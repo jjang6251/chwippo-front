@@ -1,23 +1,19 @@
 import axios from 'axios'
+import { toast } from '@/stores/toastStore'
+import { useAuthStore } from '@/stores/authStore'
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 })
 
-// Access Token 요청 헤더에 자동 삽입
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
+  const token = useAuthStore.getState().accessToken
+  if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// 401 응답 시 Refresh Token으로 재발급 시도
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -31,11 +27,14 @@ apiClient.interceptors.response.use(
           {},
           { withCredentials: true },
         )
-        localStorage.setItem('access_token', data.accessToken)
-        original.headers.Authorization = `Bearer ${data.accessToken}`
+        // 응답 구조: { data: { accessToken }, message }
+        const accessToken: string = data.data?.accessToken ?? data.accessToken
+        useAuthStore.getState().setAccessToken(accessToken)
+        original.headers.Authorization = `Bearer ${accessToken}`
         return apiClient(original)
       } catch {
-        localStorage.removeItem('access_token')
+        useAuthStore.getState().clearAuth()
+        toast.error('로그인이 만료되었습니다.')
         window.location.href = '/login'
       }
     }

@@ -45,6 +45,15 @@ export default {
       borderRadius: {
         badge: '9999px',
       },
+      keyframes: {
+        fadeInUp: {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        fadeInUp: 'fadeInUp 0.2s ease-out',
+      },
     },
   },
   plugins: [],

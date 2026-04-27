@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { ToastContainer } from '@/components/common/ToastContainer'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AdminGuard } from '@/components/layout/AdminGuard'
 import { AppShell } from '@/components/layout/AppShell'
 import { Landing } from '@/pages/Landing'
 import { Login } from '@/pages/Login'
+import { LoginCallback } from '@/pages/LoginCallback'
 import { Dashboard } from '@/pages/Dashboard'
 import { Board } from '@/pages/Board'
 import { BoardDetail } from '@/pages/BoardDetail'
@@ -24,6 +26,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/login/callback" element={<LoginCallback />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route element={<AuthGuard />}>
@@ -44,6 +47,7 @@ export default function App() {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <ToastContainer />
     </BrowserRouter>
   )
 }
