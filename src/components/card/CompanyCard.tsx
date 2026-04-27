@@ -6,6 +6,7 @@ import { DdayBadge } from './DdayBadge'
 import { useUpdateCurrentStep, useDeleteApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
 import { calcDday } from '@/utils/dday'
+import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
 
 interface CompanyCardProps {
   application: Application
@@ -13,21 +14,11 @@ interface CompanyCardProps {
   onSetResult?: (id: string) => void
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  PLANNED: '지원 예정',
-  IN_PROGRESS: '지원 중',
-  PASSED: '최종 합격',
-  FAILED: '불합격',
-}
-
-const JOB_CATEGORY_EMOJI: Record<string, string> = {
-  'IT개발': '💻',
-  '기획·PM': '📋',
-  '디자인': '🎨',
-  '마케팅': '📣',
-  '영업': '🤝',
-  '경영지원': '🏢',
-  '금융': '💰',
+const STATUS_ACCENT: Record<string, string> = {
+  PLANNED:     'border-l-white/20',
+  IN_PROGRESS: 'border-l-brand/60',
+  PASSED:      'border-l-success/70',
+  FAILED:      'border-l-white/10',
 }
 
 export function CompanyCard({ application, onStartApplication, onSetResult }: CompanyCardProps) {
@@ -46,7 +37,8 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
     application.deadline &&
     calcDday(application.deadline) < 0
 
-  // 외부 클릭 시 메뉴 닫기
+  const tags = parseTags(application.jobCategory)
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
@@ -58,7 +50,6 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
   const handleStepClick = (index: number) => {
     const steps = [...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)
     const isLastStep = index === steps.length - 1
-
     if (isLastStep) {
       if (confirm(`"${steps[index].name}"을(를) 완료하면 최종 합격으로 처리됩니다. 진행할까요?`)) {
         updateStep({ id: application.id, stepIndex: index })
@@ -84,31 +75,33 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
     <div
       onClick={handleCardClick}
       className={`
-        relative group bg-surface-2 border rounded-xl p-4 cursor-pointer
-        transition-all duration-200 hover:border-white/12 hover:bg-[#1e1f21]
-        ${isFailed ? 'opacity-50' : ''}
-        ${isPassed ? 'border-success/30 bg-success/5 hover:border-success/40' : 'border-white/6'}
+        relative group border-l-2 rounded-xl p-4 cursor-pointer
+        transition-all duration-200
+        ${STATUS_ACCENT[application.status]}
+        ${isFailed ? 'opacity-45 bg-surface-2 border border-white/5 hover:opacity-60' : ''}
+        ${isPassed
+          ? 'bg-gradient-to-br from-success/8 to-surface-2 border border-success/20 hover:border-success/35 hover:shadow-lg hover:shadow-success/5'
+          : !isFailed
+          ? 'bg-surface-2 border border-white/7 hover:border-white/14 hover:bg-[#1d1e20] hover:shadow-lg hover:shadow-black/30'
+          : ''
+        }
       `}
     >
-      {/* 상단 영역 */}
+      {/* 상단: 아바타 + 회사명 + 메뉴 */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {/* 회사 이니셜 아바타 */}
+        <div className="flex items-center gap-3 min-w-0">
           <div className={`
-            flex-none w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold
-            ${isPassed ? 'bg-success/15 text-success' : 'bg-brand/15 text-brand'}
+            flex-none w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold tracking-tight
+            ${isPassed ? 'bg-success/15 text-success' : 'bg-brand/12 text-brand'}
           `}>
             {application.companyName.charAt(0)}
           </div>
-
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-text-primary text-sm font-semibold truncate">
-                {application.companyName}
-              </h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-text-primary text-sm font-semibold truncate">{application.companyName}</h3>
               {isPassed && (
-                <span className="text-[10px] text-success font-medium bg-success/10 px-1.5 py-0.5 rounded-full border border-success/20">
-                  🎉 최종 합격
+                <span className="text-[10px] text-success font-medium bg-success/10 px-1.5 py-0.5 rounded-full border border-success/20 flex-none">
+                  🎉 합격
                 </span>
               )}
             </div>
@@ -118,17 +111,10 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
           </div>
         </div>
 
-        {/* 우측 상단: 배지 + 메뉴 */}
-        <div className="flex items-center gap-1.5 flex-none">
+        <div className="flex items-center gap-2 flex-none">
+          {/* D-day 배지 — 더 크게, 눈에 잘 띄게 */}
           {application.deadline && !isPassed && !isFailed && (
             <DdayBadge deadline={application.deadline} />
-          )}
-
-          {/* 직군 태그 */}
-          {application.jobCategory && (
-            <span className="text-[10px] text-text-quaternary bg-white/5 px-1.5 py-0.5 rounded">
-              {JOB_CATEGORY_EMOJI[application.jobCategory] ?? ''} {application.jobCategory}
-            </span>
           )}
 
           {/* ... 메뉴 */}
@@ -141,30 +127,40 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
                 <circle cx="8" cy="3" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="8" cy="13" r="1.5" />
               </svg>
             </button>
-
             {menuOpen && (
-              <div className="absolute right-0 top-8 z-20 bg-surface border border-white/10 rounded-lg shadow-xl py-1 w-36 animate-fadeInUp">
+              <div className="absolute right-0 top-8 z-20 bg-surface border border-white/10 rounded-xl shadow-2xl py-1.5 w-36 animate-fadeInUp">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/board/${application.id}`); setMenuOpen(false) }}
-                  className="w-full text-left px-3 py-2 text-xs text-text-secondary hover:bg-white/5 transition-colors"
-                >
-                  상세 보기
-                </button>
+                  className="w-full text-left px-3.5 py-2 text-xs text-text-secondary hover:bg-white/5 transition-colors"
+                >상세 보기</button>
+                <div className="mx-3 my-1 border-t border-white/6" />
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setMenuOpen(false) }}
-                  className="w-full text-left px-3 py-2 text-xs text-danger hover:bg-danger/8 transition-colors"
-                >
-                  카드 삭제
-                </button>
+                  className="w-full text-left px-3.5 py-2 text-xs text-danger hover:bg-danger/8 transition-colors"
+                >카드 삭제</button>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* 스텝바 (IN_PROGRESS / PASSED / FAILED) */}
+      {/* 태그들 */}
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {tags.map((tag) => {
+            const colorClass = JOB_CATEGORY_COLOR[tag] ?? JOB_CATEGORY_COLOR['기타']
+            return (
+              <span key={tag} className={`inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-medium rounded-full border ${colorClass}`}>
+                {JOB_CATEGORY_EMOJI[tag]} {tag}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 스텝바 */}
       {!isPlanned && application.steps.length > 0 && (
-        <div className="mb-3">
+        <div className="mb-2">
           <StepBar
             steps={application.steps}
             currentStepIndex={application.currentStepIndex}
@@ -174,37 +170,37 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
         </div>
       )}
 
-      {/* 지원 예정 카드 — "지원 시작" 버튼 */}
+      {/* 지원 예정 — 지원 시작 버튼 */}
       {isPlanned && (
-        <div className="mt-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); onStartApplication?.(application.id) }}
-            className="w-full py-2 text-xs font-medium text-brand border border-brand/30 rounded-lg hover:bg-brand/8 transition-colors"
-          >
-            지원 시작 →
-          </button>
-        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onStartApplication?.(application.id) }}
+          className="mt-1 w-full py-2 text-xs font-medium text-brand border border-brand/25 rounded-lg hover:bg-brand/8 hover:border-brand/40 transition-all"
+        >
+          지원 시작 →
+        </button>
       )}
 
-      {/* 하단 배지 영역 */}
-      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-        {application.needsDetail && (
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate(`/board/${application.id}`) }}
-            className="text-[10px] text-warning bg-warning/8 border border-warning/20 px-2 py-0.5 rounded-full hover:bg-warning/14 transition-colors"
-          >
-            📝 상세 입력 필요
-          </button>
-        )}
-        {needsResult && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onSetResult?.(application.id) }}
-            className="text-[10px] text-danger bg-danger/8 border border-danger/20 px-2 py-0.5 rounded-full hover:bg-danger/14 transition-colors"
-          >
-            ⚠️ 결과 입력 필요
-          </button>
-        )}
-      </div>
+      {/* 하단 배지 */}
+      {(application.needsDetail || needsResult) && (
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          {application.needsDetail && (
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(`/board/${application.id}`) }}
+              className="text-[10px] text-warning bg-warning/8 border border-warning/25 px-2 py-0.5 rounded-full hover:bg-warning/14 transition-colors font-medium"
+            >
+              📝 상세 입력 필요
+            </button>
+          )}
+          {needsResult && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSetResult?.(application.id) }}
+              className="text-[10px] text-danger bg-danger/8 border border-danger/25 px-2 py-0.5 rounded-full hover:bg-danger/14 transition-colors font-medium"
+            >
+              ⚠️ 결과 입력 필요
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
@@ -218,20 +214,11 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
           >
             <h3 className="text-text-primary font-semibold text-sm mb-1">카드를 삭제할까요?</h3>
             <p className="text-text-tertiary text-xs mb-5">
-              <span className="text-text-secondary font-medium">{application.companyName}</span> 카드와 모든 스텝 정보가 삭제됩니다.
+              <span className="text-text-secondary font-medium">{application.companyName}</span> 카드와 모든 정보가 삭제됩니다.
             </p>
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="flex-1 py-2.5 text-xs font-medium text-white bg-danger/80 hover:bg-danger rounded-lg transition-colors disabled:opacity-50"
-              >
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
+              <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 text-xs font-medium text-white bg-danger/80 hover:bg-danger rounded-lg transition-colors disabled:opacity-50">
                 {isDeleting ? '삭제 중...' : '삭제'}
               </button>
             </div>
