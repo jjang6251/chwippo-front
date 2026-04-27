@@ -375,7 +375,7 @@ export function BoardDetail() {
       </Modal>
 
       {/* 스텝 편집 모달 (드래그 가능) */}
-      <Modal open={showStepEditor} onClose={() => setShowStepEditor(false)} title="스텝 편집" width="w-96">
+      <Modal open={showStepEditor} onClose={() => setShowStepEditor(false)} title="스텝 편집">
         <p className="text-text-quaternary text-xs mb-3">☰ 드래그로 순서를 변경할 수 있어요</p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={editSteps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
