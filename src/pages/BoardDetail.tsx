@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import type { DragEndEvent } from '@dnd-kit/core'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
-  useSensor, useSensors, DragEndEvent,
+  useSensor, useSensors,
 } from '@dnd-kit/core'
 import {
   arrayMove, SortableContext, sortableKeyboardCoordinates,
