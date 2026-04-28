@@ -1,10 +1,15 @@
 import { Outlet } from 'react-router-dom'
+import { Sidebar } from './Sidebar'
+import { MobileNav } from './MobileNav'
 
-// M6에서 사이드바/탭바 포함한 완전한 레이아웃으로 교체
 export function AppShell() {
   return (
-    <div className="min-h-screen bg-bg text-text-primary">
-      <Outlet />
+    <div className="min-h-screen bg-bg text-text-primary flex">
+      <Sidebar />
+      <main className="flex-1 min-w-0 pb-20 lg:pb-0">
+        <Outlet />
+      </main>
+      <MobileNav />
     </div>
   )
 }

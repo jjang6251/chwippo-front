@@ -200,7 +200,7 @@ export function MyInfo() {
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
   const [activeSection, setActiveSection] = useState('profile')
   const isProgrammaticScroll = useRef(false)
-  const scrollLockTimer = useRef<ReturnType<typeof setTimeout>>()
+  const scrollLockTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     const handleScroll = () => {

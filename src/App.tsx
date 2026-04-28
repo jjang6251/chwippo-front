@@ -14,6 +14,7 @@ import { Inquiry } from '@/pages/Inquiry'
 import { Privacy } from '@/pages/Privacy'
 import { Terms } from '@/pages/Terms'
 import { NotFound } from '@/pages/NotFound'
+import { Settings } from '@/pages/settings/Settings'
 import { AlarmSettings } from '@/pages/settings/AlarmSettings'
 import { ProfileSettings } from '@/pages/settings/ProfileSettings'
 import { Help } from '@/pages/settings/Help'
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/board/:id" element={<BoardDetail />} />
             <Route path="/myinfo" element={<MyInfo />} />
             <Route path="/inquiry" element={<Inquiry />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/settings/alarm" element={<AlarmSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/help" element={<Help />} />

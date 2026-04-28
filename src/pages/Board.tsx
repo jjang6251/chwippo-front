@@ -5,7 +5,7 @@ import { CompanyCard } from '@/components/card/CompanyCard'
 import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
-import type { Application, ApplicationStatus } from '@/types/application'
+import type { ApplicationStatus } from '@/types/application'
 
 type FilterTab = 'all' | ApplicationStatus
 
