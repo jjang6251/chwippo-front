@@ -21,6 +21,29 @@ const STATUS_ACCENT: Record<string, string> = {
   FAILED:      'border-l-white/10',
 }
 
+const AVATAR_COLORS = [
+  'bg-blue-500/15 text-blue-400',
+  'bg-violet-500/15 text-violet-400',
+  'bg-emerald-500/15 text-emerald-400',
+  'bg-amber-500/15 text-amber-400',
+  'bg-rose-500/15 text-rose-400',
+  'bg-cyan-500/15 text-cyan-400',
+  'bg-orange-500/15 text-orange-400',
+  'bg-pink-500/15 text-pink-400',
+  'bg-indigo-500/15 text-indigo-400',
+  'bg-teal-500/15 text-teal-400',
+]
+
+function getAvatarColor(name: string): string {
+  const hash = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
+}
+
+function formatRegisteredDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 등록`
+}
+
 export function CompanyCard({ application, onStartApplication, onSetResult }: CompanyCardProps) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -92,7 +115,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
         <div className="flex items-center gap-3 min-w-0">
           <div className={`
             flex-none w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold tracking-tight
-            ${isPassed ? 'bg-success/15 text-success' : 'bg-brand/12 text-brand'}
+            ${isPassed ? 'bg-success/15 text-success' : isFailed ? 'bg-white/5 text-text-quaternary' : getAvatarColor(application.companyName)}
           `}>
             {application.companyName.charAt(0)}
           </div>
@@ -105,14 +128,16 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
                 </span>
               )}
             </div>
-            {application.jobTitle && (
+            {application.jobTitle ? (
               <p className="text-text-tertiary text-xs truncate mt-0.5">{application.jobTitle}</p>
-            )}
+            ) : isPlanned ? (
+              <p className="text-text-quaternary text-xs mt-0.5">{formatRegisteredDate(application.createdAt)}</p>
+            ) : null}
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-none">
-          {/* D-day 배지 — 더 크게, 눈에 잘 띄게 */}
+          {/* D-day 배지 */}
           {application.deadline && !isPassed && !isFailed && (
             <DdayBadge deadline={application.deadline} />
           )}
@@ -121,7 +146,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
           <div ref={menuRef} className="relative">
             <button
               onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/6 transition-colors opacity-0 group-hover:opacity-100"
+              className="w-7 h-7 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/6 transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <circle cx="8" cy="3" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="8" cy="13" r="1.5" />
@@ -167,6 +192,17 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
             onStepClick={!isPassed && !isFailed ? handleStepClick : undefined}
             size="sm"
           />
+          {/* 현재 단계 텍스트 */}
+          {(() => {
+            const sorted = [...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)
+            const currentStepName = sorted[application.currentStepIndex]?.name
+            if (!currentStepName || isPassed) return null
+            return (
+              <p className="text-text-tertiary text-xs mt-1.5 truncate">
+                📍 현재: {currentStepName}
+              </p>
+            )
+          })()}
         </div>
       )}
 
@@ -174,9 +210,12 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
       {isPlanned && (
         <button
           onClick={(e) => { e.stopPropagation(); onStartApplication?.(application.id) }}
-          className="mt-1 w-full py-2 text-xs font-medium text-brand border border-brand/25 rounded-lg hover:bg-brand/8 hover:border-brand/40 transition-all"
+          className="mt-2 w-full py-2.5 text-xs font-semibold text-brand border border-brand/30 rounded-lg hover:bg-brand/10 hover:border-brand/50 transition-all flex items-center justify-center gap-1.5"
         >
-          지원 시작 →
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          지원 시작하기
         </button>
       )}
 

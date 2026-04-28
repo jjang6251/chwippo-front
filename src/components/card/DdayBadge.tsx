@@ -16,7 +16,7 @@ export function DdayBadge({ deadline }: DdayBadgeProps) {
   const variant = getDdayVariant(dday)
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-mono font-semibold ${variantClass[variant]}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-mono font-semibold ${variantClass[variant]}`}>
       {getDdayLabel(dday)}
     </span>
   )

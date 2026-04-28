@@ -84,14 +84,10 @@ export function StepBar({ steps, currentStepIndex, onStepClick, size = 'sm' }: S
         })}
       </div>
 
-      {/* 현재 단계 + 진행률 */}
+      {/* 진행률 */}
       {size === 'sm' && (
-        <div className="flex items-center justify-between mt-2.5">
-          <p className="text-text-tertiary text-[11px] flex items-center gap-1">
-            <span className="text-brand">●</span>
-            {sorted[currentStepIndex]?.name ?? '완료'}
-          </p>
-          <span className="text-text-quaternary text-[11px] font-mono tabular-nums">{progress}%</span>
+        <div className="flex justify-end mt-2">
+          <span className="text-text-quaternary text-[10px] font-mono tabular-nums">{progress}%</span>
         </div>
       )}
 
