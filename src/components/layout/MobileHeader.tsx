@@ -8,11 +8,13 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings/profile': '프로필 설정',
   '/settings/alarm': '알림 설정',
   '/settings/help': '도움말',
-  '/inquiry': '문의하기',
+  '/inquiry': '문의 내역',
+  '/inquiry/new': '새 문의',
 }
 
 function getTitle(pathname: string): string {
   if (pathname.startsWith('/board/')) return '카드 상세'
+  if (pathname.startsWith('/inquiry/') && pathname !== '/inquiry/new') return '문의 상세'
   return PAGE_TITLES[pathname] ?? '취뽀'
 }
 

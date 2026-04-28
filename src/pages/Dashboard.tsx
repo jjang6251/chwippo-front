@@ -5,9 +5,11 @@ import { TodoList } from '@/components/dashboard/TodoList'
 import { useDashboardStats, useDdayList } from '@/hooks/useDashboard'
 import { useTodos } from '@/hooks/useTodos'
 import { useProfile } from '@/hooks/useMyinfo'
+import { useAuthStore } from '@/stores/authStore'
 
 export function Dashboard() {
   const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: dday, isLoading: ddayLoading } = useDdayList()
   const { data: todos, isLoading: todosLoading } = useTodos()
@@ -33,8 +35,15 @@ export function Dashboard() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {/* 헤더 */}
       <div className="mb-8">
-        <p className="text-text-quaternary text-xs mb-1">{month}월 {date}일 ({day})</p>
-        <h1 className="text-text-primary text-xl font-bold">대시보드</h1>
+        <p className="text-text-muted text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>
+        <div className="flex items-end gap-2">
+          <h1 className="text-text-primary text-2xl font-bold leading-tight">
+            안녕하세요,{' '}
+            <span className="text-brand">{user?.nickname ?? ''}님</span>
+          </h1>
+          <span className="text-xl mb-0.5">👋</span>
+        </div>
+        <p className="text-text-muted text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
       </div>
 
       {/* 통계 카드 3개 */}

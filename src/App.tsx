@@ -10,7 +10,9 @@ import { Dashboard } from '@/pages/Dashboard'
 import { Board } from '@/pages/Board'
 import { BoardDetail } from '@/pages/BoardDetail'
 import { MyInfo } from '@/pages/MyInfo'
-import { Inquiry } from '@/pages/Inquiry'
+import { InquiryList } from '@/pages/inquiry/InquiryList'
+import { InquiryNew } from '@/pages/inquiry/InquiryNew'
+import { InquiryDetail } from '@/pages/inquiry/InquiryDetail'
 import { Privacy } from '@/pages/Privacy'
 import { Terms } from '@/pages/Terms'
 import { NotFound } from '@/pages/NotFound'
@@ -36,7 +38,9 @@ export default function App() {
             <Route path="/board" element={<Board />} />
             <Route path="/board/:id" element={<BoardDetail />} />
             <Route path="/myinfo" element={<MyInfo />} />
-            <Route path="/inquiry" element={<Inquiry />} />
+            <Route path="/inquiry" element={<InquiryList />} />
+            <Route path="/inquiry/new" element={<InquiryNew />} />
+            <Route path="/inquiry/:id" element={<InquiryDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/alarm" element={<AlarmSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />

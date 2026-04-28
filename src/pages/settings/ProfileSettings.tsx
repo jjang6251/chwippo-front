@@ -1,34 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
-import { updateNickname, deleteAccount } from '@/api/users'
+import { deleteAccount } from '@/api/users'
 import { apiClient } from '@/api/client'
 
 export function ProfileSettings() {
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
-  const setUser = useAuthStore((s) => s.setUser)
   const navigate = useNavigate()
 
-  const [nickname, setNickname] = useState(user?.nickname ?? '')
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-
-  // user 로드 후 nickname 동기화
-  useEffect(() => {
-    if (user?.nickname) setNickname(user.nickname)
-  }, [user?.nickname])
-
-  const nicknameMutation = useMutation({
-    mutationFn: () => updateNickname(nickname),
-    onSuccess: (data) => {
-      if (user) setUser({ ...user, nickname: data.nickname })
-      toast.success('닉네임이 변경됐어요.')
-    },
-    onError: () => toast.error('오류가 발생했습니다. 다시 시도해주세요.'),
-  })
 
   const deleteMutation = useMutation({
     mutationFn: deleteAccount,
@@ -45,33 +29,9 @@ export function ProfileSettings() {
     navigate('/login')
   }
 
-  const canSave = nickname.trim().length > 0 && nickname !== user?.nickname
-
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <h1 className="text-xl font-bold mb-6">프로필 설정</h1>
-
-      {/* 닉네임 */}
-      <section className="bg-surface-2 border border-white/5 rounded-xl p-5 mb-4">
-        <h2 className="text-sm font-semibold mb-4">닉네임 변경</h2>
-        <div className="flex gap-2">
-          <input
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            maxLength={20}
-            placeholder="닉네임 입력"
-            className="flex-1 bg-bg border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/50 transition-colors"
-          />
-          <button
-            onClick={() => nicknameMutation.mutate()}
-            disabled={!canSave || nicknameMutation.isPending}
-            className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent transition-colors"
-          >
-            {nicknameMutation.isPending ? '저장 중...' : '저장'}
-          </button>
-        </div>
-        <p className="text-xs text-text-muted mt-2">최대 20자 · 현재 닉네임: <span className="text-text-secondary">{user?.nickname}</span></p>
-      </section>
 
       {/* 계정 정보 */}
       <section className="bg-surface-2 border border-white/5 rounded-xl p-5 mb-4">
