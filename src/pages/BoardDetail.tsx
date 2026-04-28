@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
@@ -110,6 +110,8 @@ function EditableField({
 export function BoardDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const backTo = (location.state as any)?.from === 'dashboard' ? '/dashboard' : '/board'
   const { data: app, isLoading } = useApplication(id!)
   const { mutate: update } = useUpdateApplication(id!)
   const { mutate: updateStep } = useUpdateCurrentStep()
@@ -205,7 +207,7 @@ export function BoardDetail() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {/* 뒤로가기 */}
       <button
-        onClick={() => navigate('/board')}
+        onClick={() => navigate(backTo)}
         className="flex items-center gap-1.5 text-text-tertiary hover:text-text-secondary text-xs mb-6 transition-colors group"
       >
         <svg className="group-hover:-translate-x-0.5 transition-transform" width="14" height="14" viewBox="0 0 14 14" fill="none">

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
 import { CompanyCard } from '@/components/card/CompanyCard'
 import { AddCardModal } from '@/components/card/AddCardModal'
@@ -33,7 +34,9 @@ function CardSkeleton() {
 }
 
 export function Board() {
-  const [filter, setFilter] = useState<FilterTab>('all')
+  const [searchParams] = useSearchParams()
+  const initialFilter = (searchParams.get('filter') as FilterTab) || 'all'
+  const [filter, setFilter] = useState<FilterTab>(initialFilter)
   const [search, setSearch] = useState('')
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [addModalStatus, setAddModalStatus] = useState<'PLANNED' | 'IN_PROGRESS' | null>(null)

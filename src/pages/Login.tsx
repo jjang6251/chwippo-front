@@ -1,14 +1,24 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 
 export function Login() {
-  const accessToken = useAuthStore((s) => s.accessToken)
+  const { accessToken, setAccessToken } = useAuthStore()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (accessToken) navigate('/dashboard', { replace: true })
-  }, [accessToken, navigate])
+    if (accessToken) { navigate('/dashboard', { replace: true }); return }
+    // 유효한 refresh 쿠키가 있으면 자동 리다이렉트
+    axios
+      .post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true })
+      .then(({ data }) => {
+        const token = data.data?.accessToken ?? data.accessToken
+        setAccessToken(token)
+        navigate('/dashboard', { replace: true })
+      })
+      .catch(() => {})
+  }, [])
 
   const handleKakaoLogin = () => {
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/kakao`

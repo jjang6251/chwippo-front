@@ -6,7 +6,7 @@ import { DdayBadge } from './DdayBadge'
 import { useUpdateCurrentStep, useDeleteApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
 import { calcDday } from '@/utils/dday'
-import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
+import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI, getAvatarColor } from '@/utils/tags'
 
 interface CompanyCardProps {
   application: Application
@@ -19,24 +19,6 @@ const STATUS_ACCENT: Record<string, string> = {
   IN_PROGRESS: 'border-l-brand/60',
   PASSED:      'border-l-success/70',
   FAILED:      'border-l-white/10',
-}
-
-const AVATAR_COLORS = [
-  'bg-blue-500/15 text-blue-400',
-  'bg-violet-500/15 text-violet-400',
-  'bg-emerald-500/15 text-emerald-400',
-  'bg-amber-500/15 text-amber-400',
-  'bg-rose-500/15 text-rose-400',
-  'bg-cyan-500/15 text-cyan-400',
-  'bg-orange-500/15 text-orange-400',
-  'bg-pink-500/15 text-pink-400',
-  'bg-indigo-500/15 text-indigo-400',
-  'bg-teal-500/15 text-teal-400',
-]
-
-function getAvatarColor(name: string): string {
-  const hash = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
 }
 
 function formatRegisteredDate(dateStr: string): string {
