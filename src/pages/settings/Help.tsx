@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 const FAQ = [
   {
@@ -32,39 +33,64 @@ export function Help() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold mb-2">도움말</h1>
-      <p className="text-sm text-text-muted mb-8">자주 묻는 질문을 확인하세요.</p>
+      <h1 className="text-xl font-bold mb-1">도움말</h1>
+      <p className="text-sm text-text-muted mb-8">자주 묻는 질문</p>
 
       <div className="flex flex-col gap-2">
-        {FAQ.map(({ q, a }, i) => (
-          <div
-            key={i}
-            className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden"
-          >
-            <button
-              onClick={() => setOpen(open === i ? null : i)}
-              className="w-full text-left px-5 py-4 flex items-center justify-between gap-3"
+        {FAQ.map(({ q, a }, i) => {
+          const isOpen = open === i
+          return (
+            <div
+              key={i}
+              className={`border rounded-xl overflow-hidden transition-colors ${
+                isOpen
+                  ? 'bg-brand/5 border-brand/25'
+                  : 'bg-surface-2 border-white/5 hover:border-white/12'
+              }`}
             >
-              <span className="text-sm font-medium">{q}</span>
-              <span className={`text-text-muted text-lg leading-none transition-transform ${open === i ? 'rotate-45' : ''}`}>+</span>
-            </button>
-            {open === i && (
-              <div className="px-5 pb-4">
-                <p className="text-sm text-text-muted leading-relaxed">{a}</p>
-              </div>
-            )}
-          </div>
-        ))}
+              <button
+                onClick={() => setOpen(isOpen ? null : i)}
+                className="w-full text-left px-5 py-4 flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    isOpen ? 'bg-brand text-white' : 'bg-white/8 text-text-muted'
+                  }`}>
+                    Q
+                  </span>
+                  <span className={`text-sm font-semibold ${isOpen ? 'text-brand' : 'text-text-primary'}`}>
+                    {q}
+                  </span>
+                </div>
+                <span className={`text-sm flex-shrink-0 transition-transform font-light ${isOpen ? 'rotate-45 text-brand' : 'text-text-muted'}`}>
+                  +
+                </span>
+              </button>
+
+              {isOpen && (
+                <div className="px-5 pb-4 flex gap-3">
+                  <span className="text-xs font-bold w-5 h-5 rounded-full bg-success/15 text-success flex items-center justify-center flex-shrink-0 mt-0.5">
+                    A
+                  </span>
+                  <p className="text-sm text-text-secondary leading-relaxed">{a}</p>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
-      <div className="mt-8 text-center">
-        <p className="text-sm text-text-muted mb-3">원하는 답변을 찾지 못하셨나요?</p>
-        <a
-          href="/inquiry"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-brand/10 text-brand border border-brand/20 rounded-lg text-sm font-medium hover:bg-brand/20 transition-colors"
+      <div className="mt-8 bg-surface-2 border border-white/5 rounded-xl p-5 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium mb-0.5">원하는 답변을 찾지 못하셨나요?</p>
+          <p className="text-xs text-text-muted">무엇이든 편하게 물어보세요.</p>
+        </div>
+        <Link
+          to="/inquiry"
+          className="px-4 py-2 bg-brand/10 text-brand border border-brand/20 rounded-lg text-sm font-medium hover:bg-brand/20 transition-colors flex-shrink-0"
         >
           문의하기
-        </a>
+        </Link>
       </div>
     </div>
   )

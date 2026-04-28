@@ -33,10 +33,10 @@ export function Inquiry() {
   if (done) {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 flex flex-col items-center text-center gap-4">
-        <div className="text-4xl">🙏</div>
+        <div className="text-5xl">🙏</div>
         <h2 className="text-lg font-bold">문의가 접수됐어요</h2>
         <p className="text-sm text-text-muted leading-relaxed">
-          답변은 가입하신 이메일로 발송됩니다.<br />
+          답변은 이 앱 안에서 확인할 수 있어요.<br />
           소중한 피드백 감사합니다.
         </p>
         <button
@@ -54,27 +54,27 @@ export function Inquiry() {
       <h1 className="text-xl font-bold mb-2">문의하기</h1>
       <p className="text-sm text-text-muted mb-8">
         버그, 기능 요청, 무엇이든 알려주세요.<br />
-        답변은 가입하신 이메일로 발송됩니다.
+        답변은 앱 안 문의 내역에서 확인할 수 있어요.
       </p>
 
-      <div className="flex flex-col gap-4">
-        {/* 카테고리 */}
+      <div className="flex flex-col gap-5">
+        {/* 카테고리 드롭다운 */}
         <div>
-          <label className="text-xs font-semibold text-text-muted uppercase tracking-wide block mb-2">카테고리 *</label>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  category === c
-                    ? 'bg-brand/15 border-brand/40 text-brand'
-                    : 'bg-surface-2 border-white/8 text-text-secondary hover:border-white/20'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
+          <label className="text-xs font-semibold text-text-muted uppercase tracking-wide block mb-2">
+            카테고리 *
+          </label>
+          <div className="relative">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full appearance-none bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors pr-8 text-text-primary"
+            >
+              <option value="" disabled className="bg-surface-2 text-text-muted">카테고리 선택</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c} className="bg-surface-2">{c}</option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-xs">▾</div>
           </div>
         </div>
 
@@ -93,7 +93,7 @@ export function Inquiry() {
         {/* 내용 */}
         <div>
           <label className="text-xs font-semibold text-text-muted uppercase tracking-wide block mb-2">
-            내용 * <span className="normal-case font-normal">(최소 10자)</span>
+            내용 * <span className="normal-case font-normal text-text-muted">(최소 10자)</span>
           </label>
           <textarea
             value={content}
@@ -109,7 +109,7 @@ export function Inquiry() {
         <button
           onClick={() => mutation.mutate()}
           disabled={!valid || mutation.isPending}
-          className="w-full py-3 bg-brand text-white font-semibold rounded-lg disabled:opacity-40 hover:bg-accent transition-colors"
+          className="w-full py-3 bg-brand text-white font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent transition-colors"
         >
           {mutation.isPending ? '제출 중...' : '문의 제출'}
         </button>
