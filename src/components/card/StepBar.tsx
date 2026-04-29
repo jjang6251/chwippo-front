@@ -100,8 +100,8 @@ export function StepBar({ steps, currentStepIndex, onStepClick, size = 'sm' }: S
             </p>
             <span className="text-text-tertiary text-xs font-mono tabular-nums bg-white/5 px-2 py-0.5 rounded">{progress}%</span>
           </div>
-          {/* 단계 이름 목록 (md에서만) */}
-          <div className="flex mt-3 gap-0">
+          {/* 단계 이름 목록 (md에서만, 모바일 숨김) */}
+          <div className="hidden sm:flex mt-3 gap-0">
             {sorted.map((step, i) => (
               <div
                 key={step.id}

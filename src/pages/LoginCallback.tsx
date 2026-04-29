@@ -24,10 +24,10 @@ export function LoginCallback() {
 
     setAccessToken(accessToken)
 
-    // isNew면 추후 온보딩 페이지로 분기 (MVP 2차), 지금은 dashboard로
-    navigate('/dashboard', { replace: true })
     if (isNew) {
-      toast.show('취뽀에 오신 것을 환영해요! 첫 지원 카드를 추가해보세요.')
+      navigate('/terms-agreement', { replace: true })
+    } else {
+      navigate('/dashboard', { replace: true })
     }
   }, [params, navigate, setAccessToken])
 

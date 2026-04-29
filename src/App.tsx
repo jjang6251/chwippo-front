@@ -22,6 +22,7 @@ import { ProfileSettings } from '@/pages/settings/ProfileSettings'
 import { Help } from '@/pages/settings/Help'
 import { OpsPage } from '@/pages/ops/OpsPage'
 import { OpsInquiries } from '@/pages/ops/OpsInquiries'
+import { TermsAgreement } from '@/pages/TermsAgreement'
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route element={<AuthGuard />}>
+          <Route path="/terms-agreement" element={<TermsAgreement />} />
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/board" element={<Board />} />
