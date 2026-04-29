@@ -20,6 +20,8 @@ export interface AdminInquiry {
   user_unread: number
   admin_unread: number
   created_at: string
+  user_nickname: string | null
+  user_email: string | null
 }
 
 export interface InquiriesResult {

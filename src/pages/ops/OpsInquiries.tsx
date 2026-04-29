@@ -6,6 +6,10 @@ import { type InquiryComment } from '@/api/inquiries'
 import { toast } from '@/stores/toastStore'
 import dayjs from 'dayjs'
 
+function dPlusDays(createdAt: string) {
+  return Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000)
+}
+
 const STATUS_LABEL: Record<string, string> = { OPEN: '미답변', IN_PROGRESS: '답변 중', CLOSED: '완료' }
 const STATUS_COLOR: Record<string, string> = {
   OPEN: 'text-danger bg-danger/10 border-danger/20',
@@ -138,6 +142,23 @@ export function OpsInquiries() {
               <button onClick={closeDetailModal} className="ml-auto text-text-muted hover:text-text-primary text-xl">×</button>
             </div>
 
+            {/* 사용자 컨텍스트 바 */}
+            <div className="flex items-center gap-2 flex-wrap px-6 py-2.5 bg-white/[0.02] border-b border-white/5 text-[11px] text-text-muted">
+              <span className="text-text-secondary font-semibold">
+                {detail.user_nickname ?? '탈퇴한 사용자'}
+              </span>
+              {detail.user_email && (
+                <><span>·</span><span>{detail.user_email}</span></>
+              )}
+              {detail.user_created_at && (
+                <><span>·</span><span className="text-text-muted">가입 D+{dPlusDays(detail.user_created_at)}일</span></>
+              )}
+              <span>·</span>
+              <span>카드 <span className="text-text-secondary font-medium">{detail.user_card_count ?? 0}</span>개</span>
+              <span>·</span>
+              <span>문의 <span className="text-text-secondary font-medium">{detail.user_inquiry_count ?? 0}</span>건</span>
+            </div>
+
             {/* 내용 스크롤 */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
               <h3 className="text-base font-bold mb-3">{detail.title}</h3>
@@ -240,6 +261,10 @@ function AdminInquiryCard({ item, onSelect, selected }: { item: AdminInquiry; on
         <span className="text-xs text-text-muted ml-auto">{dayjs(item.created_at).format('MM.DD')}</span>
       </div>
       <p className="text-sm font-semibold truncate">{item.title}</p>
+      <p className="text-xs text-text-muted mt-0.5 truncate">
+        {item.user_nickname ?? '탈퇴한 사용자'}
+        {item.user_email ? ` · ${item.user_email}` : ''}
+      </p>
     </button>
   )
 }
