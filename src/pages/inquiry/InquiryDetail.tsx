@@ -5,8 +5,8 @@ import { getInquiryDetail, addComment, type InquiryComment } from '@/api/inquiri
 import { toast } from '@/stores/toastStore'
 import dayjs from 'dayjs'
 
-const STATUS_LABEL = { OPEN: '답변 대기', IN_PROGRESS: '답변 중', CLOSED: '완료' }
-const STATUS_COLOR = {
+const STATUS_LABEL: Record<string, string> = { OPEN: '답변 대기', IN_PROGRESS: '답변 중', CLOSED: '완료' }
+const STATUS_COLOR: Record<string, string> = {
   OPEN: 'text-warning bg-warning/10 border-warning/20',
   IN_PROGRESS: 'text-brand bg-brand/10 border-brand/20',
   CLOSED: 'text-text-muted bg-white/5 border-white/10',
@@ -50,8 +50,8 @@ export function InquiryDetail() {
       {/* 문의 정보 */}
       <div className="bg-surface-2 border border-white/8 rounded-xl px-5 py-4 mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[data.status]}`}>
-            {STATUS_LABEL[data.status]}
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[data.status] ?? 'text-text-muted bg-white/5 border-white/10'}`}>
+            {STATUS_LABEL[data.status] ?? data.status}
           </span>
           <span className="text-xs text-text-muted">{data.category}</span>
           <span className="text-xs text-text-muted ml-auto">{dayjs(data.created_at).format('YYYY.MM.DD')}</span>

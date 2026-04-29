@@ -44,21 +44,20 @@ export function InquiryList() {
         </Link>
       </div>
 
-      {/* 카테고리 필터 */}
-      <div className="flex gap-1.5 flex-wrap mb-5">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCatFilter(c)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
-              catFilter === c
-                ? 'bg-brand/15 border-brand/40 text-brand'
-                : 'bg-surface-2 border-white/8 text-text-muted hover:border-white/20'
-            }`}
+      {/* 카테고리 필터 드롭다운 */}
+      <div className="mb-5">
+        <div className="relative inline-block">
+          <select
+            value={catFilter}
+            onChange={(e) => setCatFilter(e.target.value)}
+            className="appearance-none bg-surface-2 border border-white/8 rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
           >
-            {c}
-          </button>
-        ))}
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">▾</div>
+        </div>
       </div>
 
       {isLoading ? (
@@ -84,6 +83,9 @@ export function InquiryList() {
 
 function InquiryCard({ item }: { item: Inquiry }) {
   const isClosed = item.status === 'CLOSED'
+  const statusLabel = STATUS_LABEL[item.status as keyof typeof STATUS_LABEL] ?? item.status
+  const statusColor = STATUS_COLOR[item.status as keyof typeof STATUS_COLOR] ?? 'text-text-muted bg-white/5 border-white/10'
+
   return (
     <Link
       to={`/inquiry/${item.id}`}
@@ -99,8 +101,8 @@ function InquiryCard({ item }: { item: Inquiry }) {
       )}
 
       <div className="flex items-center gap-2 mb-1.5 pr-6">
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[item.status]}`}>
-          {STATUS_LABEL[item.status]}
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusColor}`}>
+          {statusLabel}
         </span>
         <span className="text-xs text-text-muted">{item.category}</span>
       </div>
