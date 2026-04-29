@@ -6,7 +6,7 @@ import { toast } from '@/stores/toastStore'
 export function LoginCallback() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const { setAccessToken } = useAuthStore()
+  const { setAccessToken, setUser } = useAuthStore()
   const handled = useRef(false)
 
   useEffect(() => {
@@ -23,6 +23,14 @@ export function LoginCallback() {
     }
 
     setAccessToken(accessToken)
+
+    const userId = params.get('user_id')
+    const userNickname = params.get('user_nickname')
+    const userRole = params.get('user_role') as 'user' | 'admin'
+    const userEmail = params.get('user_email')
+    if (userId && userNickname && userRole) {
+      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole })
+    }
 
     if (isNew) {
       navigate('/terms-agreement', { replace: true })

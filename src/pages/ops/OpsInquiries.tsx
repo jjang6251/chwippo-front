@@ -146,6 +146,9 @@ export function OpsInquiries() {
             <div className="flex items-center gap-2 flex-wrap px-6 py-2.5 bg-white/[0.02] border-b border-white/5 text-[11px] text-text-muted">
               <span className="text-text-secondary font-semibold">
                 {detail.user_nickname ?? '탈퇴한 사용자'}
+                {detail.user_short_id && (
+                  <span className="ml-1 text-text-quaternary font-mono font-normal text-[10px]">#{detail.user_short_id}</span>
+                )}
               </span>
               {detail.user_email && (
                 <><span>·</span><span>{detail.user_email}</span></>
@@ -263,6 +266,7 @@ function AdminInquiryCard({ item, onSelect, selected }: { item: AdminInquiry; on
       <p className="text-sm font-semibold truncate">{item.title}</p>
       <p className="text-xs text-text-muted mt-0.5 truncate">
         {item.user_nickname ?? '탈퇴한 사용자'}
+        {item.user_short_id ? <span className="ml-1 text-text-quaternary font-mono">#{item.user_short_id}</span> : null}
         {item.user_email ? ` · ${item.user_email}` : ''}
       </p>
     </button>

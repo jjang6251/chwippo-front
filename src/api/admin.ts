@@ -22,6 +22,7 @@ export interface AdminInquiry {
   created_at: string
   user_nickname: string | null
   user_email: string | null
+  user_short_id: string | null
 }
 
 export interface InquiriesResult {
