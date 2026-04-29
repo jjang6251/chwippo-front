@@ -43,3 +43,20 @@ export const addAdminComment = (id: string, content: string) =>
 
 export const closeInquiry = (id: string) =>
   apiClient.patch(`/admin/inquiries/${id}/close`, {}).then(unwrap<AdminInquiry>)
+
+export interface DayData { date: string; count: number }
+
+export interface AdminAnalytics {
+  dau: DayData[]
+  signups: DayData[]
+  cumulative: DayData[]
+  cards: DayData[]
+  inquiries: DayData[]
+  avgReplyHours: number | null
+  avgCardsPerUser: number | null
+  d7Retention: number | null
+  d7CohortSize: number
+}
+
+export const getAdminAnalytics = (days: number) =>
+  apiClient.get('/admin/analytics', { params: { days } }).then(unwrap<AdminAnalytics>)
