@@ -15,19 +15,22 @@ const STATUS_COLOR: Record<string, string> = {
 const CATEGORIES = ['전체', '버그 신고', '기능 추가 요청', '기능 개선', '알림 문의', '계정·개인정보', '사용 방법 문의', '기타']
 
 export function OpsInquiries() {
-  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined)
+  const [statusFilter, setStatusFilter] = useState<string>('전체')
   const [catFilter, setCatFilter] = useState('전체')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const qc = useQueryClient()
 
+  const statusParam = statusFilter === '전체' ? undefined : statusFilter
+
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'inquiries', statusFilter, catFilter],
     queryFn: () => getAdminInquiries({
-      status: statusFilter,
+      status: statusParam,
       category: catFilter === '전체' ? undefined : catFilter,
     }),
+    placeholderData: (prev) => prev,
   })
 
   const { data: detail } = useQuery({
@@ -60,6 +63,12 @@ export function OpsInquiries() {
     onError: () => toast.error('오류가 발생했습니다.'),
   })
 
+  function closeDetailModal() {
+    setSelectedId(null)
+    setShowCloseConfirm(false)
+    setComment('')
+  }
+
   const items = data?.items ?? []
   const open = items.filter((i) => i.status !== 'CLOSED')
   const closed = items.filter((i) => i.status === 'CLOSED')
@@ -73,40 +82,38 @@ export function OpsInquiries() {
         <span className="ml-auto text-xs text-text-muted">총 {data?.total ?? 0}건</span>
       </div>
 
-      {/* 필터 */}
-      <div className="flex gap-2 mb-3 flex-wrap">
-        {[undefined, 'OPEN', 'IN_PROGRESS', 'CLOSED'].map((s) => (
-          <button
-            key={s ?? 'all'}
-            onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              statusFilter === s
-                ? 'bg-brand/15 border-brand/40 text-brand'
-                : 'bg-surface-2 border-white/8 text-text-secondary hover:border-white/20'
-            }`}
+      {/* 필터 드롭다운 */}
+      <div className="flex gap-3 mb-5">
+        <div className="relative">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="appearance-none bg-surface-2 border border-white/8 rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
           >
-            {s ? STATUS_LABEL[s] : '전체'}
-          </button>
-        ))}
-      </div>
-      <div className="flex gap-1.5 flex-wrap mb-5">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCatFilter(c)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
-              catFilter === c
-                ? 'bg-white/10 border-white/25 text-text-primary'
-                : 'bg-surface-2 border-white/5 text-text-muted hover:border-white/15'
-            }`}
+            <option value="전체">전체 상태</option>
+            <option value="OPEN">미답변</option>
+            <option value="IN_PROGRESS">답변 중</option>
+            <option value="CLOSED">완료</option>
+          </select>
+          <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">▾</div>
+        </div>
+
+        <div className="relative">
+          <select
+            value={catFilter}
+            onChange={(e) => setCatFilter(e.target.value)}
+            className="appearance-none bg-surface-2 border border-white/8 rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
           >
-            {c}
-          </button>
-        ))}
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">▾</div>
+        </div>
       </div>
 
       {/* 목록 */}
-      {isLoading ? (
+      {isLoading && !data ? (
         <div className="text-center py-16 text-text-muted text-sm">불러오는 중...</div>
       ) : sorted.length === 0 ? (
         <div className="text-center py-16 text-text-muted text-sm">문의가 없어요.</div>
@@ -128,7 +135,7 @@ export function OpsInquiries() {
                 {STATUS_LABEL[detail.status]}
               </span>
               <span className="text-xs text-text-muted">{detail.category}</span>
-              <button onClick={() => setSelectedId(null)} className="ml-auto text-text-muted hover:text-text-primary text-xl">×</button>
+              <button onClick={closeDetailModal} className="ml-auto text-text-muted hover:text-text-primary text-xl">×</button>
             </div>
 
             {/* 내용 스크롤 */}
@@ -181,15 +188,26 @@ export function OpsInquiries() {
         </div>
       )}
 
-      {/* 닫기 확인 모달 */}
+      {/* 닫기 확인 모달 — z-[60]으로 상세 모달(z-50) 위에 렌더링 */}
       {showCloseConfirm && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
           <div className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">이슈를 닫을까요?</h3>
             <p className="text-sm text-text-muted mb-6">사용자에게 완료로 표시되고, 댓글을 더 이상 남길 수 없어요.</p>
             <div className="flex gap-2">
-              <button onClick={() => setShowCloseConfirm(false)} className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm text-text-secondary hover:bg-white/4 transition-colors">취소</button>
-              <button onClick={() => closeMutation.mutate()} disabled={closeMutation.isPending} className="flex-1 py-2.5 rounded-lg bg-success/15 text-success border border-success/25 text-sm font-medium hover:bg-success/25 transition-colors">닫기</button>
+              <button
+                onClick={() => setShowCloseConfirm(false)}
+                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm text-text-secondary hover:bg-white/4 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => closeMutation.mutate()}
+                disabled={closeMutation.isPending}
+                className="flex-1 py-2.5 rounded-lg bg-success/15 text-success border border-success/25 text-sm font-medium hover:bg-success/25 transition-colors"
+              >
+                {closeMutation.isPending ? '처리 중...' : '닫기'}
+              </button>
             </div>
           </div>
         </div>
