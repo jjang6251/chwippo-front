@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/stores/toastStore'
+import { agreeTerms as agreeTermsApi } from '@/api/users'
 
 export function TermsAgreement() {
   const navigate = useNavigate()
@@ -8,6 +9,7 @@ export function TermsAgreement() {
   const [agreePrivacy, setAgreePrivacy] = useState(false)
   const [expandedTerms, setExpandedTerms] = useState(false)
   const [expandedPrivacy, setExpandedPrivacy] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const allAgreed = agreeTerms && agreePrivacy
 
@@ -17,8 +19,14 @@ export function TermsAgreement() {
     setAgreePrivacy(next)
   }
 
-  const handleSubmit = () => {
-    if (!allAgreed) return
+  const handleSubmit = async () => {
+    if (!allAgreed || submitting) return
+    setSubmitting(true)
+    try {
+      await agreeTermsApi()
+    } catch {
+      // 동의 기록 실패해도 서비스 이용은 막지 않음
+    }
     navigate('/dashboard', { replace: true })
     toast.show('취뽀에 오신 것을 환영해요! 첫 지원 카드를 추가해보세요.')
   }
@@ -130,15 +138,15 @@ export function TermsAgreement() {
         {/* 시작 버튼 */}
         <button
           onClick={handleSubmit}
-          disabled={!allAgreed}
+          disabled={!allAgreed || submitting}
           className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all
-            ${allAgreed
+            ${allAgreed && !submitting
               ? 'bg-brand hover:bg-accent text-white shadow-[0_0_20px_rgba(94,106,210,0.3)]'
               : 'bg-white/5 text-text-quaternary cursor-not-allowed'
             }
           `}
         >
-          동의하고 시작하기
+          {submitting ? '처리 중...' : '동의하고 시작하기'}
         </button>
 
         <p className="text-text-quaternary text-xs text-center">
