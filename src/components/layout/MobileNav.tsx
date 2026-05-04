@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 const TABS = [
   { label: '대시보드', path: '/dashboard', icon: GridIcon },
   { label: '보드', path: '/board', icon: BoardIcon },
+  { label: '캘린더', path: '/calendar', icon: CalendarIcon },
   { label: '내정보', path: '/myinfo', icon: StorageIcon },
   { label: '설정', path: '/settings', icon: SettingsIcon },
 ] as const
@@ -15,6 +16,7 @@ export function MobileNav() {
       return location.pathname.startsWith('/settings') || location.pathname === '/inquiry'
     }
     if (path === '/board') return location.pathname.startsWith('/board')
+    if (path === '/calendar') return location.pathname === '/calendar'
     return location.pathname === path
   }
 
@@ -77,6 +79,18 @@ function SettingsIcon({ size }: { size: number }) {
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="10" cy="10" r="2.5" />
       <path d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.1 4.1l1.1 1.1M14.8 14.8l1.1 1.1M4.1 15.9l1.1-1.1M14.8 5.2l1.1-1.1" />
+    </svg>
+  )
+}
+
+function CalendarIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3.5" width="16" height="14" rx="2" />
+      <line x1="2" y1="8.5" x2="18" y2="8.5" />
+      <line x1="6.5" y1="1.5" x2="6.5" y2="5.5" />
+      <line x1="13.5" y1="1.5" x2="13.5" y2="5.5" />
+      <circle cx="10" cy="13" r="1.2" fill="currentColor" stroke="none" />
     </svg>
   )
 }

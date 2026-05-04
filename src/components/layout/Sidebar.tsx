@@ -6,6 +6,7 @@ import { apiClient } from '@/api/client'
 const NAV_ITEMS = [
   { label: '대시보드', path: '/dashboard', icon: GridIcon },
   { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
+  { label: '캘린더', path: '/calendar', icon: CalendarIcon },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
@@ -42,7 +43,7 @@ export function Sidebar() {
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/5">
           <Link to="/dashboard" className="text-lg font-bold text-brand tracking-tight">
-            취뽀
+            치뽀
           </Link>
         </div>
 
@@ -205,4 +206,7 @@ function ChatIcon({ size }: { size: number }) {
 }
 function AdminIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1l1.5 3 3.5.5-2.5 2.5.5 3.5L8 9l-3 1.5.5-3.5L3 4.5 6.5 4z" /></svg>
+}
+function CalendarIcon({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="2.5" width="14" height="12" rx="1.5" /><line x1="1" y1="6.5" x2="15" y2="6.5" /><line x1="5" y1="1" x2="5" y2="4" /><line x1="11" y1="1" x2="11" y2="4" /><circle cx="8" cy="10.5" r="1" fill="currentColor" stroke="none" /></svg>
 }
