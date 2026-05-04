@@ -26,6 +26,7 @@ export interface Inquiry {
 export interface InquiryDetail extends Inquiry {
   comments: InquiryComment[]
   // 어드민 전용 (optional)
+  user_short_id?: string | null
   user_nickname?: string | null
   user_email?: string | null
   user_created_at?: string | null
