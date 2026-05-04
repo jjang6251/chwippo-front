@@ -28,7 +28,7 @@ export function TermsAgreement() {
       // 동의 기록 실패해도 서비스 이용은 막지 않음
     }
     navigate('/dashboard', { replace: true })
-    toast.show('취뽀에 오신 것을 환영해요! 첫 지원 카드를 추가해보세요.')
+    toast.show('치뽀에 오신 것을 환영해요! 첫 지원 카드를 추가해보세요.')
   }
 
   return (
@@ -36,10 +36,10 @@ export function TermsAgreement() {
       <div className="w-full max-w-md flex flex-col gap-8">
         {/* 헤더 */}
         <div className="flex flex-col items-center gap-3">
-          <div className="text-3xl font-bold text-text-primary tracking-tight">취뽀</div>
+          <div className="text-3xl font-bold text-text-primary tracking-tight">치뽀</div>
           <h1 className="text-text-primary text-xl font-semibold">서비스 이용 동의</h1>
           <p className="text-text-tertiary text-sm text-center leading-relaxed">
-            취뽀 서비스를 이용하기 위해<br />아래 약관에 동의해주세요.
+            치뽀 서비스를 이용하기 위해<br />아래 약관에 동의해주세요.
           </p>
         </div>
 
@@ -75,10 +75,10 @@ export function TermsAgreement() {
             {expandedTerms && (
               <div className="px-5 pb-4">
                 <div className="bg-bg rounded-lg p-4 text-text-quaternary text-xs leading-relaxed max-h-40 overflow-y-auto">
-                  <p className="font-medium text-text-tertiary mb-2">취뽀 이용약관</p>
-                  <p>제1조 (목적) 이 약관은 취뽀(이하 "서비스")가 제공하는 취업 일정 관리 서비스의 이용에 관한 조건 및 절차, 서비스 이용자와 서비스 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
+                  <p className="font-medium text-text-tertiary mb-2">치뽀 이용약관</p>
+                  <p>제1조 (목적) 이 약관은 치뽀(이하 "서비스")가 제공하는 취업 일정 관리 서비스의 이용에 관한 조건 및 절차, 서비스 이용자와 서비스 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
                   <br />
-                  <p>제2조 (정의) "서비스"란 취뽀가 제공하는 취업 준비 관련 모든 기능을 의미합니다.</p>
+                  <p>제2조 (정의) "서비스"란 치뽀가 제공하는 취업 준비 관련 모든 기능을 의미합니다.</p>
                   <br />
                   <p>제3조 (서비스 이용) 서비스는 카카오 계정을 통한 로그인으로 이용할 수 있습니다. 서비스를 통해 입력한 정보는 회원의 자산으로 보호됩니다.</p>
                   <br />
@@ -115,7 +115,7 @@ export function TermsAgreement() {
               <div className="px-5 pb-4">
                 <div className="bg-bg rounded-lg p-4 text-text-quaternary text-xs leading-relaxed max-h-40 overflow-y-auto">
                   <p className="font-medium text-text-tertiary mb-2">개인정보처리방침</p>
-                  <p>취뽀는 회원의 개인정보를 중요시하며 정보통신망 이용촉진 및 정보보호 등에 관한 법률과 개인정보 보호법을 준수합니다.</p>
+                  <p>치뽀는 회원의 개인정보를 중요시하며 정보통신망 이용촉진 및 정보보호 등에 관한 법률과 개인정보 보호법을 준수합니다.</p>
                   <br />
                   <p>수집 항목: 카카오 계정 식별자, 닉네임, 이메일(선택)</p>
                   <br />
@@ -150,7 +150,7 @@ export function TermsAgreement() {
         </button>
 
         <p className="text-text-quaternary text-xs text-center">
-          동의 후 취뽀의 모든 기능을 이용할 수 있어요.
+          동의 후 치뽀의 모든 기능을 이용할 수 있어요.
         </p>
       </div>
     </div>

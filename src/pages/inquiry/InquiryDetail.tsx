@@ -106,7 +106,7 @@ function CommentBubble({ comment, isMe }: { comment: InquiryComment; isMe: boole
         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
           isMe ? 'bg-brand/15 text-brand' : 'bg-white/8 text-text-muted'
         }`}>
-          {isMe ? '나' : '취뽀 팀'}
+          {isMe ? '나' : '치뽀 팀'}
         </span>
         <span className="text-[10px] text-text-muted">{dayjs(comment.created_at).format('MM.DD HH:mm')}</span>
       </div>

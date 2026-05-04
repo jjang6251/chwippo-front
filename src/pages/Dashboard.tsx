@@ -43,7 +43,7 @@ export function Dashboard() {
           </h1>
           <span className="text-xl mb-0.5">👋</span>
         </div>
-        <p className="text-text-muted text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
+        <p className="text-text-muted text-sm mt-1">오늘도 치뽀 향해 한 걸음씩!</p>
       </div>
 
       {/* 통계 카드 3개 */}

@@ -67,14 +67,14 @@ export function OpsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">관리자</h1>
-          <p className="text-sm text-text-muted mt-1">취뽀 운영 현황</p>
+          <p className="text-sm text-text-muted mt-1">치뽀 운영 현황</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
             to="/dashboard"
             className="text-xs text-text-muted hover:text-text-secondary bg-surface-2 border border-white/8 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors"
           >
-            ← 취뽀로 돌아가기
+            ← 치뽀로 돌아가기
           </Link>
           <span className="text-xs text-text-muted bg-surface-2 border border-white/5 px-3 py-1 rounded-full">admin</span>
         </div>

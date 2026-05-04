@@ -16,7 +16,7 @@ export function InquiryNew() {
   const mutation = useMutation({
     mutationFn: () => createInquiry({ category, title, content }),
     onSuccess: (data) => {
-      toast.success('접수됐어요. 여러분의 피드백이 취뽀를 만들어갑니다 🙏')
+      toast.success('접수됐어요. 여러분의 피드백이 치뽀를 만들어갑니다 🙏')
       qc.invalidateQueries({ queryKey: ['inquiries', 'my'] })
       navigate(`/inquiry/${data.id}`)
     },

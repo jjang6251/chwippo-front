@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import './index.css'
 
-// 다크모드 항상 켜기 (취뽀는 다크 전용)
+// 다크모드 항상 켜기 (치뽀는 다크 전용)
 document.documentElement.classList.add('dark')
 
 const queryClient = new QueryClient()

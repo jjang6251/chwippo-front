@@ -279,7 +279,7 @@ function AdminCommentBubble({ comment }: { comment: InquiryComment }) {
     <div className={`flex flex-col gap-1 ${isAdmin ? 'items-end' : 'items-start'}`}>
       <div className={`flex items-center gap-1.5 ${isAdmin ? 'flex-row-reverse' : ''}`}>
         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isAdmin ? 'bg-brand/15 text-brand' : 'bg-white/8 text-text-muted'}`}>
-          {isAdmin ? '취뽀 팀' : '사용자'}
+          {isAdmin ? '치뽀 팀' : '사용자'}
         </span>
         <span className="text-[10px] text-text-muted">{dayjs(comment.created_at).format('MM.DD HH:mm')}</span>
       </div>

@@ -23,7 +23,7 @@ export function Inquiry() {
     mutationFn: () => createInquiry({ category, title, content }),
     onSuccess: () => {
       setDone(true)
-      toast.success('접수됐어요. 여러분의 피드백이 취뽀를 만들어갑니다 🙏')
+      toast.success('접수됐어요. 여러분의 피드백이 치뽀를 만들어갑니다 🙏')
     },
     onError: () => toast.error('오류가 발생했습니다. 다시 시도해주세요.'),
   })

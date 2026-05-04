@@ -29,7 +29,7 @@ export function Login() {
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
         {/* 로고 */}
         <div className="flex flex-col items-center gap-3">
-          <div className="text-4xl font-bold text-text-primary tracking-tight">취뽀</div>
+          <div className="text-4xl font-bold text-text-primary tracking-tight">치뽀</div>
           <p className="text-text-tertiary text-sm text-center leading-relaxed">
             취업 준비의 모든 것을<br />한 곳에서 관리하세요
           </p>

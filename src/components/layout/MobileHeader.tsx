@@ -15,7 +15,7 @@ const PAGE_TITLES: Record<string, string> = {
 function getTitle(pathname: string): string {
   if (pathname.startsWith('/board/')) return '카드 상세'
   if (pathname.startsWith('/inquiry/') && pathname !== '/inquiry/new') return '문의 상세'
-  return PAGE_TITLES[pathname] ?? '취뽀'
+  return PAGE_TITLES[pathname] ?? '치뽀'
 }
 
 export function MobileHeader() {
@@ -25,7 +25,7 @@ export function MobileHeader() {
   return (
     <header className="lg:hidden sticky top-0 z-40 bg-surface border-b border-white/5 flex items-center px-4 h-12">
       <Link to="/dashboard" className="text-brand font-bold text-base tracking-tight mr-3">
-        취뽀
+        치뽀
       </Link>
       <span className="text-white/20 text-sm mr-3">|</span>
       <span className="text-text-secondary text-sm font-medium">{title}</span>

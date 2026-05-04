@@ -33,7 +33,7 @@ export function Landing() {
       {/* 상단 네비 */}
       <header className="sticky top-0 z-50 bg-bg/80 backdrop-blur border-b border-white/5">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <span className="text-lg font-bold tracking-tight">취뽀</span>
+          <span className="text-lg font-bold tracking-tight">치뽀</span>
           <button
             onClick={handleKakaoLogin}
             className="text-sm font-medium bg-brand hover:bg-accent text-white px-4 py-2 rounded-lg transition-colors"
@@ -57,7 +57,7 @@ export function Landing() {
 
         <p className="text-text-tertiary text-lg sm:text-xl max-w-xl mx-auto leading-relaxed mb-10">
           지원 현황 관리부터 면접 일정, 자기소개서 소재까지.<br />
-          취뽀 하나로 취업 준비를 끝내세요.
+          치뽀 하나로 취업 준비를 끝내세요.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -130,7 +130,7 @@ export function Landing() {
       <section className="max-w-5xl mx-auto px-6 py-24 text-center">
         <p className="text-brand text-sm font-medium mb-4">함께 만들어가는 서비스</p>
         <h2 className="text-2xl sm:text-3xl font-bold mb-4">
-          여러분의 피드백이<br />취뽀를 만들어갑니다
+          여러분의 피드백이<br />치뽀를 만들어갑니다
         </h2>
         <p className="text-text-tertiary text-sm max-w-md mx-auto mb-10 leading-relaxed">
           취준생이 직접 겪는 불편함을 해결하기 위해 만들었습니다.<br />
@@ -148,12 +148,12 @@ export function Landing() {
       {/* 푸터 */}
       <footer className="border-t border-white/5 py-8">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-text-quaternary text-xs">
-          <span className="font-semibold text-text-tertiary">취뽀</span>
+          <span className="font-semibold text-text-tertiary">치뽀</span>
           <div className="flex items-center gap-6">
             <a href="/terms" className="hover:text-text-tertiary transition-colors">이용약관</a>
             <a href="/privacy" className="hover:text-text-tertiary transition-colors">개인정보처리방침</a>
           </div>
-          <span>© 2025 취뽀. All rights reserved.</span>
+          <span>© 2025 치뽀. All rights reserved.</span>
         </div>
       </footer>
     </div>

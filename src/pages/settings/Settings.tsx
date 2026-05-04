@@ -50,7 +50,7 @@ export function Settings() {
         </button>
       </div>
 
-      <p className="text-center text-xs text-text-muted mt-8 opacity-50">취뽀 · 취준생이 만드는 취업 관리 앱</p>
+      <p className="text-center text-xs text-text-muted mt-8 opacity-50">치뽀 · 취준생이 만드는 취업 관리 앱</p>
     </div>
   )
 }
