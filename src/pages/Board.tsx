@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
 import { CompanyCard } from '@/components/card/CompanyCard'
+import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -42,6 +43,7 @@ export function Board() {
   const [addModalStatus, setAddModalStatus] = useState<'PLANNED' | 'IN_PROGRESS' | null>(null)
   const [startAppId, setStartAppId] = useState<string | null>(null)
   const [resultAppId, setResultAppId] = useState<string | null>(null)
+  const [panelStep, setPanelStep] = useState<{ appId: string; stepId: string } | null>(null)
   const addMenuRef = useRef<HTMLDivElement>(null)
 
   const { data: applications = [], isLoading } = useApplications()
@@ -79,11 +81,16 @@ export function Board() {
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
 
+  const panelApp = panelStep ? applications.find((a) => a.id === panelStep.appId) : null
+  const panelStepData = panelApp
+    ? [...panelApp.steps].sort((a, b) => a.orderIndex - b.orderIndex).find((s) => s.id === panelStep!.stepId) ?? null
+    : null
+
   const countByStatus = (status: ApplicationStatus) => applications.filter((a) => a.status === status).length
   const failedCount = countByStatus('FAILED')
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 ${panelStep ? 'lg:pr-96' : ''}`}>
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -183,13 +190,14 @@ export function Board() {
       ) : sorted.length === 0 ? (
         <EmptyState filter={filter} search={search} onAdd={() => setAddModalStatus('IN_PROGRESS')} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className={`grid gap-3 ${panelStep ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
           {sorted.map((app) => (
             <CompanyCard
               key={app.id}
               application={app}
               onStartApplication={setStartAppId}
               onSetResult={setResultAppId}
+              onCurrentStepClick={(appId, stepId) => setPanelStep({ appId, stepId })}
             />
           ))}
         </div>
@@ -218,6 +226,14 @@ export function Board() {
           onClose={() => setResultAppId(null)}
           applicationId={resultApp.id}
           companyName={resultApp.companyName}
+        />
+      )}
+
+      {panelApp && panelStepData && (
+        <StepDetailPanel
+          appId={panelApp.id}
+          step={panelStepData}
+          onClose={() => setPanelStep(null)}
         />
       )}
     </div>
