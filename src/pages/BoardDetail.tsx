@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import dayjs from 'dayjs'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
@@ -24,15 +25,19 @@ import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from
 interface SortableStepItem {
   id: string
   name: string
+  scheduledDate: string  // datetime-local 형식 'YYYY-MM-DDTHH:mm' or ''
+  location: string
 }
 
 function SortableStepRow({
-  item, index, onChange, onRemove,
+  item, index, onChange, onRemove, onChangeDate, onChangeLocation,
 }: {
   item: SortableStepItem
   index: number
   onChange: (id: string, name: string) => void
   onRemove: (id: string) => void
+  onChangeDate: (id: string, value: string) => void
+  onChangeLocation: (id: string, value: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
 
@@ -40,34 +45,52 @@ function SortableStepRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-2 rounded-lg transition-all ${isDragging ? 'opacity-50 bg-surface-3 shadow-xl z-50' : ''}`}
+      className={`rounded-lg transition-all ${isDragging ? 'opacity-50 bg-surface-3 shadow-xl z-50' : ''}`}
     >
-      {/* 드래그 핸들 */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="flex-none text-text-quaternary hover:text-text-tertiary cursor-grab active:cursor-grabbing p-1 touch-none"
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-          <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-          <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-          <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-        </svg>
-      </button>
-      <span className="text-text-quaternary text-xs w-4 text-center">{index + 1}</span>
-      <input
-        value={item.name}
-        onChange={(e) => onChange(item.id, e.target.value)}
-        className="flex-1 bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all"
-      />
-      <button
-        onClick={() => onRemove(item.id)}
-        className="flex-none text-text-quaternary hover:text-danger transition-colors p-1"
-      >
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-          <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </button>
+      {/* 스텝 이름 행 */}
+      <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="flex-none text-text-quaternary hover:text-text-tertiary cursor-grab active:cursor-grabbing p-1 touch-none"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
+            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
+            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
+          </svg>
+        </button>
+        <span className="text-text-quaternary text-xs w-4 text-center">{index + 1}</span>
+        <input
+          value={item.name}
+          onChange={(e) => onChange(item.id, e.target.value)}
+          className="flex-1 bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all"
+        />
+        <button
+          onClick={() => onRemove(item.id)}
+          className="flex-none text-text-quaternary hover:text-danger transition-colors p-1"
+        >
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+      {/* 날짜/시간 + 장소 행 */}
+      <div className="flex gap-1.5 mt-1 ml-7">
+        <input
+          type="datetime-local"
+          value={item.scheduledDate}
+          onChange={(e) => onChangeDate(item.id, e.target.value)}
+          className="flex-1 bg-surface-3 border border-white/6 rounded-md px-2 py-1.5 text-[11px] text-text-tertiary focus:outline-none focus:border-brand/40 transition-all [color-scheme:dark]"
+        />
+        <input
+          type="text"
+          value={item.location}
+          onChange={(e) => onChangeLocation(item.id, e.target.value)}
+          placeholder="장소"
+          className="w-24 bg-surface-3 border border-white/6 rounded-md px-2 py-1.5 text-[11px] text-text-tertiary placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-all"
+        />
+      </div>
     </div>
   )
 }
@@ -161,7 +184,12 @@ export function BoardDetail() {
   }
 
   const openStepEditor = () => {
-    setEditSteps(sortedSteps.map((s) => ({ id: s.id, name: s.name })))
+    setEditSteps(sortedSteps.map((s) => ({
+      id: s.id,
+      name: s.name,
+      scheduledDate: s.scheduledDate ? dayjs(s.scheduledDate).format('YYYY-MM-DDTHH:mm') : '',
+      location: s.location ?? '',
+    })))
     setShowStepEditor(true)
   }
 
@@ -185,7 +213,14 @@ export function BoardDetail() {
     const valid = editSteps.filter((s) => s.name.trim())
     if (valid.length === 0) return
     updateSteps(
-      { steps: valid.map((s, i) => ({ orderIndex: i, name: s.name.trim() })) },
+      {
+        steps: valid.map((s, i) => ({
+          orderIndex: i,
+          name: s.name.trim(),
+          scheduledDate: s.scheduledDate ? `${s.scheduledDate}:00` : undefined,
+          location: s.location.trim() || undefined,
+        })),
+      },
       {
         onSuccess: () => { setShowStepEditor(false); toast.show('스텝이 저장됐어요.') },
         onError: () => toast.error('저장에 실패했습니다.'),
@@ -389,13 +424,15 @@ export function BoardDetail() {
                   index={i}
                   onChange={(id, name) => setEditSteps((prev) => prev.map((s) => s.id === id ? { ...s, name } : s))}
                   onRemove={(id) => setEditSteps((prev) => prev.filter((s) => s.id !== id))}
+                  onChangeDate={(id, value) => setEditSteps((prev) => prev.map((s) => s.id === id ? { ...s, scheduledDate: value } : s))}
+                  onChangeLocation={(id, value) => setEditSteps((prev) => prev.map((s) => s.id === id ? { ...s, location: value } : s))}
                 />
               ))}
             </div>
           </SortableContext>
         </DndContext>
         <button
-          onClick={() => setEditSteps((prev) => [...prev, { name: '', id: crypto.randomUUID() }])}
+          onClick={() => setEditSteps((prev) => [...prev, { id: crypto.randomUUID(), name: '', scheduledDate: '', location: '' }])}
           className="w-full py-2 text-xs text-text-tertiary border border-dashed border-white/15 rounded-lg hover:border-white/25 hover:text-text-secondary transition-all mb-4"
         >
           + 스텝 추가

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '@/hooks/useCalendar'
 import type { CalendarEvent } from '@/api/calendar'
+import { DailyScheduleModal } from '@/components/calendar/DailyScheduleModal'
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -43,6 +44,10 @@ function fmtDate(dateStr: string) {
 export function Calendar() {
   const [cursor, setCursor] = useState(dayjs().startOf('month'))
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerYear, setPickerYear] = useState(cursor.year())
+  const pickerRef = useRef<HTMLDivElement>(null)
+  const [scheduleDate, setScheduleDate] = useState<string | null>(null)
 
   const year = cursor.year()
   const month = cursor.month() + 1
@@ -75,9 +80,22 @@ export function Calendar() {
   const deadlineCount = events.filter((e) => e.type === 'deadline').length
   const interviewCount = events.filter((e) => e.type === 'interview').length
 
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false)
+    }
+    if (pickerOpen) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [pickerOpen])
+
   function prevMonth() { setCursor((d) => d.subtract(1, 'month')); setSelectedDate(null) }
   function nextMonth() { setCursor((d) => d.add(1, 'month')); setSelectedDate(null) }
   function goToday() { setCursor(dayjs().startOf('month')); setSelectedDate(dayjs().format('YYYY-MM-DD')) }
+  function selectMonth(month: number) {
+    setCursor(cursor.year(pickerYear).month(month).startOf('month'))
+    setSelectedDate(null)
+    setPickerOpen(false)
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
@@ -85,7 +103,63 @@ export function Calendar() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-text-primary text-xl font-bold">{cursor.format('YYYY년 M월')}</h1>
+          <div ref={pickerRef} className="relative">
+            <button
+              onClick={() => { setPickerOpen((o) => !o); setPickerYear(cursor.year()) }}
+              className="flex items-center gap-1 text-text-primary text-xl font-bold hover:text-brand transition-colors"
+            >
+              {cursor.format('YYYY년 M월')}
+              <svg
+                className={`mt-0.5 transition-transform duration-200 ${pickerOpen ? 'rotate-180' : ''}`}
+                width="14" height="14" viewBox="0 0 16 16" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              >
+                <path d="M4 6l4 4 4-4" />
+              </svg>
+            </button>
+
+            {pickerOpen && (
+              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/10 rounded-2xl shadow-2xl p-4 w-56 animate-fadeInUp">
+                {/* 연도 선택 */}
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    onClick={() => setPickerYear((y) => y - 1)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4" /></svg>
+                  </button>
+                  <span className="text-text-primary text-sm font-semibold">{pickerYear}년</span>
+                  <button
+                    onClick={() => setPickerYear((y) => y + 1)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4" /></svg>
+                  </button>
+                </div>
+                {/* 월 그리드 */}
+                <div className="grid grid-cols-4 gap-1">
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const isSelected = pickerYear === cursor.year() && i === cursor.month()
+                    const isCurrentMonth = pickerYear === dayjs().year() && i === dayjs().month()
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => selectMonth(i)}
+                        className={`py-1.5 rounded-lg text-xs font-medium transition-colors
+                          ${isSelected ? 'bg-brand text-white' : ''}
+                          ${!isSelected && isCurrentMonth ? 'text-brand border border-brand/30' : ''}
+                          ${!isSelected && !isCurrentMonth ? 'text-text-secondary hover:bg-white/6' : ''}
+                        `}
+                      >
+                        {i + 1}월
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={goToday}
             className="text-xs font-medium px-2.5 py-1 rounded-md border border-white/10 text-text-tertiary hover:text-text-secondary hover:border-white/20 transition-colors"
@@ -169,6 +243,7 @@ export function Calendar() {
                 <button
                   key={dateStr}
                   onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                  onDoubleClick={() => setScheduleDate(dateStr)}
                   className={`min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-white/3 transition-colors text-left w-full
                     ${isLastRow ? 'border-b-0' : ''}
                     ${(i + 1) % 7 === 0 ? 'border-r-0' : ''}
@@ -276,6 +351,15 @@ export function Calendar() {
             보드로 이동 →
           </Link>
         </div>
+      )}
+
+      {/* 더블클릭 — 하루 일정 모달 */}
+      {scheduleDate && (
+        <DailyScheduleModal
+          date={scheduleDate}
+          events={eventsByDate[scheduleDate] ?? []}
+          onClose={() => setScheduleDate(null)}
+        />
       )}
     </div>
   )
