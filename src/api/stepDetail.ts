@@ -7,6 +7,8 @@ export interface StepDetail {
   name: string
   scheduledDate: string | null
   location: string | null
+  notes: string | null
+  pinnedContent: string | null
 }
 
 export interface ChecklistItem {
@@ -18,7 +20,14 @@ export interface ChecklistItem {
   createdAt: string
 }
 
-export const updateStep = (appId: string, stepId: string, body: { scheduledDate?: string | null; location?: string | null }) =>
+export interface UpdateStepBody {
+  scheduledDate?: string | null
+  location?: string | null
+  notes?: string | null
+  pinnedContent?: string | null
+}
+
+export const updateStep = (appId: string, stepId: string, body: UpdateStepBody) =>
   apiClient.patch<{ data: StepDetail }>(`/applications/${appId}/steps/${stepId}`, body).then((r) => r.data.data)
 
 export const getChecklist = (appId: string, stepId: string) =>

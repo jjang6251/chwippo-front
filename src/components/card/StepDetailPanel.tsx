@@ -8,6 +8,8 @@ interface Step {
   name: string
   scheduledDate: string | null
   location: string | null
+  notes?: string | null
+  pinnedContent?: string | null
 }
 
 interface Props {
@@ -124,6 +126,20 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
               className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
             />
           </section>
+
+          {/* 메모 있음 표시 */}
+          {(step.notes || step.pinnedContent) && (
+            <button
+              onClick={() => navigate(`/board/${appId}/steps/${step.id}`)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-brand/8 border border-brand/20 hover:bg-brand/12 transition-colors text-left"
+            >
+              <span className="text-brand text-xs">📝</span>
+              <span className="text-brand text-xs flex-1">메모 있음 · 전체에서 편집</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-brand/60">
+                <path d="M4 2l4 4-4 4" />
+              </svg>
+            </button>
+          )}
 
           {/* 준비 체크리스트 */}
           <section>

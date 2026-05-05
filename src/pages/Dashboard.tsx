@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { DdayList } from '@/components/dashboard/DdayList'
+import { DdayPinnedCard } from '@/components/dashboard/DdayPinnedCard'
 import { TodoList } from '@/components/dashboard/TodoList'
 import { useDashboardStats, useDdayList } from '@/hooks/useDashboard'
 import { useTodos } from '@/hooks/useTodos'
@@ -31,6 +32,10 @@ export function Dashboard() {
   const doneCount = todayTodos.filter((t) => t.is_done).length
   const totalCount = todayTodos.length
 
+  const pinnedItem = dday?.find(
+    (item) => item.type === 'interview' && item.pinnedContent && item.dday <= 1 && item.dday >= 0,
+  )
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {/* 헤더 */}
@@ -45,6 +50,13 @@ export function Dashboard() {
         </div>
         <p className="text-text-muted text-sm mt-1">오늘도 치뽀 향해 한 걸음씩!</p>
       </div>
+
+      {/* 면접 핀 카드 (D-1 / D-day) */}
+      {pinnedItem && (
+        <div className="mb-6">
+          <DdayPinnedCard item={pinnedItem} />
+        </div>
+      )}
 
       {/* 통계 카드 3개 */}
       <div className="grid grid-cols-3 gap-3 mb-8">
