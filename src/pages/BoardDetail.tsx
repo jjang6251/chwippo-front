@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import dayjs from 'dayjs'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
@@ -13,6 +12,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep, useUpdateSteps } from '@/hooks/useApplications'
 import { StepBar } from '@/components/card/StepBar'
+import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { DdayBadge } from '@/components/card/DdayBadge'
 import { SetResultModal } from '@/components/card/SetResultModal'
 import { Modal } from '@/components/common/Modal'
@@ -25,19 +25,18 @@ import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from
 interface SortableStepItem {
   id: string
   name: string
-  scheduledDate: string  // datetime-local 형식 'YYYY-MM-DDTHH:mm' or ''
-  location: string
+  // scheduledDate/location은 UI에 표시하지 않지만 저장 시 유지하기 위해 보존
+  scheduledDate: string | null
+  location: string | null
 }
 
 function SortableStepRow({
-  item, index, onChange, onRemove, onChangeDate, onChangeLocation,
+  item, index, onChange, onRemove,
 }: {
   item: SortableStepItem
   index: number
   onChange: (id: string, name: string) => void
   onRemove: (id: string) => void
-  onChangeDate: (id: string, value: string) => void
-  onChangeLocation: (id: string, value: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
 
@@ -47,7 +46,6 @@ function SortableStepRow({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`rounded-lg transition-all ${isDragging ? 'opacity-50 bg-surface-3 shadow-xl z-50' : ''}`}
     >
-      {/* 스텝 이름 행 */}
       <div className="flex items-center gap-2">
         <button
           {...attributes}
@@ -74,22 +72,6 @@ function SortableStepRow({
             <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </button>
-      </div>
-      {/* 날짜/시간 + 장소 행 */}
-      <div className="flex gap-1.5 mt-1 ml-7">
-        <input
-          type="datetime-local"
-          value={item.scheduledDate}
-          onChange={(e) => onChangeDate(item.id, e.target.value)}
-          className="flex-1 bg-surface-3 border border-white/6 rounded-md px-2 py-1.5 text-[11px] text-text-tertiary focus:outline-none focus:border-brand/40 transition-all [color-scheme:dark]"
-        />
-        <input
-          type="text"
-          value={item.location}
-          onChange={(e) => onChangeLocation(item.id, e.target.value)}
-          placeholder="장소"
-          className="w-24 bg-surface-3 border border-white/6 rounded-md px-2 py-1.5 text-[11px] text-text-tertiary placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-all"
-        />
       </div>
     </div>
   )
@@ -145,6 +127,7 @@ export function BoardDetail() {
   const [showTagEditor, setShowTagEditor] = useState(false)
   const [editSteps, setEditSteps] = useState<SortableStepItem[]>([])
   const [editTags, setEditTags] = useState<string[]>([])
+  const [openStepId, setOpenStepId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -161,6 +144,7 @@ export function BoardDetail() {
   const sortedSteps = [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex)
   const needsResult = app.status === 'IN_PROGRESS' && app.deadline && calcDday(app.deadline) < 0
   const currentTags = parseTags(app.jobCategory)
+  const openStep = openStepId ? sortedSteps.find((s) => s.id === openStepId) ?? null : null
 
   const save = (field: string) => (value: string) => {
     update(
@@ -187,8 +171,8 @@ export function BoardDetail() {
     setEditSteps(sortedSteps.map((s) => ({
       id: s.id,
       name: s.name,
-      scheduledDate: s.scheduledDate ? dayjs(s.scheduledDate).format('YYYY-MM-DDTHH:mm') : '',
-      location: s.location ?? '',
+      scheduledDate: s.scheduledDate,
+      location: s.location,
     })))
     setShowStepEditor(true)
   }
@@ -217,8 +201,8 @@ export function BoardDetail() {
         steps: valid.map((s, i) => ({
           orderIndex: i,
           name: s.name.trim(),
-          scheduledDate: s.scheduledDate ? `${s.scheduledDate}:00` : undefined,
-          location: s.location.trim() || undefined,
+          scheduledDate: s.scheduledDate || undefined,
+          location: s.location || undefined,
         })),
       },
       {
@@ -349,7 +333,10 @@ export function BoardDetail() {
       {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
         <div className="border border-white/8 bg-surface-2 rounded-2xl p-5 mb-4">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-text-primary text-sm font-semibold">진행 상황</h2>
+            <div>
+              <h2 className="text-text-primary text-sm font-semibold">진행 상황</h2>
+              <p className="text-text-quaternary text-[10px] mt-0.5">스텝 이름을 클릭하면 상세 정보를 입력할 수 있어요</p>
+            </div>
             {app.status !== 'PASSED' && (
               <button
                 onClick={openStepEditor}
@@ -363,6 +350,7 @@ export function BoardDetail() {
             steps={app.steps}
             currentStepIndex={app.currentStepIndex}
             onStepClick={app.status !== 'PASSED' && app.status !== 'FAILED' ? handleStepClick : undefined}
+            onStepNameClick={setOpenStepId}
             size="md"
           />
         </div>
@@ -424,15 +412,13 @@ export function BoardDetail() {
                   index={i}
                   onChange={(id, name) => setEditSteps((prev) => prev.map((s) => s.id === id ? { ...s, name } : s))}
                   onRemove={(id) => setEditSteps((prev) => prev.filter((s) => s.id !== id))}
-                  onChangeDate={(id, value) => setEditSteps((prev) => prev.map((s) => s.id === id ? { ...s, scheduledDate: value } : s))}
-                  onChangeLocation={(id, value) => setEditSteps((prev) => prev.map((s) => s.id === id ? { ...s, location: value } : s))}
                 />
               ))}
             </div>
           </SortableContext>
         </DndContext>
         <button
-          onClick={() => setEditSteps((prev) => [...prev, { id: crypto.randomUUID(), name: '', scheduledDate: '', location: '' }])}
+          onClick={() => setEditSteps((prev) => [...prev, { id: crypto.randomUUID(), name: '', scheduledDate: null, location: null }])}
           className="w-full py-2 text-xs text-text-tertiary border border-dashed border-white/15 rounded-lg hover:border-white/25 hover:text-text-secondary transition-all mb-4"
         >
           + 스텝 추가
@@ -444,6 +430,15 @@ export function BoardDetail() {
           </button>
         </div>
       </Modal>
+
+      {/* 스텝 상세 패널 */}
+      {openStep && (
+        <StepDetailPanel
+          appId={app.id}
+          step={openStep}
+          onClose={() => setOpenStepId(null)}
+        />
+      )}
     </div>
   )
 }

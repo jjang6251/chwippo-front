@@ -12,6 +12,7 @@ interface CompanyCardProps {
   application: Application
   onStartApplication?: (id: string) => void
   onSetResult?: (id: string) => void
+  onCurrentStepClick?: (appId: string, stepId: string) => void
 }
 
 const STATUS_ACCENT: Record<string, string> = {
@@ -26,7 +27,7 @@ function formatRegisteredDate(dateStr: string): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 등록`
 }
 
-export function CompanyCard({ application, onStartApplication, onSetResult }: CompanyCardProps) {
+export function CompanyCard({ application, onStartApplication, onSetResult, onCurrentStepClick }: CompanyCardProps) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -165,26 +166,18 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
         </div>
       )}
 
-      {/* 스텝바 */}
+      {/* 스텝바 + 현재 단계명 */}
       {!isPlanned && application.steps.length > 0 && (
         <div className="mb-2">
           <StepBar
             steps={application.steps}
             currentStepIndex={application.currentStepIndex}
             onStepClick={!isPassed && !isFailed ? handleStepClick : undefined}
+            onStepNameClick={onCurrentStepClick && !isPassed
+              ? (stepId) => onCurrentStepClick(application.id, stepId)
+              : undefined}
             size="sm"
           />
-          {/* 현재 단계 텍스트 */}
-          {(() => {
-            const sorted = [...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)
-            const currentStepName = sorted[application.currentStepIndex]?.name
-            if (!currentStepName || isPassed) return null
-            return (
-              <p className="text-text-tertiary text-xs mt-1.5 truncate">
-                📍 현재: {currentStepName}
-              </p>
-            )
-          })()}
         </div>
       )}
 

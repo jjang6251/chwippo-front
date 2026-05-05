@@ -9,6 +9,7 @@ import { LoginCallback } from '@/pages/LoginCallback'
 import { Dashboard } from '@/pages/Dashboard'
 import { Board } from '@/pages/Board'
 import { BoardDetail } from '@/pages/BoardDetail'
+import { StepPage } from '@/pages/StepPage'
 import { Calendar } from '@/pages/Calendar'
 import { MyInfo } from '@/pages/MyInfo'
 import { InquiryList } from '@/pages/inquiry/InquiryList'
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/board" element={<Board />} />
             <Route path="/board/:id" element={<BoardDetail />} />
+            <Route path="/board/:id/steps/:stepId" element={<StepPage />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/myinfo" element={<MyInfo />} />
             <Route path="/inquiry" element={<InquiryList />} />
