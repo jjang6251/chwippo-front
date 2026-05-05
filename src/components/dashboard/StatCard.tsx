@@ -57,7 +57,7 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
           <span className={`flex-none w-7 h-7 rounded-lg flex items-center justify-center text-sm ${c.iconBg}`}>
             {icon}
           </span>
-          <p className={`text-[11px] font-semibold truncate ${c.label}`}>{label}</p>
+          <p className={`text-xs font-semibold truncate ${c.label}`}>{label}</p>
         </div>
         {filterKey && (
           <svg className="flex-none text-text-quaternary/60" width="11" height="11" viewBox="0 0 12 12" fill="none">
