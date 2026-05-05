@@ -18,7 +18,6 @@ import { SetResultModal } from '@/components/card/SetResultModal'
 import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
 import { toast } from '@/stores/toastStore'
-import { calcDday } from '@/utils/dday'
 import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
 
 // --- 드래그 가능한 스텝 아이템 ---
@@ -100,7 +99,7 @@ function EditableField({
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setLocal(e.target.value),
     onFocus: () => setFocused(true),
     onBlur: handleBlur,
-    onKeyDown: (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter') (e.target as HTMLElement).blur() },
+    onKeyDown: (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLElement).blur() },
     placeholder,
     className: `w-full bg-transparent focus:outline-none transition-all rounded-md px-2 py-1 -mx-2 -my-1
       ${focused ? 'bg-surface-3 ring-1 ring-brand/30' : 'hover:bg-white/4'}
@@ -142,7 +141,12 @@ export function BoardDetail() {
   )
 
   const sortedSteps = [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex)
-  const needsResult = app.status === 'IN_PROGRESS' && app.deadline && calcDday(app.deadline) < 0
+  const currentStep = sortedSteps[app.currentStepIndex]
+  const RESULT_KEYWORDS = ['결과', '발표', '대기']
+  const needsResult =
+    app.status === 'IN_PROGRESS' &&
+    !!currentStep &&
+    RESULT_KEYWORDS.some((kw) => currentStep.name.includes(kw))
   const currentTags = parseTags(app.jobCategory)
   const openStep = openStepId ? sortedSteps.find((s) => s.id === openStepId) ?? null : null
 
@@ -199,6 +203,7 @@ export function BoardDetail() {
     updateSteps(
       {
         steps: valid.map((s, i) => ({
+          id: s.id,
           orderIndex: i,
           name: s.name.trim(),
           scheduledDate: s.scheduledDate || undefined,
@@ -360,8 +365,8 @@ export function BoardDetail() {
       {needsResult && (
         <div className="border border-warning/25 bg-warning/5 rounded-2xl p-4 mb-4 flex items-center justify-between">
           <div>
-            <p className="text-warning text-xs font-medium">⚠️ 마감일이 지났어요</p>
-            <p className="text-text-tertiary text-xs mt-0.5">최종 결과를 입력해주세요.</p>
+            <p className="text-warning text-xs font-medium">⚠️ 결과 대기 중이에요</p>
+            <p className="text-text-tertiary text-xs mt-0.5">합격·불합격 결과를 입력하면 다음 단계로 진행할 수 있어요.</p>
           </div>
           <button
             onClick={() => setShowResultModal(true)}

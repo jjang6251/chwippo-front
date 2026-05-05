@@ -41,7 +41,6 @@ export function StepNoteEditor({ stepName, initialContent, onSave }: Props) {
     },
     onUpdate: ({ editor }) => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
-      setSaveState('idle')
       debounceRef.current = setTimeout(async () => {
         setSaveState('saving')
         try {

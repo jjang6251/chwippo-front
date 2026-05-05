@@ -5,7 +5,6 @@ import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
 import { useUpdateCurrentStep, useDeleteApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
-import { calcDday } from '@/utils/dday'
 import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI, getAvatarColor } from '@/utils/tags'
 
 interface CompanyCardProps {
@@ -38,10 +37,14 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   const isPassed = application.status === 'PASSED'
   const isFailed = application.status === 'FAILED'
   const isPlanned = application.status === 'PLANNED'
+
+  const currentStep = [...application.steps]
+    .sort((a, b) => a.orderIndex - b.orderIndex)[application.currentStepIndex]
+  const RESULT_KEYWORDS = ['결과', '발표', '대기']
   const needsResult =
     application.status === 'IN_PROGRESS' &&
-    application.deadline &&
-    calcDday(application.deadline) < 0
+    !!currentStep &&
+    RESULT_KEYWORDS.some((kw) => currentStep.name.includes(kw))
 
   const tags = parseTags(application.jobCategory)
 

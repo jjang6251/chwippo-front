@@ -45,16 +45,23 @@ export function DdayList({ items, isLoading }: DdayListProps) {
         return (
           <button
             key={i}
-            onClick={() => navigate(`/board/${item.applicationId}`, { state: { from: 'dashboard' } })}
+            onClick={() =>
+              item.type === 'interview' && item.stepId
+                ? navigate(`/board/${item.applicationId}/steps/${item.stepId}`)
+                : navigate(`/board/${item.applicationId}`, { state: { from: 'dashboard' } })
+            }
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-white/6 hover:border-white/12 hover:bg-[#1d1e20] transition-all text-left"
           >
-            <div className={`flex-none w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${avatarColor}`}>
-              {item.companyName.charAt(0)}
+            {/* 타입 아이콘 */}
+            <div className={`flex-none w-8 h-8 rounded-lg flex items-center justify-center text-base ${avatarColor}`}>
+              {item.type === 'deadline' ? '📄' : '🗣️'}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-text-primary text-xs font-medium truncate">{item.companyName}</p>
               <p className="text-text-quaternary text-[10px] truncate">
-                {item.type === 'deadline' ? '서류 마감' : item.stepName}
+                {item.type === 'deadline'
+                  ? '서류 마감'
+                  : `${item.stepName}${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`}
               </p>
             </div>
             <span className={`text-xs font-mono font-semibold flex-none ${VARIANT_CLASS[variant]}`}>
