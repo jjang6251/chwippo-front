@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { useApplication } from '@/hooks/useApplications'
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
+import { StepNoteEditor } from '@/components/editor/StepNoteEditor'
+import { PinnedNoteField } from '@/components/editor/PinnedNoteField'
 
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
@@ -35,6 +37,19 @@ export function StepPage() {
 
   function handleLocationBlur() {
     updateStep({ stepId: stepId!, location: location || null })
+  }
+
+  async function handleSaveNotes(json: string) {
+    await new Promise<void>((resolve, reject) =>
+      updateStep(
+        { stepId: stepId!, notes: json },
+        { onSuccess: () => resolve(), onError: () => reject() },
+      ),
+    )
+  }
+
+  function handleSavePinnedContent(value: string | null) {
+    updateStep({ stepId: stepId!, pinnedContent: value })
   }
 
   function handleAddItem() {
@@ -105,6 +120,24 @@ export function StepPage() {
             onBlur={handleLocationBlur}
             placeholder="예: 강남역 3번 출구 위워크 3층"
             className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
+          />
+        </section>
+
+        {/* 핵심 메모 (핀) */}
+        <section>
+          <PinnedNoteField
+            initialValue={step.pinnedContent ?? null}
+            onSave={handleSavePinnedContent}
+          />
+        </section>
+
+        {/* 자유 메모 */}
+        <section>
+          <p className="text-[10px] font-medium text-text-quaternary uppercase tracking-wide mb-3">메모</p>
+          <StepNoteEditor
+            stepName={step.name}
+            initialContent={step.notes ?? null}
+            onSave={handleSaveNotes}
           />
         </section>
 

@@ -10,6 +10,8 @@ const makeStep = (orderIndex: number, name: string): ApplicationStep => ({
   name,
   scheduledDate: null,
   location: null,
+  notes: null,
+  pinnedContent: null,
 })
 
 const DEFAULT_STEPS: ApplicationStep[] = [

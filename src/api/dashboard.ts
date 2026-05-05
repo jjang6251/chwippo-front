@@ -9,10 +9,13 @@ export interface DashboardStats {
 export interface DdayItem {
   type: 'deadline' | 'interview'
   applicationId: string
+  stepId?: string
   companyName: string
   stepName?: string
   date: string
+  scheduledTime?: string
   dday: number
+  pinnedContent?: string | null
 }
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
