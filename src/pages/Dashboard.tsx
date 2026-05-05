@@ -135,7 +135,7 @@ export function Dashboard() {
               <p className="text-2xl">🎯</p>
               <p className="text-text-tertiary text-xs">아직 목표가 없어요</p>
               <button
-                onClick={() => navigate('/myinfo')}
+                onClick={() => navigate('/myinfo#goals')}
                 className="mt-1 text-[11px] text-brand hover:text-accent transition-colors"
               >
                 내 정보 창고에서 목표 추가하기 →

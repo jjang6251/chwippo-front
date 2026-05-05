@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   useProfile, useUpdateProfile,
   useLangCerts, useCreateLangCert, useUpdateLangCert, useDeleteLangCert,
@@ -201,6 +202,26 @@ export function MyInfo() {
   const [activeSection, setActiveSection] = useState('profile')
   const isProgrammaticScroll = useRef(false)
   const scrollLockTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const location = useLocation()
+
+  // URL hash로 진입 시 해당 섹션으로 자동 스크롤 (예: /myinfo#goals)
+  useEffect(() => {
+    const hash = location.hash.replace('#', '')
+    if (!hash) return
+    const tryScroll = (attempts = 0) => {
+      const el = sectionRefs.current[hash]
+      if (el) {
+        setActiveSection(hash)
+        isProgrammaticScroll.current = true
+        const top = el.getBoundingClientRect().top + window.scrollY - 24
+        window.scrollTo({ top, behavior: 'smooth' })
+        scrollLockTimer.current = setTimeout(() => { isProgrammaticScroll.current = false }, 800)
+      } else if (attempts < 10) {
+        setTimeout(() => tryScroll(attempts + 1), 100)
+      }
+    }
+    tryScroll()
+  }, [location.hash])
 
   useEffect(() => {
     const handleScroll = () => {
