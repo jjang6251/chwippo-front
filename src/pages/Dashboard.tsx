@@ -1,20 +1,41 @@
-import { useNavigate } from 'react-router-dom'
-import { StatCard } from '@/components/dashboard/StatCard'
-import { DdayList } from '@/components/dashboard/DdayList'
+import { useState } from 'react'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import { DdayPinnedCard } from '@/components/dashboard/DdayPinnedCard'
-import { TodoList } from '@/components/dashboard/TodoList'
+import { SectionWrapper } from '@/components/dashboard/SectionWrapper'
+import { AddSectionSheet } from '@/components/dashboard/AddSectionSheet'
+import { StatsSection } from '@/components/dashboard/sections/StatsSection'
+import { DdaySection } from '@/components/dashboard/sections/DdaySection'
+import { TodosSection } from '@/components/dashboard/sections/TodosSection'
+import { GoalsSection } from '@/components/dashboard/sections/GoalsSection'
 import { useDashboardStats, useDdayList } from '@/hooks/useDashboard'
+import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
 import { useTodos } from '@/hooks/useTodos'
 import { useProfile } from '@/hooks/useMyinfo'
 import { useAuthStore } from '@/stores/authStore'
 
 export function Dashboard() {
-  const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: dday, isLoading: ddayLoading } = useDdayList()
   const { data: todos, isLoading: todosLoading } = useTodos()
   const { data: profile } = useProfile()
+  const { data: config } = useDashboardConfig()
+  const { mutate: saveConfig } = useUpdateDashboardConfig()
+
+  const [editMode, setEditMode] = useState(false)
+  const [showAddSheet, setShowAddSheet] = useState(false)
 
   const goals = profile?.goal_other
     ?.split('\n')
@@ -28,131 +49,133 @@ export function Dashboard() {
   const dayNames = ['일', '월', '화', '수', '목', '금', '토']
   const day = dayNames[now.getDay()]
 
-  const todayTodos = todos?.filter((t) => t.date === todayStr) ?? []
-  const doneCount = todayTodos.filter((t) => t.is_done).length
-  const totalCount = todayTodos.length
-
   const pinnedItem = dday?.find(
     (item) => item.type === 'interview' && item.pinnedContent && item.dday <= 1 && item.dday >= 0,
   )
+
+  const sections = config?.sections ?? []
+  // stats는 항상 최상단 고정 — DndContext 밖에서 별도 렌더링
+  const draggableSections = sections.filter((s) => s.visible && s.id !== 'stats')
+  const draggableIds = draggableSections.map((s) => s.id)
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = draggableIds.indexOf(active.id as string)
+    const newIndex = draggableIds.indexOf(over.id as string)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove(draggableSections, oldIndex, newIndex)
+    const statsSection = sections.find((s) => s.id === 'stats') ?? { id: 'stats', visible: true }
+    saveConfig({ sections: [statsSection, ...reordered] })
+  }
+
+  function handleRemove(id: string) {
+    const newSections = sections.map((s) => s.id === id ? { ...s, visible: false } : s)
+    saveConfig({ sections: newSections })
+  }
+
+  function handleAdd(id: string) {
+    const existing = sections.find((s) => s.id === id)
+    const statsSection = sections.find((s) => s.id === 'stats') ?? { id: 'stats', visible: true }
+    const rest = sections.filter((s) => s.id !== 'stats')
+    let newRest
+    if (existing) {
+      newRest = rest.map((s) => s.id === id ? { ...s, visible: true } : s)
+    } else {
+      newRest = [...rest, { id, visible: true }]
+    }
+    saveConfig({ sections: [statsSection, ...newRest] })
+  }
+
+  function renderSectionContent(id: string) {
+    switch (id) {
+      case 'dday':   return <DdaySection items={dday} isLoading={ddayLoading} />
+      case 'todos':  return <TodosSection todos={todos} isLoading={todosLoading} todayStr={todayStr} />
+      case 'goals':  return <GoalsSection goals={goals} />
+      default:       return null
+    }
+  }
+
+  const activeSectionIds = sections.filter((s) => s.visible).map((s) => s.id)
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {/* 헤더 */}
       <div className="mb-8">
         <p className="text-text-muted text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>
-        <div className="flex items-end gap-2">
-          <h1 className="text-text-primary text-2xl font-bold leading-tight">
-            안녕하세요,{' '}
-            <span className="text-brand">{user?.nickname ?? ''}님</span>
-          </h1>
-          <span className="text-xl mb-0.5">👋</span>
+        <div className="flex items-end justify-between gap-2">
+          <div className="flex items-end gap-2">
+            <h1 className="text-text-primary text-2xl font-bold leading-tight">
+              안녕하세요,{' '}
+              <span className="text-brand">{user?.nickname ?? ''}님</span>
+            </h1>
+            <span className="text-xl mb-0.5">👋</span>
+          </div>
+          <button
+            onClick={() => setEditMode((v) => !v)}
+            className={`flex-none text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${
+              editMode
+                ? 'bg-brand/20 border-brand/40 text-brand'
+                : 'bg-white/5 border-white/10 text-text-quaternary hover:text-text-tertiary'
+            }`}
+          >
+            {editMode ? '완료' : '편집'}
+          </button>
         </div>
-        <p className="text-text-muted text-sm mt-1">오늘도 치뽀 향해 한 걸음씩!</p>
+        <p className="text-text-muted text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
       </div>
 
-      {/* 면접 핀 카드 (D-1 / D-day) */}
+      {/* 면접 핀 카드 (D-1 / D-day) — 커스터마이징 대상 아님 */}
       {pinnedItem && (
         <div className="mb-6">
           <DdayPinnedCard item={pinnedItem} />
         </div>
       )}
 
-      {/* 통계 카드 3개 */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        <StatCard
-          label="전체 지원"
-          value={stats?.total}
-          icon="📋"
-          description="서류부터 최종까지 진행 중인 기업"
-          filterKey="all"
-          accent="brand"
-          isLoading={statsLoading}
-        />
-        <StatCard
-          label="면접 진행중"
-          value={stats?.interviews}
-          icon="🗓️"
-          description="현재 면접 단계에 있는 기업"
-          filterKey="IN_PROGRESS"
-          accent="warning"
-          isLoading={statsLoading}
-        />
-        <StatCard
-          label="최종 합격"
-          value={stats?.passed}
-          icon="🎉"
-          description="합격이 확정된 기업"
-          filterKey="PASSED"
-          accent="success"
-          isLoading={statsLoading}
-        />
+      {/* stats 섹션 — 항상 최상단 고정, 드래그 없음 */}
+      <div className="mb-6 bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4">
+        <StatsSection stats={stats} isLoading={statsLoading} />
       </div>
 
-      {/* 오늘 할 일 */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-text-primary text-sm font-semibold">✅ 오늘 할 일</h2>
-          {totalCount > 0 && (
-            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
-              doneCount === totalCount
-                ? 'bg-success/15 text-success border border-success/20'
-                : 'bg-white/8 text-text-tertiary border border-white/10'
-            }`}>
-              {doneCount} / {totalCount} 완료
-            </span>
-          )}
-        </div>
-        <div className="bg-surface-2 border border-white/7 rounded-xl p-4">
-          <TodoList todos={todos} isLoading={todosLoading} />
-        </div>
-      </section>
-
-      {/* D-day 임박 */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-text-primary text-sm font-semibold">📅 D-day 임박</h2>
-        </div>
-        <div className="bg-surface-2 border border-white/7 rounded-xl p-4">
-          <DdayList items={dday} isLoading={ddayLoading} />
-        </div>
-      </section>
-
-      {/* 내 스펙 목표 */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-text-primary text-sm font-semibold">🎯 내 스펙 목표</h2>
-          <button
-            onClick={() => navigate('/myinfo#goals')}
-            className="text-[11px] text-text-quaternary hover:text-text-tertiary transition-colors"
-          >
-            편집 →
-          </button>
-        </div>
-        <div className="bg-surface-2 border border-white/7 rounded-xl p-4">
-          {goals.length === 0 ? (
-            <div className="flex flex-col items-center py-6 gap-2 text-center">
-              <p className="text-2xl">🎯</p>
-              <p className="text-text-tertiary text-xs">아직 목표가 없어요</p>
-              <button
-                onClick={() => navigate('/myinfo#goals')}
-                className="mt-1 text-[11px] text-brand hover:text-accent transition-colors"
+      {/* 드래그 가능한 섹션들 */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-4">
+            {draggableSections.map((s) => (
+              <SectionWrapper
+                key={s.id}
+                id={s.id}
+                editMode={editMode}
+                onRemove={() => handleRemove(s.id)}
               >
-                내 정보 창고에서 목표 추가하기 →
-              </button>
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {goals.map((goal, i) => (
-                <li key={i} className="flex items-center gap-2.5 text-xs text-text-secondary">
-                  <span className="w-1.5 h-1.5 rounded-full bg-danger/60 flex-none" />
-                  {goal}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+                {renderSectionContent(s.id)}
+              </SectionWrapper>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+
+      {/* 편집 모드: 섹션 추가 */}
+      {editMode && (
+        <button
+          onClick={() => setShowAddSheet(true)}
+          className="mt-4 w-full py-3 rounded-xl border border-dashed border-white/15 text-text-quaternary text-xs hover:border-brand/40 hover:text-brand transition-colors"
+        >
+          + 섹션 추가
+        </button>
+      )}
+
+      {showAddSheet && (
+        <AddSectionSheet
+          activeSectionIds={activeSectionIds}
+          onAdd={handleAdd}
+          onClose={() => setShowAddSheet(false)}
+        />
+      )}
     </div>
   )
 }
