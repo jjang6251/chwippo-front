@@ -252,7 +252,7 @@ function EmptyState({ filter, search, onAdd }: { filter: FilterTab; search: stri
   }
 
   const messages: Record<FilterTab, { emoji: string; title: string; desc: string }> = {
-    all: { emoji: '📋', title: '아직 지원한 곳이 없어요', desc: '첫 지원 카드를 추가해보세요!' },
+    all: { emoji: '📋', title: '아직 지원한 회사가 없어요', desc: '첫 지원 카드를 추가해보세요!' },
     PLANNED: { emoji: '📌', title: '지원 예정 카드가 없어요', desc: '관심 기업을 미리 등록해두세요.' },
     IN_PROGRESS: { emoji: '🚀', title: '진행 중인 지원이 없어요', desc: '지원을 시작해보세요!' },
     PASSED: { emoji: '🎉', title: '아직 합격한 곳이 없어요', desc: '곧 좋은 소식이 올 거예요!' },
@@ -270,7 +270,7 @@ function EmptyState({ filter, search, onAdd }: { filter: FilterTab; search: stri
           onClick={onAdd}
           className="bg-brand hover:bg-accent text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
         >
-          + 첫 카드 추가하기
+          + 첫 회사 추가하기
         </button>
       )}
     </div>

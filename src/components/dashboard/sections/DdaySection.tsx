@@ -9,7 +9,7 @@ interface DdaySectionProps {
 export function DdaySection({ items, isLoading }: DdaySectionProps) {
   return (
     <section>
-      <h2 className="text-text-primary text-sm font-semibold mb-3">📅 D-day 임박</h2>
+      <h2 className="text-text-primary text-base font-semibold mb-3">📅 D-day 임박</h2>
       <DdayList items={items} isLoading={isLoading} />
     </section>
   )

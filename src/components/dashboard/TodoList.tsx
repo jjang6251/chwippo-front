@@ -137,7 +137,7 @@ function TodoItem({ todo, onToggle, onDelete, onCarryOver, carryOverButton, dimm
         )}
         <button
           onClick={onDelete}
-          className="w-5 h-5 flex items-center justify-center text-text-quaternary hover:text-danger transition-colors"
+          className="w-7 h-7 flex items-center justify-center text-text-quaternary hover:text-danger transition-colors"
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
             <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />

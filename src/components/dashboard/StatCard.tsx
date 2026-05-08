@@ -45,7 +45,7 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
     <div
       onClick={() => filterKey && navigate(`/board?filter=${filterKey}`)}
       className={`
-        bg-gradient-to-b ${c.gradient} to-surface-2
+        bg-gradient-to-b ${c.gradient} to-white/[0.04]
         border ${c.border} rounded-xl p-3.5
         transition-all duration-200 flex flex-col gap-2.5
         ${filterKey ? `cursor-pointer hover:brightness-110 hover:shadow-lg ${c.glow}` : ''}
@@ -70,7 +70,7 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
       {isLoading ? (
         <div className="h-8 w-8 bg-white/8 rounded animate-pulse" />
       ) : (
-        <p className={`text-3xl font-bold tabular-nums leading-none ${c.value}`}>{value ?? 0}</p>
+        <p className={`text-3xl font-bold font-mono tabular-nums leading-none ${c.value}`}>{value ?? 0}</p>
       )}
 
       {/* 설명 */}

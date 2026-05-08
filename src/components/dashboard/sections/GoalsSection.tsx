@@ -10,7 +10,7 @@ export function GoalsSection({ goals }: GoalsSectionProps) {
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-text-primary text-sm font-semibold">🎯 내 스펙 목표</h2>
+        <h2 className="text-text-primary text-base font-semibold">🎯 내 스펙 목표</h2>
         <button
           onClick={() => navigate('/myinfo#goals')}
           className="text-[11px] text-text-quaternary hover:text-text-tertiary transition-colors"

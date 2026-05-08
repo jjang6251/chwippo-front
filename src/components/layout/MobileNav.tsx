@@ -30,10 +30,10 @@ export function MobileNav() {
             to={path}
             className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors"
           >
-            <span className={active ? 'text-brand' : 'text-text-muted'}>
+            <span className={active ? 'text-brand' : 'text-text-quaternary'}>
               <Icon size={20} />
             </span>
-            <span className={`text-[10px] font-medium ${active ? 'text-brand' : 'text-text-muted'}`}>
+            <span className={`text-[10px] font-medium ${active ? 'text-brand' : 'text-text-quaternary'}`}>
               {label}
             </span>
           </Link>

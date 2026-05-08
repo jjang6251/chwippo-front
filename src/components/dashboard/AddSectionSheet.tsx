@@ -35,10 +35,17 @@ export function AddSectionSheet({ activeSectionIds, onAdd, onClose }: AddSection
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-sm bg-surface border border-white/10 rounded-t-2xl sm:rounded-2xl p-5">
+      <div className="relative z-10 w-full max-w-sm bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-text-primary text-sm font-semibold">섹션 추가</h3>
-          <button onClick={onClose} className="text-text-quaternary hover:text-text-tertiary text-lg leading-none">×</button>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-white/5 transition-colors"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
 
         {addable.length === 0 ? (
@@ -50,7 +57,7 @@ export function AddSectionSheet({ activeSectionIds, onAdd, onClose }: AddSection
                 <button
                   onClick={() => { if (s.available) { onAdd(s.id); onClose() } }}
                   disabled={!s.available}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors
                     ${s.available
                       ? 'border-white/8 hover:bg-white/5 cursor-pointer'
                       : 'border-white/5 opacity-50 cursor-not-allowed'

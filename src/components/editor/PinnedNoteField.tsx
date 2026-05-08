@@ -13,7 +13,7 @@ export function PinnedNoteField({ initialValue, onSave }: Props) {
   }
 
   return (
-    <div className="border border-brand/30 bg-brand/5 rounded-2xl p-5">
+    <div className="border border-brand/30 bg-brand/5 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-brand text-sm">📌</span>
         <p className="text-[10px] font-medium text-brand uppercase tracking-wide">핵심 메모</p>

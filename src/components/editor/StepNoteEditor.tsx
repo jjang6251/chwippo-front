@@ -72,7 +72,7 @@ export function StepNoteEditor({ stepName, initialContent, onSave }: Props) {
   const isEmpty = editor ? editor.isEmpty : true
 
   return (
-    <div className="border border-white/8 bg-surface-2 rounded-2xl overflow-hidden">
+    <div className="border border-white/8 bg-surface-2 rounded-xl overflow-hidden">
       {editor && <EditorToolbar editor={editor} />}
 
       <EditorContent editor={editor} />

@@ -124,6 +124,8 @@ export function BoardDetail() {
   const [showResultModal, setShowResultModal] = useState(false)
   const [showStepEditor, setShowStepEditor] = useState(false)
   const [showTagEditor, setShowTagEditor] = useState(false)
+  const [showPassConfirm, setShowPassConfirm] = useState(false)
+  const [pendingStepIndex, setPendingStepIndex] = useState<number | null>(null)
   const [editSteps, setEditSteps] = useState<SortableStepItem[]>([])
   const [editTags, setEditTags] = useState<string[]>([])
   const [openStepId, setOpenStepId] = useState<string | null>(null)
@@ -163,9 +165,8 @@ export function BoardDetail() {
   const handleStepClick = (index: number) => {
     const isLastStep = index === sortedSteps.length - 1
     if (isLastStep) {
-      if (confirm(`"${sortedSteps[index].name}"을(를) 완료하면 최종 합격으로 처리됩니다.`)) {
-        updateStep({ id: app.id, stepIndex: index })
-      }
+      setPendingStepIndex(index)
+      setShowPassConfirm(true)
     } else {
       updateStep({ id: app.id, stepIndex: index })
     }
@@ -241,7 +242,7 @@ export function BoardDetail() {
       </button>
 
       {/* 기본 정보 카드 */}
-      <div className={`border rounded-2xl p-6 mb-4 ${app.status === 'PASSED' ? 'border-success/25 bg-gradient-to-br from-success/6 to-surface-2' : 'border-white/8 bg-surface-2'}`}>
+      <div className={`border rounded-xl p-6 mb-4 ${app.status === 'PASSED' ? 'border-success/25 bg-gradient-to-br from-success/6 to-surface-2' : 'border-white/8 bg-surface-2'}`}>
         <div className="flex items-start gap-4 mb-5">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold flex-none ${app.status === 'PASSED' ? 'bg-success/15 text-success' : 'bg-brand/12 text-brand'}`}>
             {app.companyName.charAt(0)}
@@ -336,7 +337,7 @@ export function BoardDetail() {
 
       {/* 스텝바 */}
       {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
-        <div className="border border-white/8 bg-surface-2 rounded-2xl p-5 mb-4">
+        <div className="border border-white/8 bg-surface-2 rounded-xl p-5 mb-4">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-text-primary text-sm font-semibold">진행 상황</h2>
@@ -363,7 +364,7 @@ export function BoardDetail() {
 
       {/* 결과 처리 */}
       {needsResult && (
-        <div className="border border-warning/25 bg-warning/5 rounded-2xl p-4 mb-4 flex items-center justify-between">
+        <div className="border border-warning/25 bg-warning/5 rounded-xl p-4 mb-4 flex items-center justify-between">
           <div>
             <p className="text-warning text-xs font-medium">⚠️ 결과 대기 중이에요</p>
             <p className="text-text-tertiary text-xs mt-0.5">합격·불합격 결과를 입력하면 다음 단계로 진행할 수 있어요.</p>
@@ -376,7 +377,7 @@ export function BoardDetail() {
       )}
 
       {/* 메모 */}
-      <div className="border border-white/8 bg-surface-2 rounded-2xl p-5">
+      <div className="border border-white/8 bg-surface-2 rounded-xl p-5">
         <h2 className="text-text-primary text-sm font-semibold mb-3">메모</h2>
         <EditableField
           value={app.memo ?? ''}
@@ -444,6 +445,39 @@ export function BoardDetail() {
           onClose={() => setOpenStepId(null)}
         />
       )}
+
+      {/* 최종 합격 확인 모달 */}
+      {showPassConfirm && pendingStepIndex !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowPassConfirm(false)}
+        >
+          <div
+            className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-2xl mb-3">🎉</div>
+            <h3 className="text-text-primary font-semibold text-sm mb-1">최종 합격 처리할까요?</h3>
+            <p className="text-text-tertiary text-xs mb-5">
+              <span className="text-text-secondary font-medium">{sortedSteps[pendingStepIndex]?.name}</span> 완료 시 이 카드가 최종 합격으로 전환됩니다.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowPassConfirm(false)}
+                className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { updateStep({ id: app.id, stepIndex: pendingStepIndex }); setShowPassConfirm(false) }}
+                className="flex-1 py-2.5 text-xs font-medium text-white bg-success/80 hover:bg-success rounded-lg transition-colors"
+              >
+                합격 처리
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -452,7 +486,7 @@ function DetailSkeleton() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 animate-pulse">
       <div className="h-3 bg-white/6 rounded w-24 mb-6" />
-      <div className="border border-white/8 bg-surface-2 rounded-2xl p-6 mb-4">
+      <div className="border border-white/8 bg-surface-2 rounded-xl p-6 mb-4">
         <div className="flex gap-4 mb-5">
           <div className="w-12 h-12 bg-white/6 rounded-xl" />
           <div className="flex-1"><div className="h-5 bg-white/8 rounded w-32 mb-2" /><div className="h-3 bg-white/5 rounded w-24" /></div>

@@ -106,7 +106,7 @@ export function Dashboard() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {/* 헤더 */}
       <div className="mb-8">
-        <p className="text-text-muted text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>
+        <p className="text-text-quaternary text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>
         <div className="flex items-end justify-between gap-2">
           <div className="flex items-end gap-2">
             <h1 className="text-text-primary text-2xl font-bold leading-tight">
@@ -126,7 +126,7 @@ export function Dashboard() {
             {editMode ? '완료' : '편집'}
           </button>
         </div>
-        <p className="text-text-muted text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
+        <p className="text-text-quaternary text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
       </div>
 
       {/* 면접 핀 카드 (D-1 / D-day) — 커스터마이징 대상 아님 */}
@@ -137,7 +137,7 @@ export function Dashboard() {
       )}
 
       {/* stats 섹션 — 항상 최상단 고정, 드래그 없음 */}
-      <div className="mb-6 bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4">
+      <div className="mb-6 bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
         <StatsSection stats={stats} isLoading={statsLoading} />
       </div>
 

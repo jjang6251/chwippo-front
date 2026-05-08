@@ -87,6 +87,8 @@ export function Sidebar() {
           {/* 설정 (accordion) */}
           <button
             onClick={() => setSettingsOpen((o) => !o)}
+            aria-expanded={settingsOpen}
+            aria-controls="settings-submenu"
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-left ${
               isSettingsActive
                 ? 'bg-brand/10 text-brand'
@@ -99,7 +101,7 @@ export function Sidebar() {
           </button>
 
           {settingsOpen && (
-            <div className="ml-7 flex flex-col gap-0.5">
+            <div id="settings-submenu" className="ml-7 flex flex-col gap-0.5">
               {SETTINGS_SUB.map(({ label, path }) => (
                 <Link
                   key={path}
@@ -107,7 +109,7 @@ export function Sidebar() {
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     location.pathname === path
                       ? 'text-brand bg-brand/8'
-                      : 'text-text-muted hover:text-text-secondary hover:bg-white/3'
+                      : 'text-text-quaternary hover:text-text-secondary hover:bg-white/3'
                   }`}
                 >
                   {label}
@@ -158,9 +160,9 @@ export function Sidebar() {
       {/* 로그아웃 확인 모달 */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-xs">
+          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">로그아웃 하시겠어요?</h3>
-            <p className="text-sm text-text-muted mb-6">로그인 화면으로 이동합니다.</p>
+            <p className="text-sm text-text-quaternary mb-6">로그인 화면으로 이동합니다.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}

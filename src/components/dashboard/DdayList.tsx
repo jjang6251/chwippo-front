@@ -39,12 +39,12 @@ export function DdayList({ items, isLoading }: DdayListProps) {
 
   return (
     <div className="space-y-1.5">
-      {items.map((item, i) => {
+      {items.map((item) => {
         const variant = getDdayVariant(item.dday)
         const avatarColor = getAvatarColor(item.companyName)
         return (
           <button
-            key={i}
+            key={`${item.applicationId}-${item.type}`}
             onClick={() =>
               item.type === 'interview' && item.stepId
                 ? navigate(`/board/${item.applicationId}/steps/${item.stepId}`)

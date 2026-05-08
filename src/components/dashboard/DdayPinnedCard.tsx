@@ -15,7 +15,7 @@ export function DdayPinnedCard({ item }: Props) {
   return (
     <button
       onClick={() => navigate(`/board/${item.applicationId}/steps/${item.stepId}`)}
-      className="w-full text-left border border-brand/30 bg-brand/8 rounded-2xl p-4 hover:bg-brand/12 transition-colors"
+      className="w-full text-left border border-brand/30 bg-brand/8 rounded-xl p-4 hover:bg-brand/12 transition-colors"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>

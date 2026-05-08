@@ -132,7 +132,7 @@ export function OpsInquiries() {
       {/* 상세 모달 */}
       {selectedId && detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-surface border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+          <div className="bg-surface border border-white/10 rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
             {/* 모달 헤더 */}
             <div className="flex items-center gap-2 px-6 py-4 border-b border-white/5">
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[detail.status]}`}>
@@ -215,7 +215,7 @@ export function OpsInquiries() {
       {/* 닫기 확인 모달 — z-[60]으로 상세 모달(z-50) 위에 렌더링 */}
       {showCloseConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
-          <div className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-xs">
+          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">이슈를 닫을까요?</h3>
             <p className="text-sm text-text-muted mb-6">사용자에게 완료로 표시되고, 댓글을 더 이상 남길 수 없어요.</p>
             <div className="flex gap-2">

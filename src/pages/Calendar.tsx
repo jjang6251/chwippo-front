@@ -8,25 +8,25 @@ import { DailyScheduleModal } from '@/components/calendar/DailyScheduleModal'
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 
-// 서류 마감: 주황(amber) / 면접: 초록(emerald)
+// 서류 마감: warning(#fb923c) / 면접: info(#7170ff)
 const COLOR = {
   deadline: {
-    dot: 'bg-amber-400',
-    pill: 'bg-amber-400/15 text-amber-300',
-    badge: 'bg-amber-400/12 text-amber-400',
-    border: 'border-amber-400/25',
+    dot: 'bg-warning',
+    pill: 'bg-warning/10 text-warning',
+    badge: 'bg-warning/10 text-warning',
+    border: 'border-warning/25',
     icon: '📄',
     label: '서류',
-    summary: 'text-amber-400',
+    summary: 'text-warning',
   },
   interview: {
-    dot: 'bg-emerald-400',
-    pill: 'bg-emerald-400/15 text-emerald-300',
-    badge: 'bg-emerald-400/12 text-emerald-400',
-    border: 'border-emerald-400/25',
+    dot: 'bg-info',
+    pill: 'bg-info/10 text-info',
+    badge: 'bg-info/10 text-info',
+    border: 'border-info/25',
     icon: '🗓️',
     label: '면접',
-    summary: 'text-emerald-400',
+    summary: 'text-info',
   },
 } as const
 
@@ -119,7 +119,7 @@ export function Calendar() {
             </button>
 
             {pickerOpen && (
-              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/10 rounded-2xl shadow-2xl p-4 w-56 animate-fadeInUp">
+              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/10 rounded-xl shadow-2xl p-4 w-56 animate-fadeInUp">
                 {/* 연도 선택 */}
                 <div className="flex items-center justify-between mb-3">
                   <button
@@ -182,8 +182,8 @@ export function Calendar() {
         <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-white/5 rounded-xl">
           <span className="text-xs text-text-quaternary">이번 달</span>
           {deadlineCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-amber-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+            <span className="flex items-center gap-1.5 text-xs font-medium text-warning">
+              <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
               서류 마감 {deadlineCount}건
             </span>
           )}
@@ -191,8 +191,8 @@ export function Calendar() {
             <span className="text-white/10">|</span>
           )}
           {interviewCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+            <span className="flex items-center gap-1.5 text-xs font-medium text-info">
+              <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0" />
               면접 일정 {interviewCount}건
             </span>
           )}
@@ -200,14 +200,14 @@ export function Calendar() {
       )}
 
       {/* Calendar grid */}
-      <div className="bg-surface-2 border border-white/5 rounded-2xl overflow-hidden">
+      <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden">
         {/* Day-of-week header */}
         <div className="grid grid-cols-7 border-b border-white/5">
           {DAY_LABELS.map((d, i) => (
             <div
               key={d}
               className={`py-2.5 text-center text-xs font-medium ${
-                i === 0 ? 'text-red-400/70' : i === 6 ? 'text-sky-400/70' : 'text-text-quaternary'
+                i === 0 ? 'text-danger/70' : i === 6 ? 'text-info/70' : 'text-text-quaternary'
               }`}
             >
               {d}
@@ -255,8 +255,8 @@ export function Calendar() {
                   <span
                     className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold shrink-0
                       ${isToday ? 'bg-brand text-white' : ''}
-                      ${!isToday && isSun ? 'text-red-400/80' : ''}
-                      ${!isToday && isSat ? 'text-sky-400/80' : ''}
+                      ${!isToday && isSun ? 'text-danger/80' : ''}
+                      ${!isToday && isSat ? 'text-info/80' : ''}
                       ${!isToday && !isSun && !isSat ? 'text-text-secondary' : ''}
                     `}
                   >

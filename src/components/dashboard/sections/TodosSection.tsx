@@ -15,7 +15,7 @@ export function TodosSection({ todos, isLoading, todayStr }: TodosSectionProps) 
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-text-primary text-sm font-semibold">✅ 오늘 할 일</h2>
+        <h2 className="text-text-primary text-base font-semibold">✅ 오늘 할 일</h2>
         {totalCount > 0 && (
           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
             doneCount === totalCount

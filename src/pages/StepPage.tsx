@@ -99,7 +99,7 @@ export function StepPage() {
 
       <div className="space-y-6">
         {/* 날짜/시간 */}
-        <section className="border border-white/8 bg-surface-2 rounded-2xl p-5">
+        <section className="border border-white/8 bg-surface-2 rounded-xl p-5">
           <p className="text-[10px] font-medium text-text-quaternary uppercase tracking-wide mb-3">날짜 · 시간</p>
           <input
             type="datetime-local"
@@ -111,7 +111,7 @@ export function StepPage() {
         </section>
 
         {/* 장소 */}
-        <section className="border border-white/8 bg-surface-2 rounded-2xl p-5">
+        <section className="border border-white/8 bg-surface-2 rounded-xl p-5">
           <p className="text-[10px] font-medium text-text-quaternary uppercase tracking-wide mb-3">장소</p>
           <input
             type="text"
@@ -142,7 +142,7 @@ export function StepPage() {
         </section>
 
         {/* 준비 체크리스트 */}
-        <section className="border border-white/8 bg-surface-2 rounded-2xl p-5">
+        <section className="border border-white/8 bg-surface-2 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[10px] font-medium text-text-quaternary uppercase tracking-wide">준비 체크리스트</p>
             {checklist.length > 0 && (
@@ -206,9 +206,9 @@ function PageSkeleton() {
       <div className="h-3 bg-white/6 rounded w-24 mb-6" />
       <div className="h-8 bg-white/8 rounded w-48 mb-8" />
       <div className="space-y-4">
-        <div className="h-16 bg-white/5 rounded-2xl" />
-        <div className="h-16 bg-white/5 rounded-2xl" />
-        <div className="h-32 bg-white/5 rounded-2xl" />
+        <div className="h-16 bg-white/5 rounded-xl" />
+        <div className="h-16 bg-white/5 rounded-xl" />
+        <div className="h-32 bg-white/5 rounded-xl" />
       </div>
     </div>
   )

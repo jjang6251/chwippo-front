@@ -37,11 +37,11 @@ export function ProfileSettings() {
       <section className="bg-surface-2 border border-white/5 rounded-xl p-5 mb-4">
         <h2 className="text-sm font-semibold mb-3">계정 정보</h2>
         <div className="flex items-center justify-between py-2 border-b border-white/5">
-          <span className="text-sm text-text-muted">이메일</span>
+          <span className="text-sm text-text-quaternary">이메일</span>
           <span className="text-sm">{user?.email ?? '—'}</span>
         </div>
         <div className="flex items-center justify-between py-2">
-          <span className="text-sm text-text-muted">로그인 방식</span>
+          <span className="text-sm text-text-quaternary">로그인 방식</span>
           <span className="text-sm">카카오</span>
         </div>
       </section>
@@ -53,14 +53,14 @@ export function ProfileSettings() {
           className="w-full flex items-center justify-between text-sm text-text-secondary hover:text-text-primary transition-colors py-1"
         >
           <span>로그아웃</span>
-          <span className="text-text-muted">›</span>
+          <span className="text-text-quaternary">›</span>
         </button>
       </section>
 
       {/* 계정 탈퇴 */}
       <section className="bg-surface-2 border border-danger/15 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-danger mb-1">계정 탈퇴</h2>
-        <p className="text-xs text-text-muted mb-4 leading-relaxed">
+        <p className="text-xs text-text-quaternary mb-4 leading-relaxed">
           탈퇴 시 지원 카드, 내 정보, 업로드한 파일 등 모든 데이터가 즉시 삭제되며 복구할 수 없습니다.
         </p>
         <button
@@ -74,9 +74,9 @@ export function ProfileSettings() {
       {/* 로그아웃 확인 모달 */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-xs">
+          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">로그아웃 하시겠어요?</h3>
-            <p className="text-sm text-text-muted mb-6">로그인 화면으로 이동합니다.</p>
+            <p className="text-sm text-text-quaternary mb-6">로그인 화면으로 이동합니다.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}
@@ -98,9 +98,9 @@ export function ProfileSettings() {
       {/* 탈퇴 확인 모달 */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-sm">
+          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-sm">
             <h3 className="text-base font-bold mb-2">정말 탈퇴하시겠어요?</h3>
-            <p className="text-sm text-text-muted mb-6 leading-relaxed">
+            <p className="text-sm text-text-quaternary mb-6 leading-relaxed">
               지원 카드, 내 정보, 파일 등 모든 데이터가 즉시 삭제되며
               복구할 수 없습니다. 카카오 연동도 함께 해제됩니다.
             </p>

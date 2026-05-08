@@ -104,7 +104,7 @@ export function Landing() {
           </p>
 
           {/* 데모 스텝바 */}
-          <div className="bg-surface-2 border border-white/5 rounded-2xl p-6 max-w-lg mx-auto text-left">
+          <div className="bg-surface-2 border border-white/5 rounded-xl p-6 max-w-lg mx-auto text-left">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-text-primary font-semibold text-sm">카카오</p>
@@ -162,7 +162,7 @@ export function Landing() {
 
 function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
-    <div className="bg-surface-2 border border-white/5 rounded-2xl p-6 text-left hover:border-brand/20 transition-colors">
+    <div className="bg-surface-2 border border-white/5 rounded-xl p-6 text-left hover:border-brand/20 transition-colors">
       <div className="text-2xl mb-4">{icon}</div>
       <h3 className="text-text-primary font-semibold text-sm mb-2">{title}</h3>
       <p className="text-text-quaternary text-xs leading-relaxed">{desc}</p>

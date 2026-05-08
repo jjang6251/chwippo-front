@@ -92,6 +92,7 @@ export function StepBar({ steps, currentStepIndex, onStepClick, onStepNameClick,
                     onMouseEnter={() => setHoveredIndex(i)}
                     onMouseLeave={() => setHoveredIndex(null)}
                     disabled={!onStepClick}
+                    aria-label={`${step.name}${isDone ? ' (완료)' : isCurrent ? ' (현재)' : ''}`}
                     className={`
                       relative flex-none rounded-full transition-all duration-200 flex items-center justify-center
                       ${nodeSize}

@@ -29,8 +29,8 @@ function currentTimeSlot(): number {
 
 const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const EVENT_COLOR = {
-  deadline: 'bg-amber-400/15 border-l-2 border-amber-400 text-amber-300',
-  interview: 'bg-emerald-400/15 border-l-2 border-emerald-400 text-emerald-300',
+  deadline: 'bg-warning/15 border-l-2 border-warning text-warning',
+  interview: 'bg-info/15 border-l-2 border-info text-info',
 }
 
 interface Props {
@@ -92,7 +92,7 @@ export function DailyScheduleModal({ date, events, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-surface border border-white/10 rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col overflow-hidden"
+        className="bg-surface border border-white/10 rounded-xl shadow-2xl w-full max-w-md mx-4 flex flex-col overflow-hidden"
         style={{ maxHeight: '85vh' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -125,7 +125,7 @@ export function DailyScheduleModal({ date, events, onClose }: Props) {
                 key={idx}
                 to={`/board/${e.applicationId}`}
                 onClick={onClose}
-                className="flex items-center gap-2 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 px-3 py-1.5 rounded-lg hover:bg-amber-400/15 transition-colors"
+                className="flex items-center gap-2 text-xs text-warning bg-warning/10 border border-warning/20 px-3 py-1.5 rounded-lg hover:bg-warning/15 transition-colors"
               >
                 <span>📄</span>
                 <span className="font-medium">{e.companyName} 서류 마감</span>
