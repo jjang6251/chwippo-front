@@ -70,11 +70,11 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
       {isLoading ? (
         <div className="h-8 w-8 bg-white/8 rounded animate-pulse" />
       ) : (
-        <p className={`text-3xl font-bold font-mono tabular-nums leading-none ${c.value}`}>{value ?? 0}</p>
+        <p className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums leading-none ${c.value}`}>{value ?? 0}</p>
       )}
 
       {/* 설명 */}
-      <p className="text-text-quaternary text-[10px] leading-relaxed">{description}</p>
+      <p className="hidden sm:block text-text-quaternary text-[10px] leading-relaxed">{description}</p>
     </div>
   )
 }
