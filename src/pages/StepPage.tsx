@@ -1,27 +1,40 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
-import { useApplication } from '@/hooks/useApplications'
+import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/hooks/useApplications'
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
 import { StepNoteEditor } from '@/components/editor/StepNoteEditor'
-import { PinnedNoteField } from '@/components/editor/PinnedNoteField'
+import { Modal } from '@/components/common/Modal'
+import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTemplates'
+import { getDdayLabel, getDdayVariant } from '@/utils/dday'
 
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
   const navigate = useNavigate()
 
   const { data: app, isLoading } = useApplication(appId!)
-  const step = app ? [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex).find((s) => s.id === stepId) ?? null : null
+  const sortedSteps = app ? [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex) : []
+  const step = sortedSteps.find((s) => s.id === stepId) ?? null
+  const stepIdx = sortedSteps.findIndex((s) => s.id === stepId)
+  const prevStep = stepIdx > 0 ? sortedSteps[stepIdx - 1] : null
+  const nextStep = stepIdx < sortedSteps.length - 1 ? sortedSteps[stepIdx + 1] : null
+  const isLastStep = stepIdx === sortedSteps.length - 1
+  const isCurrentStep = step ? step.orderIndex === app?.currentStepIndex : false
 
-  const [scheduledDate, setScheduledDate] = useState<string | null>(null)
-  const [location, setLocation] = useState<string | null>(null)
+  const [scheduledDate, setScheduledDate] = useState('')
+  const [location, setLocation] = useState('')
+  const [pinnedContent, setPinnedContent] = useState('')
   const [inputText, setInputText] = useState('')
-
-  // step 로드 후 초기값 세팅 (한 번만)
+  const [editingField, setEditingField] = useState<'date' | 'location' | null>(null)
+  const [showPassedModal, setShowPassedModal] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const dateInputRef = useRef<HTMLInputElement>(null)
+  const locationInputRef = useRef<HTMLInputElement>(null)
+
   if (step && !initialized) {
     setScheduledDate(step.scheduledDate ? dayjs(step.scheduledDate).format('YYYY-MM-DDTHH:mm') : '')
     setLocation(step.location ?? '')
+    setPinnedContent(step.pinnedContent ?? '')
     setInitialized(true)
   }
 
@@ -30,32 +43,48 @@ export function StepPage() {
   const { mutate: createItem } = useCreateChecklistItem(appId!, stepId!)
   const { mutate: updateItem } = useUpdateChecklistItem(appId!, stepId!)
   const { mutate: deleteItem } = useDeleteChecklistItem(appId!, stepId!)
+  const { mutate: updateCurrentStep } = useUpdateCurrentStep()
+  const { mutate: updateApplication } = useUpdateApplication(appId!)
 
   function handleDateBlur() {
+    setEditingField(null)
     updateStep({ stepId: stepId!, scheduledDate: scheduledDate ? `${scheduledDate}:00` : null })
   }
-
   function handleLocationBlur() {
+    setEditingField(null)
     updateStep({ stepId: stepId!, location: location || null })
   }
-
+  function handlePinnedBlur() {
+    updateStep({ stepId: stepId!, pinnedContent: pinnedContent.trim() || null })
+  }
   async function handleSaveNotes(json: string) {
     await new Promise<void>((resolve, reject) =>
-      updateStep(
-        { stepId: stepId!, notes: json },
-        { onSuccess: () => resolve(), onError: () => reject() },
-      ),
+      updateStep({ stepId: stepId!, notes: json }, { onSuccess: () => resolve(), onError: () => reject() }),
     )
   }
-
-  function handleSavePinnedContent(value: string | null) {
-    updateStep({ stepId: stepId!, pinnedContent: value })
-  }
-
   function handleAddItem() {
     if (!inputText.trim()) return
     createItem(inputText.trim())
     setInputText('')
+  }
+  function handleLoadPreset() {
+    if (!step) return
+    const preset = CHECKLIST_PRESETS[getStepType(step.name)]
+    if (!preset) return
+    const existing = new Set(checklist.map((i) => i.content))
+    preset.filter((p) => !existing.has(p)).forEach((p) => createItem(p))
+  }
+  function handleCompleteStep() {
+    if (!app || !step) return
+    if (isLastStep) {
+      setShowPassedModal(true)
+    } else {
+      updateCurrentStep({ id: appId!, stepIndex: step.orderIndex + 1 })
+    }
+  }
+  function handleConfirmPassed() {
+    updateApplication({ status: 'PASSED' }, { onSuccess: () => navigate(`/board/${appId}`) })
+    setShowPassedModal(false)
   }
 
   if (isLoading) return <PageSkeleton />
@@ -67,135 +96,342 @@ export function StepPage() {
     )
   }
 
+  const stepType = getStepType(step.name)
+  const typeConfig = STEP_TYPE_CONFIG[stepType]
+  const hasPreset = !!CHECKLIST_PRESETS[stepType]
   const doneCount = checklist.filter((i) => i.isDone).length
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-      {/* 뒤로가기 */}
-      <button
-        onClick={() => navigate(`/board/${appId}`)}
-        className="flex items-center gap-1.5 text-text-tertiary hover:text-text-secondary text-xs mb-6 transition-colors group"
-      >
-        <svg className="group-hover:-translate-x-0.5 transition-transform" width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        {app.companyName} 상세
-      </button>
+  const dday = step.scheduledDate
+    ? dayjs(step.scheduledDate).startOf('day').diff(dayjs().startOf('day'), 'day')
+    : null
+  const ddayVariant = dday !== null ? getDdayVariant(dday) : null
+  const ddayLabel = dday !== null ? getDdayLabel(dday) : null
 
-      {/* 헤더 */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-brand text-xs font-medium bg-brand/10 px-2 py-0.5 rounded-full border border-brand/20">
-            {app.companyName}
-          </span>
-        </div>
-        <h1 className="text-text-primary text-2xl font-bold">{step.name}</h1>
-        {checklist.length > 0 && (
-          <p className="text-text-quaternary text-xs mt-1.5">
-            체크리스트 {doneCount}/{checklist.length} 완료
-          </p>
-        )}
+  const stepStatus: 'done' | 'current' | 'upcoming' =
+    step.orderIndex < app.currentStepIndex ? 'done' :
+    step.orderIndex === app.currentStepIndex ? 'current' : 'upcoming'
+
+  const statusBadge = {
+    done:     { label: '완료됨', cls: 'text-success bg-success/8 border-success/25' },
+    current:  { label: '진행중', cls: 'text-info bg-info/8 border-info/25' },
+    upcoming: { label: '대기중', cls: 'text-text-quaternary bg-white/4 border-white/10' },
+  }[stepStatus]
+
+  // 날짜 표시 포맷
+  const scheduledDjs = step.scheduledDate ? dayjs(step.scheduledDate) : null
+  const DAY_KO = ['일', '월', '화', '수', '목', '금', '토']
+  const dateDisplayLabel = scheduledDjs
+    ? `${scheduledDjs.month() + 1}월 ${scheduledDjs.date()}일 (${DAY_KO[scheduledDjs.day()]})`
+    : null
+  const timeDisplayLabel = scheduledDjs && (scheduledDjs.hour() > 0 || scheduledDjs.minute() > 0)
+    ? scheduledDjs.format('HH:mm')
+    : null
+
+  // D-day 강조 색상
+  const ddayTextCls =
+    ddayVariant === 'danger' ? 'text-danger' :
+    ddayVariant === 'warning' ? 'text-warning' : 'text-info'
+  const dateRowAccentCls =
+    dday === 0 ? 'bg-danger/5' :
+    dday === 1 ? 'bg-warning/5' : ''
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-28">
+      {/* 뒤로가기 */}
+      <div className="pt-6 pb-4">
+        <button
+          onClick={() => navigate(`/board/${appId}`)}
+          className="flex items-center gap-1.5 text-text-quaternary hover:text-text-tertiary text-xs transition-colors group"
+        >
+          <svg className="group-hover:-translate-x-0.5 transition-transform" width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {app.companyName} 상세
+        </button>
       </div>
 
-      <div className="space-y-6">
-        {/* 날짜/시간 */}
-        <section className="border border-white/8 bg-surface-2 rounded-xl p-5">
-          <p className="text-[10px] font-medium text-text-quaternary uppercase tracking-wide mb-3">날짜 · 시간</p>
-          <input
-            type="datetime-local"
-            value={scheduledDate ?? ''}
-            onChange={(e) => setScheduledDate(e.target.value)}
-            onBlur={handleDateBlur}
-            className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 transition-colors [color-scheme:dark]"
-          />
-        </section>
+      {/* 헤더 */}
+      <div className={`rounded-xl border p-5 mb-1 ${typeConfig.borderCls} ${typeConfig.bgCls}`}>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg leading-none">{typeConfig.icon}</span>
+            <span className={`text-[10px] font-semibold uppercase tracking-widest ${typeConfig.colorCls}`}>
+              {typeConfig.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {ddayLabel && (
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border font-mono
+                ${ddayVariant === 'danger' ? 'text-danger bg-danger/8 border-danger/25' :
+                  ddayVariant === 'warning' ? 'text-warning bg-warning/8 border-warning/25' :
+                  'text-info bg-info/8 border-info/25'}`}>
+                {ddayLabel}
+              </span>
+            )}
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${statusBadge.cls}`}>
+              {statusBadge.label}
+            </span>
+          </div>
+        </div>
+        <h1 className="text-text-primary text-2xl font-bold leading-tight mb-2">{step.name}</h1>
+        <div className="flex items-center gap-1.5">
+          <span className="text-text-quaternary text-xs font-mono">{stepIdx + 1} / {sortedSteps.length}</span>
+          {checklist.length > 0 && (
+            <>
+              <span className="text-white/15">·</span>
+              <span className="text-text-quaternary text-xs">체크리스트 {doneCount}/{checklist.length}</span>
+            </>
+          )}
+        </div>
+      </div>
 
-        {/* 장소 */}
-        <section className="border border-white/8 bg-surface-2 rounded-xl p-5">
-          <p className="text-[10px] font-medium text-text-quaternary uppercase tracking-wide mb-3">장소</p>
-          <input
-            type="text"
-            value={location ?? ''}
-            onChange={(e) => setLocation(e.target.value)}
-            onBlur={handleLocationBlur}
-            placeholder="예: 강남역 3번 출구 위워크 3층"
-            className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
-          />
-        </section>
+      {/* 이전/다음 네비게이션 */}
+      <div className="flex items-center border border-white/6 rounded-xl mb-6 overflow-hidden">
+        <button
+          onClick={() => prevStep && navigate(`/board/${appId}/steps/${prevStep.id}`)}
+          disabled={!prevStep}
+          aria-label={prevStep ? `이전 단계: ${prevStep.name}` : '처음 단계'}
+          className="flex-1 flex items-center gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-white/4 transition-colors disabled:cursor-default"
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
+            <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="text-xs text-text-quaternary truncate">{prevStep ? prevStep.name : '처음 단계'}</span>
+        </button>
+        <div className="w-px h-5 bg-white/6" />
+        <button
+          onClick={() => nextStep && navigate(`/board/${appId}/steps/${nextStep.id}`)}
+          disabled={!nextStep}
+          aria-label={nextStep ? `다음 단계: ${nextStep.name}` : '마지막 단계'}
+          className="flex-1 flex items-center justify-end gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-white/4 transition-colors disabled:cursor-default"
+        >
+          <span className="text-xs text-text-quaternary truncate">{nextStep ? nextStep.name : '마지막 단계'}</span>
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
+            <path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
 
-        {/* 핵심 메모 (핀) */}
-        <section>
-          <PinnedNoteField
-            initialValue={step.pinnedContent ?? null}
-            onSave={handleSavePinnedContent}
-          />
-        </section>
+      {/* ── Properties 바 ─────────────────────────────── */}
+      <div className="rounded-xl border border-white/6 overflow-hidden mb-6">
+        {/* 날짜 행 */}
+        <div className={`transition-colors ${dateRowAccentCls}`}>
+          {editingField === 'date' ? (
+            <div className="flex items-center gap-3 px-4 py-3">
+              <span className="text-text-quaternary text-sm shrink-0">📅</span>
+              <span className="text-xs text-text-quaternary w-10 shrink-0">날짜</span>
+              <input
+                ref={dateInputRef}
+                type="datetime-local"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                onBlur={handleDateBlur}
+                autoFocus
+                aria-label="일정 날짜 및 시간"
+                className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none [color-scheme:dark]"
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => { setEditingField('date'); setTimeout(() => dateInputRef.current?.focus(), 0) }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left"
+            >
+              <span className="text-sm shrink-0">📅</span>
+              <span className="text-xs text-text-quaternary w-10 shrink-0">날짜</span>
+              {dateDisplayLabel ? (
+                <span className="flex-1 flex items-center gap-2">
+                  <span className="text-sm text-text-primary">{dateDisplayLabel}</span>
+                  {timeDisplayLabel && (
+                    <span className={`text-sm font-semibold font-mono ${typeConfig.colorCls}`}>{timeDisplayLabel}</span>
+                  )}
+                  {ddayLabel && (
+                    <span className={`text-[10px] font-semibold font-mono ml-auto ${ddayTextCls}`}>{ddayLabel}</span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-sm text-text-quaternary flex-1">날짜 설정</span>
+              )}
+            </button>
+          )}
+        </div>
 
-        {/* 자유 메모 */}
-        <section>
-          <p className="text-[10px] font-medium text-text-quaternary uppercase tracking-wide mb-3">메모</p>
+        <div className="h-px bg-white/5 mx-3" />
+
+        {/* 장소 행 */}
+        <div>
+          {editingField === 'location' ? (
+            <div className="flex items-center gap-3 px-4 py-3">
+              <span className="text-text-quaternary text-sm shrink-0">📍</span>
+              <span className="text-xs text-text-quaternary w-10 shrink-0">장소</span>
+              <input
+                ref={locationInputRef}
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                onBlur={handleLocationBlur}
+                autoFocus
+                placeholder="장소 입력"
+                aria-label="면접 장소"
+                className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none"
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => { setEditingField('location'); setTimeout(() => locationInputRef.current?.focus(), 0) }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left"
+            >
+              <span className="text-sm shrink-0">📍</span>
+              <span className="text-xs text-text-quaternary w-10 shrink-0">장소</span>
+              <span className={`text-sm flex-1 ${location ? 'text-text-primary' : 'text-text-quaternary'}`}>
+                {location || '장소 설정'}
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── 준비 체크리스트 ────────────────────────────── */}
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-xs text-text-quaternary shrink-0">준비 체크리스트</span>
+          <div className="flex-1 h-px bg-white/6" />
+          <div className="flex items-center gap-2 shrink-0">
+            {checklist.length > 0 && (
+              <span className="text-[10px] text-text-quaternary font-mono">{doneCount}/{checklist.length}</span>
+            )}
+            {hasPreset && (
+              <button
+                onClick={handleLoadPreset}
+                className="text-[10px] text-text-quaternary hover:text-text-tertiary transition-colors"
+              >
+                기본 불러오기
+              </button>
+            )}
+          </div>
+        </div>
+
+        {stepType === 'wait' && checklist.length === 0 && (
+          <p className="text-xs text-text-quaternary leading-relaxed mb-4 pl-1">
+            결과 발표일을 위 날짜 필드에 기록해두세요. 📌 핵심 메모에 예상 결과나 특이사항을 적으면 대시보드에 표시됩니다.
+          </p>
+        )}
+
+        <div className="space-y-1 mb-6">
+          {checklist.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 group py-1 px-1 rounded-lg hover:bg-white/3 transition-colors">
+              <button
+                onClick={() => updateItem({ itemId: item.id, isDone: !item.isDone })}
+                className={`relative w-[17px] h-[17px] rounded border shrink-0 flex items-center justify-center transition-colors after:content-[''] after:absolute after:inset-[-8px] ${
+                  item.isDone ? 'bg-brand border-brand' : 'border-white/20 hover:border-brand/60'
+                }`}
+              >
+                {item.isDone && (
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                    <path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+              <span className={`flex-1 text-sm leading-relaxed ${item.isDone ? 'line-through text-text-quaternary' : 'text-text-primary'}`}>
+                {item.content}
+              </span>
+              <button
+                onClick={() => deleteItem(item.id)}
+                className="opacity-0 group-hover:opacity-100 text-text-quaternary hover:text-danger transition-all w-6 h-6 flex items-center justify-center rounded"
+              >
+                <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M2 2l6 6M8 2L2 8" />
+                </svg>
+              </button>
+            </div>
+          ))}
+          <div className="flex items-center gap-3 py-1 px-1">
+            <div className="w-[17px] h-[17px] rounded border border-white/10 shrink-0" />
+            <input
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAddItem()
+                if (e.key === 'Escape') setInputText('')
+              }}
+              placeholder="항목 추가 후 Enter"
+              className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-quaternary outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── 핵심 메모 ──────────────────────────────────── */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-xs text-text-quaternary shrink-0">📌 핵심 메모</span>
+          <div className="flex-1 h-px bg-white/6" />
+          <span className="text-[10px] text-brand/50 shrink-0">D-1·당일 대시보드 표시</span>
+        </div>
+        <div className="pl-1">
+          <textarea
+            value={pinnedContent}
+            onChange={(e) => setPinnedContent(e.target.value)}
+            onBlur={handlePinnedBlur}
+            placeholder="면접 당일 꼭 기억할 내용 (예상 질문 답변, 핵심 키워드, 준비물 등)"
+            rows={3}
+            className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-quaternary outline-none resize-none leading-relaxed"
+          />
+        </div>
+      </div>
+
+      {/* ── 준비 노트 ──────────────────────────────────── */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-xs text-text-quaternary shrink-0">준비 노트</span>
+          <div className="flex-1 h-px bg-white/6" />
+        </div>
+        <div className="pl-1">
           <StepNoteEditor
             stepName={step.name}
             initialContent={step.notes ?? null}
             onSave={handleSaveNotes}
           />
-        </section>
-
-        {/* 준비 체크리스트 */}
-        <section className="border border-white/8 bg-surface-2 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-[10px] font-medium text-text-quaternary uppercase tracking-wide">준비 체크리스트</p>
-            {checklist.length > 0 && (
-              <span className="text-[10px] text-text-quaternary font-mono">{doneCount}/{checklist.length}</span>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            {checklist.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 group py-0.5">
-                <button
-                  onClick={() => updateItem({ itemId: item.id, isDone: !item.isDone })}
-                  className={`w-4.5 h-4.5 w-[18px] h-[18px] rounded border shrink-0 flex items-center justify-center transition-colors ${
-                    item.isDone ? 'bg-brand border-brand' : 'border-white/20 hover:border-brand/60'
-                  }`}
-                >
-                  {item.isDone && (
-                    <svg width="9" height="9" viewBox="0 0 8 8" fill="none">
-                      <path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </button>
-                <span className={`flex-1 text-sm ${item.isDone ? 'line-through text-text-quaternary' : 'text-text-primary'}`}>
-                  {item.content}
-                </span>
-                <button
-                  onClick={() => deleteItem(item.id)}
-                  className="opacity-0 group-hover:opacity-100 text-text-quaternary hover:text-danger transition-all w-6 h-6 flex items-center justify-center rounded"
-                >
-                  <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <path d="M2 2l6 6M8 2L2 8" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-
-            {/* 새 항목 입력 */}
-            <div className="flex items-center gap-3 py-0.5 mt-1">
-              <div className="w-[18px] h-[18px] rounded border border-white/10 shrink-0" />
-              <input
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAddItem()
-                  if (e.key === 'Escape') setInputText('')
-                }}
-                placeholder="항목 추가 후 Enter"
-                className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-quaternary outline-none"
-              />
-            </div>
-          </div>
-        </section>
+        </div>
       </div>
+
+      {/* ── 이 단계 완료하기 버튼 (fixed bottom) ─────── */}
+      {isCurrentStep && (
+        <div className="fixed bottom-20 lg:bottom-0 left-0 right-0 z-20 pointer-events-none">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-4 pt-8 bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-auto">
+            <button
+              onClick={handleCompleteStep}
+              className="w-full bg-brand hover:bg-accent text-white font-semibold text-sm py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              {isLastStep ? '🎉 최종 합격 처리하기' : '이 단계 완료하기'}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 최종 합격 확인 모달 */}
+      <Modal open={showPassedModal} onClose={() => setShowPassedModal(false)} title="최종 합격 처리">
+        <p className="text-text-secondary text-sm mb-5 leading-relaxed">
+          <span className="text-text-primary font-semibold">{app.companyName}</span>에 최종 합격 처리할까요?
+          카드가 초록색으로 전환됩니다.
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowPassedModal(false)}
+            className="flex-1 py-2.5 rounded-lg border border-white/10 text-text-secondary text-sm hover:bg-white/4 transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleConfirmPassed}
+            className="flex-1 py-2.5 rounded-lg bg-success text-white text-sm font-semibold hover:bg-success/90 transition-colors"
+          >
+            🎉 합격!
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }
@@ -203,12 +439,15 @@ export function StepPage() {
 function PageSkeleton() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 animate-pulse">
-      <div className="h-3 bg-white/6 rounded w-24 mb-6" />
-      <div className="h-8 bg-white/8 rounded w-48 mb-8" />
-      <div className="space-y-4">
-        <div className="h-16 bg-white/5 rounded-xl" />
-        <div className="h-16 bg-white/5 rounded-xl" />
-        <div className="h-32 bg-white/5 rounded-xl" />
+      <div className="h-3 bg-white/6 rounded w-24 mb-5" />
+      <div className="h-24 bg-white/5 rounded-xl mb-1" />
+      <div className="h-10 bg-white/4 rounded-xl mb-6" />
+      <div className="h-20 bg-white/[0.03] rounded-xl mb-6" />
+      <div className="h-3 bg-white/5 rounded w-32 mb-4" />
+      <div className="space-y-2.5">
+        <div className="h-7 bg-white/4 rounded-lg" />
+        <div className="h-7 bg-white/4 rounded-lg" />
+        <div className="h-7 bg-white/3 rounded-lg w-3/4" />
       </div>
     </div>
   )
