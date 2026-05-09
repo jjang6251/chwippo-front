@@ -17,11 +17,23 @@ export function SectionWrapper({ id, editMode, onRemove, children }: SectionWrap
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
       className="relative"
     >
-      {/* 드래그 핸들 — 카드 왼쪽 외부, 패딩 영역 사용 */}
+      {/* 드래그 핸들 — 모바일: 카드 상단 중앙 / 웹: 카드 왼쪽 외부 */}
       <button
         {...attributes}
         {...listeners}
-        className="absolute top-2 -left-6 w-6 h-8 flex flex-col gap-[3.5px] items-center justify-center text-text-quaternary/40 hover:text-text-quaternary/70 cursor-grab active:cursor-grabbing transition-colors"
+        className="sm:hidden absolute -top-4 left-1/2 -translate-x-1/2 w-12 h-8 flex items-center justify-center text-text-quaternary/50 hover:text-text-quaternary/80 cursor-grab active:cursor-grabbing transition-colors touch-none"
+        aria-label="드래그해서 순서 변경"
+      >
+        <span className="flex gap-1">
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i} className="w-[3px] h-[3px] rounded-full bg-current" />
+          ))}
+        </span>
+      </button>
+      <button
+        {...attributes}
+        {...listeners}
+        className="hidden sm:flex absolute top-2 -left-6 w-6 h-8 flex-col gap-[3.5px] items-center justify-center text-text-quaternary/40 hover:text-text-quaternary/70 cursor-grab active:cursor-grabbing transition-colors"
         aria-label="드래그해서 순서 변경"
       >
         {[0, 1, 2].map((i) => (
@@ -32,19 +44,23 @@ export function SectionWrapper({ id, editMode, onRemove, children }: SectionWrap
         ))}
       </button>
 
-      {/* 섹션 카드 — stats와 동일한 너비 */}
-      <div className="relative bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
-        {editMode && (
-          <button
-            onClick={onRemove}
-            className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-lg bg-danger/10 text-danger/70 hover:bg-danger/20 hover:text-danger transition-colors z-10"
-            aria-label="섹션 제거"
-          >
-            <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-              <path d="M1 1l7 7M8 1L1 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      {/* 섹션 제거 버튼 — 카드 우측 상단 외부 */}
+      {editMode && (
+        <button
+          onClick={onRemove}
+          className="absolute -top-4 -right-4 w-8 h-8 flex items-center justify-center group z-10"
+          aria-label="섹션 제거"
+        >
+          <span className="w-5 h-5 rounded-full bg-danger group-hover:brightness-110 transition-all flex items-center justify-center">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+              <path d="M1 1l6 6M7 1L1 7" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-          </button>
-        )}
+          </span>
+        </button>
+      )}
+
+      {/* 섹션 카드 */}
+      <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
         {children}
       </div>
     </div>

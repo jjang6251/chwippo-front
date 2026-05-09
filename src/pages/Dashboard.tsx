@@ -122,7 +122,7 @@ export function Dashboard() {
             className={`flex-none text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${
               editMode
                 ? 'bg-brand/20 border-brand/40 text-brand'
-                : 'bg-white/5 border-white/10 text-text-quaternary hover:text-text-tertiary'
+                : 'bg-white/5 border-white/8 text-text-quaternary hover:text-text-tertiary'
             }`}
           >
             {editMode ? '완료' : '편집'}
@@ -149,7 +149,7 @@ export function Dashboard() {
       {/* 드래그 가능한 섹션들 */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-4">
+          <div className="space-y-6 sm:space-y-4">
             {draggableSections.map((s) => (
               <SectionWrapper
                 key={s.id}
