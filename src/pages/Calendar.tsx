@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '@/hooks/useCalendar'
 import type { CalendarEvent } from '@/api/calendar'
-import { DailyScheduleModal } from '@/components/calendar/DailyScheduleModal'
+import { CalendarDayPanel } from '@/components/calendar/CalendarDayPanel'
+import { CalendarWeekView } from '@/components/calendar/CalendarWeekView'
+
+type CalendarView = 'month' | 'week'
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
-const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 
-// 서류 마감: warning(#fb923c) / 면접: info(#7170ff)
 const COLOR = {
   deadline: {
     dot: 'bg-warning',
@@ -17,7 +18,6 @@ const COLOR = {
     border: 'border-warning/25',
     icon: '📄',
     label: '서류',
-    summary: 'text-warning',
   },
   interview: {
     dot: 'bg-info',
@@ -26,7 +26,6 @@ const COLOR = {
     border: 'border-info/25',
     icon: '🗓️',
     label: '면접',
-    summary: 'text-info',
   },
 } as const
 
@@ -36,32 +35,67 @@ function eventLabel(e: CalendarEvent) {
   return `${e.companyName} ${step}`
 }
 
-function fmtDate(dateStr: string) {
-  const d = dayjs(dateStr)
-  return `${d.month() + 1}/${d.date()} (${KO_DAYS[d.day()]})`
+function eventPillLabel(e: CalendarEvent) {
+  const base = e.type === 'deadline' ? `${e.companyName} 서류` : `${e.companyName} ${e.stepName ?? '면접'}`
+  if (e.time) return `${e.time.slice(0, 5)} ${base}`
+  return base
+}
+
+// Korean week starts on Monday
+function getWeekStart(date: dayjs.Dayjs): dayjs.Dayjs {
+  const day = date.day()
+  const daysFromMonday = day === 0 ? 6 : day - 1
+  return date.subtract(daysFromMonday, 'day').startOf('day')
 }
 
 export function Calendar() {
+  const today = dayjs().format('YYYY-MM-DD')
+
+  const [view, setView] = useState<CalendarView>('month')
   const [cursor, setCursor] = useState(dayjs().startOf('month'))
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [weekCursor, setWeekCursor] = useState(dayjs())
+  const [selectedDate, setSelectedDate] = useState<string>(today)
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerYear, setPickerYear] = useState(cursor.year())
   const pickerRef = useRef<HTMLDivElement>(null)
-  const [scheduleDate, setScheduleDate] = useState<string | null>(null)
 
   const year = cursor.year()
   const month = cursor.month() + 1
+  const { data: monthlyEvents = [], isLoading: monthlyLoading } = useCalendarEvents(year, month)
 
-  const { data: events = [], isLoading } = useCalendarEvents(year, month)
+  // Weekly view — may span two months
+  const weekStart = useMemo(() => getWeekStart(weekCursor), [weekCursor])
+  const weekEnd = weekStart.add(6, 'day')
+  const { data: weekEvents1 = [], isLoading: weekLoading1 } = useCalendarEvents(
+    weekStart.year(), weekStart.month() + 1
+  )
+  const { data: weekEvents2 = [], isLoading: weekLoading2 } = useCalendarEvents(
+    weekEnd.year(), weekEnd.month() + 1
+  )
+  const weekEvents = useMemo(() => {
+    const combined = [...weekEvents1, ...weekEvents2]
+    const seen = new Set<string>()
+    const weekStartStr = weekStart.format('YYYY-MM-DD')
+    const weekEndStr = weekEnd.format('YYYY-MM-DD')
+    return combined.filter((e) => {
+      const key = `${e.date}|${e.applicationId}|${e.type}|${e.stepId ?? ''}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return e.date >= weekStartStr && e.date <= weekEndStr
+    })
+  }, [weekEvents1, weekEvents2, weekStart, weekEnd])
+
+  const weekLoading = weekLoading1 || weekLoading2
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {}
-    for (const e of events) {
+    for (const e of monthlyEvents) {
       if (!map[e.date]) map[e.date] = []
       map[e.date].push(e)
     }
     return map
-  }, [events])
+  }, [monthlyEvents])
 
   const cells = useMemo(() => {
     const firstDay = cursor.day()
@@ -74,69 +108,119 @@ export function Calendar() {
     return result
   }, [cursor])
 
-  const today = dayjs().format('YYYY-MM-DD')
-  const selectedEvents = selectedDate ? (eventsByDate[selectedDate] ?? []) : []
+  const selectedDateEvents = useMemo(() => {
+    if (!selectedDate) return []
+    // Try monthlyEvents first; for weekly view also check weekEvents
+    return eventsByDate[selectedDate] ?? weekEvents.filter((e) => e.date === selectedDate)
+  }, [selectedDate, eventsByDate, weekEvents])
 
-  const deadlineCount = events.filter((e) => e.type === 'deadline').length
-  const interviewCount = events.filter((e) => e.type === 'interview').length
+  const deadlineCount = monthlyEvents.filter((e) => e.type === 'deadline').length
+  const interviewCount = monthlyEvents.filter((e) => e.type === 'interview').length
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false)
+  function handleSelectDate(dateStr: string) {
+    if (dateStr === selectedDate) {
+      setBottomSheetOpen((o) => !o)
+    } else {
+      setSelectedDate(dateStr)
+      setBottomSheetOpen(true)
     }
-    if (pickerOpen) document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [pickerOpen])
-
-  function prevMonth() { setCursor((d) => d.subtract(1, 'month')); setSelectedDate(null) }
-  function nextMonth() { setCursor((d) => d.add(1, 'month')); setSelectedDate(null) }
-  function goToday() { setCursor(dayjs().startOf('month')); setSelectedDate(dayjs().format('YYYY-MM-DD')) }
-  function selectMonth(month: number) {
-    setCursor(cursor.year(pickerYear).month(month).startOf('month'))
-    setSelectedDate(null)
-    setPickerOpen(false)
   }
 
+  function switchToMonthView() {
+    setView('month')
+    setCursor(weekCursor.startOf('month'))
+  }
+
+  function switchToWeekView() {
+    setView('week')
+    setWeekCursor(dayjs(selectedDate))
+  }
+
+  function prevMonth() {
+    setCursor((d) => d.subtract(1, 'month'))
+    setSelectedDate(cursor.subtract(1, 'month').format('YYYY-MM') + '-01')
+    setBottomSheetOpen(false)
+  }
+
+  function nextMonth() {
+    setCursor((d) => d.add(1, 'month'))
+    setSelectedDate(cursor.add(1, 'month').format('YYYY-MM') + '-01')
+    setBottomSheetOpen(false)
+  }
+
+  function prevWeek() {
+    setWeekCursor((d) => d.subtract(7, 'day'))
+    setBottomSheetOpen(false)
+  }
+
+  function nextWeek() {
+    setWeekCursor((d) => d.add(7, 'day'))
+    setBottomSheetOpen(false)
+  }
+
+  function goToday() {
+    if (view === 'month') {
+      setCursor(dayjs().startOf('month'))
+    } else {
+      setWeekCursor(dayjs())
+    }
+    setSelectedDate(today)
+    setBottomSheetOpen(false)
+  }
+
+  function selectMonth(m: number) {
+    setCursor(cursor.year(pickerYear).month(m).startOf('month'))
+    setPickerOpen(false)
+    setBottomSheetOpen(false)
+  }
+
+  // Header label
+  const headerLabel = view === 'month'
+    ? cursor.format('YYYY년 M월')
+    : weekStart.month() === weekEnd.month() && weekStart.year() === weekEnd.year()
+      ? `${weekStart.year()}년 ${weekStart.month() + 1}월 ${weekStart.date()}일–${weekEnd.date()}일`
+      : `${weekStart.year()}년 ${weekStart.month() + 1}월 ${weekStart.date()}일–${weekEnd.month() + 1}월 ${weekEnd.date()}일`
+
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div ref={pickerRef} className="relative">
             <button
-              onClick={() => { setPickerOpen((o) => !o); setPickerYear(cursor.year()) }}
-              className="flex items-center gap-1 text-text-primary text-xl font-bold hover:text-brand transition-colors"
+              onClick={() => { if (view === 'month') { setPickerOpen((o) => !o); setPickerYear(cursor.year()) } }}
+              className={`flex items-center gap-1 text-text-primary text-xl font-bold transition-colors ${view === 'month' ? 'hover:text-brand cursor-pointer' : 'cursor-default'}`}
             >
-              {cursor.format('YYYY년 M월')}
-              <svg
-                className={`mt-0.5 transition-transform duration-200 ${pickerOpen ? 'rotate-180' : ''}`}
-                width="14" height="14" viewBox="0 0 16 16" fill="none"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              >
-                <path d="M4 6l4 4 4-4" />
-              </svg>
+              {headerLabel}
+              {view === 'month' && (
+                <svg
+                  className={`mt-0.5 transition-transform duration-200 ${pickerOpen ? 'rotate-180' : ''}`}
+                  width="14" height="14" viewBox="0 0 16 16" fill="none"
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              )}
             </button>
 
             {pickerOpen && (
               <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/10 rounded-xl shadow-2xl p-4 w-56 animate-fadeInUp">
-                {/* 연도 선택 */}
                 <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setPickerYear((y) => y - 1)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4" /></svg>
                   </button>
                   <span className="text-text-primary text-sm font-semibold">{pickerYear}년</span>
                   <button
                     onClick={() => setPickerYear((y) => y + 1)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4" /></svg>
                   </button>
                 </div>
-                {/* 월 그리드 */}
                 <div className="grid grid-cols-4 gap-1">
                   {Array.from({ length: 12 }, (_, i) => {
                     const isSelected = pickerYear === cursor.year() && i === cursor.month()
@@ -167,19 +251,51 @@ export function Calendar() {
             오늘
           </button>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={prevMonth} aria-label="이전 달" className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors">
-            <ChevronLeft />
-          </button>
-          <button onClick={nextMonth} aria-label="다음 달" className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors">
-            <ChevronRight />
-          </button>
+
+        <div className="flex items-center gap-2">
+          {/* View toggle */}
+          <div className="flex items-center bg-surface-2 border border-white/5 rounded-lg p-0.5">
+            <button
+              onClick={switchToMonthView}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                view === 'month' ? 'bg-white/8 text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
+              }`}
+            >
+              월별
+            </button>
+            <button
+              onClick={switchToWeekView}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                view === 'week' ? 'bg-white/8 text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
+              }`}
+            >
+              주별
+            </button>
+          </div>
+
+          {/* Prev/Next */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={view === 'month' ? prevMonth : prevWeek}
+              aria-label="이전"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+            >
+              <ChevronLeft />
+            </button>
+            <button
+              onClick={view === 'month' ? nextMonth : nextWeek}
+              aria-label="다음"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+            >
+              <ChevronRight />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 이번 달 요약 배너 */}
-      {!isLoading && (deadlineCount > 0 || interviewCount > 0) && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-white/5 rounded-xl">
+      {/* Summary banner (monthly view only) */}
+      {view === 'month' && !monthlyLoading && (deadlineCount > 0 || interviewCount > 0) && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-white/5 rounded-xl mb-4">
           <span className="text-xs text-text-quaternary">이번 달</span>
           {deadlineCount > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-warning">
@@ -199,177 +315,215 @@ export function Calendar() {
         </div>
       )}
 
-      {/* Calendar grid */}
-      <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden">
-        {/* Day-of-week header */}
-        <div className="grid grid-cols-7 border-b border-white/5">
-          {DAY_LABELS.map((d, i) => (
-            <div
-              key={d}
-              className={`py-2.5 text-center text-xs font-medium ${
-                i === 0 ? 'text-danger/70' : i === 6 ? 'text-info/70' : 'text-text-quaternary'
-              }`}
-            >
-              {d}
-            </div>
-          ))}
-        </div>
+      {/* Main content: calendar + side panel */}
+      <div className="flex gap-5 items-start">
+        {/* Calendar area */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-        {isLoading ? (
-          <div className="grid grid-cols-7">
-            {Array.from({ length: 35 }).map((_, i) => (
-              <div key={i} className="h-20 border-b border-r border-white/3 animate-pulse bg-white/2" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-7">
-            {cells.map((day, i) => {
-              if (!day) {
-                return <div key={`empty-${i}`} className="min-h-[80px] border-b border-r border-white/3" />
-              }
-
-              const dateStr = day.format('YYYY-MM-DD')
-              const dayEvents = eventsByDate[dateStr] ?? []
-              const isToday = dateStr === today
-              const isSelected = dateStr === selectedDate
-              const isPast = dateStr < today
-              const isSun = day.day() === 0
-              const isSat = day.day() === 6
-              const isLastRow = i >= cells.length - 7
-              const visibleEvents = dayEvents.slice(0, 2)
-              const overflow = dayEvents.length - 2
-
-              return (
-                <button
-                  key={dateStr}
-                  onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                  onDoubleClick={() => setScheduleDate(dateStr)}
-                  className={`min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-white/3 transition-colors text-left w-full
-                    ${isLastRow ? 'border-b-0' : ''}
-                    ${(i + 1) % 7 === 0 ? 'border-r-0' : ''}
-                    ${isSelected ? 'bg-brand/8' : 'hover:bg-white/3'}
-                    ${isPast ? 'opacity-50' : ''}
-                  `}
-                >
-                  {/* Day number */}
-                  <span
-                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold shrink-0
-                      ${isToday ? 'bg-brand text-white' : ''}
-                      ${!isToday && isSun ? 'text-danger/80' : ''}
-                      ${!isToday && isSat ? 'text-info/80' : ''}
-                      ${!isToday && !isSun && !isSat ? 'text-text-secondary' : ''}
-                    `}
+          {view === 'month' ? (
+            /* Monthly grid */
+            <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden">
+              {/* Day-of-week header */}
+              <div className="grid grid-cols-7 border-b border-white/5">
+                {DAY_LABELS.map((d, i) => (
+                  <div
+                    key={d}
+                    className={`py-2.5 text-center text-xs font-medium ${
+                      i === 0 ? 'text-danger/70' : i === 6 ? 'text-info/70' : 'text-text-quaternary'
+                    }`}
                   >
-                    {day.date()}
-                  </span>
-
-                  {/* 데스크탑: 이벤트 pill 태그 */}
-                  <div className="hidden sm:flex flex-col gap-0.5 w-full">
-                    {visibleEvents.map((e, idx) => (
-                      <span
-                        key={idx}
-                        className={`text-[9px] font-medium px-1.5 py-0.5 rounded truncate w-full leading-tight ${COLOR[e.type].pill}`}
-                        title={eventLabel(e)}
-                      >
-                        {eventLabel(e)}
-                      </span>
-                    ))}
-                    {overflow > 0 && (
-                      <span className="text-[9px] text-text-quaternary px-1">+{overflow}개</span>
-                    )}
+                    {d}
                   </div>
+                ))}
+              </div>
 
-                  {/* 모바일: 색 점만 */}
-                  {dayEvents.length > 0 && (
-                    <div className="sm:hidden flex gap-0.5 flex-wrap px-0.5">
-                      {dayEvents.slice(0, 3).map((e, idx) => (
-                        <span key={idx} className={`w-1.5 h-1.5 rounded-full shrink-0 ${COLOR[e.type].dot}`} />
-                      ))}
-                      {dayEvents.length > 3 && (
-                        <span className="text-[8px] text-text-quaternary">+{dayEvents.length - 3}</span>
-                      )}
-                    </div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
+              {monthlyLoading ? (
+                <div className="grid grid-cols-7">
+                  {Array.from({ length: 35 }).map((_, i) => (
+                    <div key={i} className="h-20 border-b border-r border-white/5 animate-pulse bg-white/2" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-7">
+                  {cells.map((day, i) => {
+                    if (!day) {
+                      return <div key={`empty-${i}`} className="min-h-[80px] border-b border-r border-white/5" />
+                    }
+                    const dateStr = day.format('YYYY-MM-DD')
+                    const dayEvents = eventsByDate[dateStr] ?? []
+                    const isToday = dateStr === today
+                    const isSelected = dateStr === selectedDate
+                    const isPast = dateStr < today
+                    const isSun = day.day() === 0
+                    const isSat = day.day() === 6
+                    const isLastRow = i >= cells.length - 7
+                    const visibleEvents = dayEvents.slice(0, 2)
+                    const overflow = dayEvents.length - 2
 
-      {/* 범례 */}
-      <div className="flex items-center gap-5">
-        {(['deadline', 'interview'] as const).map((type) => (
-          <div key={type} className="flex items-center gap-1.5 text-xs text-text-quaternary">
-            <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR[type].dot}`} />
-            {type === 'deadline' ? '서류 마감' : '면접 일정'}
-          </div>
-        ))}
-      </div>
+                    return (
+                      <button
+                        key={dateStr}
+                        onClick={() => handleSelectDate(dateStr)}
+                        className={`min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-white/5 transition-colors text-left w-full
+                          ${isLastRow ? 'border-b-0' : ''}
+                          ${(i + 1) % 7 === 0 ? 'border-r-0' : ''}
+                          ${isSelected ? 'bg-brand/8' : 'hover:bg-white/3'}
+                          ${isPast ? 'opacity-50' : ''}
+                        `}
+                      >
+                        <span
+                          className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold shrink-0
+                            ${isToday ? 'bg-brand text-white' : ''}
+                            ${!isToday && isSun ? 'text-danger/80' : ''}
+                            ${!isToday && isSat ? 'text-info/80' : ''}
+                            ${!isToday && !isSun && !isSat ? 'text-text-secondary' : ''}
+                          `}
+                        >
+                          {day.date()}
+                        </span>
 
-      {/* 선택된 날짜 이벤트 */}
-      {selectedDate && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-text-secondary">
-            {(() => { const d = dayjs(selectedDate); return `${d.month() + 1}월 ${d.date()}일 (${KO_DAYS[d.day()]})`})()}
-          </h2>
-          {selectedEvents.length === 0 ? (
-            <div className="text-text-quaternary text-sm py-6 text-center bg-surface-2 border border-white/5 rounded-xl">
-              이 날 일정이 없어요
+                        {/* Desktop: event pills */}
+                        <div className="hidden sm:flex flex-col gap-0.5 w-full">
+                          {visibleEvents.map((e, idx) => (
+                            <span
+                              key={idx}
+                              className={`text-[9px] font-medium px-1.5 py-0.5 rounded truncate w-full leading-tight ${COLOR[e.type].pill}`}
+                              title={eventLabel(e)}
+                            >
+                              {eventPillLabel(e)}
+                            </span>
+                          ))}
+                          {overflow > 0 && (
+                            <span className="text-[9px] text-text-quaternary px-1">+{overflow}개</span>
+                          )}
+                        </div>
+
+                        {/* Mobile: dots */}
+                        {dayEvents.length > 0 && (
+                          <div className="sm:hidden flex gap-0.5 flex-wrap px-0.5">
+                            {dayEvents.slice(0, 3).map((e, idx) => (
+                              <span key={idx} className={`w-1.5 h-1.5 rounded-full shrink-0 ${COLOR[e.type].dot}`} />
+                            ))}
+                            {dayEvents.length > 3 && (
+                              <span className="text-[8px] text-text-quaternary">+{dayEvents.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="space-y-2">
-              {selectedEvents.map((e, idx) => (
-                <EventCard key={idx} event={e} />
-              ))}
+            /* Weekly grid */
+            <CalendarWeekView
+              weekStart={weekStart}
+              events={weekEvents}
+              selectedDate={selectedDate}
+              today={today}
+              isLoading={weekLoading}
+              onSelectDate={handleSelectDate}
+            />
+          )}
+
+          {/* Legend */}
+          <div className="flex items-center gap-5">
+            {(['deadline', 'interview'] as const).map((type) => (
+              <div key={type} className="flex items-center gap-1.5 text-xs text-text-quaternary">
+                <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR[type].dot}`} />
+                {type === 'deadline' ? '서류 마감' : '면접 일정'}
+              </div>
+            ))}
+          </div>
+
+          {/* Monthly view: no-events empty state */}
+          {view === 'month' && !monthlyLoading && monthlyEvents.length === 0 && (
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <span className="text-4xl">📅</span>
+              <p className="text-text-tertiary text-sm">이번 달 일정이 없어요</p>
+              <p className="text-text-quaternary text-xs leading-relaxed">
+                보드에서 서류 마감일이나<br />면접 스텝에 날짜를 등록해보세요
+              </p>
+              <Link to="/board" className="mt-1 text-xs font-medium text-brand hover:text-accent transition-colors">
+                보드로 이동 →
+              </Link>
+            </div>
+          )}
+
+          {/* Mobile: selected date event list (below calendar, lg:hidden) */}
+          {!bottomSheetOpen && selectedDate && (
+            <div className="lg:hidden space-y-2">
+              <h2 className="text-sm font-semibold text-text-secondary">
+                {(() => { const d = dayjs(selectedDate); return `${d.month() + 1}월 ${d.date()}일 (${DAY_LABELS[d.day()]})` })()}
+              </h2>
+              {selectedDateEvents.length === 0 ? (
+                <button
+                  onClick={() => setBottomSheetOpen(true)}
+                  className="w-full text-text-quaternary text-sm py-5 text-center bg-surface-2 border border-white/5 rounded-xl hover:bg-white/3 transition-colors"
+                >
+                  이 날 일정이 없어요 · 탭해서 메모 추가
+                </button>
+              ) : (
+                <>
+                  {selectedDateEvents.map((e, idx) => (
+                    <EventCard key={idx} event={e} />
+                  ))}
+                  <button
+                    onClick={() => setBottomSheetOpen(true)}
+                    className="w-full text-xs text-text-quaternary py-2 text-center hover:text-text-secondary transition-colors"
+                  >
+                    메모 보기 / 추가 →
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
-      )}
 
-      {/* 이번 달 전체 일정 (날짜 미선택 시) */}
-      {!selectedDate && events.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-text-secondary">이번 달 일정</h2>
-          <div className="space-y-2">
-            {events.map((e, idx) => (
-              <EventCard key={idx} event={e} showDate />
-            ))}
-          </div>
+        {/* Desktop side panel */}
+        <div className="hidden lg:flex w-64 xl:w-72 shrink-0 sticky top-20 bg-surface border border-white/8 rounded-xl overflow-hidden flex-col" style={{ height: 'calc(100vh - 96px)' }}>
+          <CalendarDayPanel
+            date={selectedDate}
+            events={selectedDateEvents}
+          />
         </div>
-      )}
+      </div>
 
-      {/* 빈 상태 */}
-      {!selectedDate && !isLoading && events.length === 0 && (
-        <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <span className="text-4xl">📅</span>
-          <p className="text-text-tertiary text-sm">이번 달 일정이 없어요</p>
-          <p className="text-text-quaternary text-xs leading-relaxed">
-            보드에서 서류 마감일이나<br />면접 스텝에 날짜를 등록해보세요
-          </p>
-          <Link to="/board" className="mt-1 text-xs font-medium text-brand hover:text-accent transition-colors">
-            보드로 이동 →
-          </Link>
-        </div>
-      )}
-
-      {/* 더블클릭 — 하루 일정 모달 */}
-      {scheduleDate && (
-        <DailyScheduleModal
-          date={scheduleDate}
-          events={eventsByDate[scheduleDate] ?? []}
-          onClose={() => setScheduleDate(null)}
+      {/* Mobile bottom sheet backdrop */}
+      {bottomSheetOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setBottomSheetOpen(false)}
         />
+      )}
+
+      {/* Mobile bottom sheet */}
+      {bottomSheetOpen && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-white/10 rounded-t-2xl flex flex-col animate-slideUp" style={{ height: '65vh' }}>
+          {/* Drag handle */}
+          <div className="flex justify-center pt-2.5 pb-1 shrink-0">
+            <div className="w-8 h-1 bg-white/20 rounded-full" />
+          </div>
+          <CalendarDayPanel
+            date={selectedDate}
+            events={selectedDateEvents}
+            onClose={() => setBottomSheetOpen(false)}
+          />
+        </div>
       )}
     </div>
   )
 }
 
-function EventCard({ event, showDate }: { event: CalendarEvent; showDate?: boolean }) {
+function EventCard({ event }: { event: CalendarEvent }) {
   const c = COLOR[event.type]
+  const to = event.type === 'interview' && event.stepId
+    ? `/board/${event.applicationId}/steps/${event.stepId}`
+    : `/board/${event.applicationId}`
   return (
     <Link
-      to={`/board/${event.applicationId}`}
+      to={to}
       className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-white/4 transition-colors group ${c.border}`}
     >
       <span className="text-base shrink-0">{c.icon}</span>
@@ -379,17 +533,13 @@ function EventCard({ event, showDate }: { event: CalendarEvent; showDate?: boole
         </p>
         <p className="text-xs text-text-quaternary mt-0.5">
           {event.type === 'deadline' ? '서류 마감' : event.stepName}
+          {event.time && <span className="ml-1.5">· {event.time.slice(0, 5)}</span>}
           {event.location && <span className="ml-1.5">· {event.location}</span>}
         </p>
       </div>
-      <div className="flex flex-col items-end gap-1 shrink-0">
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.badge}`}>
-          {c.label}
-        </span>
-        {showDate && (
-          <span className="text-[10px] text-text-quaternary">{fmtDate(event.date)}</span>
-        )}
-      </div>
+      <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${c.badge}`}>
+        {c.label}
+      </span>
     </Link>
   )
 }

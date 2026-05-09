@@ -20,8 +20,8 @@ import { DdaySection } from '@/components/dashboard/sections/DdaySection'
 import { TodosSection } from '@/components/dashboard/sections/TodosSection'
 import { GoalsSection } from '@/components/dashboard/sections/GoalsSection'
 import { useDashboardStats, useDdayList } from '@/hooks/useDashboard'
+import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
 import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
-import { useTodos } from '@/hooks/useTodos'
 import { useProfile } from '@/hooks/useMyinfo'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -29,7 +29,6 @@ export function Dashboard() {
   const user = useAuthStore((s) => s.user)
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: dday, isLoading: ddayLoading } = useDdayList()
-  const { data: todos, isLoading: todosLoading } = useTodos()
   const { data: profile } = useProfile()
   const { data: config } = useDashboardConfig()
   const { mutate: saveConfig } = useUpdateDashboardConfig()
@@ -43,7 +42,6 @@ export function Dashboard() {
     .filter(Boolean) ?? []
 
   const now = new Date()
-  const todayStr = now.toISOString().split('T')[0]
   const month = now.getMonth() + 1
   const date = now.getDate()
   const dayNames = ['일', '월', '화', '수', '목', '금', '토']
@@ -94,7 +92,7 @@ export function Dashboard() {
   function renderSectionContent(id: string) {
     switch (id) {
       case 'dday':   return <DdaySection items={dday} isLoading={ddayLoading} />
-      case 'todos':  return <TodosSection todos={todos} isLoading={todosLoading} todayStr={todayStr} />
+      case 'todos':  return <TodosSection />
       case 'goals':  return <GoalsSection goals={goals} />
       default:       return null
     }
@@ -128,6 +126,9 @@ export function Dashboard() {
         </div>
         <p className="text-text-quaternary text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
       </div>
+
+      {/* 어제 면접 후기 CTA */}
+      <InterviewReviewCard />
 
       {/* 면접 핀 카드 (D-1 / D-day) — 커스터마이징 대상 아님 */}
       {pinnedItem && (
