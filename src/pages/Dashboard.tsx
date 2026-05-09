@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -56,7 +57,10 @@ export function Dashboard() {
   const draggableSections = sections.filter((s) => s.visible && s.id !== 'stats')
   const draggableIds = draggableSections.map((s) => s.id)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  )
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event

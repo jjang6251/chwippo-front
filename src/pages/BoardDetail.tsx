@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor,
   useSensor, useSensors,
 } from '@dnd-kit/core'
 import {
@@ -132,6 +132,7 @@ export function BoardDetail() {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
