@@ -34,15 +34,18 @@ describe('StepBar', () => {
 
     it('steps 개수만큼 버튼(노드) 렌더링', () => {
       render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={0} />)
-      const buttons = screen.getAllByRole('button')
-      expect(buttons).toHaveLength(DEFAULT_STEPS.length)
+      // 컴포넌트는 step node 버튼(aria-label 있음)과 step 이름 레이블 버튼 두 행을 렌더링
+      // aria-label 있는 버튼 = step node 버튼
+      const nodeButtons = screen.getAllByRole('button').filter((btn) => btn.hasAttribute('aria-label'))
+      expect(nodeButtons).toHaveLength(DEFAULT_STEPS.length)
     })
 
     it('steps가 orderIndex 순서 무관하게 입력되어도 정렬해서 렌더링', () => {
       const shuffled = [makeStep(2, '1차 면접'), makeStep(0, '서류 제출'), makeStep(1, '서류 발표')]
       render(<StepBar steps={shuffled} currentStepIndex={0} />)
-      // 3개 노드 렌더링 확인
-      expect(screen.getAllByRole('button')).toHaveLength(3)
+      // node 버튼(aria-label 있음) 3개 렌더링 확인
+      const nodeButtons = screen.getAllByRole('button').filter((btn) => btn.hasAttribute('aria-label'))
+      expect(nodeButtons).toHaveLength(3)
     })
   })
 
@@ -97,11 +100,12 @@ describe('StepBar', () => {
       })
     })
 
-    it('onStepClick 제공 시 버튼은 활성화', () => {
+    it('onStepClick 제공 시 step node 버튼은 활성화 (이름 레이블 버튼은 onStepNameClick 기준으로 별도 제어)', () => {
       const onStepClick = vi.fn()
       render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={0} onStepClick={onStepClick} />)
-      const buttons = screen.getAllByRole('button')
-      buttons.forEach((btn) => {
+      // aria-label 있는 버튼 = step node 버튼 → onStepClick 제공 시 활성화
+      const nodeButtons = screen.getAllByRole('button').filter((btn) => btn.hasAttribute('aria-label'))
+      nodeButtons.forEach((btn) => {
         expect(btn).not.toBeDisabled()
       })
     })
@@ -140,6 +144,21 @@ describe('StepBar', () => {
       render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={0} size="md" />)
       expect(screen.getByText('서류 제출')).toBeInTheDocument()
       expect(screen.getByText('최종 합격')).toBeInTheDocument()
+    })
+  })
+
+  // ── 경계값 방어 ────────────────────────────────────────
+  describe('경계값 방어', () => {
+    it('currentStepIndex가 steps 범위 초과해도 크래시 없이 렌더링', () => {
+      expect(() =>
+        render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={99} />)
+      ).not.toThrow()
+    })
+
+    it('currentStepIndex가 음수여도 크래시 없이 렌더링', () => {
+      expect(() =>
+        render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={-1} />)
+      ).not.toThrow()
     })
   })
 })
