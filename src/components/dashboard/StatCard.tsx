@@ -54,7 +54,7 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
       {/* 이모지 + 라벨 + 화살표 */}
       <div className="flex items-center justify-between gap-1.5">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`flex-none w-7 h-7 rounded-lg flex items-center justify-center text-sm ${c.iconBg}`}>
+          <span className={`hidden sm:flex flex-none w-7 h-7 rounded-lg items-center justify-center text-sm ${c.iconBg}`}>
             {icon}
           </span>
           <p className={`text-xs font-semibold truncate ${c.label}`}>{label}</p>
