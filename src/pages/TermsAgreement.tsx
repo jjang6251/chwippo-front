@@ -44,7 +44,7 @@ export function TermsAgreement() {
         </div>
 
         {/* 동의 카드 */}
-        <div className="bg-surface-2 border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
+        <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden divide-y divide-white/5">
           {/* 전체 동의 */}
           <button
             onClick={handleAllToggle}

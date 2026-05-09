@@ -5,13 +5,13 @@ import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
 import { useUpdateCurrentStep, useDeleteApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
-import { calcDday } from '@/utils/dday'
 import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI, getAvatarColor } from '@/utils/tags'
 
 interface CompanyCardProps {
   application: Application
   onStartApplication?: (id: string) => void
   onSetResult?: (id: string) => void
+  onCurrentStepClick?: (appId: string, stepId: string) => void
 }
 
 const STATUS_ACCENT: Record<string, string> = {
@@ -26,10 +26,12 @@ function formatRegisteredDate(dateStr: string): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 등록`
 }
 
-export function CompanyCard({ application, onStartApplication, onSetResult }: CompanyCardProps) {
+export function CompanyCard({ application, onStartApplication, onSetResult, onCurrentStepClick }: CompanyCardProps) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showPassConfirm, setShowPassConfirm] = useState(false)
+  const [pendingStepIndex, setPendingStepIndex] = useState<number | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const { mutate: updateStep } = useUpdateCurrentStep()
   const { mutate: deleteApp, isPending: isDeleting } = useDeleteApplication()
@@ -37,10 +39,14 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
   const isPassed = application.status === 'PASSED'
   const isFailed = application.status === 'FAILED'
   const isPlanned = application.status === 'PLANNED'
+
+  const currentStep = [...application.steps]
+    .sort((a, b) => a.orderIndex - b.orderIndex)[application.currentStepIndex]
+  const RESULT_KEYWORDS = ['결과', '발표', '대기']
   const needsResult =
     application.status === 'IN_PROGRESS' &&
-    application.deadline &&
-    calcDday(application.deadline) < 0
+    !!currentStep &&
+    RESULT_KEYWORDS.some((kw) => currentStep.name.includes(kw))
 
   const tags = parseTags(application.jobCategory)
 
@@ -56,9 +62,8 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
     const steps = [...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)
     const isLastStep = index === steps.length - 1
     if (isLastStep) {
-      if (confirm(`"${steps[index].name}"을(를) 완료하면 최종 합격으로 처리됩니다. 진행할까요?`)) {
-        updateStep({ id: application.id, stepIndex: index })
-      }
+      setPendingStepIndex(index)
+      setShowPassConfirm(true)
     } else {
       updateStep({ id: application.id, stepIndex: index })
     }
@@ -128,7 +133,10 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
           <div ref={menuRef} className="relative">
             <button
               onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/6 transition-colors"
+              aria-label="더보기 메뉴"
+              aria-haspopup="true"
+              aria-expanded={menuOpen}
+              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/6 transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <circle cx="8" cy="3" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="8" cy="13" r="1.5" />
@@ -165,26 +173,18 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
         </div>
       )}
 
-      {/* 스텝바 */}
+      {/* 스텝바 + 현재 단계명 */}
       {!isPlanned && application.steps.length > 0 && (
         <div className="mb-2">
           <StepBar
             steps={application.steps}
             currentStepIndex={application.currentStepIndex}
             onStepClick={!isPassed && !isFailed ? handleStepClick : undefined}
+            onStepNameClick={onCurrentStepClick && !isPassed
+              ? (stepId) => onCurrentStepClick(application.id, stepId)
+              : undefined}
             size="sm"
           />
-          {/* 현재 단계 텍스트 */}
-          {(() => {
-            const sorted = [...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)
-            const currentStepName = sorted[application.currentStepIndex]?.name
-            if (!currentStepName || isPassed) return null
-            return (
-              <p className="text-text-tertiary text-xs mt-1.5 truncate">
-                📍 현재: {currentStepName}
-              </p>
-            )
-          })()}
         </div>
       )}
 
@@ -230,7 +230,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
           onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false) }}
         >
           <div
-            className="bg-surface border border-white/10 rounded-2xl p-6 w-80 shadow-2xl animate-fadeInUp"
+            className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-text-primary font-semibold text-sm mb-1">카드를 삭제할까요?</h3>
@@ -241,6 +241,34 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
               <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
               <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 text-xs font-medium text-white bg-danger/80 hover:bg-danger rounded-lg transition-colors disabled:opacity-50">
                 {isDeleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 최종 합격 확인 모달 */}
+      {showPassConfirm && pendingStepIndex !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { e.stopPropagation(); setShowPassConfirm(false) }}
+        >
+          <div
+            className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-2xl mb-3">🎉</div>
+            <h3 className="text-text-primary font-semibold text-sm mb-1">최종 합격 처리할까요?</h3>
+            <p className="text-text-tertiary text-xs mb-5">
+              <span className="text-text-secondary font-medium">{[...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)[pendingStepIndex]?.name}</span> 완료 시 이 카드가 최종 합격으로 전환됩니다.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowPassConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
+              <button
+                onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }); setShowPassConfirm(false) }}
+                className="flex-1 py-2.5 text-xs font-medium text-white bg-success/80 hover:bg-success rounded-lg transition-colors"
+              >
+                합격 처리
               </button>
             </div>
           </div>

@@ -23,7 +23,7 @@ export function Modal({ open, onClose, title, children, width = 'max-w-sm' }: Mo
       onClick={onClose}
     >
       <div
-        className={`bg-surface border border-white/10 rounded-2xl shadow-2xl w-full ${width} animate-fadeInUp`}
+        className={`bg-surface border border-white/10 rounded-xl shadow-2xl w-full ${width} animate-fadeInUp`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/6">

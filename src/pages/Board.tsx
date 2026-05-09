@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
 import { CompanyCard } from '@/components/card/CompanyCard'
+import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -42,6 +43,7 @@ export function Board() {
   const [addModalStatus, setAddModalStatus] = useState<'PLANNED' | 'IN_PROGRESS' | null>(null)
   const [startAppId, setStartAppId] = useState<string | null>(null)
   const [resultAppId, setResultAppId] = useState<string | null>(null)
+  const [panelStep, setPanelStep] = useState<{ appId: string; stepId: string } | null>(null)
   const addMenuRef = useRef<HTMLDivElement>(null)
 
   const { data: applications = [], isLoading } = useApplications()
@@ -79,11 +81,16 @@ export function Board() {
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
 
+  const panelApp = panelStep ? applications.find((a) => a.id === panelStep.appId) : null
+  const panelStepData = panelApp
+    ? [...panelApp.steps].sort((a, b) => a.orderIndex - b.orderIndex).find((s) => s.id === panelStep!.stepId) ?? null
+    : null
+
   const countByStatus = (status: ApplicationStatus) => applications.filter((a) => a.status === status).length
   const failedCount = countByStatus('FAILED')
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 ${panelStep ? 'lg:pr-96' : ''}`}>
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -183,13 +190,14 @@ export function Board() {
       ) : sorted.length === 0 ? (
         <EmptyState filter={filter} search={search} onAdd={() => setAddModalStatus('IN_PROGRESS')} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className={`grid gap-3 ${panelStep ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
           {sorted.map((app) => (
             <CompanyCard
               key={app.id}
               application={app}
               onStartApplication={setStartAppId}
               onSetResult={setResultAppId}
+              onCurrentStepClick={(appId, stepId) => setPanelStep({ appId, stepId })}
             />
           ))}
         </div>
@@ -220,6 +228,14 @@ export function Board() {
           companyName={resultApp.companyName}
         />
       )}
+
+      {panelApp && panelStepData && (
+        <StepDetailPanel
+          appId={panelApp.id}
+          step={panelStepData}
+          onClose={() => setPanelStep(null)}
+        />
+      )}
     </div>
   )
 }
@@ -236,7 +252,7 @@ function EmptyState({ filter, search, onAdd }: { filter: FilterTab; search: stri
   }
 
   const messages: Record<FilterTab, { emoji: string; title: string; desc: string }> = {
-    all: { emoji: '📋', title: '아직 지원한 곳이 없어요', desc: '첫 지원 카드를 추가해보세요!' },
+    all: { emoji: '📋', title: '아직 지원한 회사가 없어요', desc: '첫 지원 카드를 추가해보세요!' },
     PLANNED: { emoji: '📌', title: '지원 예정 카드가 없어요', desc: '관심 기업을 미리 등록해두세요.' },
     IN_PROGRESS: { emoji: '🚀', title: '진행 중인 지원이 없어요', desc: '지원을 시작해보세요!' },
     PASSED: { emoji: '🎉', title: '아직 합격한 곳이 없어요', desc: '곧 좋은 소식이 올 거예요!' },
@@ -254,7 +270,7 @@ function EmptyState({ filter, search, onAdd }: { filter: FilterTab; search: stri
           onClick={onAdd}
           className="bg-brand hover:bg-accent text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
         >
-          + 첫 카드 추가하기
+          + 첫 회사 추가하기
         </button>
       )}
     </div>

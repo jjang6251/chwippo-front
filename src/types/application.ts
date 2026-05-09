@@ -7,6 +7,8 @@ export interface ApplicationStep {
   name: string
   scheduledDate: string | null
   location: string | null
+  notes: string | null
+  pinnedContent: string | null
 }
 
 export interface Application {

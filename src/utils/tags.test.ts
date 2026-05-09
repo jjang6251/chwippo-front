@@ -61,6 +61,14 @@ describe('tags utils', () => {
     it('빈 항목 제거', () => {
       expect(parseTags('IT개발,,디자인')).toEqual(['IT개발', '디자인'])
     })
+
+    it('공백만 있는 문자열 → 빈 배열', () => {
+      expect(parseTags('   ')).toEqual([])
+    })
+
+    it('공백으로만 이루어진 항목은 필터링', () => {
+      expect(parseTags('IT개발, ,디자인')).toEqual(['IT개발', '디자인'])
+    })
   })
 
   describe('serializeTags', () => {

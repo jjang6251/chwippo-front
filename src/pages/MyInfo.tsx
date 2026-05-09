@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   useProfile, useUpdateProfile,
   useLangCerts, useCreateLangCert, useUpdateLangCert, useDeleteLangCert,
@@ -9,6 +10,7 @@ import {
   useDocuments, useCreateDocument, useDeleteDocument,
 } from '@/hooks/useMyinfo'
 import type { LanguageCert, Cert, Award, Experience, CoverletterCustom, MyDocument } from '@/api/myinfo'
+import { toast } from '@/stores/toastStore'
 import { CopyButton } from '@/components/myinfo/CopyButton'
 import { FileUpload } from '@/components/myinfo/FileUpload'
 
@@ -52,7 +54,7 @@ function Field({
   onBlur?: () => void; type?: string; placeholder?: string
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
 }) {
-  const cls = 'w-full bg-[#111213] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all'
+  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all'
   return (
     <div className={span ? 'col-span-2' : ''}>
       <label className="block text-xs text-text-tertiary mb-1.5 font-medium">{label}</label>
@@ -73,7 +75,7 @@ function SelectField({ label, value, onChange, options }: {
   return (
     <div>
       <label className="block text-xs text-text-tertiary mb-1.5 font-medium">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-[#111213] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
         <option value="">선택</option>
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -121,7 +123,7 @@ function SectionCard({ id, sectionRef, saved, isActive, children }: {
   const meta = SECTIONS.find(s => s.id === id)!
   const ac = ACCENT_STYLE[meta.accent as keyof typeof ACCENT_STYLE]
   return (
-    <section id={id} ref={sectionRef as React.RefCallback<HTMLElement>} className={`rounded-2xl transition-all duration-300 bg-gradient-to-b from-[#131415] to-[#0f1011] overflow-hidden
+    <section id={id} ref={sectionRef as React.RefCallback<HTMLElement>} className={`rounded-xl transition-all duration-300 bg-white/[0.02] overflow-hidden
       ${isActive ? `${ac.activeBorder} ${ac.activeGlow}` : ac.border}`}>
       <div className="px-6 py-4 border-b border-white/6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -146,7 +148,7 @@ function ExpandableItem({ title, subtitle, badge, onEdit, onDelete, children }: 
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className={`rounded-xl border transition-all duration-200 ${open ? 'border-brand/30 bg-brand/4' : 'border-white/8 bg-[#111213] hover:border-white/14'}`}>
+    <div className={`rounded-xl border transition-all duration-200 ${open ? 'border-brand/30 bg-brand/4' : 'border-white/8 bg-white/[0.02] hover:border-white/14'}`}>
       <button className="w-full flex items-center gap-3 px-4 py-3 text-left" onClick={() => setOpen(!open)}>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-text-primary truncate">{title}</p>
@@ -201,6 +203,26 @@ export function MyInfo() {
   const [activeSection, setActiveSection] = useState('profile')
   const isProgrammaticScroll = useRef(false)
   const scrollLockTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const location = useLocation()
+
+  // URL hash로 진입 시 해당 섹션으로 자동 스크롤 (예: /myinfo#goals)
+  useEffect(() => {
+    const hash = location.hash.replace('#', '')
+    if (!hash) return
+    const tryScroll = (attempts = 0) => {
+      const el = sectionRefs.current[hash]
+      if (el) {
+        setActiveSection(hash)
+        isProgrammaticScroll.current = true
+        const top = el.getBoundingClientRect().top + window.scrollY - 24
+        window.scrollTo({ top, behavior: 'smooth' })
+        scrollLockTimer.current = setTimeout(() => { isProgrammaticScroll.current = false }, 800)
+      } else if (attempts < 10) {
+        setTimeout(() => tryScroll(attempts + 1), 100)
+      }
+    }
+    tryScroll()
+  }, [location.hash])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -376,9 +398,9 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
   const openAdd = () => { setForm(emptyForm); setModal('add') }
   const openEdit = (item: LanguageCert) => { setForm({ cert_type: item.cert_type, score_grade: item.score_grade ?? '', issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
   const handleSave = () => {
-    if (modal === 'add') create(form as any)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any })
-    setModal(null)
+    const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
+    if (modal === 'add') create(form as any, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
   }
 
   return (
@@ -437,9 +459,9 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   const openAdd = () => { setForm(emptyForm); setModal('add') }
   const openEdit = (item: Cert) => { setForm({ name: item.name, issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
   const handleSave = () => {
-    if (modal === 'add') create(form as any)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any })
-    setModal(null)
+    const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
+    if (modal === 'add') create(form as any, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
   }
 
   return (
@@ -489,9 +511,9 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
   const openAdd = () => { setForm(emptyForm); setModal('add') }
   const openEdit = (item: Award) => { setForm({ contest_name: item.contest_name, award_name: item.award_name ?? '', org: item.org ?? '', awarded_at: item.awarded_at ?? '', content: item.content ?? '', file_url: item.file_url ?? '' }); setModal(item) }
   const handleSave = () => {
-    if (modal === 'add') create(form as any)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any })
-    setModal(null)
+    const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
+    if (modal === 'add') create(form as any, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
   }
 
   return (
@@ -543,9 +565,9 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   const openAdd = () => { setForm(emptyForm); setModal('add') }
   const openEdit = (item: Experience) => { setForm({ activity_name: item.activity_name, org: item.org ?? '', start_at: item.start_at ?? '', end_at: item.end_at ?? '', content: item.content ?? '' }); setModal(item) }
   const handleSave = () => {
-    if (modal === 'add') create(form as any)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any })
-    setModal(null)
+    const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
+    if (modal === 'add') create(form as any, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
   }
 
   return (
@@ -620,7 +642,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           <p className="text-xs text-text-quaternary text-center py-3">목표를 추가해보세요. 대시보드에서도 볼 수 있어요 🎯</p>
         )}
         {goals.map((goal, i) => (
-          <div key={i} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-[#111213]">
+          <div key={i} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02]">
             <span className="w-1.5 h-1.5 rounded-full bg-danger/60 flex-none mt-px" />
             <span className="flex-1 text-xs text-text-primary">{goal}</span>
             <button onClick={() => removeGoal(i)} className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger">
@@ -636,7 +658,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               onChange={(e) => setNewGoal(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) addGoal(); if (e.key === 'Escape') setAdding(false) }}
               placeholder="목표를 입력하세요 (예: TOEIC 900점 달성)"
-              className="flex-1 bg-[#111213] border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
+              className="flex-1 bg-white/[0.02] border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
             />
             <button onClick={() => setAdding(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
           </div>
@@ -704,7 +726,7 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
               maxLength={2000}
               rows={3}
               placeholder={placeholder}
-              className="w-full bg-[#111213] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
+              className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
             />
             <p className="text-[10px] text-text-quaternary text-right mt-1">{(clForm[key] ?? '').length} / 2000</p>
           </div>
@@ -729,7 +751,7 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
               onChange={(e) => setNewLabel(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAddCustom(); if (e.key === 'Escape') setAddingLabel(false) }}
               placeholder="항목명 입력 (예: 해외 경험)"
-              className="flex-1 bg-[#111213] border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
+              className="flex-1 bg-white/[0.02] border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
             />
             <button onClick={() => setAddingLabel(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
           </div>
@@ -766,7 +788,7 @@ function CustomCoverItem({ item, onUpdate, onDelete }: { item: CoverletterCustom
         maxLength={2000}
         rows={3}
         placeholder={`${item.label}을 작성해보세요`}
-        className="w-full bg-[#111213] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
+        className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
       />
       <p className="text-[10px] text-text-quaternary text-right mt-1">{value.length} / 2000</p>
     </div>
@@ -835,7 +857,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   href={f.file_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-[#111213] hover:border-white/16 hover:bg-[#161718] transition-all group"
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 hover:bg-[#161718] transition-all group"
                 >
                   <FileIcon url={f.file_url} />
                   <div className="flex-1 min-w-0">
@@ -863,7 +885,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           )}
           <div className="space-y-1.5">
             {documents.map((doc) => (
-              <div key={doc.id} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-[#111213] hover:border-white/16 transition-all">
+              <div key={doc.id} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 transition-all">
                 <FileIcon url={doc.file_url} />
                 <div className="flex-1 min-w-0">
                   <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-text-primary hover:text-brand transition-colors truncate block">{doc.title}</a>
@@ -892,7 +914,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="예: 2025 토익 성적표, 개인 포트폴리오"
-                  className="w-full bg-[#111213] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
+                  className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
                 />
               </div>
               <div>
@@ -900,7 +922,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-[#111213] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
+                  className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
                 >
                   <option value="">선택 안함</option>
                   {DOC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -910,7 +932,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
                     placeholder="카테고리 직접 입력"
-                    className="mt-2 w-full bg-[#111213] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
+                    className="mt-2 w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
                   />
                 )}
               </div>
