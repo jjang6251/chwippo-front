@@ -135,7 +135,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
                 aria-label={n.isDone ? '완료 취소' : '완료 표시'}
                 onClick={() => updateNote({ id: n.id, isDone: !n.isDone })}
                 className={`relative w-3.5 h-3.5 rounded-sm border shrink-0 flex items-center justify-center transition-colors ${
-                  n.isDone ? 'bg-success border-success text-white' : 'border-white/8 hover:border-success/60'
+                  n.isDone ? 'bg-success border-success text-text-primary' : 'border-white/8 hover:border-success/60'
                 }`}
               >
                 {n.isDone && (
@@ -205,7 +205,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
                       aria-label={n.isDone ? '완료 취소' : '완료 표시'}
                       onClick={() => updateNote({ id: n.id, isDone: !n.isDone })}
                       className={`relative w-3.5 h-3.5 rounded-sm border shrink-0 flex items-center justify-center transition-colors ${
-                        n.isDone ? 'bg-success border-success text-white' : 'border-white/8 hover:border-success/60'
+                        n.isDone ? 'bg-success border-success text-text-primary' : 'border-white/8 hover:border-success/60'
                       }`}
                     >
                       {n.isDone && (

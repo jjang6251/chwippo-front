@@ -141,7 +141,7 @@ export function TermsAgreement() {
           disabled={!allAgreed || submitting}
           className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all
             ${allAgreed && !submitting
-              ? 'bg-brand hover:bg-accent text-white shadow-[0_0_20px_rgba(94,106,210,0.3)]'
+              ? 'bg-brand hover:bg-accent text-text-primary shadow-[0_0_20px_rgba(94,106,210,0.3)]'
               : 'bg-white/5 text-text-quaternary cursor-not-allowed'
             }
           `}

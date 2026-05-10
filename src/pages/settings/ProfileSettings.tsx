@@ -86,7 +86,7 @@ export function ProfileSettings() {
               </button>
               <button
                 onClick={handleLogout}
-                className="flex-1 py-2.5 rounded-lg bg-brand text-white text-sm font-medium hover:bg-accent transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent transition-colors"
               >
                 로그아웃
               </button>
@@ -114,7 +114,7 @@ export function ProfileSettings() {
               <button
                 onClick={() => deleteMutation.mutate()}
                 disabled={deleteMutation.isPending}
-                className="flex-1 py-2.5 rounded-lg bg-danger text-white text-sm font-medium disabled:opacity-40 hover:opacity-80 transition-opacity"
+                className="flex-1 py-2.5 rounded-lg bg-danger text-text-primary text-sm font-medium disabled:opacity-40 hover:opacity-80 transition-opacity"
               >
                 {deleteMutation.isPending ? '처리 중...' : '탈퇴하기'}
               </button>

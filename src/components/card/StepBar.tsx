@@ -106,7 +106,7 @@ export function StepBar({ steps, currentStepIndex, onStepClick, onStepNameClick,
                       <span className="absolute inset-0 rounded-full bg-brand/50 animate-ping" />
                     )}
                     {isDone && (
-                      <svg className="text-white" width={checkSize} height={checkSize} viewBox="0 0 8 8" fill="none">
+                      <svg className="text-text-primary" width={checkSize} height={checkSize} viewBox="0 0 8 8" fill="none">
                         <path d="M1 4l2.5 2.5L7 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}

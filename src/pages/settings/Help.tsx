@@ -54,7 +54,7 @@ export function Help() {
               >
                 <div className="flex items-center gap-3">
                   <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    isOpen ? 'bg-brand text-white' : 'bg-white/8 text-text-muted'
+                    isOpen ? 'bg-brand text-text-primary' : 'bg-white/8 text-text-muted'
                   }`}>
                     Q
                   </span>

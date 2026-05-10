@@ -92,7 +92,7 @@ function Modal({ title, onClose, onSave, children }: { title: string; onClose: (
         <div className="space-y-3">{children}</div>
         <div className="flex gap-2 pt-2">
           <button onClick={onClose} className="flex-1 py-2.5 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors">취소</button>
-          <button onClick={onSave} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent text-white rounded-lg transition-colors">저장</button>
+          <button onClick={onSave} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent text-text-primary rounded-lg transition-colors">저장</button>
         </div>
       </div>
     </div>
@@ -109,7 +109,7 @@ function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: str
         </div>
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 text-xs border border-white/10 text-text-secondary rounded-lg hover:bg-white/5 transition-colors">취소</button>
-          <button onClick={onConfirm} className="flex-1 py-2.5 text-xs font-semibold bg-danger/90 hover:bg-danger text-white rounded-lg transition-colors">삭제</button>
+          <button onClick={onConfirm} className="flex-1 py-2.5 text-xs font-semibold bg-danger/90 hover:bg-danger text-text-primary rounded-lg transition-colors">삭제</button>
         </div>
       </div>
     </div>
@@ -950,7 +950,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                 <button
                   onClick={handleSave}
                   disabled={!title.trim() || !fileUrl}
-                  className="flex-1 py-2 text-xs font-semibold bg-brand hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                  className="flex-1 py-2 text-xs font-semibold bg-brand hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed text-text-primary rounded-lg transition-colors"
                 >
                   저장
                 </button>

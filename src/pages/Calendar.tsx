@@ -230,7 +230,7 @@ export function Calendar() {
                         key={i}
                         onClick={() => selectMonth(i)}
                         className={`py-1.5 rounded-lg text-xs font-medium transition-colors
-                          ${isSelected ? 'bg-brand text-white' : ''}
+                          ${isSelected ? 'bg-brand text-text-primary' : ''}
                           ${!isSelected && isCurrentMonth ? 'text-brand border border-brand/30' : ''}
                           ${!isSelected && !isCurrentMonth ? 'text-text-secondary hover:bg-white/6' : ''}
                         `}
@@ -373,7 +373,7 @@ export function Calendar() {
                       >
                         <span
                           className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold shrink-0
-                            ${isToday ? 'bg-brand text-white' : ''}
+                            ${isToday ? 'bg-brand text-text-primary' : ''}
                             ${!isToday && isSun ? 'text-danger/80' : ''}
                             ${!isToday && isSat ? 'text-info/80' : ''}
                             ${!isToday && !isSun && !isSat ? 'text-text-secondary' : ''}

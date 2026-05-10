@@ -96,7 +96,7 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
           <button type="button" onClick={handleClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">
             취소
           </button>
-          <button type="submit" disabled={!companyName.trim() || isPending} className="flex-1 py-2.5 text-xs font-medium text-white bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
+          <button type="submit" disabled={!companyName.trim() || isPending} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
             {isPending ? '추가 중...' : '추가하기'}
           </button>
         </div>

@@ -96,7 +96,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
                 {KO_DAYS[day.day()]}
               </div>
               <div className={`mt-0.5 w-6 h-6 flex items-center justify-center rounded-full mx-auto text-xs font-semibold transition-colors ${
-                isToday ? 'bg-brand text-white' : isSelected ? 'text-brand' : isSun ? 'text-danger/80' : isSat ? 'text-info/80' : 'text-text-secondary'
+                isToday ? 'bg-brand text-text-primary' : isSelected ? 'text-brand' : isSun ? 'text-danger/80' : isSat ? 'text-info/80' : 'text-text-secondary'
               }`}>
                 {day.date()}
               </div>

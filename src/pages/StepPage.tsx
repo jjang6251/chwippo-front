@@ -400,7 +400,7 @@ export function StepPage() {
           <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-4 pt-8 bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-auto">
             <button
               onClick={handleCompleteStep}
-              className="w-full bg-brand hover:bg-accent text-white font-semibold text-sm py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-brand hover:bg-accent text-text-primary font-semibold text-sm py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               {isLastStep ? '🎉 최종 합격 처리하기' : '이 단계 완료하기'}
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -426,7 +426,7 @@ export function StepPage() {
           </button>
           <button
             onClick={handleConfirmPassed}
-            className="flex-1 py-2.5 rounded-lg bg-success text-white text-sm font-semibold hover:bg-success/90 transition-colors"
+            className="flex-1 py-2.5 rounded-lg bg-success text-text-primary text-sm font-semibold hover:bg-success/90 transition-colors"
           >
             🎉 합격!
           </button>
