@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/hooks/useApplications'
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
@@ -140,13 +141,13 @@ export function StepPage() {
       {/* 뒤로가기 */}
       <div className="pt-6 pb-4">
         <button
-          onClick={() => navigate(`/board/${appId}`)}
+          onClick={() => goBack(navigate, `/board/${appId}`)}
           className="flex items-center gap-1.5 text-text-quaternary hover:text-text-tertiary text-xs transition-colors group"
         >
           <svg className="group-hover:-translate-x-0.5 transition-transform" width="13" height="13" viewBox="0 0 14 14" fill="none">
             <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          {app.companyName} 상세
+          뒤로
         </button>
       </div>
 

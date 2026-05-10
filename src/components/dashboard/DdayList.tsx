@@ -48,7 +48,7 @@ export function DdayList({ items, isLoading }: DdayListProps) {
             onClick={() =>
               item.type === 'interview' && item.stepId
                 ? navigate(`/board/${item.applicationId}/steps/${item.stepId}`)
-                : navigate(`/board/${item.applicationId}`, { state: { from: 'dashboard' } })
+                : navigate(`/board/${item.applicationId}`)
             }
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-white/6 hover:border-white/12 hover:bg-[#1d1e20] transition-all text-left"
           >
