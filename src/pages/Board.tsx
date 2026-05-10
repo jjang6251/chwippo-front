@@ -7,6 +7,7 @@ import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
 import type { ApplicationStatus } from '@/types/application'
+import { sortApplications } from '@/utils/sortApplications'
 
 type FilterTab = 'all' | ApplicationStatus
 
@@ -70,13 +71,7 @@ export function Board() {
     return matchSearch && app.status === filter
   })
 
-  // 마감일 임박순 정렬 (null은 뒤로)
-  const sorted = [...filtered].sort((a, b) => {
-    if (!a.deadline && !b.deadline) return 0
-    if (!a.deadline) return 1
-    if (!b.deadline) return -1
-    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-  })
+  const sorted = sortApplications(filtered)
 
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
