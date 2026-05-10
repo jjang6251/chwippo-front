@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { goBack } from '@/utils/navigation'
 import { getInquiryDetail, addComment, type InquiryComment } from '@/api/inquiries'
 import { toast } from '@/stores/toastStore'
 import dayjs from 'dayjs'
@@ -44,7 +45,7 @@ export function InquiryDetail() {
     <div className="max-w-lg mx-auto px-4 py-8">
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate('/inquiry')} className="text-text-muted hover:text-text-primary text-sm transition-colors">← 문의 내역</button>
+        <button onClick={() => goBack(navigate, '/inquiry')} className="text-text-muted hover:text-text-primary text-sm transition-colors">← 뒤로</button>
       </div>
 
       {/* 문의 정보 */}

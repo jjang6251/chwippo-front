@@ -20,6 +20,10 @@ import { StatsSection } from '@/components/dashboard/sections/StatsSection'
 import { DdaySection } from '@/components/dashboard/sections/DdaySection'
 import { TodosSection } from '@/components/dashboard/sections/TodosSection'
 import { GoalsSection } from '@/components/dashboard/sections/GoalsSection'
+import { TodayScheduleSection } from '@/components/dashboard/sections/TodayScheduleSection'
+import { TopApplicationsSection } from '@/components/dashboard/sections/TopApplicationsSection'
+import { CalendarMiniSection } from '@/components/dashboard/sections/CalendarMiniSection'
+import { CoverLetterQuickSection } from '@/components/dashboard/sections/CoverLetterQuickSection'
 import { useDashboardStats, useDdayList } from '@/hooks/useDashboard'
 import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
 import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
@@ -80,13 +84,14 @@ export function Dashboard() {
     saveConfig({ sections: newSections })
   }
 
-  function handleAdd(id: string) {
+  function handleToggle(id: string) {
     const existing = sections.find((s) => s.id === id)
+    const isActive = existing?.visible === true
     const statsSection = sections.find((s) => s.id === 'stats') ?? { id: 'stats', visible: true }
     const rest = sections.filter((s) => s.id !== 'stats')
     let newRest
     if (existing) {
-      newRest = rest.map((s) => s.id === id ? { ...s, visible: true } : s)
+      newRest = rest.map((s) => s.id === id ? { ...s, visible: !isActive } : s)
     } else {
       newRest = [...rest, { id, visible: true }]
     }
@@ -95,10 +100,14 @@ export function Dashboard() {
 
   function renderSectionContent(id: string) {
     switch (id) {
-      case 'dday':   return <DdaySection items={dday} isLoading={ddayLoading} />
-      case 'todos':  return <TodosSection />
-      case 'goals':  return <GoalsSection goals={goals} />
-      default:       return null
+      case 'dday':              return <DdaySection items={dday} isLoading={ddayLoading} />
+      case 'todos':             return <TodosSection />
+      case 'goals':             return <GoalsSection goals={goals} />
+      case 'today_schedule':    return <TodayScheduleSection items={dday} isLoading={ddayLoading} />
+      case 'top_applications':  return <TopApplicationsSection />
+      case 'calendar_mini':     return <CalendarMiniSection />
+      case 'cover_letter_quick':return <CoverLetterQuickSection />
+      default:                  return null
     }
   }
 
@@ -125,7 +134,7 @@ export function Dashboard() {
                 : 'bg-white/5 border-white/8 text-text-quaternary hover:text-text-tertiary'
             }`}
           >
-            {editMode ? '완료' : '편집'}
+            {editMode ? '완료' : '섹션 편집'}
           </button>
         </div>
         <p className="text-text-quaternary text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
@@ -164,20 +173,18 @@ export function Dashboard() {
         </SortableContext>
       </DndContext>
 
-      {/* 편집 모드: 섹션 추가 */}
-      {editMode && (
-        <button
-          onClick={() => setShowAddSheet(true)}
-          className="mt-4 w-full py-3 rounded-xl border border-dashed border-white/15 text-text-quaternary text-xs hover:border-brand/40 hover:text-brand transition-colors"
-        >
-          + 섹션 추가
-        </button>
-      )}
+      {/* 섹션 추가 (항상 노출) */}
+      <button
+        onClick={() => setShowAddSheet(true)}
+        className="mt-4 w-full py-3 rounded-xl border border-dashed border-white/15 text-text-quaternary text-xs hover:border-brand/40 hover:text-brand transition-colors"
+      >
+        + 섹션 추가
+      </button>
 
       {showAddSheet && (
         <AddSectionSheet
           activeSectionIds={activeSectionIds}
-          onAdd={handleAdd}
+          onToggle={handleToggle}
           onClose={() => setShowAddSheet(false)}
         />
       )}

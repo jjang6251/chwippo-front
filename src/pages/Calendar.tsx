@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '@/hooks/useCalendar'
 import type { CalendarEvent } from '@/api/calendar'
@@ -50,11 +50,14 @@ function getWeekStart(date: dayjs.Dayjs): dayjs.Dayjs {
 
 export function Calendar() {
   const today = dayjs().format('YYYY-MM-DD')
+  const [searchParams] = useSearchParams()
+  const queryDate = searchParams.get('date')
+  const initialDate = queryDate && dayjs(queryDate, 'YYYY-MM-DD', true).isValid() ? queryDate : today
 
   const [view, setView] = useState<CalendarView>('month')
-  const [cursor, setCursor] = useState(dayjs().startOf('month'))
-  const [weekCursor, setWeekCursor] = useState(dayjs())
-  const [selectedDate, setSelectedDate] = useState<string>(today)
+  const [cursor, setCursor] = useState(dayjs(initialDate).startOf('month'))
+  const [weekCursor, setWeekCursor] = useState(dayjs(initialDate))
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate)
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerYear, setPickerYear] = useState(cursor.year())
