@@ -7,9 +7,10 @@ export interface DashboardStats {
 }
 
 export interface DdayItem {
-  type: 'deadline' | 'interview'
-  applicationId: string
+  type: 'deadline' | 'interview' | 'exam'
+  applicationId?: string
   stepId?: string
+  examId?: string
   companyName: string
   stepName?: string
   date: string

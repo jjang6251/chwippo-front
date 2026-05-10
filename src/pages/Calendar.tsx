@@ -5,6 +5,7 @@ import { useCalendarEvents } from '@/hooks/useCalendar'
 import type { CalendarEvent } from '@/api/calendar'
 import { CalendarDayPanel } from '@/components/calendar/CalendarDayPanel'
 import { CalendarWeekView } from '@/components/calendar/CalendarWeekView'
+import { AddExamScheduleModal } from '@/components/myinfo/AddExamScheduleModal'
 
 type CalendarView = 'month' | 'week'
 
@@ -27,16 +28,29 @@ const COLOR = {
     icon: '🗓️',
     label: '면접',
   },
+  exam: {
+    dot: 'bg-violet',
+    pill: 'bg-violet/10 text-violet',
+    badge: 'bg-violet/10 text-violet',
+    border: 'border-violet/25',
+    icon: '📚',
+    label: '시험',
+  },
 } as const
 
 function eventLabel(e: CalendarEvent) {
   if (e.type === 'deadline') return `${e.companyName} 서류`
+  if (e.type === 'exam') return e.companyName
   const step = e.stepName ?? '면접'
   return `${e.companyName} ${step}`
 }
 
 function eventPillLabel(e: CalendarEvent) {
-  const base = e.type === 'deadline' ? `${e.companyName} 서류` : `${e.companyName} ${e.stepName ?? '면접'}`
+  const base = e.type === 'deadline'
+    ? `${e.companyName} 서류`
+    : e.type === 'exam'
+      ? e.companyName
+      : `${e.companyName} ${e.stepName ?? '면접'}`
   if (e.time) return `${e.time.slice(0, 5)} ${base}`
   return base
 }
@@ -60,6 +74,7 @@ export function Calendar() {
   const [selectedDate, setSelectedDate] = useState<string>(initialDate)
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [examModalOpen, setExamModalOpen] = useState(false)
   const [pickerYear, setPickerYear] = useState(cursor.year())
   const pickerRef = useRef<HTMLDivElement>(null)
 
@@ -188,8 +203,8 @@ export function Calendar() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
           <div ref={pickerRef} className="relative">
             <button
               onClick={() => { if (view === 'month') { setPickerOpen((o) => !o); setPickerYear(cursor.year()) } }}
@@ -252,6 +267,15 @@ export function Calendar() {
             className="text-xs font-medium px-2.5 py-1 rounded-md border border-white/10 text-text-tertiary hover:text-text-secondary hover:border-white/20 transition-colors"
           >
             오늘
+          </button>
+
+          <button
+            onClick={() => setExamModalOpen(true)}
+            aria-label="시험 일정 추가"
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-violet/10 border border-violet/30 text-violet hover:bg-violet/15 transition-colors flex-none"
+          >
+            <span>📚</span>
+            <span className="hidden sm:inline">시험 추가</span>
           </button>
         </div>
 
@@ -515,15 +539,23 @@ export function Calendar() {
           />
         </div>
       )}
+
+      <AddExamScheduleModal
+        open={examModalOpen}
+        onClose={() => setExamModalOpen(false)}
+        defaultDate={selectedDate}
+      />
     </div>
   )
 }
 
 function EventCard({ event }: { event: CalendarEvent }) {
   const c = COLOR[event.type]
-  const to = event.type === 'interview' && event.stepId
-    ? `/board/${event.applicationId}/steps/${event.stepId}`
-    : `/board/${event.applicationId}`
+  const to = event.type === 'exam'
+    ? '/myinfo#exam-schedules'
+    : event.type === 'interview' && event.stepId
+      ? `/board/${event.applicationId}/steps/${event.stepId}`
+      : `/board/${event.applicationId}`
   return (
     <Link
       to={to}
@@ -535,7 +567,7 @@ function EventCard({ event }: { event: CalendarEvent }) {
           {event.companyName}
         </p>
         <p className="text-xs text-text-quaternary mt-0.5">
-          {event.type === 'deadline' ? '서류 마감' : event.stepName}
+          {event.type === 'deadline' ? '서류 마감' : event.type === 'exam' ? '시험 일정' : event.stepName}
           {event.time && <span className="ml-1.5">· {event.time.slice(0, 5)}</span>}
           {event.location && <span className="ml-1.5">· {event.location}</span>}
         </p>

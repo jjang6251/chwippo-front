@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import dayjs from 'dayjs'
 import {
   useProfile, useUpdateProfile,
   useLangCerts, useCreateLangCert, useUpdateLangCert, useDeleteLangCert,
@@ -9,10 +10,15 @@ import {
   useCoverletter, useUpdateCoverletter, useCreateCustomItem, useUpdateCustomItem, useDeleteCustomItem,
   useDocuments, useCreateDocument, useDeleteDocument,
 } from '@/hooks/useMyinfo'
+import { useExamSchedules, useDeleteExamSchedule } from '@/hooks/useExamSchedules'
+import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
 import type { LanguageCert, Cert, Award, Experience, CoverletterCustom, MyDocument } from '@/api/myinfo'
+import type { ExamSchedule } from '@/types/exam-schedule'
 import { toast } from '@/stores/toastStore'
 import { CopyButton } from '@/components/myinfo/CopyButton'
 import { FileUpload } from '@/components/myinfo/FileUpload'
+import { AddExamScheduleModal } from '@/components/myinfo/AddExamScheduleModal'
+import { ConvertExamToCertModal } from '@/components/myinfo/ConvertExamToCertModal'
 
 // ── 섹션 메타데이터 ────────────────────────────────────────
 const SECTIONS = [
@@ -20,6 +26,7 @@ const SECTIONS = [
   { id: 'military',       label: '병역사항',     icon: '🪖', accent: 'warning' },
   { id: 'language-certs', label: '어학 자격증',   icon: '🌐', accent: 'success' },
   { id: 'certs',          label: '자격증',       icon: '📜', accent: 'brand'   },
+  { id: 'exam-schedules', label: '시험 일정',     icon: '📚', accent: 'violet'  },
   { id: 'awards',         label: '수상 내역',     icon: '🏆', accent: 'warning' },
   { id: 'experiences',    label: '경험',         icon: '💼', accent: 'success' },
   { id: 'goals',          label: '스펙 목표',     icon: '🎯', accent: 'danger'  },
@@ -32,6 +39,7 @@ const ACCENT_STYLE = {
   warning: { icon: 'bg-warning/15 text-warning', border: 'border border-warning/25', activeBorder: 'border-2 border-warning', activeGlow: 'shadow-lg' },
   success: { icon: 'bg-success/15 text-success', border: 'border border-success/25', activeBorder: 'border-2 border-success', activeGlow: 'shadow-lg' },
   danger:  { icon: 'bg-danger/15 text-danger',   border: 'border border-danger/25',  activeBorder: 'border-2 border-danger',  activeGlow: 'shadow-lg'  },
+  violet:  { icon: 'bg-violet/15 text-violet',   border: 'border border-violet/25',  activeBorder: 'border-2 border-violet',  activeGlow: 'shadow-lg'  },
 }
 
 const LANG_CERT_TYPES = ['TOEIC', 'TOEIC Speaking', 'OPIC', 'TEPS', 'JLPT', 'HSK', '기타']
@@ -227,6 +235,12 @@ export function MyInfo() {
   useEffect(() => {
     const handleScroll = () => {
       if (isProgrammaticScroll.current) return
+      // 페이지 끝(또는 거의 끝)에 도달하면 무조건 마지막 섹션을 active로
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4
+      if (atBottom) {
+        setActiveSection(SECTIONS[SECTIONS.length - 1].id)
+        return
+      }
       const OFFSET = 160
       const tops = SECTIONS.map(({ id }) => ({
         id,
@@ -293,6 +307,7 @@ export function MyInfo() {
           <MilitarySection    sectionRef={(el) => { sectionRefs.current['military'] = el }}       isActive={activeSection === 'military'} />
           <LangCertsSection   sectionRef={(el) => { sectionRefs.current['language-certs'] = el }} isActive={activeSection === 'language-certs'} />
           <CertsSection       sectionRef={(el) => { sectionRefs.current['certs'] = el }}          isActive={activeSection === 'certs'} />
+          <ExamSchedulesSection sectionRef={(el) => { sectionRefs.current['exam-schedules'] = el }} isActive={activeSection === 'exam-schedules'} />
           <AwardsSection      sectionRef={(el) => { sectionRefs.current['awards'] = el }}         isActive={activeSection === 'awards'} />
           <ExperiencesSection sectionRef={(el) => { sectionRefs.current['experiences'] = el }}    isActive={activeSection === 'experiences'} />
           <GoalsSection       sectionRef={(el) => { sectionRefs.current['goals'] = el }}          isActive={activeSection === 'goals'} />
@@ -392,11 +407,11 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
   const { mutate: remove } = useDeleteLangCert()
   const [modal, setModal] = useState<null | 'add' | LanguageCert>(null)
   const [deleteTarget, setDeleteTarget] = useState<LanguageCert | null>(null)
-  const emptyForm = { cert_type: '', score_grade: '', issuer: '', cert_number: '', acquired_at: '', file_url: '' }
+  const emptyForm = { cert_type: '', score_grade: '', issuer: '', cert_number: '', acquired_at: '', expires_at: '', file_url: '' }
   const [form, setForm] = useState(emptyForm)
 
   const openAdd = () => { setForm(emptyForm); setModal('add') }
-  const openEdit = (item: LanguageCert) => { setForm({ cert_type: item.cert_type, score_grade: item.score_grade ?? '', issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
+  const openEdit = (item: LanguageCert) => { setForm({ cert_type: item.cert_type, score_grade: item.score_grade ?? '', issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
   const handleSave = () => {
     const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
     if (modal === 'add') create(form as any, cb)
@@ -420,6 +435,7 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
             <DetailRow label="발급기관" value={item.issuer} />
             <DetailRow label="자격증번호" value={item.cert_number} />
             <DetailRow label="취득일" value={item.acquired_at} />
+            <DetailRow label="만료일" value={item.expires_at} />
             {item.file_url && (
               <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-brand hover:underline">
                 <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 8V9.5a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><path d="M5.5 1v6M3 5l2.5 2.5L8 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -437,6 +453,7 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
           <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder="ETS" />
           <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
           <Field label="취득일" type="date" value={form.acquired_at} onChange={(v) => setForm(f => ({ ...f, acquired_at: v }))} />
+          <Field label="만료일" type="date" value={form.expires_at} onChange={(v) => setForm(f => ({ ...f, expires_at: v }))} />
           <FileUpload value={form.file_url} scope="myinfo/language-cert" onUploaded={(url) => setForm(f => ({ ...f, file_url: url }))} onRemove={() => setForm(f => ({ ...f, file_url: '' }))} />
         </Modal>
       )}
@@ -453,11 +470,11 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   const { mutate: remove } = useDeleteCert()
   const [modal, setModal] = useState<null | 'add' | Cert>(null)
   const [deleteTarget, setDeleteTarget] = useState<Cert | null>(null)
-  const emptyForm = { name: '', issuer: '', cert_number: '', acquired_at: '', file_url: '' }
+  const emptyForm = { name: '', issuer: '', cert_number: '', acquired_at: '', expires_at: '', file_url: '' }
   const [form, setForm] = useState(emptyForm)
 
   const openAdd = () => { setForm(emptyForm); setModal('add') }
-  const openEdit = (item: Cert) => { setForm({ name: item.name, issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
+  const openEdit = (item: Cert) => { setForm({ name: item.name, issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
   const handleSave = () => {
     const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
     if (modal === 'add') create(form as any, cb)
@@ -473,6 +490,7 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
             <DetailRow label="발급기관" value={item.issuer} />
             <DetailRow label="자격증번호" value={item.cert_number} />
             <DetailRow label="취득일" value={item.acquired_at} />
+            <DetailRow label="만료일" value={item.expires_at} />
             {item.file_url && (
               <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-brand hover:underline">
                 <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 8V9.5a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><path d="M5.5 1v6M3 5l2.5 2.5L8 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -489,8 +507,97 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder="한국산업인력공단" />
           <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
           <Field label="취득일" type="date" value={form.acquired_at} onChange={(v) => setForm(f => ({ ...f, acquired_at: v }))} />
+          <Field label="만료일" type="date" value={form.expires_at} onChange={(v) => setForm(f => ({ ...f, expires_at: v }))} />
           <FileUpload value={form.file_url} scope="myinfo/cert" onUploaded={(url) => setForm(f => ({ ...f, file_url: url }))} onRemove={() => setForm(f => ({ ...f, file_url: '' }))} />
         </Modal>
+      )}
+      {deleteTarget && <DeleteModal label={deleteTarget.name} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
+    </SectionCard>
+  )
+}
+
+// ── 시험 일정 ─────────────────────────────────────────────
+const EXAM_DDAY_VARIANT_CLASS: Record<string, string> = {
+  danger:  'text-danger',
+  warning: 'text-warning',
+  info:    'text-violet',     // 일반 imminent → 시험 컨텍스트에선 violet로 표시
+  muted:   'text-text-quaternary',
+}
+
+function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+  const { data: items = [] } = useExamSchedules()
+  const { mutate: remove } = useDeleteExamSchedule()
+  const [modal, setModal] = useState<null | 'add' | ExamSchedule>(null)
+  const [convertTarget, setConvertTarget] = useState<ExamSchedule | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ExamSchedule | null>(null)
+
+  return (
+    <SectionCard id="exam-schedules" sectionRef={sectionRef} isActive={isActive}>
+      <div className="space-y-2">
+        {items.length === 0 && (
+          <p className="text-text-quaternary text-xs py-4 text-center">아직 등록된 시험 일정이 없어요.</p>
+        )}
+        {items.map((item) => {
+          const examDate = dayjs(item.exam_date)
+          const dday = calcDday(item.exam_date)
+          const isPassed = dday < 0
+          const variant = getDdayVariant(dday)
+          return (
+            <div key={item.id} className="bg-surface-2 border border-white/8 rounded-lg p-3">
+              <div className="flex items-start gap-3">
+                <div className="flex-none w-9 h-9 rounded-lg bg-violet/15 text-violet flex items-center justify-center text-base">📚</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-text-primary text-sm font-medium truncate">{item.name}</p>
+                    <span className={`text-[10px] font-mono font-semibold flex-none ${EXAM_DDAY_VARIANT_CLASS[variant]}`}>{getDdayLabel(dday)}</span>
+                  </div>
+                  <p className="text-text-quaternary text-[11px]">
+                    {examDate.format('M월 D일 (ddd) HH:mm')}
+                    {item.location && ` · ${item.location}`}
+                  </p>
+                  {item.memo && <p className="text-text-tertiary text-[11px] mt-1 line-clamp-2">{item.memo}</p>}
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3 pt-3 border-t border-white/6 flex-wrap">
+                {isPassed && (
+                  <button
+                    onClick={() => setConvertTarget(item)}
+                    className="flex items-center gap-1.5 text-[11px] text-violet hover:text-text-primary px-3 py-1.5 rounded-lg bg-violet/10 hover:bg-violet/20 border border-violet/30 hover:border-violet/50 transition-colors font-medium"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 6L4.5 8.5L9 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    결과 입력 → 자격증 이관
+                  </button>
+                )}
+                <div className="flex-1" />
+                <button
+                  onClick={() => setModal(item)}
+                  className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-white/8 border border-white/8 transition-colors"
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
+                  편집
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(item)}
+                  className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger/8 border border-white/8 hover:border-danger/20 transition-colors"
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
+                  삭제
+                </button>
+              </div>
+            </div>
+          )
+        })}
+        <AddButton onClick={() => setModal('add')} label="시험 일정 추가" />
+      </div>
+      {modal && (
+        <AddExamScheduleModal
+          open={true}
+          onClose={() => setModal(null)}
+          initial={modal === 'add' ? null : modal}
+        />
+      )}
+      {convertTarget && (
+        <ConvertExamToCertModal exam={convertTarget} onClose={() => setConvertTarget(null)} />
       )}
       {deleteTarget && <DeleteModal label={deleteTarget.name} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
     </SectionCard>

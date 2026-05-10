@@ -32,6 +32,7 @@ export default {
         danger: '#f87171',
         warning: '#fb923c',
         info: '#7170ff',
+        violet: '#a78bfa',
       },
       borderColor: {
         DEFAULT: 'rgba(255,255,255,0.08)',

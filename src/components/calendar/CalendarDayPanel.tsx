@@ -183,21 +183,33 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
               <div className={`flex-1 border-t px-2 py-1 relative min-h-[56px] ${isHalfHour ? 'border-white/5 border-dashed' : 'border-white/8'}`}>
                 {isCurrentSlot && <div className="absolute left-0 top-0 w-full h-px bg-danger/60" />}
 
-                {slotEvents.map((e, idx) => (
-                  <Link
-                    key={idx}
-                    to={e.type === 'interview' && e.stepId ? `/board/${e.applicationId}/steps/${e.stepId}` : `/board/${e.applicationId}`}
-                    className={`flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-md mb-1 ${
-                      e.type === 'interview'
-                        ? 'bg-info/15 border-l-2 border-info text-info'
-                        : 'bg-warning/15 border-l-2 border-warning text-warning'
-                    }`}
-                  >
-                    {e.type === 'interview' ? '🗓️' : '📄'}
-                    <span className="truncate">{e.companyName} {e.stepName ?? '면접'}</span>
-                    {e.location && <span className="text-text-quaternary ml-1 shrink-0">· {e.location}</span>}
-                  </Link>
-                ))}
+                {slotEvents.map((e, idx) => {
+                  const eventTo = e.type === 'exam'
+                    ? '/myinfo#exam-schedules'
+                    : e.type === 'interview' && e.stepId
+                      ? `/board/${e.applicationId}/steps/${e.stepId}`
+                      : `/board/${e.applicationId}`
+                  const colorClass = e.type === 'interview'
+                    ? 'bg-info/15 border-l-2 border-info text-info'
+                    : e.type === 'exam'
+                      ? 'bg-violet/15 border-l-2 border-violet text-violet'
+                      : 'bg-warning/15 border-l-2 border-warning text-warning'
+                  const icon = e.type === 'interview' ? '🗓️' : e.type === 'exam' ? '📚' : '📄'
+                  const label = e.type === 'exam'
+                    ? e.companyName
+                    : `${e.companyName} ${e.stepName ?? '면접'}`
+                  return (
+                    <Link
+                      key={idx}
+                      to={eventTo}
+                      className={`flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-md mb-1 ${colorClass}`}
+                    >
+                      {icon}
+                      <span className="truncate">{label}</span>
+                      {e.location && <span className="text-text-quaternary ml-1 shrink-0">· {e.location}</span>}
+                    </Link>
+                  )
+                })}
 
                 {slotNotes.map((n) => (
                   <div key={n.id} className="flex items-center gap-1.5 mb-1 group/note">
