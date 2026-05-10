@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -40,6 +42,7 @@ export function Dashboard() {
 
   const [editMode, setEditMode] = useState(false)
   const [showAddSheet, setShowAddSheet] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(null)
 
   const goals = profile?.goal_other
     ?.split('\n')
@@ -66,7 +69,12 @@ export function Dashboard() {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   )
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string)
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null)
     const { active, over } = event
     if (!over || active.id === over.id) return
 
@@ -156,7 +164,7 @@ export function Dashboard() {
       </div>
 
       {/* 드래그 가능한 섹션들 */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-6 sm:space-y-4">
             {draggableSections.map((s) => (
@@ -171,6 +179,13 @@ export function Dashboard() {
             ))}
           </div>
         </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {activeId ? (
+            <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 shadow-2xl shadow-black/40 cursor-grabbing">
+              {renderSectionContent(activeId)}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       {/* 섹션 추가 (항상 노출) */}

@@ -14,8 +14,8 @@ export function SectionWrapper({ id, editMode, onRemove, children }: SectionWrap
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className="relative"
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`relative ${isDragging ? 'invisible' : ''}`}
     >
       {/* 드래그 핸들 — 모바일: 카드 상단 중앙 / 웹: 카드 왼쪽 외부 */}
       <button
