@@ -14,6 +14,7 @@ function makeApp(overrides: Partial<Application> & { id: string }): Application 
     memo: null,
     currentStepIndex: 0,
     needsDetail: false,
+    isStarred: false,
     steps: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

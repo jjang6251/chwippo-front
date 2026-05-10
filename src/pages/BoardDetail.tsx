@@ -16,6 +16,7 @@ import { useUpdateStep } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
 import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { DdayBadge } from '@/components/card/DdayBadge'
+import { StarToggle } from '@/components/card/StarToggle'
 import { SetResultModal } from '@/components/card/SetResultModal'
 import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
@@ -284,7 +285,12 @@ export function BoardDetail() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-none">
+          <div className="flex items-center gap-1 flex-none">
+            <StarToggle
+              starred={app.isStarred}
+              onToggle={() => update({ isStarred: !app.isStarred })}
+              size="md"
+            />
             {app.status === 'PASSED' && (
               <span className="text-xs text-success font-medium bg-success/10 px-2 py-1 rounded-full border border-success/20">🎉 최종 합격</span>
             )}

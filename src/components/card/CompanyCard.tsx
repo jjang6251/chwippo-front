@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import type { Application } from '@/types/application'
 import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
+import { StarToggle } from './StarToggle'
 import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
 import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI, getAvatarColor } from '@/utils/tags'
@@ -133,7 +134,13 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-none">
+        <div className="flex items-center gap-1 flex-none">
+          {/* 별 토글 */}
+          <StarToggle
+            starred={application.isStarred}
+            onToggle={() => updateApp({ isStarred: !application.isStarred })}
+          />
+
           {/* D-day 배지 */}
           {ddayTarget && !isPassed && !isFailed && (
             <DdayBadge deadline={ddayTarget} />
