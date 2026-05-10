@@ -43,7 +43,7 @@ export function StartApplicationModal({
     <Modal open={open} onClose={onClose} title="지원 시작">
       <p className="text-text-tertiary text-xs mb-4">
         <span className="text-text-primary font-medium">{companyName}</span> 지원을 시작합니다.
-        기본 7단계 스텝이 자동으로 생성됩니다.
+        기본 4단계 스텝이 자동으로 생성됩니다.
       </p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -64,7 +64,7 @@ export function StartApplicationModal({
           <button type="button" onClick={onClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">
             취소
           </button>
-          <button type="submit" disabled={isPending} className="flex-1 py-2.5 text-xs font-medium text-white bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
+          <button type="submit" disabled={isPending} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
             {isPending ? '처리 중...' : '지원 시작'}
           </button>
         </div>
