@@ -28,6 +28,7 @@ export interface LanguageCert {
   issuer?: string
   cert_number?: string
   acquired_at?: string
+  expires_at?: string
   file_url?: string
 }
 
@@ -37,6 +38,7 @@ export interface Cert {
   issuer?: string
   cert_number?: string
   acquired_at?: string
+  expires_at?: string
   file_url?: string
 }
 

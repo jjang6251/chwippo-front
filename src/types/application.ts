@@ -23,6 +23,7 @@ export interface Application {
   memo: string | null
   currentStepIndex: number
   needsDetail: boolean
+  isStarred: boolean
   steps: ApplicationStep[]
   createdAt: string
   updatedAt: string
@@ -48,6 +49,7 @@ export interface UpdateApplicationDto {
   memo?: string
   currentStepIndex?: number
   needsDetail?: boolean
+  isStarred?: boolean
 }
 
 export interface UpdateStepsDto {

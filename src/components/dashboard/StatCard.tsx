@@ -54,7 +54,7 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
       {/* 이모지 + 라벨 + 화살표 */}
       <div className="flex items-center justify-between gap-1.5">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`flex-none w-7 h-7 rounded-lg flex items-center justify-center text-sm ${c.iconBg}`}>
+          <span className={`hidden sm:flex flex-none w-7 h-7 rounded-lg items-center justify-center text-sm ${c.iconBg}`}>
             {icon}
           </span>
           <p className={`text-xs font-semibold truncate ${c.label}`}>{label}</p>
@@ -70,11 +70,11 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
       {isLoading ? (
         <div className="h-8 w-8 bg-white/8 rounded animate-pulse" />
       ) : (
-        <p className={`text-3xl font-bold font-mono tabular-nums leading-none ${c.value}`}>{value ?? 0}</p>
+        <p className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums leading-none ${c.value}`}>{value ?? 0}</p>
       )}
 
       {/* 설명 */}
-      <p className="text-text-quaternary text-[10px] leading-relaxed">{description}</p>
+      <p className="hidden sm:block text-text-quaternary text-[10px] leading-relaxed">{description}</p>
     </div>
   )
 }

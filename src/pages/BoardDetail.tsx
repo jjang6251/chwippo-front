@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { goBack } from '@/utils/navigation'
+import dayjs from 'dayjs'
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor,
   useSensor, useSensors,
 } from '@dnd-kit/core'
 import {
@@ -11,9 +13,11 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep, useUpdateSteps } from '@/hooks/useApplications'
+import { useUpdateStep } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
 import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { DdayBadge } from '@/components/card/DdayBadge'
+import { StarToggle } from '@/components/card/StarToggle'
 import { SetResultModal } from '@/components/card/SetResultModal'
 import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
@@ -114,12 +118,11 @@ function EditableField({
 export function BoardDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
-  const backTo = (location.state as any)?.from === 'dashboard' ? '/dashboard' : '/board'
   const { data: app, isLoading } = useApplication(id!)
   const { mutate: update } = useUpdateApplication(id!)
   const { mutate: updateStep } = useUpdateCurrentStep()
   const { mutate: updateSteps, isPending: isSavingSteps } = useUpdateSteps(id!)
+  const { mutate: updateStepDetail } = useUpdateStep(id!)
 
   const [showResultModal, setShowResultModal] = useState(false)
   const [showStepEditor, setShowStepEditor] = useState(false)
@@ -132,6 +135,7 @@ export function BoardDetail() {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
@@ -144,11 +148,16 @@ export function BoardDetail() {
 
   const sortedSteps = [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex)
   const currentStep = sortedSteps[app.currentStepIndex]
-  const RESULT_KEYWORDS = ['결과', '발표', '대기']
-  const needsResult =
-    app.status === 'IN_PROGRESS' &&
-    !!currentStep &&
-    RESULT_KEYWORDS.some((kw) => currentStep.name.includes(kw))
+  const today = dayjs().startOf('day')
+  const isLastStep = sortedSteps.length > 0 && app.currentStepIndex === sortedSteps.length - 1
+  const stepDatePassed =
+    !!currentStep?.scheduledDate &&
+    dayjs(currentStep.scheduledDate).startOf('day').isBefore(today)
+  const needsResult = app.status === 'IN_PROGRESS' && isLastStep && stepDatePassed
+
+  // D-day: 현재 스텝 날짜만 사용 (날짜 없으면 배지 없음)
+  const ddayTarget = currentStep?.scheduledDate ?? null
+
   const currentTags = parseTags(app.jobCategory)
   const openStep = openStepId ? sortedSteps.find((s) => s.id === openStepId) ?? null : null
 
@@ -232,13 +241,13 @@ export function BoardDetail() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {/* 뒤로가기 */}
       <button
-        onClick={() => navigate(backTo)}
+        onClick={() => goBack(navigate, '/board')}
         className="flex items-center gap-1.5 text-text-tertiary hover:text-text-secondary text-xs mb-6 transition-colors group"
       >
         <svg className="group-hover:-translate-x-0.5 transition-transform" width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        지원 현황 보드
+        뒤로
       </button>
 
       {/* 기본 정보 카드 */}
@@ -275,11 +284,16 @@ export function BoardDetail() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-none">
+          <div className="flex items-center gap-1 flex-none">
+            <StarToggle
+              starred={app.isStarred}
+              onToggle={() => update({ isStarred: !app.isStarred })}
+              size="md"
+            />
             {app.status === 'PASSED' && (
               <span className="text-xs text-success font-medium bg-success/10 px-2 py-1 rounded-full border border-success/20">🎉 최종 합격</span>
             )}
-            {app.deadline && app.status !== 'PASSED' && <DdayBadge deadline={app.deadline} />}
+            {ddayTarget && app.status !== 'PASSED' && <DdayBadge deadline={ddayTarget} />}
           </div>
         </div>
 
@@ -307,13 +321,36 @@ export function BoardDetail() {
         {/* 마감일 + URL */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-[10px] text-text-quaternary mb-1">서류 마감일</label>
-            <input
-              type="date"
-              defaultValue={app.deadline ?? ''}
-              onBlur={(e) => { if (e.target.value !== (app.deadline ?? '')) save('deadline')(e.target.value) }}
-              className="w-full bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-white/14 [color-scheme:dark]"
-            />
+            {currentStep ? (
+              <>
+                <label className="block text-[10px] text-text-quaternary mb-1 truncate">{currentStep.name} 날짜</label>
+                <input
+                  key={currentStep.id}
+                  type="date"
+                  defaultValue={currentStep.scheduledDate ? dayjs(currentStep.scheduledDate).format('YYYY-MM-DD') : ''}
+                  onBlur={(e) => {
+                    const oldDate = currentStep.scheduledDate ? dayjs(currentStep.scheduledDate).format('YYYY-MM-DD') : ''
+                    if (e.target.value !== oldDate) {
+                      updateStepDetail(
+                        { stepId: currentStep.id, scheduledDate: e.target.value ? `${e.target.value}T00:00:00` : null },
+                        { onSuccess: () => toast.show('저장됐어요.') },
+                      )
+                    }
+                  }}
+                  className="w-full bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-white/14 [color-scheme:dark]"
+                />
+              </>
+            ) : (
+              <>
+                <label className="block text-[10px] text-text-quaternary mb-1">서류 마감일</label>
+                <input
+                  type="date"
+                  defaultValue={app.deadline ?? ''}
+                  onBlur={(e) => { if (e.target.value !== (app.deadline ?? '')) save('deadline')(e.target.value) }}
+                  className="w-full bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-white/14 [color-scheme:dark]"
+                />
+              </>
+            )}
           </div>
           <div>
             <label className="block text-[10px] text-text-quaternary mb-1">채용공고 URL</label>
@@ -355,6 +392,7 @@ export function BoardDetail() {
           <StepBar
             steps={app.steps}
             currentStepIndex={app.currentStepIndex}
+            status={app.status}
             onStepClick={app.status !== 'PASSED' && app.status !== 'FAILED' ? handleStepClick : undefined}
             onStepNameClick={setOpenStepId}
             size="md"
@@ -371,7 +409,7 @@ export function BoardDetail() {
           </div>
           <button
             onClick={() => setShowResultModal(true)}
-            className="text-xs font-medium text-white bg-brand hover:bg-accent px-3 py-2 rounded-lg transition-colors"
+            className="text-xs font-medium text-text-primary bg-brand hover:bg-accent px-3 py-2 rounded-lg transition-colors"
           >결과 입력</button>
         </div>
       )}
@@ -401,7 +439,7 @@ export function BoardDetail() {
         <TagSelector selected={editTags} onChange={setEditTags} />
         <div className="flex gap-2 mt-5">
           <button onClick={() => setShowTagEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
-          <button onClick={handleSaveTags} className="flex-1 py-2.5 text-xs font-medium text-white bg-brand hover:bg-accent rounded-lg transition-colors">저장</button>
+          <button onClick={handleSaveTags} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors">저장</button>
         </div>
       </Modal>
 
@@ -431,7 +469,7 @@ export function BoardDetail() {
         </button>
         <div className="flex gap-2">
           <button onClick={() => setShowStepEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
-          <button onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-white bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
+          <button onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
             {isSavingSteps ? '저장 중...' : '저장'}
           </button>
         </div>
@@ -470,7 +508,7 @@ export function BoardDetail() {
               </button>
               <button
                 onClick={() => { updateStep({ id: app.id, stepIndex: pendingStepIndex }); setShowPassConfirm(false) }}
-                className="flex-1 py-2.5 text-xs font-medium text-white bg-success/80 hover:bg-success rounded-lg transition-colors"
+                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
               >
                 합격 처리
               </button>

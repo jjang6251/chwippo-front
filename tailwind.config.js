@@ -32,6 +32,7 @@ export default {
         danger: '#f87171',
         warning: '#fb923c',
         info: '#7170ff',
+        violet: '#a78bfa',
       },
       borderColor: {
         DEFAULT: 'rgba(255,255,255,0.08)',
@@ -50,9 +51,14 @@ export default {
           from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        slideUp: {
+          from: { transform: 'translateY(100%)' },
+          to: { transform: 'translateY(0)' },
+        },
       },
       animation: {
         fadeInUp: 'fadeInUp 0.2s ease-out',
+        slideUp: 'slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
       },
     },
   },

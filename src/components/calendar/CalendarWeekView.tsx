@@ -1,0 +1,201 @@
+import { useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
+import dayjs from 'dayjs'
+import type { CalendarEvent } from '@/api/calendar'
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i) // 00~23
+const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
+const ROW_HEIGHT = 44 // px per hour row
+const GRID_HEIGHT = 480 // visible scroll container height
+
+interface Props {
+  weekStart: dayjs.Dayjs
+  events: CalendarEvent[]
+  selectedDate: string
+  today: string
+  isLoading?: boolean
+  onSelectDate: (date: string) => void
+}
+
+export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoading, onSelectDate }: Props) {
+  const days = Array.from({ length: 7 }, (_, i) => weekStart.add(i, 'day'))
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const nowHour = dayjs().hour()
+  const nowMinute = dayjs().minute()
+  const todayInWeek = days.some((d) => d.format('YYYY-MM-DD') === today)
+
+  // 현재 시각 위치 (px) - 분 단위 정밀도
+  const nowPx = nowHour * ROW_HEIGHT + (nowMinute / 60) * ROW_HEIGHT
+
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const targetHour = todayInWeek ? nowHour : 8
+    // 현재 시간이 컨테이너 상단 1/3 위치에 오도록
+    const scrollTop = Math.max(0, targetHour * ROW_HEIGHT - GRID_HEIGHT / 3)
+    scrollRef.current.scrollTop = scrollTop
+  }, [weekStart.format('YYYY-MM-DD')]) // weekStart 변경 시 재스크롤
+
+  // Deadline events by date (all-day row)
+  const deadlinesByDate: Record<string, CalendarEvent[]> = {}
+  // Interview events by date+hour
+  const interviewsByDateHour: Record<string, Record<number, CalendarEvent[]>> = {}
+
+  for (const e of events) {
+    if (e.type === 'deadline') {
+      if (!deadlinesByDate[e.date]) deadlinesByDate[e.date] = []
+      deadlinesByDate[e.date].push(e)
+    } else if (e.type === 'interview' && e.time) {
+      const [h] = e.time.split(':').map(Number)
+      if (h >= 0 && h <= 23) {
+        if (!interviewsByDateHour[e.date]) interviewsByDateHour[e.date] = {}
+        if (!interviewsByDateHour[e.date][h]) interviewsByDateHour[e.date][h] = []
+        interviewsByDateHour[e.date][h].push(e)
+      }
+    }
+  }
+
+  // 시간 없는 면접 → 08:00 행에 표시
+  for (const e of events) {
+    if (e.type === 'interview' && !e.time) {
+      if (!interviewsByDateHour[e.date]) interviewsByDateHour[e.date] = {}
+      if (!interviewsByDateHour[e.date][8]) interviewsByDateHour[e.date][8] = []
+      interviewsByDateHour[e.date][8].push(e)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden animate-pulse">
+        <div className="h-14 bg-white/2 border-b border-white/5" />
+        <div className="h-8 bg-white/1 border-b border-white/5" />
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="h-11 border-b border-white/5 bg-white/1" />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden">
+      {/* Day headers — 스크롤과 분리 */}
+      <div className="grid border-b border-white/5" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
+        <div className="border-r border-white/5" />
+        {days.map((day) => {
+          const dateStr = day.format('YYYY-MM-DD')
+          const isSelected = dateStr === selectedDate
+          const isToday = dateStr === today
+          const isSun = day.day() === 0
+          const isSat = day.day() === 6
+          return (
+            <button
+              key={dateStr}
+              onClick={() => onSelectDate(dateStr)}
+              className={`py-2 text-center transition-colors hover:bg-white/3 border-r border-white/5 last:border-r-0 ${isSelected ? 'bg-brand/8' : ''}`}
+            >
+              <div className={`text-[10px] font-medium ${isSun ? 'text-danger/70' : isSat ? 'text-info/70' : 'text-text-quaternary'}`}>
+                {KO_DAYS[day.day()]}
+              </div>
+              <div className={`mt-0.5 w-6 h-6 flex items-center justify-center rounded-full mx-auto text-xs font-semibold transition-colors ${
+                isToday ? 'bg-brand text-text-primary' : isSelected ? 'text-brand' : isSun ? 'text-danger/80' : isSat ? 'text-info/80' : 'text-text-secondary'
+              }`}>
+                {day.date()}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* All-day row (서류 마감) */}
+      <div className="grid border-b border-white/5 min-h-[28px]" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
+        <div className="flex items-center justify-end px-1 border-r border-white/5">
+          <span className="text-[8px] text-text-quaternary font-medium">종일</span>
+        </div>
+        {days.map((day) => {
+          const dateStr = day.format('YYYY-MM-DD')
+          const deadlines = deadlinesByDate[dateStr] ?? []
+          const isSelected = dateStr === selectedDate
+          return (
+            <div
+              key={dateStr}
+              className={`px-0.5 py-0.5 border-r border-white/5 last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
+            >
+              {deadlines.map((e, idx) => (
+                <Link
+                  key={idx}
+                  to={`/board/${e.applicationId}`}
+                  className="block text-[9px] font-medium px-1 py-0.5 rounded bg-warning/15 text-warning truncate mb-0.5 hover:bg-warning/20 transition-colors"
+                  title={`${e.companyName} 서류 마감`}
+                >
+                  {e.companyName}
+                </Link>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Time grid — 내부 스크롤 (h-[480px] 고정 높이) */}
+      <div ref={scrollRef} className="overflow-y-auto relative" style={{ height: `${GRID_HEIGHT}px` }}>
+        {/* 현재 시각 표시선 (오늘이 이번 주에 있을 때만) */}
+        {todayInWeek && (
+          <div
+            className="absolute left-[44px] right-0 z-10 pointer-events-none flex items-center"
+            style={{ top: `${nowPx}px` }}
+          >
+            <div className="w-2 h-2 rounded-full bg-danger shrink-0 -ml-1" />
+            <div className="flex-1 h-px bg-danger/60" />
+          </div>
+        )}
+
+        {HOURS.map((hour) => {
+          const isCurrentHour = todayInWeek && hour === nowHour
+          return (
+            <div
+              key={hour}
+              className="grid border-b border-white/5 last:border-b-0"
+              style={{ gridTemplateColumns: '44px repeat(7, 1fr)', minHeight: `${ROW_HEIGHT}px` }}
+            >
+              {/* Hour label */}
+              <div className="flex items-start justify-end px-1.5 pt-1 border-r border-white/5 shrink-0">
+                <span className={`text-[9px] font-mono select-none ${isCurrentHour ? 'text-danger font-semibold' : 'text-text-quaternary'}`}>
+                  {String(hour).padStart(2, '0')}:00
+                </span>
+              </div>
+              {/* Day cells */}
+              {days.map((day) => {
+                const dateStr = day.format('YYYY-MM-DD')
+                const hourEvents = interviewsByDateHour[dateStr]?.[hour] ?? []
+                const isSelected = dateStr === selectedDate
+                const isTodayCell = dateStr === today && isCurrentHour
+                return (
+                  <div
+                    key={dateStr}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onSelectDate(dateStr)}
+                    onKeyDown={(e) => e.key === 'Enter' && onSelectDate(dateStr)}
+                    className={`cursor-pointer border-r border-white/5 last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-white/2 ${
+                      isTodayCell ? 'bg-danger/5' : isSelected ? 'bg-brand/5' : ''
+                    }`}
+                  >
+                    {hourEvents.map((e, idx) => (
+                      <Link
+                        key={idx}
+                        to={e.stepId ? `/board/${e.applicationId}/steps/${e.stepId}` : `/board/${e.applicationId}`}
+                        onClick={(ev) => ev.stopPropagation()}
+                        className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-info/15 text-info border-l border-info truncate mb-0.5 hover:bg-info/20 transition-colors"
+                        title={`${e.companyName} ${e.stepName ?? '면접'}`}
+                      >
+                        {e.companyName}
+                      </Link>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

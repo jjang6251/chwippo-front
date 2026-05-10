@@ -38,7 +38,7 @@ export function InquiryList() {
         </div>
         <Link
           to="/inquiry/new"
-          className="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-accent transition-colors"
+          className="px-4 py-2 bg-brand text-text-primary text-sm font-semibold rounded-lg hover:bg-accent transition-colors"
         >
           + 새 문의
         </Link>
@@ -99,7 +99,7 @@ function InquiryCard({ item }: { item: Inquiry }) {
     >
       {/* 미읽음 뱃지 */}
       {item.user_unread > 0 && (
-        <span className="absolute top-3 right-4 min-w-[18px] h-[18px] px-1 bg-danger text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+        <span className="absolute top-3 right-4 min-w-[18px] h-[18px] px-1 bg-danger text-text-primary text-[10px] font-bold rounded-full flex items-center justify-center">
           {item.user_unread}
         </span>
       )}

@@ -197,7 +197,7 @@ export function OpsInquiries() {
                   <button
                     onClick={() => commentMutation.mutate()}
                     disabled={!comment.trim() || commentMutation.isPending}
-                    className="flex-1 py-2 bg-brand text-white text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-accent transition-colors"
+                    className="flex-1 py-2 bg-brand text-text-primary text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-accent transition-colors"
                   >
                     {commentMutation.isPending ? '전송 중...' : '답변 전송'}
                   </button>
@@ -252,7 +252,7 @@ function AdminInquiryCard({ item, onSelect, selected }: { item: AdminInquiry; on
       }`}
     >
       {item.admin_unread > 0 && (
-        <span className="absolute top-3 right-4 min-w-[18px] h-[18px] px-1 bg-danger text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+        <span className="absolute top-3 right-4 min-w-[18px] h-[18px] px-1 bg-danger text-text-primary text-[10px] font-bold rounded-full flex items-center justify-center">
           {item.admin_unread}
         </span>
       )}

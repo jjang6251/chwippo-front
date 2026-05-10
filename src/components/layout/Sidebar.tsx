@@ -147,7 +147,7 @@ export function Sidebar() {
             to="/inquiry"
             className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
               location.pathname === '/inquiry'
-                ? 'bg-brand text-white'
+                ? 'bg-brand text-text-primary'
                 : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
             }`}
           >
@@ -172,7 +172,7 @@ export function Sidebar() {
               </button>
               <button
                 onClick={handleLogout}
-                className="flex-1 py-2.5 rounded-lg bg-brand text-white text-sm font-medium hover:bg-accent transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent transition-colors"
               >
                 로그아웃
               </button>

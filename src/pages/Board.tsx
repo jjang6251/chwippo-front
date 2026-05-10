@@ -7,6 +7,7 @@ import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
 import type { ApplicationStatus } from '@/types/application'
+import { sortApplications } from '@/utils/sortApplications'
 
 type FilterTab = 'all' | ApplicationStatus
 
@@ -70,13 +71,7 @@ export function Board() {
     return matchSearch && app.status === filter
   })
 
-  // 마감일 임박순 정렬 (null은 뒤로)
-  const sorted = [...filtered].sort((a, b) => {
-    if (!a.deadline && !b.deadline) return 0
-    if (!a.deadline) return 1
-    if (!b.deadline) return -1
-    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-  })
+  const sorted = sortApplications(filtered)
 
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
@@ -105,7 +100,7 @@ export function Board() {
         <div ref={addMenuRef} className="relative">
           <button
             onClick={() => setAddMenuOpen(!addMenuOpen)}
-            className="flex items-center gap-1.5 bg-brand hover:bg-accent text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors shadow-lg shadow-brand/20"
+            className="flex items-center gap-1.5 bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors shadow-lg shadow-brand/20"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -268,7 +263,7 @@ function EmptyState({ filter, search, onAdd }: { filter: FilterTab; search: stri
       {filter === 'all' && (
         <button
           onClick={onAdd}
-          className="bg-brand hover:bg-accent text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
+          className="bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
         >
           + 첫 회사 추가하기
         </button>

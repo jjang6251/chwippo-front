@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import dayjs from 'dayjs'
 import type { Application } from '@/types/application'
 import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
-import { useUpdateCurrentStep, useDeleteApplication } from '@/hooks/useApplications'
+import { StarToggle } from './StarToggle'
+import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
 import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI, getAvatarColor } from '@/utils/tags'
 
@@ -30,23 +32,32 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showFailConfirm, setShowFailConfirm] = useState(false)
   const [showPassConfirm, setShowPassConfirm] = useState(false)
   const [pendingStepIndex, setPendingStepIndex] = useState<number | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const { mutate: updateStep } = useUpdateCurrentStep()
   const { mutate: deleteApp, isPending: isDeleting } = useDeleteApplication()
+  const { mutate: updateApp } = useUpdateApplication(application.id)
 
   const isPassed = application.status === 'PASSED'
   const isFailed = application.status === 'FAILED'
   const isPlanned = application.status === 'PLANNED'
 
-  const currentStep = [...application.steps]
-    .sort((a, b) => a.orderIndex - b.orderIndex)[application.currentStepIndex]
-  const RESULT_KEYWORDS = ['결과', '발표', '대기']
-  const needsResult =
-    application.status === 'IN_PROGRESS' &&
-    !!currentStep &&
-    RESULT_KEYWORDS.some((kw) => currentStep.name.includes(kw))
+  const sortedSteps = [...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)
+  const currentStep = sortedSteps[application.currentStepIndex]
+
+  const today = dayjs().startOf('day')
+
+  // D-day: 현재 스텝 날짜만 사용 (날짜 없으면 배지 없음)
+  const ddayTarget = currentStep?.scheduledDate ?? null
+
+  // 결과 배지: 마지막 스텝에서만, 날짜가 지났을 때
+  const isLastStep = sortedSteps.length > 0 && application.currentStepIndex === sortedSteps.length - 1
+  const stepDatePassed =
+    !!currentStep?.scheduledDate &&
+    dayjs(currentStep.scheduledDate).startOf('day').isBefore(today)
+  const needsResult = application.status === 'IN_PROGRESS' && isLastStep && stepDatePassed
 
   const tags = parseTags(application.jobCategory)
 
@@ -123,10 +134,16 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-none">
+        <div className="flex items-center gap-1 flex-none">
+          {/* 별 토글 */}
+          <StarToggle
+            starred={application.isStarred}
+            onToggle={() => updateApp({ isStarred: !application.isStarred })}
+          />
+
           {/* D-day 배지 */}
-          {application.deadline && !isPassed && !isFailed && (
-            <DdayBadge deadline={application.deadline} />
+          {ddayTarget && !isPassed && !isFailed && (
+            <DdayBadge deadline={ddayTarget} />
           )}
 
           {/* ... 메뉴 */}
@@ -148,6 +165,12 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
                   onClick={(e) => { e.stopPropagation(); navigate(`/board/${application.id}`); setMenuOpen(false) }}
                   className="w-full text-left px-3.5 py-2 text-xs text-text-secondary hover:bg-white/5 transition-colors"
                 >상세 보기</button>
+                {application.status === 'IN_PROGRESS' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowFailConfirm(true); setMenuOpen(false) }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-warning hover:bg-warning/8 transition-colors"
+                  >불합격 처리</button>
+                )}
                 <div className="mx-3 my-1 border-t border-white/6" />
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setMenuOpen(false) }}
@@ -179,6 +202,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           <StepBar
             steps={application.steps}
             currentStepIndex={application.currentStepIndex}
+            status={application.status}
             onStepClick={!isPassed && !isFailed ? handleStepClick : undefined}
             onStepNameClick={onCurrentStepClick && !isPassed
               ? (stepId) => onCurrentStepClick(application.id, stepId)
@@ -223,6 +247,42 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
         </div>
       )}
 
+      {/* 불합격 확인 모달 */}
+      {showFailConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { e.stopPropagation(); setShowFailConfirm(false) }}
+        >
+          <div
+            className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-text-primary font-semibold text-sm mb-1">불합격 처리할까요?</h3>
+            <p className="text-text-tertiary text-xs mb-5">
+              <span className="text-text-secondary font-medium">{application.companyName}</span> 카드가 불합격으로 전환됩니다.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowFailConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
+              <button
+                onClick={() => {
+                  updateApp(
+                    { status: 'FAILED' } as any,
+                    {
+                      onSuccess: () => toast.show(`${application.companyName} 불합격 처리됐어요.`),
+                      onError: () => toast.error('처리에 실패했습니다.'),
+                    },
+                  )
+                  setShowFailConfirm(false)
+                }}
+                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-warning/70 hover:bg-warning/90 rounded-lg transition-colors"
+              >
+                불합격 처리
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
         <div
@@ -239,7 +299,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
             </p>
             <div className="flex gap-2">
               <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
-              <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 text-xs font-medium text-white bg-danger/80 hover:bg-danger rounded-lg transition-colors disabled:opacity-50">
+              <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-danger/80 hover:bg-danger rounded-lg transition-colors disabled:opacity-50">
                 {isDeleting ? '삭제 중...' : '삭제'}
               </button>
             </div>
@@ -266,7 +326,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               <button onClick={() => setShowPassConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
               <button
                 onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }); setShowPassConfirm(false) }}
-                className="flex-1 py-2.5 text-xs font-medium text-white bg-success/80 hover:bg-success rounded-lg transition-colors"
+                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
               >
                 합격 처리
               </button>

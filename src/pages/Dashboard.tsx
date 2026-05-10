@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -19,9 +22,13 @@ import { StatsSection } from '@/components/dashboard/sections/StatsSection'
 import { DdaySection } from '@/components/dashboard/sections/DdaySection'
 import { TodosSection } from '@/components/dashboard/sections/TodosSection'
 import { GoalsSection } from '@/components/dashboard/sections/GoalsSection'
+import { TodayScheduleSection } from '@/components/dashboard/sections/TodayScheduleSection'
+import { TopApplicationsSection } from '@/components/dashboard/sections/TopApplicationsSection'
+import { CalendarMiniSection } from '@/components/dashboard/sections/CalendarMiniSection'
+import { CoverLetterQuickSection } from '@/components/dashboard/sections/CoverLetterQuickSection'
 import { useDashboardStats, useDdayList } from '@/hooks/useDashboard'
+import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
 import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
-import { useTodos } from '@/hooks/useTodos'
 import { useProfile } from '@/hooks/useMyinfo'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -29,13 +36,13 @@ export function Dashboard() {
   const user = useAuthStore((s) => s.user)
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: dday, isLoading: ddayLoading } = useDdayList()
-  const { data: todos, isLoading: todosLoading } = useTodos()
   const { data: profile } = useProfile()
   const { data: config } = useDashboardConfig()
   const { mutate: saveConfig } = useUpdateDashboardConfig()
 
   const [editMode, setEditMode] = useState(false)
   const [showAddSheet, setShowAddSheet] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(null)
 
   const goals = profile?.goal_other
     ?.split('\n')
@@ -43,7 +50,6 @@ export function Dashboard() {
     .filter(Boolean) ?? []
 
   const now = new Date()
-  const todayStr = now.toISOString().split('T')[0]
   const month = now.getMonth() + 1
   const date = now.getDate()
   const dayNames = ['일', '월', '화', '수', '목', '금', '토']
@@ -58,9 +64,17 @@ export function Dashboard() {
   const draggableSections = sections.filter((s) => s.visible && s.id !== 'stats')
   const draggableIds = draggableSections.map((s) => s.id)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  )
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string)
+  }
 
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null)
     const { active, over } = event
     if (!over || active.id === over.id) return
 
@@ -78,13 +92,14 @@ export function Dashboard() {
     saveConfig({ sections: newSections })
   }
 
-  function handleAdd(id: string) {
+  function handleToggle(id: string) {
     const existing = sections.find((s) => s.id === id)
+    const isActive = existing?.visible === true
     const statsSection = sections.find((s) => s.id === 'stats') ?? { id: 'stats', visible: true }
     const rest = sections.filter((s) => s.id !== 'stats')
     let newRest
     if (existing) {
-      newRest = rest.map((s) => s.id === id ? { ...s, visible: true } : s)
+      newRest = rest.map((s) => s.id === id ? { ...s, visible: !isActive } : s)
     } else {
       newRest = [...rest, { id, visible: true }]
     }
@@ -93,10 +108,14 @@ export function Dashboard() {
 
   function renderSectionContent(id: string) {
     switch (id) {
-      case 'dday':   return <DdaySection items={dday} isLoading={ddayLoading} />
-      case 'todos':  return <TodosSection todos={todos} isLoading={todosLoading} todayStr={todayStr} />
-      case 'goals':  return <GoalsSection goals={goals} />
-      default:       return null
+      case 'dday':              return <DdaySection items={dday} isLoading={ddayLoading} />
+      case 'todos':             return <TodosSection />
+      case 'goals':             return <GoalsSection goals={goals} />
+      case 'today_schedule':    return <TodayScheduleSection items={dday} isLoading={ddayLoading} />
+      case 'top_applications':  return <TopApplicationsSection />
+      case 'calendar_mini':     return <CalendarMiniSection />
+      case 'cover_letter_quick':return <CoverLetterQuickSection />
+      default:                  return null
     }
   }
 
@@ -120,14 +139,17 @@ export function Dashboard() {
             className={`flex-none text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${
               editMode
                 ? 'bg-brand/20 border-brand/40 text-brand'
-                : 'bg-white/5 border-white/10 text-text-quaternary hover:text-text-tertiary'
+                : 'bg-white/5 border-white/8 text-text-quaternary hover:text-text-tertiary'
             }`}
           >
-            {editMode ? '완료' : '편집'}
+            {editMode ? '완료' : '섹션 편집'}
           </button>
         </div>
         <p className="text-text-quaternary text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
       </div>
+
+      {/* 어제 면접 후기 CTA */}
+      <InterviewReviewCard />
 
       {/* 면접 핀 카드 (D-1 / D-day) — 커스터마이징 대상 아님 */}
       {pinnedItem && (
@@ -142,9 +164,9 @@ export function Dashboard() {
       </div>
 
       {/* 드래그 가능한 섹션들 */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-4">
+          <div className="space-y-6 sm:space-y-4">
             {draggableSections.map((s) => (
               <SectionWrapper
                 key={s.id}
@@ -157,22 +179,27 @@ export function Dashboard() {
             ))}
           </div>
         </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {activeId ? (
+            <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 shadow-2xl shadow-black/40 cursor-grabbing">
+              {renderSectionContent(activeId)}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
-      {/* 편집 모드: 섹션 추가 */}
-      {editMode && (
-        <button
-          onClick={() => setShowAddSheet(true)}
-          className="mt-4 w-full py-3 rounded-xl border border-dashed border-white/15 text-text-quaternary text-xs hover:border-brand/40 hover:text-brand transition-colors"
-        >
-          + 섹션 추가
-        </button>
-      )}
+      {/* 섹션 추가 (항상 노출) */}
+      <button
+        onClick={() => setShowAddSheet(true)}
+        className="mt-4 w-full py-3 rounded-xl border border-dashed border-white/15 text-text-quaternary text-xs hover:border-brand/40 hover:text-brand transition-colors"
+      >
+        + 섹션 추가
+      </button>
 
       {showAddSheet && (
         <AddSectionSheet
           activeSectionIds={activeSectionIds}
-          onAdd={handleAdd}
+          onToggle={handleToggle}
           onClose={() => setShowAddSheet(false)}
         />
       )}

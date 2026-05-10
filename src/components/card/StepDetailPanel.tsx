@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
+import { getStepType, STEP_TYPE_CONFIG } from '@/utils/stepTemplates'
 
 interface Step {
   id: string
@@ -20,6 +21,8 @@ interface Props {
 
 export function StepDetailPanel({ appId, step, onClose }: Props) {
   const navigate = useNavigate()
+  const stepType = getStepType(step.name)
+  const typeConfig = STEP_TYPE_CONFIG[stepType]
   const [scheduledDate, setScheduledDate] = useState(
     step.scheduledDate ? dayjs(step.scheduledDate).format('YYYY-MM-DDTHH:mm') : '',
   )
@@ -77,7 +80,10 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/6 shrink-0">
-          <h2 className="text-text-primary font-semibold text-sm truncate">{step.name}</h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm shrink-0">{typeConfig.icon}</span>
+            <h2 className="text-text-primary font-semibold text-sm truncate">{step.name}</h2>
+          </div>
           <div className="flex items-center gap-1 shrink-0">
             {/* 전체 화면으로 열기 */}
             <button

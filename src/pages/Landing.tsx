@@ -36,7 +36,7 @@ export function Landing() {
           <span className="text-lg font-bold tracking-tight">치뽀</span>
           <button
             onClick={handleKakaoLogin}
-            className="text-sm font-medium bg-brand hover:bg-accent text-white px-4 py-2 rounded-lg transition-colors"
+            className="text-sm font-medium bg-brand hover:bg-accent text-text-primary px-4 py-2 rounded-lg transition-colors"
           >
             시작하기
           </button>
@@ -139,7 +139,7 @@ export function Landing() {
         </p>
         <button
           onClick={handleKakaoLogin}
-          className="bg-brand hover:bg-accent text-white font-semibold text-sm px-8 py-3.5 rounded-xl transition-colors shadow-[0_0_24px_rgba(94,106,210,0.3)]"
+          className="bg-brand hover:bg-accent text-text-primary font-semibold text-sm px-8 py-3.5 rounded-xl transition-colors shadow-[0_0_24px_rgba(94,106,210,0.3)]"
         >
           지금 무료로 시작하기
         </button>

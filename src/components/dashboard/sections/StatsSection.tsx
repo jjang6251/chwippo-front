@@ -8,7 +8,7 @@ interface StatsSectionProps {
 
 export function StatsSection({ stats, isLoading }: StatsSectionProps) {
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
       <StatCard
         label="전체 지원"
         value={stats?.total}
