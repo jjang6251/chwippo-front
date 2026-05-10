@@ -1,43 +1,34 @@
 import { useState } from 'react'
-import type { ApplicationStep } from '@/types/application'
+import type { ApplicationStep, ApplicationStatus } from '@/types/application'
 
 interface StepBarProps {
   steps: ApplicationStep[]
   currentStepIndex: number
+  status?: ApplicationStatus
   onStepClick?: (index: number) => void
   onStepNameClick?: (stepId: string) => void
   size?: 'sm' | 'md'
 }
 
-// 진행률에 따라 brand → violet → success 보간
-function progressColor(p: number): string {
-  if (p <= 50) {
-    const t = p / 50
-    return `rgb(${lerp(94, 139, t)},${lerp(106, 92, t)},${lerp(210, 246, t)})`
-  }
-  const t = (p - 50) / 50
-  return `rgb(${lerp(139, 16, t)},${lerp(92, 185, t)},${lerp(246, 129, t)})`
-}
-function lerp(a: number, b: number, t: number) {
-  return Math.round(a + (b - a) * t)
-}
-
-function ProgressBar({ progress, height = 'h-1.5' }: { progress: number; height?: string }) {
-  const color = progressColor(progress)
+function ProgressBar({ progress, isPassed, height = 'h-1.5' }: { progress: number; isPassed?: boolean; height?: string }) {
   return (
-    <div className={`w-full bg-white/6 rounded-full overflow-hidden ${height}`}>
+    <div
+      className={`w-full bg-white/5 rounded-full overflow-hidden ${height}`}
+      role="progressbar"
+      aria-valuenow={progress}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={isPassed ? '최종 합격' : `진행률 ${progress}%`}
+    >
       <div
-        className="h-full rounded-full transition-all duration-700 ease-out"
-        style={{
-          width: `${progress}%`,
-          background: `linear-gradient(to right, #5e6ad2, ${color})`,
-        }}
+        className={`h-full rounded-full transition-all duration-500 ease-out ${isPassed ? 'bg-success' : 'bg-brand'}`}
+        style={{ width: `${progress}%` }}
       />
     </div>
   )
 }
 
-export function StepBar({ steps, currentStepIndex, onStepClick, onStepNameClick, size = 'sm' }: StepBarProps) {
+export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNameClick, size = 'sm' }: StepBarProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   if (steps.length === 0) return null
 
@@ -172,14 +163,11 @@ export function StepBar({ steps, currentStepIndex, onStepClick, onStepNameClick,
                 {sorted[currentStepIndex]?.name ?? '완료'}
               </span>
             </span>
-            <span
-              className="text-[10px] font-mono font-semibold tabular-nums shrink-0 ml-2"
-              style={{ color: progressColor(progress) }}
-            >
+            <span className="text-text-secondary text-[10px] font-mono font-semibold tabular-nums shrink-0 ml-2">
               {progress}%
             </span>
           </div>
-          <ProgressBar progress={progress} height="h-1.5" />
+          <ProgressBar progress={progress} isPassed={status === 'PASSED'} height="h-1.5" />
         </div>
       )}
 
@@ -204,14 +192,11 @@ export function StepBar({ steps, currentStepIndex, onStepClick, onStepNameClick,
                 현재: {sorted[currentStepIndex]?.name ?? '완료'}
               </span>
             </button>
-            <span
-              className="text-sm font-mono font-semibold tabular-nums shrink-0 ml-2"
-              style={{ color: progressColor(progress) }}
-            >
+            <span className="text-text-secondary text-sm font-mono font-semibold tabular-nums shrink-0 ml-2">
               {progress}%
             </span>
           </div>
-          <ProgressBar progress={progress} height="h-2" />
+          <ProgressBar progress={progress} isPassed={status === 'PASSED'} height="h-2" />
         </div>
       )}
     </div>

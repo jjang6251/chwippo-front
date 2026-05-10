@@ -195,6 +195,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           <StepBar
             steps={application.steps}
             currentStepIndex={application.currentStepIndex}
+            status={application.status}
             onStepClick={!isPassed && !isFailed ? handleStepClick : undefined}
             onStepNameClick={onCurrentStepClick && !isPassed
               ? (stepId) => onCurrentStepClick(application.id, stepId)

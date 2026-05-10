@@ -387,6 +387,7 @@ export function BoardDetail() {
           <StepBar
             steps={app.steps}
             currentStepIndex={app.currentStepIndex}
+            status={app.status}
             onStepClick={app.status !== 'PASSED' && app.status !== 'FAILED' ? handleStepClick : undefined}
             onStepNameClick={setOpenStepId}
             size="md"
