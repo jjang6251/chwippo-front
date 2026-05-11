@@ -53,12 +53,12 @@ function goalsFilled(p?: UserProfile): boolean {
 
 function coverletterFilled(cl?: Coverletter): boolean {
   if (!cl) return false
-  return !!((cl.personality_strength && cl.personality_strength.trim())
-    || (cl.personality_weakness && cl.personality_weakness.trim())
+  return !!((cl.personality && cl.personality.trim())
     || (cl.background && cl.background.trim())
     || (cl.job_competency && cl.job_competency.trim())
-    || (cl.aspiration && cl.aspiration.trim())
-    || (cl.own_strength && cl.own_strength.trim()))
+    || (cl.own_strength && cl.own_strength.trim())
+    || (cl.collaboration && cl.collaboration.trim())
+    || (cl.challenge && cl.challenge.trim()))
 }
 
 export function computeMyinfoSections(input: Inputs): SectionStatus[] {

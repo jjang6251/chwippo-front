@@ -5,12 +5,12 @@ import { toast } from '@/stores/toastStore'
 import type { Coverletter } from '@/api/myinfo'
 
 const FIELDS: { key: keyof Coverletter; label: string }[] = [
-  { key: 'personality_strength', label: '성격 장점' },
-  { key: 'personality_weakness', label: '성격 단점' },
-  { key: 'background',           label: '성장 배경' },
-  { key: 'job_competency',       label: '직무 역량·핵심 경험' },
-  { key: 'aspiration',           label: '입사 후 포부' },
-  { key: 'own_strength',         label: '나만의 강점' },
+  { key: 'personality',    label: '성격 장단점' },
+  { key: 'background',      label: '성장 배경' },
+  { key: 'job_competency',  label: '직무 역량·핵심 경험' },
+  { key: 'own_strength',    label: '나만의 강점' },
+  { key: 'collaboration',   label: '갈등 해결·협업 경험' },
+  { key: 'challenge',       label: '도전·실패 경험' },
 ]
 
 export function CoverLetterQuickSection() {

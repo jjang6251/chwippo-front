@@ -126,9 +126,30 @@ describe('computeMyinfoSections — coverletter (6필드 중 1개)', () => {
 
   it('모든 필드 공백만이면 unfilled', () => {
     const sections = computeMyinfoSections(makeInput({
-      coverletter: { coverletter: { personality_strength: '   ', background: '' }, custom: [] },
+      coverletter: { coverletter: { personality: '   ', background: '', challenge: '  ' }, custom: [] },
     }))
     expect(sections.find((s) => s.id === 'coverletter')!.filled).toBe(false)
+  })
+
+  it('통합된 personality(성격 장단점) 필드만 채워도 filled', () => {
+    const sections = computeMyinfoSections(makeInput({
+      coverletter: { coverletter: { personality: '성실하고 꼼꼼함, 단점은 ...' }, custom: [] },
+    }))
+    expect(sections.find((s) => s.id === 'coverletter')!.filled).toBe(true)
+  })
+
+  it('신규 필드 collaboration(협업 경험)만 채워도 filled', () => {
+    const sections = computeMyinfoSections(makeInput({
+      coverletter: { coverletter: { collaboration: '팀 갈등을 조율한 경험' }, custom: [] },
+    }))
+    expect(sections.find((s) => s.id === 'coverletter')!.filled).toBe(true)
+  })
+
+  it('신규 필드 challenge(도전·실패 경험)만 채워도 filled', () => {
+    const sections = computeMyinfoSections(makeInput({
+      coverletter: { coverletter: { challenge: '실패에서 배운 점' }, custom: [] },
+    }))
+    expect(sections.find((s) => s.id === 'coverletter')!.filled).toBe(true)
   })
 
   it('coverletter 데이터 자체가 없으면 unfilled', () => {

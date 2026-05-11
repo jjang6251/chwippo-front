@@ -1038,12 +1038,12 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
 
 // ── 자기소개서 소재 ────────────────────────────────────────
 const COVER_FIELDS: { key: keyof import('@/api/myinfo').Coverletter; label: string; placeholder: string }[] = [
-  { key: 'personality_strength', label: '성격 장점', placeholder: '나의 성격 장점을 구체적인 사례와 함께...' },
-  { key: 'personality_weakness', label: '성격 단점', placeholder: '단점과 함께 극복 노력을...' },
-  { key: 'background', label: '성장 배경', placeholder: '나를 형성한 경험이나 환경...' },
-  { key: 'job_competency', label: '직무 역량·핵심 경험', placeholder: '지원 직무와 연결되는 핵심 역량...' },
-  { key: 'aspiration', label: '입사 후 포부', placeholder: '입사 후 이루고 싶은 목표...' },
+  { key: 'personality', label: '성격 장단점', placeholder: '성격의 장점과 단점, 단점을 극복하려는 노력을 사례와 함께...' },
+  { key: 'background', label: '성장 배경', placeholder: '나를 형성한 경험이나 환경, 가치관에 영향을 준 사건...' },
+  { key: 'job_competency', label: '직무 역량·핵심 경험', placeholder: '지원 직무와 연결되는 핵심 역량과 그것을 보여주는 경험...' },
   { key: 'own_strength', label: '나만의 강점', placeholder: '다른 지원자와 차별화되는 나만의 강점...' },
+  { key: 'collaboration', label: '갈등 해결·협업 경험', placeholder: '팀에서 의견 충돌이나 갈등을 조율한 경험, 협업 과정에서의 역할...' },
+  { key: 'challenge', label: '도전·실패 경험', placeholder: '실패하거나 어려움을 겪었던 경험과 거기서 배운 점...' },
 ]
 
 function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
