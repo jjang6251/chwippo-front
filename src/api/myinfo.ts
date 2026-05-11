@@ -123,6 +123,36 @@ export const updateExperience = (id: string, dto: Partial<Experience>) =>
 export const deleteExperience = (id: string) =>
   apiClient.delete(`/myinfo/experiences/${id}`).then(unwrap<void>)
 
+// ── Educations ────────────────────────────────────────────
+export interface EducationMinor {
+  type: string    // 복수전공/부전공/이중전공/연계전공/심화전공
+  name: string
+  gpa?: string
+  gpa_max?: string
+}
+export interface Education {
+  id: string
+  school_name: string
+  major?: string
+  minor?: string          // deprecated — minors로 대체
+  minors?: EducationMinor[] | null
+  degree?: string         // 고등학교/전문대/대학교 (학사)/대학원 (석사)/대학원 (박사)/기타
+  gpa?: string
+  gpa_max?: string
+  start_at?: string
+  end_at?: string
+  status?: string         // 재학중/졸업/졸업예정/휴학/수료/편입/중퇴
+  location?: string
+  file_url?: string
+}
+export const getEducations = () => apiClient.get('/myinfo/educations').then(unwrap<Education[]>)
+export const createEducation = (dto: Omit<Education, 'id'>) =>
+  apiClient.post('/myinfo/educations', dto).then(unwrap<Education>)
+export const updateEducation = (id: string, dto: Partial<Education>) =>
+  apiClient.patch(`/myinfo/educations/${id}`, dto).then(unwrap<Education>)
+export const deleteEducation = (id: string) =>
+  apiClient.delete(`/myinfo/educations/${id}`).then(unwrap<void>)
+
 // ── Coverletter ───────────────────────────────────────────
 export const getCoverletter = () => apiClient.get('/myinfo/coverletter').then(unwrap<CoverletterData>)
 export const updateCoverletter = (dto: Partial<Coverletter>) =>
