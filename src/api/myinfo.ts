@@ -69,12 +69,12 @@ export interface CoverletterCustom {
 }
 
 export interface Coverletter {
-  personality_strength?: string
-  personality_weakness?: string
-  background?: string
-  job_competency?: string
-  aspiration?: string
-  own_strength?: string
+  personality?: string       // 성격 장단점
+  background?: string        // 성장 배경
+  job_competency?: string    // 직무 역량·핵심 경험
+  own_strength?: string      // 나만의 강점
+  collaboration?: string     // 갈등 해결·협업 경험
+  challenge?: string         // 도전·실패 경험
 }
 
 export interface CoverletterData {
