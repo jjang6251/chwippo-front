@@ -119,6 +119,33 @@ export function useDeleteExperience() {
   })
 }
 
+// ── Educations ────────────────────────────────────────────
+export function useEducations() {
+  return useQuery({ queryKey: ['myinfo', 'educations'], queryFn: api.getEducations })
+}
+export function useCreateEducation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: api.createEducation,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'educations'] }),
+  })
+}
+export function useUpdateEducation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: Partial<api.Education> }) =>
+      api.updateEducation(id, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'educations'] }),
+  })
+}
+export function useDeleteEducation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: api.deleteEducation,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'educations'] }),
+  })
+}
+
 // ── Coverletter ───────────────────────────────────────────
 export function useCoverletter() {
   return useQuery({ queryKey: ['myinfo', 'coverletter'], queryFn: api.getCoverletter })

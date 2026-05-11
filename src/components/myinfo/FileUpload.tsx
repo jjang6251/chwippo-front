@@ -6,9 +6,10 @@ interface FileUploadProps {
   scope: string
   onUploaded: (url: string) => void
   onRemove: () => void
+  hint?: string   // 예: "예: 졸업증명서, 성적증명서"
 }
 
-export function FileUpload({ value, scope, onUploaded, onRemove }: FileUploadProps) {
+export function FileUpload({ value, scope, onUploaded, onRemove, hint }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -95,6 +96,9 @@ export function FileUpload({ value, scope, onUploaded, onRemove }: FileUploadPro
           </>
         )}
       </button>
+      {hint && (
+        <p className="text-[11px] text-text-quaternary/80 mt-1.5 pl-1">{hint}</p>
+      )}
     </>
   )
 }

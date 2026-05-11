@@ -304,14 +304,14 @@ export function Calendar() {
           <div className="flex items-center gap-1">
             <button
               onClick={view === 'month' ? prevMonth : prevWeek}
-              aria-label="이전"
+              aria-label={view === 'month' ? '이전 달' : '이전 주'}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
             >
               <ChevronLeft />
             </button>
             <button
               onClick={view === 'month' ? nextMonth : nextWeek}
-              aria-label="다음"
+              aria-label={view === 'month' ? '다음 달' : '다음 주'}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
             >
               <ChevronRight />
