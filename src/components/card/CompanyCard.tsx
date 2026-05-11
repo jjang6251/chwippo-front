@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
-import type { Application } from '@/types/application'
+import type { Application, UpdateApplicationDto } from '@/types/application'
 import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
 import { StarToggle } from './StarToggle'
@@ -266,7 +266,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               <button
                 onClick={() => {
                   updateApp(
-                    { status: 'FAILED' } as any,
+                    { status: 'FAILED' } as UpdateApplicationDto,
                     {
                       onSuccess: () => toast.show(`${application.companyName} 불합격 처리됐어요.`),
                       onError: () => toast.error('처리에 실패했습니다.'),

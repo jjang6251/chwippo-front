@@ -17,7 +17,9 @@ export function Login() {
         setAccessToken(token)
         navigate('/dashboard', { replace: true })
       })
-      .catch(() => {})
+      .catch(() => { /* refresh 실패는 무시 — 로그인 화면 유지 */ })
+    // 마운트 시 1회만 자동 로그인 체크
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleKakaoLogin = () => {

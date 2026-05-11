@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import type { Todo } from '@/api/todos'
 import { useCreateTodo, useUpdateTodo, useDeleteTodo, useCarryOverTodo } from '@/hooks/useTodos'
 
@@ -15,8 +15,13 @@ export function TodoList({ todos, isLoading }: TodoListProps) {
   const { mutate: remove } = useDeleteTodo()
   const { mutate: carryOver } = useCarryOverTodo()
 
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  const { today, yesterday } = useMemo(() => {
+    const now = new Date()
+    return {
+      today: now.toISOString().split('T')[0],
+      yesterday: new Date(now.getTime() - 86400000).toISOString().split('T')[0],
+    }
+  }, [])
 
   const todayItems = todos?.filter((t) => t.date === today) ?? []
   const yesterdayItems = todos?.filter((t) => t.date === yesterday && !t.is_done) ?? []
