@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { applicationsApi } from '@/api/applications'
-import type { CreateApplicationDto, UpdateApplicationDto, UpdateStepsDto } from '@/types/application'
+import type { Application, CreateApplicationDto, UpdateApplicationDto, UpdateStepsDto } from '@/types/application'
 
 const QUERY_KEY = ['applications']
 
@@ -36,8 +36,8 @@ export function useUpdateCurrentStep() {
     onMutate: async ({ id, stepIndex }) => {
       await qc.cancelQueries({ queryKey: QUERY_KEY })
       const prev = qc.getQueryData(QUERY_KEY)
-      qc.setQueryData(QUERY_KEY, (old: any) =>
-        old?.map((a: any) => (a.id === id ? { ...a, currentStepIndex: stepIndex } : a)),
+      qc.setQueryData<Application[]>(QUERY_KEY, (old) =>
+        old?.map((a) => (a.id === id ? { ...a, currentStepIndex: stepIndex } : a)),
       )
       return { prev }
     },

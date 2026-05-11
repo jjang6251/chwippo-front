@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep, useUpdateSteps } from '@/hooks/useApplications'
+import type { UpdateApplicationDto } from '@/types/application'
 import { useUpdateStep } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
 import { StepDetailPanel } from '@/components/card/StepDetailPanel'
@@ -161,9 +162,9 @@ export function BoardDetail() {
   const currentTags = parseTags(app.jobCategory)
   const openStep = openStepId ? sortedSteps.find((s) => s.id === openStepId) ?? null : null
 
-  const save = (field: string) => (value: string) => {
+  const save = (field: keyof UpdateApplicationDto) => (value: string) => {
     update(
-      { [field]: value || undefined } as any,
+      { [field]: value || undefined } as UpdateApplicationDto,
       {
         onSuccess: () => toast.show('저장됐어요.'),
         onError: () => toast.error('저장에 실패했습니다.'),

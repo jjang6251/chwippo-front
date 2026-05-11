@@ -19,6 +19,8 @@ export function AuthGuard() {
       })
       .catch(() => clearAuth())
       .finally(() => setChecking(false))
+    // 마운트 시 1회만 refresh 시도. zustand setter들은 stable이라 deps에서 제외
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (checking) return null

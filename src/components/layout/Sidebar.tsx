@@ -32,7 +32,7 @@ export function Sidebar() {
   const isSettingsActive = location.pathname.startsWith('/settings')
 
   async function handleLogout() {
-    try { await apiClient.post('/auth/logout') } catch {}
+    try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
     navigate('/login')
   }

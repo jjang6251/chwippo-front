@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-export interface SectionMeta {
+interface SectionMeta {
   id: string
   label: string
   icon: string
@@ -8,7 +8,7 @@ export interface SectionMeta {
   available: boolean
 }
 
-export const ALL_SECTIONS: SectionMeta[] = [
+const ALL_SECTIONS: SectionMeta[] = [
   { id: 'dday',              label: 'D-day 임박',         icon: '📅', description: '마감일과 면접 일정을 한눈에',           available: true },
   { id: 'todos',             label: '오늘 할 일',         icon: '✅', description: '오늘의 준비 항목 체크',                 available: true },
   { id: 'goals',             label: '내 스펙 목표',       icon: '🎯', description: '설정한 스펙 목표 확인',                 available: true },

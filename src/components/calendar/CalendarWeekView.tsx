@@ -27,13 +27,16 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
   // 현재 시각 위치 (px) - 분 단위 정밀도
   const nowPx = nowHour * ROW_HEIGHT + (nowMinute / 60) * ROW_HEIGHT
 
+  const weekStartKey = weekStart.format('YYYY-MM-DD')
   useEffect(() => {
     if (!scrollRef.current) return
     const targetHour = todayInWeek ? nowHour : 8
     // 현재 시간이 컨테이너 상단 1/3 위치에 오도록
     const scrollTop = Math.max(0, targetHour * ROW_HEIGHT - GRID_HEIGHT / 3)
     scrollRef.current.scrollTop = scrollTop
-  }, [weekStart.format('YYYY-MM-DD')]) // weekStart 변경 시 재스크롤
+    // 주가 바뀔 때만 재스크롤. nowHour/todayInWeek는 마운트 시 초기값으로 충분
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStartKey])
 
   // Deadline events by date (all-day row)
   const deadlinesByDate: Record<string, CalendarEvent[]> = {}

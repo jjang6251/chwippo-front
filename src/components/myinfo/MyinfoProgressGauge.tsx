@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { useMyinfoProgress } from '@/hooks/useMyinfoProgress'
 
 const RADIUS = 38
@@ -19,7 +18,6 @@ function getStage(percent: number): Stage {
 }
 
 export function MyinfoProgressGauge() {
-  const navigate = useNavigate()
   const { percent, filled, total, firstEmptyId, isLoading } = useMyinfoProgress()
 
   const isComplete = percent === 100

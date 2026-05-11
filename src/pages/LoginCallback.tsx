@@ -37,6 +37,8 @@ export function LoginCallback() {
     } else {
       navigate('/dashboard', { replace: true })
     }
+    // setUser는 zustand setter라 stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, navigate, setAccessToken])
 
   return (

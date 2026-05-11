@@ -14,7 +14,7 @@ import {
 import { useExamSchedules, useDeleteExamSchedule } from '@/hooks/useExamSchedules'
 import { useMyinfoProgress } from '@/hooks/useMyinfoProgress'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
-import type { LanguageCert, Cert, Award, Experience, CoverletterCustom, MyDocument, Education, EducationMinor } from '@/api/myinfo'
+import type { UserProfile, LanguageCert, Cert, Award, Experience, Coverletter, CoverletterCustom, MyDocument, Education, EducationMinor } from '@/api/myinfo'
 import type { ExamSchedule } from '@/types/exam-schedule'
 import { toast } from '@/stores/toastStore'
 import { CopyButton } from '@/components/myinfo/CopyButton'
@@ -243,16 +243,16 @@ export function MyInfo() {
     const handleScroll = () => {
       if (isProgrammaticScroll.current) return
 
-      const bounds = SECTIONS.map(({ id }) => {
+      const bounds = SECTIONS.flatMap(({ id }) => {
         const el = sectionRefs.current[id]
-        if (!el) return null
+        if (!el) return []
         const rect = el.getBoundingClientRect()
-        return {
-          id,
+        return [{
+          id: id as string,
           top: rect.top + window.scrollY,
           bottom: rect.bottom + window.scrollY,
-        }
-      }).filter((b): b is { id: string; top: number; bottom: number } => b !== null)
+        }]
+      })
 
       // 페이지 끝 도달 시 마지막 섹션 강제 (모바일 주소창 영향 고려해 -10)
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10
@@ -301,7 +301,7 @@ export function MyInfo() {
         <aside className="hidden lg:block w-44 flex-none sticky top-8 self-start">
           <p className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider mb-3 px-3">섹션</p>
           <nav className="space-y-0.5">
-            {SECTIONS.map((s, idx) => {
+            {SECTIONS.map((s) => {
               const ac = ACCENT_STYLE[s.accent as keyof typeof ACCENT_STYLE]
               const isActive = activeSection === s.id
               const status = progressSections.find((p) => p.id === s.id)
@@ -377,7 +377,7 @@ function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement
   }
 
   const save = (key: string, val: string) =>
-    update({ [key]: val || null } as any, { onSuccess: show })
+    update({ [key]: val || null } as Partial<UserProfile>, { onSuccess: show })
 
   return (
     <SectionCard id="profile" sectionRef={sectionRef} saved={saved} isActive={isActive}>
@@ -412,7 +412,7 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
   }
 
   const isMale = profile?.gender === 'MALE'
-  const save = (key: string, val: string) => update({ [key]: val || null } as any, { onSuccess: show })
+  const save = (key: string, val: string) => update({ [key]: val || null } as Partial<UserProfile>, { onSuccess: show })
 
   return (
     <SectionCard id="military" sectionRef={sectionRef} saved={saved} isActive={isActive}>
@@ -452,8 +452,8 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
   const openEdit = (item: LanguageCert) => { setForm({ cert_type: item.cert_type, score_grade: item.score_grade ?? '', issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
   const handleSave = () => {
     const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as any, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
+    if (modal === 'add') create(form as Omit<LanguageCert, 'id'>, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as Partial<LanguageCert> }, cb)
   }
 
   return (
@@ -515,8 +515,8 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   const openEdit = (item: Cert) => { setForm({ name: item.name, issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
   const handleSave = () => {
     const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as any, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
+    if (modal === 'add') create(form as Omit<Cert, 'id'>, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as Partial<Cert> }, cb)
   }
 
   return (
@@ -657,12 +657,12 @@ function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElem
     if (initialized.current || isLoading) return
     initialized.current = true
     if (items.length === 0) {
-      create({ school_name: '', degree: '대학교 (학사)', status: '재학중' } as any)
+      create({ school_name: '', degree: '대학교 (학사)', status: '재학중' } as Omit<Education, 'id'>)
     }
   }, [isLoading, items.length, create])
 
   const handleAdd = () => {
-    create({ school_name: '', degree: '대학교 (학사)', status: '재학중' } as any, {
+    create({ school_name: '', degree: '대학교 (학사)', status: '재학중' } as Omit<Education, 'id'>, {
       onError: () => toast.error('학력 추가에 실패했어요.'),
     })
   }
@@ -878,8 +878,8 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
   const openEdit = (item: Award) => { setForm({ contest_name: item.contest_name, award_name: item.award_name ?? '', org: item.org ?? '', awarded_at: item.awarded_at ?? '', content: item.content ?? '', file_url: item.file_url ?? '' }); setModal(item) }
   const handleSave = () => {
     const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as any, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
+    if (modal === 'add') create(form as Omit<Award, 'id'>, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as Partial<Award> }, cb)
   }
 
   return (
@@ -932,8 +932,8 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   const openEdit = (item: Experience) => { setForm({ activity_name: item.activity_name, org: item.org ?? '', start_at: item.start_at ?? '', end_at: item.end_at ?? '', content: item.content ?? '' }); setModal(item) }
   const handleSave = () => {
     const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as any, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
+    if (modal === 'add') create(form as Omit<Experience, 'id'>, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as Partial<Experience> }, cb)
   }
 
   return (
@@ -983,7 +983,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   }
 
   const persist = (list: string[]) => {
-    update({ goal_other: list.join('\n') } as any, { onSuccess: show })
+    update({ goal_other: list.join('\n') } as Partial<UserProfile>, { onSuccess: show })
   }
 
   const addGoal = () => {
@@ -1062,13 +1062,13 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
 
   if (data && !loaded) {
     const init: Record<string, string> = {}
-    COVER_FIELDS.forEach(({ key }) => { init[key] = (data.coverletter as any)?.[key] ?? '' })
+    COVER_FIELDS.forEach(({ key }) => { init[key] = (data.coverletter as Record<string, string | undefined> | null)?.[key] ?? '' })
     setClForm(init)
     setLoaded(true)
   }
 
   const saveCover = (key: string, val: string) =>
-    updateCover({ [key]: val || null } as any, { onSuccess: show })
+    updateCover({ [key]: val || null } as Partial<Coverletter>, { onSuccess: show })
 
   const handleAddCustom = () => {
     if (!newLabel.trim()) return

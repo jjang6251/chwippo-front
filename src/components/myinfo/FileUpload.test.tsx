@@ -21,10 +21,7 @@ vi.mock('@/api/files', () => ({
 }))
 
 describe('FileUpload', () => {
-  let originalAlert: typeof window.alert
-
   beforeEach(() => {
-    originalAlert = window.alert
     window.alert = vi.fn()
     vi.clearAllMocks()
   })

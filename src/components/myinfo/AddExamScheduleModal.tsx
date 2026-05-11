@@ -23,6 +23,8 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
   const create = useCreateExamSchedule()
   const update = useUpdateExamSchedule(initial?.id ?? '')
 
+  // 모달이 열릴 때 initial / defaultDate를 폼 state에 동기화
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return
     if (initial) {
@@ -44,6 +46,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
       setMemo('')
     }
   }, [open, initial, defaultDate])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!open) return null
 

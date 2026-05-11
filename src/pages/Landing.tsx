@@ -21,7 +21,9 @@ export function Landing() {
         setAccessToken(token)
         navigate('/dashboard', { replace: true })
       })
-      .catch(() => {})
+      .catch(() => { /* refresh 실패는 무시 — 비로그인 상태로 랜딩 표시 */ })
+    // 랜딩 첫 진입 시 1회만 자동 로그인 시도
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleKakaoLogin = () => {
