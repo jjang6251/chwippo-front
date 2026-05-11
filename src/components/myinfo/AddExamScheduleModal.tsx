@@ -71,7 +71,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
+      <div role="dialog" aria-modal="true" aria-label={isEdit ? '시험 일정 수정' : '시험 일정 추가'} className="relative z-10 w-full max-w-md bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-text-primary text-sm font-semibold">{isEdit ? '시험 일정 수정' : '시험 일정 추가'}</h3>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-white/5 transition-colors" aria-label="닫기">
