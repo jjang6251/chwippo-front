@@ -3,6 +3,7 @@ import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
 import { useCreateApplication } from '@/hooks/useApplications'
 import { serializeTags } from '@/utils/tags'
+import { APPLICATION_TEMPLATES, getApplicationTemplate, recommendTemplate } from '@/utils/stepTemplates'
 import { toast } from '@/stores/toastStore'
 
 interface AddCardModalProps {
@@ -16,9 +17,16 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
   const [jobTitle, setJobTitle] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [deadline, setDeadline] = useState('')
+  const [templateId, setTemplateId] = useState('general')
+  const [templateTouched, setTemplateTouched] = useState(false)
   const { mutate: create, isPending } = useCreateApplication()
 
   const isPlanned = defaultStatus === 'PLANNED'
+  // 사용자가 직접 고르기 전까지는 직군 태그·회사명 기반 추천을 따라감
+  const effectiveTemplateId = templateTouched
+    ? templateId
+    : recommendTemplate({ jobCategories: tags, companyName })
+  const templatePreview = getApplicationTemplate(effectiveTemplateId).steps.join(' → ')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,6 +40,7 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
         status: defaultStatus,
         deadline: deadline || undefined,
         needsDetail: !isPlanned && !jobTitle.trim(),
+        templateId: !isPlanned ? effectiveTemplateId : undefined,
       },
       {
         onSuccess: () => {
@@ -45,6 +54,7 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
 
   const handleClose = () => {
     setCompanyName(''); setJobTitle(''); setTags([]); setDeadline('')
+    setTemplateId('general'); setTemplateTouched(false)
     onClose()
   }
 
@@ -79,6 +89,24 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
           <label className="block text-xs text-text-tertiary mb-1.5">직군 태그</label>
           <TagSelector selected={tags} onChange={setTags} />
         </div>
+
+        {!isPlanned && (
+          <div>
+            <label>
+              <span className="block text-xs text-text-tertiary mb-1.5">
+                전형 템플릿 <span className="text-text-quaternary">(만든 뒤 단계 자유 편집)</span>
+              </span>
+              <select
+                value={effectiveTemplateId}
+                onChange={(e) => { setTemplateTouched(true); setTemplateId(e.target.value) }}
+                className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all [color-scheme:dark] cursor-pointer"
+              >
+                {APPLICATION_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </label>
+            <p className="mt-1.5 text-[11px] text-text-quaternary leading-relaxed">{templatePreview}</p>
+          </div>
+        )}
 
         {!isPlanned && (
           <div>
