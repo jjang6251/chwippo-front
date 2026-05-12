@@ -24,6 +24,7 @@ import { SetResultModal } from '@/components/card/SetResultModal'
 import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
 import { toast } from '@/stores/toastStore'
+import { celebrate } from '@/stores/celebrationStore'
 import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
 
 // --- 드래그 가능한 스텝 아이템 ---
@@ -533,7 +534,7 @@ export function BoardDetail() {
                 취소
               </button>
               <button
-                onClick={() => { updateStep({ id: app.id, stepIndex: pendingStepIndex }); setShowPassConfirm(false) }}
+                onClick={() => { updateStep({ id: app.id, stepIndex: pendingStepIndex }, { onSuccess: () => celebrate(app.companyName) }); setShowPassConfirm(false) }}
                 className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
               >
                 합격 처리

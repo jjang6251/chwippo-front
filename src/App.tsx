@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ToastContainer } from '@/components/common/ToastContainer'
+import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AdminGuard } from '@/components/layout/AdminGuard'
 import { AppShell } from '@/components/layout/AppShell'
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <ToastContainer />
+      <CelebrationOverlay />
     </BrowserRouter>
   )
 }

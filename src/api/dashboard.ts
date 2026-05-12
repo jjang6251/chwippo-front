@@ -1,9 +1,10 @@
 import { apiClient } from './client'
 
 export interface DashboardStats {
-  total: number
-  interviews: number
-  passed: number
+  total: number               // 지원한 회사 (IN_PROGRESS + PASSED + FAILED)
+  inProgress: number          // 진행 중
+  interviewsAttended: number  // 면접 본 횟수 (면접 스텝 중 KST 날짜가 과거)
+  passed: number              // 합격
 }
 
 export interface DdayItem {

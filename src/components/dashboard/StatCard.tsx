@@ -6,7 +6,7 @@ interface StatCardProps {
   icon: string
   description: string
   filterKey?: string
-  accent?: 'brand' | 'success' | 'warning'
+  accent?: 'brand' | 'success' | 'warning' | 'info' | 'neutral'
   isLoading?: boolean
 }
 
@@ -34,6 +34,22 @@ const ACCENT = {
     glow:     'hover:shadow-warning/12',
     gradient: 'from-warning/10',
     label:    'text-warning/80',
+  },
+  info: {
+    border:   'border-info/25',
+    iconBg:   'bg-info/15 text-info',
+    value:    'text-info',
+    glow:     'hover:shadow-info/12',
+    gradient: 'from-info/10',
+    label:    'text-info/80',
+  },
+  neutral: {
+    border:   'border-white/8',
+    iconBg:   'bg-white/8 text-text-tertiary',
+    value:    'text-text-primary',
+    glow:     '',
+    gradient: 'from-white/[0.05]',
+    label:    'text-text-secondary',
   },
 }
 

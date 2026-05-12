@@ -7,6 +7,7 @@ import { DdayBadge } from './DdayBadge'
 import { StarToggle } from './StarToggle'
 import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
+import { celebrate } from '@/stores/celebrationStore'
 import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI, getAvatarColor } from '@/utils/tags'
 
 interface CompanyCardProps {
@@ -325,7 +326,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
             <div className="flex gap-2">
               <button onClick={() => setShowPassConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
               <button
-                onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }); setShowPassConfirm(false) }}
+                onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }, { onSuccess: () => celebrate(application.companyName) }); setShowPassConfirm(false) }}
                 className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
               >
                 합격 처리
