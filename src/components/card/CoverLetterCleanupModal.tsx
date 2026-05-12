@@ -1,0 +1,102 @@
+import { useMemo, type ReactNode } from 'react'
+import { Modal } from '@/components/common/Modal'
+import { cleanupCoverletter } from '@/utils/coverletterCleanup'
+
+interface CoverLetterCleanupModalProps {
+  text: string
+  limit: number | null
+  onClose: () => void
+  onApply: (cleaned: string) => void
+}
+
+function highlight(text: string, ranges: Array<[number, number]>): ReactNode {
+  if (ranges.length === 0) return text
+  const out: ReactNode[] = []
+  let pos = 0
+  ranges.forEach(([s, e], i) => {
+    if (s > pos) out.push(<span key={`t${i}`}>{text.slice(pos, s)}</span>)
+    out.push(
+      <mark key={`m${i}`} className="bg-danger/25 text-danger rounded-[2px] px-px">
+        {text.slice(s, e)}
+      </mark>,
+    )
+    pos = e
+  })
+  if (pos < text.length) out.push(<span key="end">{text.slice(pos)}</span>)
+  return out
+}
+
+export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: CoverLetterCleanupModalProps) {
+  const result = useMemo(() => cleanupCoverletter(text, limit), [text, limit])
+  const { cleaned, issues, ranges } = result
+  const nothingToFix = issues.length === 0
+  const onlyOverLimit = !nothingToFix && cleaned === text
+
+  return (
+    <Modal open onClose={onClose} title="자소서 정리" width="max-w-lg">
+      {/* 무엇을 검사하는지 안내 */}
+      <div className="text-[11px] text-text-quaternary leading-relaxed bg-white/[0.03] border border-white/6 rounded-lg px-3 py-2 mb-4">
+        <span className="text-text-tertiary">맞춤법은 검사하지 않아요.</span> 형식만 정리합니다 —
+        연속된 줄바꿈·공백, 줄 앞뒤 공백, 탭, 문장 도중 줄바꿈(쉼표 뒤), 한글 자모 단독(ㅋㅋ), 이모지·그림문자, 전각 공백, 둥근 따옴표, 문장부호 외 특수문자, 글자수 초과.
+      </div>
+
+      {nothingToFix ? (
+        <div className="text-center py-6">
+          <div className="text-2xl mb-2">✨</div>
+          <p className="text-text-secondary text-sm">정리할 내용이 없어요. 깔끔합니다!</p>
+          <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">
+            닫기
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* 발견된 항목 */}
+          <ul className="space-y-1.5 mb-4">
+            {issues.map((iss) => (
+              <li key={iss.key} className="flex items-center gap-2 text-xs text-text-secondary">
+                <span className="w-1.5 h-1.5 rounded-full bg-danger flex-none" />
+                <span className="flex-1">{iss.label}</span>
+                {iss.key !== 'overLimit' && <span className="font-mono text-[11px] text-text-quaternary flex-none">{iss.count}곳</span>}
+              </li>
+            ))}
+          </ul>
+
+          {/* 원본 (문제 부분 강조) */}
+          <div className="mb-3">
+            <p className="text-[11px] font-medium text-text-tertiary mb-1.5">원본 — 빨간 부분이 정리 대상</p>
+            <div className="max-h-40 overflow-y-auto bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+              {highlight(text, ranges)}
+            </div>
+          </div>
+
+          {!onlyOverLimit && (
+            <div className="mb-3">
+              <p className="text-[11px] font-medium text-text-tertiary mb-1.5">정리 후</p>
+              <div className="max-h-40 overflow-y-auto bg-success/5 border border-success/20 rounded-lg px-3 py-2.5 text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
+                {cleaned || <span className="text-text-quaternary">(빈 내용)</span>}
+              </div>
+            </div>
+          )}
+
+          {issues.some((i) => i.key === 'overLimit') && (
+            <p className="text-[11px] text-warning mb-3">⚠️ 글자수 초과는 자동으로 줄이지 않아요. 직접 다듬어 주세요.</p>
+          )}
+
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">
+              취소
+            </button>
+            {!onlyOverLimit && (
+              <button
+                onClick={() => { onApply(cleaned); onClose() }}
+                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+              >
+                정리된 내용으로 바꾸기
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </Modal>
+  )
+}
