@@ -17,6 +17,7 @@ import type { UpdateApplicationDto } from '@/types/application'
 import { useUpdateStep } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
 import { StepDetailPanel } from '@/components/card/StepDetailPanel'
+import { CoverLetterTab } from '@/components/card/CoverLetterTab'
 import { DdayBadge } from '@/components/card/DdayBadge'
 import { StarToggle } from '@/components/card/StarToggle'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -133,6 +134,7 @@ export function BoardDetail() {
   const [editSteps, setEditSteps] = useState<SortableStepItem[]>([])
   const [editTags, setEditTags] = useState<string[]>([])
   const [openStepId, setOpenStepId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'steps' | 'coverletter'>('steps')
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -373,59 +375,82 @@ export function BoardDetail() {
         </div>
       </div>
 
-      {/* 스텝바 */}
-      {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
-        <div className="border border-white/8 bg-surface-2 rounded-xl p-5 mb-4">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-text-primary text-sm font-semibold">진행 상황</h2>
-              <p className="text-text-quaternary text-[10px] mt-0.5">스텝 이름을 클릭하면 상세 정보를 입력할 수 있어요</p>
-            </div>
-            {app.status !== 'PASSED' && (
-              <button
-                onClick={openStepEditor}
-                className="text-xs text-text-tertiary hover:text-text-secondary border border-white/8 hover:border-white/15 px-2.5 py-1.5 rounded-lg transition-all"
-              >
-                스텝 편집
-              </button>
-            )}
-          </div>
-          <StepBar
-            steps={app.steps}
-            currentStepIndex={app.currentStepIndex}
-            status={app.status}
-            onStepClick={app.status !== 'PASSED' && app.status !== 'FAILED' ? handleStepClick : undefined}
-            onStepNameClick={setOpenStepId}
-            size="md"
-          />
-        </div>
-      )}
-
-      {/* 결과 처리 */}
-      {needsResult && (
-        <div className="border border-warning/25 bg-warning/5 rounded-xl p-4 mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-warning text-xs font-medium">⚠️ 결과 대기 중이에요</p>
-            <p className="text-text-tertiary text-xs mt-0.5">합격·불합격 결과를 입력하면 다음 단계로 진행할 수 있어요.</p>
-          </div>
+      {/* 탭: 전형 단계 / 자소서 */}
+      <div className="flex gap-1 p-1 bg-surface-2 border border-white/8 rounded-lg mb-4">
+        {([
+          { v: 'steps' as const, label: '전형 단계' },
+          { v: 'coverletter' as const, label: '자소서' },
+        ]).map((t) => (
           <button
-            onClick={() => setShowResultModal(true)}
-            className="text-xs font-medium text-text-primary bg-brand hover:bg-accent px-3 py-2 rounded-lg transition-colors"
-          >결과 입력</button>
-        </div>
+            key={t.v}
+            onClick={() => setActiveTab(t.v)}
+            className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors
+              ${activeTab === t.v ? 'bg-surface-3 text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'steps' && (
+        <>
+          {/* 스텝바 */}
+          {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
+            <div className="border border-white/8 bg-surface-2 rounded-xl p-5 mb-4">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-text-primary text-sm font-semibold">진행 상황</h2>
+                  <p className="text-text-quaternary text-[10px] mt-0.5">스텝 이름을 클릭하면 상세 정보를 입력할 수 있어요</p>
+                </div>
+                {app.status !== 'PASSED' && (
+                  <button
+                    onClick={openStepEditor}
+                    className="text-xs text-text-tertiary hover:text-text-secondary border border-white/8 hover:border-white/15 px-2.5 py-1.5 rounded-lg transition-all"
+                  >
+                    스텝 편집
+                  </button>
+                )}
+              </div>
+              <StepBar
+                steps={app.steps}
+                currentStepIndex={app.currentStepIndex}
+                status={app.status}
+                onStepClick={app.status !== 'PASSED' && app.status !== 'FAILED' ? handleStepClick : undefined}
+                onStepNameClick={setOpenStepId}
+                size="md"
+              />
+            </div>
+          )}
+
+          {/* 결과 처리 */}
+          {needsResult && (
+            <div className="border border-warning/25 bg-warning/5 rounded-xl p-4 mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-warning text-xs font-medium">⚠️ 결과 대기 중이에요</p>
+                <p className="text-text-tertiary text-xs mt-0.5">합격·불합격 결과를 입력하면 다음 단계로 진행할 수 있어요.</p>
+              </div>
+              <button
+                onClick={() => setShowResultModal(true)}
+                className="text-xs font-medium text-text-primary bg-brand hover:bg-accent px-3 py-2 rounded-lg transition-colors"
+              >결과 입력</button>
+            </div>
+          )}
+
+          {/* 메모 */}
+          <div className="border border-white/8 bg-surface-2 rounded-xl p-5">
+            <h2 className="text-text-primary text-sm font-semibold mb-3">메모</h2>
+            <EditableField
+              value={app.memo ?? ''}
+              placeholder="면접관 3명, 복장 자유, 기술 면접 위주... (자동 저장)"
+              onSave={save('memo')}
+              className="text-sm text-text-primary placeholder:text-text-quaternary"
+              multiline
+            />
+          </div>
+        </>
       )}
 
-      {/* 메모 */}
-      <div className="border border-white/8 bg-surface-2 rounded-xl p-5">
-        <h2 className="text-text-primary text-sm font-semibold mb-3">메모</h2>
-        <EditableField
-          value={app.memo ?? ''}
-          placeholder="면접관 3명, 복장 자유, 기술 면접 위주... (자동 저장)"
-          onSave={save('memo')}
-          className="text-sm text-text-primary placeholder:text-text-quaternary"
-          multiline
-        />
-      </div>
+      {activeTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
 
       {/* 결과 모달 */}
       <SetResultModal
