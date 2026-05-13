@@ -14,7 +14,7 @@ const STATUS_LABEL: Record<string, string> = { OPEN: '미답변', IN_PROGRESS: '
 const STATUS_COLOR: Record<string, string> = {
   OPEN: 'text-danger bg-danger/10 border-danger/20',
   IN_PROGRESS: 'text-brand bg-brand/10 border-brand/20',
-  CLOSED: 'text-text-muted bg-white/5 border-white/10',
+  CLOSED: 'text-text-tertiary bg-white/5 border-white/10',
 }
 const CATEGORIES = ['전체', '버그 신고', '기능 추가 요청', '기능 개선', '알림 문의', '계정·개인정보', '사용 방법 문의', '기타']
 
@@ -81,9 +81,9 @@ export function OpsInquiries() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
       <div className="flex items-center gap-3 mb-6">
-        <Link to="/ops" className="text-text-muted hover:text-text-primary text-sm">← 관리자</Link>
+        <Link to="/ops" className="text-text-tertiary hover:text-text-primary text-sm">← 관리자</Link>
         <h1 className="text-xl font-bold">문의 관리</h1>
-        <span className="ml-auto text-xs text-text-muted">총 {data?.total ?? 0}건</span>
+        <span className="ml-auto text-xs text-text-tertiary">총 {data?.total ?? 0}건</span>
       </div>
 
       {/* 필터 드롭다운 */}
@@ -99,7 +99,7 @@ export function OpsInquiries() {
             <option value="IN_PROGRESS">답변 중</option>
             <option value="CLOSED">완료</option>
           </select>
-          <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">▾</div>
+          <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary text-xs">▾</div>
         </div>
 
         <div className="relative">
@@ -112,15 +112,15 @@ export function OpsInquiries() {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">▾</div>
+          <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary text-xs">▾</div>
         </div>
       </div>
 
       {/* 목록 */}
       {isLoading && !data ? (
-        <div className="text-center py-16 text-text-muted text-sm">불러오는 중...</div>
+        <div className="text-center py-16 text-text-tertiary text-sm">불러오는 중...</div>
       ) : sorted.length === 0 ? (
-        <div className="text-center py-16 text-text-muted text-sm">문의가 없어요.</div>
+        <div className="text-center py-16 text-text-tertiary text-sm">문의가 없어요.</div>
       ) : (
         <div className="flex flex-col gap-2">
           {sorted.map((item) => (
@@ -138,12 +138,12 @@ export function OpsInquiries() {
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[detail.status]}`}>
                 {STATUS_LABEL[detail.status]}
               </span>
-              <span className="text-xs text-text-muted">{detail.category}</span>
-              <button onClick={closeDetailModal} className="ml-auto text-text-muted hover:text-text-primary text-xl">×</button>
+              <span className="text-xs text-text-tertiary">{detail.category}</span>
+              <button onClick={closeDetailModal} className="ml-auto text-text-tertiary hover:text-text-primary text-xl">×</button>
             </div>
 
             {/* 사용자 컨텍스트 바 */}
-            <div className="flex items-center gap-2 flex-wrap px-6 py-2.5 bg-white/[0.02] border-b border-white/5 text-[11px] text-text-muted">
+            <div className="flex items-center gap-2 flex-wrap px-6 py-2.5 bg-white/[0.02] border-b border-white/5 text-[11px] text-text-tertiary">
               <span className="text-text-secondary font-semibold">
                 {detail.user_nickname ?? '탈퇴한 사용자'}
                 {detail.user_short_id && (
@@ -154,7 +154,7 @@ export function OpsInquiries() {
                 <><span>·</span><span>{detail.user_email}</span></>
               )}
               {detail.user_created_at && (
-                <><span>·</span><span className="text-text-muted">가입 D+{dPlusDays(detail.user_created_at)}일</span></>
+                <><span>·</span><span className="text-text-tertiary">가입 D+{dPlusDays(detail.user_created_at)}일</span></>
               )}
               <span>·</span>
               <span>카드 <span className="text-text-secondary font-medium">{detail.user_card_count ?? 0}</span>개</span>
@@ -185,12 +185,12 @@ export function OpsInquiries() {
                   onChange={(e) => setComment(e.target.value)}
                   rows={3}
                   placeholder="사용자에게 답변을 남겨주세요..."
-                  className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-muted resize-none mb-3"
+                  className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none mb-3"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowCloseConfirm(true)}
-                    className="px-4 py-2 border border-white/15 text-text-muted text-sm rounded-lg hover:border-white/30 hover:text-text-secondary transition-colors"
+                    className="px-4 py-2 border border-white/15 text-text-tertiary text-sm rounded-lg hover:border-white/30 hover:text-text-secondary transition-colors"
                   >
                     이슈 닫기
                   </button>
@@ -204,7 +204,7 @@ export function OpsInquiries() {
                 </div>
               </div>
             ) : (
-              <div className="px-6 py-4 border-t border-white/5 text-center text-sm text-text-muted">
+              <div className="px-6 py-4 border-t border-white/5 text-center text-sm text-text-tertiary">
                 ✅ 완료된 문의입니다.
               </div>
             )}
@@ -217,7 +217,7 @@ export function OpsInquiries() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
           <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">이슈를 닫을까요?</h3>
-            <p className="text-sm text-text-muted mb-6">사용자에게 완료로 표시되고, 댓글을 더 이상 남길 수 없어요.</p>
+            <p className="text-sm text-text-tertiary mb-6">사용자에게 완료로 표시되고, 댓글을 더 이상 남길 수 없어요.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowCloseConfirm(false)}
@@ -260,11 +260,11 @@ function AdminInquiryCard({ item, onSelect, selected }: { item: AdminInquiry; on
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[item.status]}`}>
           {STATUS_LABEL[item.status]}
         </span>
-        <span className="text-xs text-text-muted">{item.category}</span>
-        <span className="text-xs text-text-muted ml-auto">{dayjs(item.created_at).format('MM.DD')}</span>
+        <span className="text-xs text-text-tertiary">{item.category}</span>
+        <span className="text-xs text-text-tertiary ml-auto">{dayjs(item.created_at).format('MM.DD')}</span>
       </div>
       <p className="text-sm font-semibold truncate">{item.title}</p>
-      <p className="text-xs text-text-muted mt-0.5 truncate">
+      <p className="text-xs text-text-tertiary mt-0.5 truncate">
         {item.user_nickname ?? '탈퇴한 사용자'}
         {item.user_short_id ? <span className="ml-1 text-text-quaternary font-mono">#{item.user_short_id}</span> : null}
         {item.user_email ? ` · ${item.user_email}` : ''}
@@ -278,10 +278,10 @@ function AdminCommentBubble({ comment }: { comment: InquiryComment }) {
   return (
     <div className={`flex flex-col gap-1 ${isAdmin ? 'items-end' : 'items-start'}`}>
       <div className={`flex items-center gap-1.5 ${isAdmin ? 'flex-row-reverse' : ''}`}>
-        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isAdmin ? 'bg-brand/15 text-brand' : 'bg-white/8 text-text-muted'}`}>
+        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isAdmin ? 'bg-brand/15 text-brand' : 'bg-white/8 text-text-tertiary'}`}>
           {isAdmin ? '치뽀 팀' : '사용자'}
         </span>
-        <span className="text-[10px] text-text-muted">{dayjs(comment.created_at).format('MM.DD HH:mm')}</span>
+        <span className="text-[10px] text-text-tertiary">{dayjs(comment.created_at).format('MM.DD HH:mm')}</span>
       </div>
       <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
         isAdmin ? 'bg-brand/15 text-text-primary rounded-tr-sm' : 'bg-surface-2 border border-white/8 text-text-secondary rounded-tl-sm'
