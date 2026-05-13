@@ -68,6 +68,7 @@ export function TourOverlay() {
 
   // Reset stop-confirm on every new tour start
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (active) setShowStop(false)
   }, [active])
 
@@ -83,7 +84,6 @@ export function TourOverlay() {
       document.body.style.overflow = ''
     }
     return () => { document.body.style.overflow = '' }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, step])
 
   // Navigate to required page when step changes
@@ -105,6 +105,7 @@ export function TourOverlay() {
 
   // Find target element and track its rect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!active || !config.selector) { setRect(null); return }
     retriesRef.current = 0
 
@@ -364,7 +365,7 @@ function TourTooltip({ rect, placement, title, desc, step, total, canGoBack, isC
     // Clamp to viewport
     left = Math.max(16, Math.min(left, vpW - TOOLTIP_W - 16))
     top = Math.max(16, Math.min(top as number, vpH - 180))
-    arrowStyle = getArrowStyle(placement, rect, left)
+    arrowStyle = getArrowStyle(placement)
   }
 
   const w = !rect ? Math.min(TOOLTIP_W, vpW - 32) : TOOLTIP_W
@@ -443,8 +444,6 @@ function TourTooltip({ rect, placement, title, desc, step, total, canGoBack, isC
 
 function getArrowStyle(
   placement: 'top' | 'bottom' | 'left' | 'right',
-  _rect: DOMRect,
-  _tooltipLeft: number,
 ): React.CSSProperties {
   const size = 7
   const color = '#0f1011'
