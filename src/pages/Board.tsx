@@ -163,7 +163,7 @@ export function Board() {
           className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible sm:flex-none"
           style={{ scrollbarWidth: 'none' }}
         >
-          <div className="flex items-center gap-1.5 sm:gap-1 whitespace-nowrap sm:bg-surface-2 sm:border sm:border-white/6 sm:rounded-lg sm:p-1">
+          <div role="tablist" aria-label="지원 상태 필터" className="flex items-center gap-1.5 sm:gap-1 whitespace-nowrap sm:bg-surface-2 sm:border sm:border-white/6 sm:rounded-lg sm:p-1">
             {FILTER_TABS.map((tab) => {
               const count = tab.key === 'all'
                 ? applications.filter((a) => a.status !== 'FAILED').length
@@ -176,6 +176,8 @@ export function Board() {
                 <button
                   key={tab.key}
                   onClick={() => setFilter(tab.key)}
+                  role="tab"
+                  aria-selected={isActive}
                   className={`flex-none px-3 py-1.5 text-xs rounded-full sm:rounded-md font-medium transition-all whitespace-nowrap text-center border sm:border-transparent
                     ${isActive
                       ? 'bg-brand/15 border-brand/30 text-brand sm:bg-white/10 sm:text-text-primary sm:shadow-sm'

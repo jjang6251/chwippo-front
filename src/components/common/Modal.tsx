@@ -23,6 +23,9 @@ export function Modal({ open, onClose, title, children, width = 'max-w-sm' }: Mo
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className={`bg-surface border border-white/8 rounded-t-2xl sm:rounded-xl shadow-2xl w-full ${width} max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col animate-fadeInUp`}
         onClick={(e) => e.stopPropagation()}
       >

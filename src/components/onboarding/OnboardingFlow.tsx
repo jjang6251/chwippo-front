@@ -103,7 +103,7 @@ export function OnboardingFlow() {
     <>
       {/* overlay */}
       <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
-        <div className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-2xl md:rounded-2xl shadow-2xl">
+        <div role="dialog" aria-modal="true" aria-label="치뽀 온보딩" className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-2xl md:rounded-2xl shadow-2xl">
 
           {/* header row */}
           <div className="relative flex items-center justify-center px-6 pt-6">

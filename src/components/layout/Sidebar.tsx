@@ -189,7 +189,7 @@ export function Sidebar() {
       {/* 로그아웃 확인 모달 */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">로그아웃 하시겠어요?</h3>
             <p className="text-sm text-text-quaternary mb-6">로그인 화면으로 이동합니다.</p>
             <div className="flex gap-2">

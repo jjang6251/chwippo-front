@@ -105,7 +105,7 @@ function SelectField({ label, value, onChange, options }: {
 function Modal({ title, onClose, onSave, children }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0" onClick={onClose}>
-      <div className="bg-surface border border-white/8 rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="bg-surface border border-white/8 rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold text-text-primary px-6 pt-6 pb-3 shrink-0">{title}</h3>
         <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-3">{children}</div>
         <div className="flex gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-white/6 shrink-0">
@@ -120,7 +120,7 @@ function Modal({ title, onClose, onSave, children }: { title: string; onClose: (
 function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: string; onClose: () => void; onConfirm: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-surface border border-white/10 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={`${label} 삭제 확인`} className="bg-surface border border-white/10 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div>
           <p className="text-sm font-semibold text-text-primary mb-1">삭제할까요?</p>
           <p className="text-xs text-text-quaternary">{label}을(를) 삭제하면 복구할 수 없어요.</p>

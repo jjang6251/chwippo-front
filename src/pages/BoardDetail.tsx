@@ -541,6 +541,9 @@ export function BoardDetail() {
           onClick={() => setShowPassConfirm(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="최종 합격 처리 확인"
             className="bg-surface border border-white/8 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
