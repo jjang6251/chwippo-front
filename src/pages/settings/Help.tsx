@@ -45,7 +45,7 @@ export function Help() {
               className={`border rounded-xl overflow-hidden transition-colors ${
                 isOpen
                   ? 'bg-brand/5 border-brand/25'
-                  : 'bg-surface-2 border-white/5 hover:border-white/12'
+                  : 'bg-surface-2 border-white/5 hover:border-white/10'
               }`}
             >
               <button

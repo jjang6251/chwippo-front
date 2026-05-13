@@ -88,10 +88,15 @@ function SelectField({ label, value, onChange, options }: {
   return (
     <div>
       <label className="block text-xs text-text-tertiary mb-1.5 font-medium">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
-        <option value="">선택</option>
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
+      <div className="relative">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
+          <option value="">선택</option>
+          {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
     </div>
   )
 }
@@ -100,7 +105,7 @@ function SelectField({ label, value, onChange, options }: {
 function Modal({ title, onClose, onSave, children }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#0f1011] border border-white/12 rounded-t-2xl sm:rounded-xl w-full max-w-md p-6 space-y-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-surface border border-white/10 rounded-t-2xl sm:rounded-xl w-full max-w-md p-6 space-y-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
         <div className="space-y-3">{children}</div>
         <div className="flex gap-2 pt-2">
@@ -115,7 +120,7 @@ function Modal({ title, onClose, onSave, children }: { title: string; onClose: (
 function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: string; onClose: () => void; onConfirm: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#0f1011] border border-white/12 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-surface border border-white/10 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div>
           <p className="text-sm font-semibold text-text-primary mb-1">삭제할까요?</p>
           <p className="text-xs text-text-quaternary">{label}을(를) 삭제하면 복구할 수 없어요.</p>
@@ -296,6 +301,40 @@ export function MyInfo() {
         <MyinfoProgressGauge />
       </div>
 
+      {/* 모바일 섹션 점프 칩 — lg 이상에서는 좌측 사이드바로 대체 */}
+      <div className="lg:hidden sticky top-12 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 bg-bg/95 backdrop-blur-sm border-b border-white/5 mb-4">
+        <div
+          className="flex gap-1.5 overflow-x-auto py-2"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {SECTIONS.map((s) => {
+            const isActive = activeSection === s.id
+            const status = progressSections.find((p) => p.id === s.id)
+            return (
+              <button
+                key={s.id}
+                onClick={() => scrollTo(s.id)}
+                className={`flex-none flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all duration-150 border
+                  ${isActive
+                    ? 'bg-brand/15 text-brand border-brand/30'
+                    : 'bg-white/[0.03] text-text-quaternary border-white/8 hover:text-text-secondary hover:bg-white/[0.06]'
+                  }`}
+              >
+                <span>{s.icon}</span>
+                <span>{s.label}</span>
+                {status && status.active && (
+                  status.kind === 'multi'
+                    ? <span className={`text-[10px] font-mono tabular-nums ${status.count > 0 ? 'text-brand/70' : 'text-text-quaternary/50'}`}>({status.count})</span>
+                    : status.filled
+                      ? <span className="text-success text-[10px]">✓</span>
+                      : null
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       <div className="flex gap-8">
         {/* 좌측 섹션 네비 */}
         <aside className="hidden lg:block w-44 flex-none sticky top-8 self-start">
@@ -439,7 +478,7 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
 
 // ── 어학 자격증 ───────────────────────────────────────────
 function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [] } = useLangCerts()
+  const { data: items = [], isLoading } = useLangCerts()
   const { mutate: create } = useCreateLangCert()
   const { mutate: update } = useUpdateLangCert()
   const { mutate: remove } = useDeleteLangCert()
@@ -459,6 +498,12 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
   return (
     <SectionCard id="language-certs" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+        ))}
+        {!isLoading && items.length === 0 && (
+          <p className="text-text-quaternary text-xs text-center py-4">등록된 어학 자격증이 없어요. <br /><span className="text-text-quaternary/60">TOEIC, OPIC 등 취득한 어학 성적을 추가해보세요.</span></p>
+        )}
         {items.map((item) => (
           <ExpandableItem
             key={item.id}
@@ -502,7 +547,7 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
 
 // ── 자격증 ────────────────────────────────────────────────
 function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [] } = useCerts()
+  const { data: items = [], isLoading } = useCerts()
   const { mutate: create } = useCreateCert()
   const { mutate: update } = useUpdateCert()
   const { mutate: remove } = useDeleteCert()
@@ -522,6 +567,12 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   return (
     <SectionCard id="certs" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+        ))}
+        {!isLoading && items.length === 0 && (
+          <p className="text-text-quaternary text-xs text-center py-4">등록된 자격증이 없어요. <br /><span className="text-text-quaternary/60">정보처리기사, 운전면허 등 취득한 자격증을 추가해보세요.</span></p>
+        )}
         {items.map((item) => (
           <ExpandableItem key={item.id} title={item.name} subtitle={[item.issuer, item.acquired_at].filter(Boolean).join(' · ')} badge={item.file_url ? '파일첨부' : undefined} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
             <DetailRow label="자격증명" value={item.name} />
@@ -581,7 +632,7 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
           const isPassed = dday < 0
           const variant = getDdayVariant(dday)
           return (
-            <div key={item.id} className="bg-surface-2 border border-white/8 rounded-lg p-3">
+            <div key={item.id} className="bg-white/[0.02] border border-white/8 rounded-lg p-3">
               <div className="flex items-start gap-3">
                 <div className="flex-none w-9 h-9 rounded-lg bg-violet/15 text-violet flex items-center justify-center text-base">📚</div>
                 <div className="flex-1 min-w-0">
@@ -713,7 +764,7 @@ function EducationItem({ item }: { item: Education }) {
       <button
         onClick={() => setDeleteOpen(true)}
         aria-label="학력 삭제"
-        className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-md text-text-quaternary hover:text-danger hover:bg-danger/8 transition-colors"
+        className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-danger hover:bg-danger/8 transition-colors"
       >
         <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
       </button>
@@ -813,7 +864,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
     )
   }
   return (
-    <div className="flex flex-wrap items-center gap-1.5 bg-surface-2 border border-white/12 rounded-lg px-2 py-1.5 w-full sm:w-auto">
+    <div className="flex flex-wrap items-center gap-1.5 bg-white/[0.02] border border-white/10 rounded-lg px-2 py-1.5 w-full sm:w-auto">
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
@@ -848,14 +899,14 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
       <button
         onClick={submit}
         aria-label="추가"
-        className="w-6 h-6 flex items-center justify-center rounded-full text-brand hover:bg-brand/15 transition-colors ml-auto"
+        className="w-7 h-7 flex items-center justify-center rounded-full text-brand hover:bg-brand/15 transition-colors ml-auto"
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
       <button
         onClick={reset}
         aria-label="취소"
-        className="w-6 h-6 flex items-center justify-center rounded-full text-text-quaternary hover:text-text-secondary transition-colors"
+        className="w-7 h-7 flex items-center justify-center rounded-full text-text-quaternary hover:text-text-secondary transition-colors"
       >
         <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 1l7 7M8 1L1 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
       </button>
@@ -865,7 +916,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
 
 // ── 수상 내역 ─────────────────────────────────────────────
 function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [] } = useAwards()
+  const { data: items = [], isLoading } = useAwards()
   const { mutate: create } = useCreateAward()
   const { mutate: update } = useUpdateAward()
   const { mutate: remove } = useDeleteAward()
@@ -885,6 +936,12 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
   return (
     <SectionCard id="awards" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+        ))}
+        {!isLoading && items.length === 0 && (
+          <p className="text-text-quaternary text-xs text-center py-4">등록된 수상 내역이 없어요. <br /><span className="text-text-quaternary/60">공모전, 교내 대회 수상 이력을 추가해보세요.</span></p>
+        )}
         {items.map((item) => (
           <ExpandableItem key={item.id} title={item.contest_name} subtitle={[item.award_name, item.awarded_at].filter(Boolean).join(' · ')} badge={item.file_url ? '파일첨부' : undefined} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
             <DetailRow label="대회명" value={item.contest_name} />
@@ -919,7 +976,7 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
 
 // ── 경험 ──────────────────────────────────────────────────
 function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [] } = useExperiences()
+  const { data: items = [], isLoading } = useExperiences()
   const { mutate: create } = useCreateExperience()
   const { mutate: update } = useUpdateExperience()
   const { mutate: remove } = useDeleteExperience()
@@ -939,6 +996,12 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   return (
     <SectionCard id="experiences" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+        ))}
+        {!isLoading && items.length === 0 && (
+          <p className="text-text-quaternary text-xs text-center py-4">등록된 경험이 없어요. <br /><span className="text-text-quaternary/60">동아리, 인턴, 봉사활동 등 다양한 활동을 추가해보세요.</span></p>
+        )}
         {items.map((item) => (
           <ExpandableItem key={item.id} title={item.activity_name} subtitle={[item.org, item.start_at ? `${item.start_at.slice(0, 7)} ~` : ''].filter(Boolean).join(' · ')} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
             <DetailRow label="활동명" value={item.activity_name} />
@@ -1011,7 +1074,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           <div key={i} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02]">
             <span className="w-1.5 h-1.5 rounded-full bg-danger/60 flex-none mt-px" />
             <span className="flex-1 text-xs text-text-primary">{goal}</span>
-            <button onClick={() => removeGoal(i)} className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger">
+            <button onClick={() => removeGoal(i)} className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger w-7 h-7 flex items-center justify-center rounded">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
             </button>
           </div>
@@ -1079,24 +1142,28 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   return (
     <SectionCard id="coverletter" sectionRef={sectionRef} saved={saved} isActive={isActive}>
       <div className="space-y-5">
-        {COVER_FIELDS.map(({ key, label, placeholder }) => (
-          <div key={key}>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-text-secondary">{label}</label>
-              <CopyButton value={clForm[key]} />
+        {COVER_FIELDS.map(({ key, label, placeholder }) => {
+          const len = (clForm[key] ?? '').length
+          const counterColor = len >= 2000 ? 'text-danger' : len >= 1800 ? 'text-warning' : 'text-text-quaternary'
+          return (
+            <div key={key}>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-text-secondary">{label}</label>
+                <CopyButton value={clForm[key]} />
+              </div>
+              <textarea
+                value={clForm[key] ?? ''}
+                onChange={(e) => setClForm(f => ({ ...f, [key]: e.target.value }))}
+                onBlur={() => saveCover(key, clForm[key] ?? '')}
+                maxLength={2000}
+                rows={3}
+                placeholder={placeholder}
+                className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
+              />
+              <p className={`text-[10px] ${counterColor} text-right mt-1`}>{len} / 2000</p>
             </div>
-            <textarea
-              value={clForm[key] ?? ''}
-              onChange={(e) => setClForm(f => ({ ...f, [key]: e.target.value }))}
-              onBlur={() => saveCover(key, clForm[key] ?? '')}
-              maxLength={2000}
-              rows={3}
-              placeholder={placeholder}
-              className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
-            />
-            <p className="text-[10px] text-text-quaternary text-right mt-1">{(clForm[key] ?? '').length} / 2000</p>
-          </div>
-        ))}
+          )
+        })}
 
         {/* 커스텀 항목들 */}
         {(data?.custom ?? []).map((item) => (
@@ -1136,13 +1203,14 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
 
 function CustomCoverItem({ item, onUpdate, onDelete }: { item: CoverletterCustom; onUpdate: (c: string) => void; onDelete: () => void }) {
   const [value, setValue] = useState(item.content ?? '')
+  const counterColor = value.length >= 2000 ? 'text-danger' : value.length >= 1800 ? 'text-warning' : 'text-text-quaternary'
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-semibold text-text-secondary">{item.label}</label>
         <div className="flex items-center gap-1">
           <CopyButton value={value} />
-          <button onClick={onDelete} className="w-7 h-7 flex items-center justify-center text-text-quaternary hover:text-danger rounded-md hover:bg-danger/8 transition-colors">
+          <button onClick={onDelete} className="w-8 h-8 flex items-center justify-center text-text-quaternary hover:text-danger rounded-md hover:bg-danger/8 transition-colors">
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
           </button>
         </div>
@@ -1156,7 +1224,7 @@ function CustomCoverItem({ item, onUpdate, onDelete }: { item: CoverletterCustom
         placeholder={`${item.label}을 작성해보세요`}
         className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
       />
-      <p className="text-[10px] text-text-quaternary text-right mt-1">{value.length} / 2000</p>
+      <p className={`text-[10px] ${counterColor} text-right mt-1`}>{value.length} / 2000</p>
     </div>
   )
 }
@@ -1226,7 +1294,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   href={f.file_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 hover:bg-[#161718] transition-all group"
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 hover:bg-white/[0.04] transition-all group"
                 >
                   <FileIcon url={f.file_url} />
                   <div className="flex-1 min-w-0">
@@ -1265,7 +1333,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                 </svg>
                 <button
                   onClick={() => setDeleteTarget(doc)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger w-6 h-6 flex items-center justify-center rounded"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger w-8 h-8 flex items-center justify-center rounded"
                 >
                   <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
                 </button>
@@ -1288,14 +1356,19 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               </div>
               <div>
                 <label className="block text-xs text-text-tertiary mb-1.5 font-medium">카테고리 (선택)</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
-                >
-                  <option value="">선택 안함</option>
-                  {DOC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="relative">
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
+                  >
+                    <option value="">선택 안함</option>
+                    {DOC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
                 {category === '기타(직접입력)' && (
                   <input
                     value={customCategory}
