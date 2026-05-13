@@ -139,12 +139,12 @@ export function Dashboard() {
       <div className="mb-8">
         <p className="text-text-quaternary text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>
         <div className="flex items-end justify-between gap-2">
-          <div className="flex items-end gap-2">
-            <h1 className="text-text-primary text-2xl font-bold leading-tight">
+          <div className="flex items-end gap-2 min-w-0 flex-1">
+            <h1 className="text-text-primary text-2xl font-bold leading-tight truncate">
               안녕하세요,{' '}
               <span className="text-brand">{user?.nickname ?? ''}님</span>
             </h1>
-            <span className="text-xl mb-0.5">👋</span>
+            <span className="text-xl mb-0.5 flex-none">👋</span>
           </div>
           <button
             onClick={() => setEditMode((v) => !v)}

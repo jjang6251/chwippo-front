@@ -302,14 +302,14 @@ export function BoardDetail() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 flex-none">
+          <div className="flex items-center gap-1 flex-none flex-wrap justify-end max-w-[40%] sm:max-w-none">
             <StarToggle
               starred={app.isStarred}
               onToggle={() => update({ isStarred: !app.isStarred })}
               size="md"
             />
             {app.status === 'PASSED' && (
-              <span className="text-xs text-success font-medium bg-success/10 px-2 py-1 rounded-full border border-success/20">🎉 최종 합격</span>
+              <span className="text-xs text-success font-medium bg-success/10 px-2 py-1 rounded-full border border-success/20 whitespace-nowrap">🎉 최종 합격</span>
             )}
             {ddayTarget && app.status !== 'PASSED' && <DdayBadge deadline={ddayTarget} />}
           </div>
@@ -337,7 +337,7 @@ export function BoardDetail() {
         </div>
 
         {/* 마감일 + URL */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             {currentStep ? (
               <>

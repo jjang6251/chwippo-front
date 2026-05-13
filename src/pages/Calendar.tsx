@@ -203,9 +203,9 @@ export function Calendar() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+      {/* Header — 모바일: 2행 (연/월+컨트롤) / sm+: 1행 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
           <div ref={pickerRef} className="relative">
             <button
               onClick={() => { if (view === 'month') { setPickerOpen((o) => !o); setPickerYear(cursor.year()) } }}
@@ -224,7 +224,7 @@ export function Calendar() {
             </button>
 
             {pickerOpen && (
-              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/10 rounded-xl shadow-2xl p-4 w-56 animate-fadeInUp">
+              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/8 rounded-xl shadow-2xl p-4 w-56 animate-fadeInUp">
                 <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setPickerYear((y) => y - 1)}
@@ -276,11 +276,11 @@ export function Calendar() {
             className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-violet/10 border border-violet/30 text-violet hover:bg-violet/15 transition-colors flex-none"
           >
             <span>📚</span>
-            <span className="hidden sm:inline">시험 추가</span>
+            <span>시험 일정 추가</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2">
           {/* View toggle */}
           <div className="flex items-center bg-surface-2 border border-white/5 rounded-lg p-0.5">
             <button
