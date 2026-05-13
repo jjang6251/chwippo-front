@@ -34,9 +34,9 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
   const sections = ALL_SECTIONS.filter((s) => s.id !== 'stats')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-sm bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
+      <div role="dialog" aria-modal="true" aria-label="섹션 관리" className="relative z-10 w-full max-w-sm bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-text-primary text-sm font-semibold">섹션 관리</h3>
           <button
@@ -75,7 +75,7 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
                     <p className="text-text-quaternary text-[11px] truncate">{s.description}</p>
                   </div>
                   {disabled ? (
-                    <span className="flex-none text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 text-text-quaternary">
+                    <span className="flex-none text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-text-quaternary">
                       준비 중
                     </span>
                   ) : isActive ? (

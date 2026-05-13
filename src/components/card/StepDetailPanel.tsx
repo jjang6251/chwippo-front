@@ -72,10 +72,10 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
         onClick={onClose}
       />
 
-      {/* Slide-over panel */}
+      {/* Slide-over panel — 모바일: 헤더 아래·MobileNav 위 / 데스크탑: 풀 높이 */}
       <div
         ref={panelRef}
-        className="fixed top-0 right-0 z-50 h-full w-full max-w-sm bg-surface border-l border-white/8 flex flex-col shadow-2xl lg:shadow-none"
+        className="fixed top-12 lg:top-0 right-0 z-50 bottom-[calc(env(safe-area-inset-bottom)+4rem)] lg:bottom-0 w-full max-w-sm bg-surface border-l border-white/8 flex flex-col shadow-2xl lg:shadow-none"
         style={{ animation: 'slideInRight 0.2s ease-out' }}
       >
         {/* Header */}
@@ -116,7 +116,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
               onBlur={handleDateBlur}
-              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors [color-scheme:dark]"
             />
           </section>
 

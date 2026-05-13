@@ -107,13 +107,18 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
               <span className="block text-xs text-text-tertiary mb-1.5">
                 전형 템플릿 <span className="text-text-quaternary">(만든 뒤 단계 자유 편집)</span>
               </span>
-              <select
-                value={effectiveTemplateId}
-                onChange={(e) => { setTemplateTouched(true); setTemplateId(e.target.value) }}
-                className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all [color-scheme:dark] cursor-pointer"
-              >
-                {APPLICATION_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-              </select>
+              <div className="relative">
+                <select
+                  value={effectiveTemplateId}
+                  onChange={(e) => { setTemplateTouched(true); setTemplateId(e.target.value) }}
+                  className="w-full appearance-none bg-surface-3 border border-white/8 rounded-lg pl-3 pr-9 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all [color-scheme:dark] cursor-pointer"
+                >
+                  {APPLICATION_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+                  <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
             </label>
             <p className="mt-1.5 text-[11px] text-text-quaternary leading-relaxed">{templatePreview}</p>
           </div>

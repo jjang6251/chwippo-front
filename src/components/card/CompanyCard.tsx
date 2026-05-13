@@ -256,6 +256,9 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           onClick={(e) => { e.stopPropagation(); setShowFailConfirm(false) }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="불합격 처리 확인"
             className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
@@ -292,6 +295,9 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false) }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="카드 삭제 확인"
             className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
@@ -316,6 +322,9 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           onClick={(e) => { e.stopPropagation(); setShowPassConfirm(false) }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="최종 합격 처리 확인"
             className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >

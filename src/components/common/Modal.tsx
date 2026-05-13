@@ -19,14 +19,17 @@ export function Modal({ open, onClose, title, children, width = 'max-w-sm' }: Mo
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:px-4 pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0"
       onClick={onClose}
     >
       <div
-        className={`bg-surface border border-white/10 rounded-xl shadow-2xl w-full ${width} animate-fadeInUp`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={`bg-surface border border-white/8 rounded-t-2xl sm:rounded-xl shadow-2xl w-full ${width} max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col animate-fadeInUp`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/6">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/6 shrink-0">
           <h2 className="text-text-primary font-semibold text-sm">{title}</h2>
           <button
             onClick={onClose}
@@ -37,7 +40,7 @@ export function Modal({ open, onClose, title, children, width = 'max-w-sm' }: Mo
             </svg>
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="flex-1 min-h-0 p-5 overflow-y-auto pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5">{children}</div>
       </div>
     </div>
   )

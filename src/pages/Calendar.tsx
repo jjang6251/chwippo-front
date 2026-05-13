@@ -203,9 +203,9 @@ export function Calendar() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+      {/* Header — 모바일: 2행 (연/월+컨트롤) / sm+: 1행 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
           <div ref={pickerRef} className="relative">
             <button
               onClick={() => { if (view === 'month') { setPickerOpen((o) => !o); setPickerYear(cursor.year()) } }}
@@ -224,7 +224,7 @@ export function Calendar() {
             </button>
 
             {pickerOpen && (
-              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/10 rounded-xl shadow-2xl p-4 w-56 animate-fadeInUp">
+              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/8 rounded-xl shadow-2xl p-4 w-56 max-w-[calc(100vw-2rem)] animate-fadeInUp">
                 <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setPickerYear((y) => y - 1)}
@@ -276,11 +276,11 @@ export function Calendar() {
             className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-violet/10 border border-violet/30 text-violet hover:bg-violet/15 transition-colors flex-none"
           >
             <span>📚</span>
-            <span className="hidden sm:inline">시험 추가</span>
+            <span>시험 일정 추가</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2">
           {/* View toggle */}
           <div className="flex items-center bg-surface-2 border border-white/5 rounded-lg p-0.5">
             <button
@@ -368,14 +368,14 @@ export function Calendar() {
               {monthlyLoading ? (
                 <div className="grid grid-cols-7">
                   {Array.from({ length: 35 }).map((_, i) => (
-                    <div key={i} className="h-20 border-b border-r border-white/5 animate-pulse bg-white/2" />
+                    <div key={i} className="h-16 sm:h-20 border-b border-r border-white/5 animate-pulse bg-white/2" />
                   ))}
                 </div>
               ) : (
                 <div className="grid grid-cols-7">
                   {cells.map((day, i) => {
                     if (!day) {
-                      return <div key={`empty-${i}`} className="min-h-[80px] border-b border-r border-white/5" />
+                      return <div key={`empty-${i}`} className="min-h-[64px] sm:min-h-[80px] border-b border-r border-white/5" />
                     }
                     const dateStr = day.format('YYYY-MM-DD')
                     const dayEvents = eventsByDate[dateStr] ?? []
@@ -392,7 +392,7 @@ export function Calendar() {
                       <button
                         key={dateStr}
                         onClick={() => handleSelectDate(dateStr)}
-                        className={`min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-white/5 transition-colors text-left w-full
+                        className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-white/5 transition-colors text-left w-full
                           ${isLastRow ? 'border-b-0' : ''}
                           ${(i + 1) % 7 === 0 ? 'border-r-0' : ''}
                           ${isSelected ? 'bg-brand/8' : 'hover:bg-white/3'}

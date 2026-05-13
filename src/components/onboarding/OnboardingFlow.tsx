@@ -102,8 +102,8 @@ export function OnboardingFlow() {
   return (
     <>
       {/* overlay */}
-      <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-2xl md:rounded-2xl shadow-2xl">
+      <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
+        <div role="dialog" aria-modal="true" aria-label="치뽀 온보딩" className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-2xl md:rounded-2xl shadow-2xl">
 
           {/* header row */}
           <div className="relative flex items-center justify-center px-6 pt-6">
@@ -112,7 +112,7 @@ export function OnboardingFlow() {
             </span>
             <button
               onClick={handleClose}
-              className="absolute right-5 w-7 h-7 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
+              className="absolute right-5 w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
               aria-label="닫기"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -122,10 +122,18 @@ export function OnboardingFlow() {
           </div>
 
           {/* progress dots */}
-          <div className="flex items-center justify-center gap-2 mt-4">
+          <div
+            role="progressbar"
+            aria-valuenow={step}
+            aria-valuemin={1}
+            aria-valuemax={3}
+            aria-label={`온보딩 진행: ${step} / 3`}
+            className="flex items-center justify-center gap-2 mt-4"
+          >
             {([1, 2, 3] as const).map((i) => (
               <span
                 key={i}
+                aria-hidden="true"
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   i === step ? 'bg-brand w-4' : 'bg-white/[0.15] w-1.5'
                 }`}

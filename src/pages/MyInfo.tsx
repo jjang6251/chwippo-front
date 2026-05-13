@@ -67,7 +67,7 @@ function Field({
   onBlur?: () => void; type?: string; placeholder?: string
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
 }) {
-  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all'
+  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all [color-scheme:dark]'
   return (
     <div className={span ? 'col-span-2' : ''}>
       <label className="block text-xs text-text-tertiary mb-1.5 font-medium">{label}</label>
@@ -104,11 +104,11 @@ function SelectField({ label, value, onChange, options }: {
 // ── 모달 ──────────────────────────────────────────────────
 function Modal({ title, onClose, onSave, children }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-surface border border-white/10 rounded-t-2xl sm:rounded-xl w-full max-w-md p-6 space-y-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-        <div className="space-y-3">{children}</div>
-        <div className="flex gap-2 pt-2">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="bg-surface border border-white/8 rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-text-primary px-6 pt-6 pb-3 shrink-0">{title}</h3>
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-3">{children}</div>
+        <div className="flex gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-white/6 shrink-0">
           <button onClick={onClose} className="flex-1 py-2.5 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors">취소</button>
           <button onClick={onSave} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent text-text-primary rounded-lg transition-colors">저장</button>
         </div>
@@ -120,7 +120,7 @@ function Modal({ title, onClose, onSave, children }: { title: string; onClose: (
 function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: string; onClose: () => void; onConfirm: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-surface border border-white/10 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={`${label} 삭제 확인`} className="bg-surface border border-white/10 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div>
           <p className="text-sm font-semibold text-text-primary mb-1">삭제할까요?</p>
           <p className="text-xs text-text-quaternary">{label}을(를) 삭제하면 복구할 수 없어요.</p>
@@ -218,11 +218,18 @@ function AddButton({ onClick, label = '추가' }: { onClick: () => void; label?:
 // ────────────────────────────────────────────────────────────
 export function MyInfo() {
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const [activeSection, setActiveSection] = useState('profile')
   const isProgrammaticScroll = useRef(false)
   const scrollLockTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const location = useLocation()
   const { sections: progressSections } = useMyinfoProgress()
+
+  // 활성 탭이 화면 밖이면 가로 스크롤로 중앙으로 끌어옴 (모바일 sticky 칩)
+  useEffect(() => {
+    const btn = tabRefs.current[activeSection]
+    btn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [activeSection])
 
   // URL hash로 진입 시 해당 섹션으로 자동 스크롤 (예: /myinfo#goals)
   useEffect(() => {
@@ -313,6 +320,7 @@ export function MyInfo() {
             return (
               <button
                 key={s.id}
+                ref={(el) => { tabRefs.current[s.id] = el }}
                 onClick={() => scrollTo(s.id)}
                 className={`flex-none flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all duration-150 border
                   ${isActive
@@ -420,7 +428,7 @@ function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement
 
   return (
     <SectionCard id="profile" sectionRef={sectionRef} saved={saved} isActive={isActive}>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <Field label="이름" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} onBlur={() => save('name', form.name)} placeholder="홍길동" copyable />
         <Field label="이름 (한자)" value={form.name_hanja} onChange={(v) => setForm(f => ({ ...f, name_hanja: v }))} onBlur={() => save('name_hanja', form.name_hanja)} placeholder="洪吉童" copyable />
         <SelectField label="성별" value={form.gender} onChange={(v) => { setForm(f => ({ ...f, gender: v })); save('gender', v) }} options={['MALE', 'FEMALE']} />
@@ -463,7 +471,7 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
           </div>
         )
         : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <SelectField label="군별" value={form.military_branch} onChange={(v) => { setForm(f => ({ ...f, military_branch: v })); save('military_branch', v) }} options={MILITARY_BRANCHES} />
             <SelectField label="전역 구분" value={form.military_type} onChange={(v) => { setForm(f => ({ ...f, military_type: v })); save('military_type', v) }} options={MILITARY_TYPES} />
             <Field label="입대일" type="date" value={form.military_start} onChange={(v) => setForm(f => ({ ...f, military_start: v }))} onBlur={() => save('military_start', form.military_start)} />
@@ -701,6 +709,7 @@ const MINOR_TYPES = ['복수전공', '부전공', '이중전공', '연계전공'
 function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
   const { data: items = [], isLoading } = useEducations()
   const { mutate: create } = useCreateEducation()
+  const { saved, show } = useSaved()
   const initialized = useRef(false)
 
   // 진입 시 학력 0개면 빈 row 1개 자동 생성 (한 번만)
@@ -719,10 +728,10 @@ function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElem
   }
 
   return (
-    <SectionCard id="education" sectionRef={sectionRef} isActive={isActive}>
+    <SectionCard id="education" sectionRef={sectionRef} saved={saved} isActive={isActive}>
       <div className="space-y-4">
         {items.map((item) => (
-          <EducationItem key={item.id} item={item} />
+          <EducationItem key={item.id} item={item} onSaved={show} />
         ))}
         <AddButton onClick={handleAdd} label="학력 추가" />
       </div>
@@ -730,7 +739,7 @@ function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElem
   )
 }
 
-function EducationItem({ item }: { item: Education }) {
+function EducationItem({ item, onSaved }: { item: Education; onSaved: () => void }) {
   const { mutate: update } = useUpdateEducation()
   const { mutate: remove } = useDeleteEducation()
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -746,6 +755,7 @@ function EducationItem({ item }: { item: Education }) {
 
   const save = (key: keyof Education, value: string | EducationMinor[] | null) => {
     update({ id: item.id, dto: { [key]: value } as Partial<Education> }, {
+      onSuccess: onSaved,
       onError: () => toast.error('저장에 실패했어요.'),
     })
   }
@@ -769,7 +779,7 @@ function EducationItem({ item }: { item: Education }) {
         <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
       </button>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-8">
+      <div className="space-y-3 pr-8">
         <Field label="학교명" value={form.school_name} onChange={(v) => setForm(f => ({ ...f, school_name: v }))} onBlur={() => save('school_name', form.school_name)} placeholder="예: 서울대학교 / ○○고등학교" span />
         <SelectField label="학교 단계" value={item.degree ?? ''} onChange={(v) => save('degree', v)} options={EDUCATION_DEGREES} />
         <SelectField label="상태" value={item.status ?? ''} onChange={(v) => save('status', v)} options={EDUCATION_STATUSES} />

@@ -113,14 +113,19 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 mb-3 text-[11px] text-text-tertiary">
         <label className="flex items-center gap-1.5">
           <span>유형</span>
-          <select
-            value={category}
-            onChange={(e) => onUpdate(cl.id, { category: e.target.value })}
-            className="bg-surface-3 border border-white/8 rounded-md px-2 py-1 text-[11px] text-text-secondary
-              focus:outline-none focus:border-brand/40 transition-colors [color-scheme:dark] cursor-pointer"
-          >
-            {COVERLETTER_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <span className="relative">
+            <select
+              value={category}
+              onChange={(e) => onUpdate(cl.id, { category: e.target.value })}
+              className="appearance-none bg-surface-3 border border-white/8 rounded-md pl-2 pr-6 py-1 text-[11px] text-text-secondary
+                focus:outline-none focus:border-brand/40 transition-colors [color-scheme:dark] cursor-pointer"
+            >
+              {COVERLETTER_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </label>
         <label className="flex items-center gap-1.5">
           <span>글자수 제한</span>

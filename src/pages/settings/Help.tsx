@@ -50,6 +50,7 @@ export function Help() {
             >
               <button
                 onClick={() => setOpen(isOpen ? null : i)}
+                aria-expanded={isOpen}
                 className="w-full text-left px-5 py-4 flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3">
