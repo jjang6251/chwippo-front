@@ -116,7 +116,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
               onBlur={handleDateBlur}
-              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors [color-scheme:dark]"
             />
           </section>
 

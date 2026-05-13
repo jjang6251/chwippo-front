@@ -67,7 +67,7 @@ function Field({
   onBlur?: () => void; type?: string; placeholder?: string
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
 }) {
-  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all'
+  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all [color-scheme:dark]'
   return (
     <div className={span ? 'col-span-2' : ''}>
       <label className="block text-xs text-text-tertiary mb-1.5 font-medium">{label}</label>

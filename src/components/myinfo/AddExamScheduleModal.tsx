@@ -137,7 +137,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors [color-scheme:dark]"
               />
             </div>
             <div>
@@ -146,7 +146,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors [color-scheme:dark]"
               />
             </div>
           </div>

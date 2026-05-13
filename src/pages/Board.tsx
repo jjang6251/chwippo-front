@@ -145,7 +145,7 @@ export function Board() {
       {/* 검색 + 필터 탭 */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {/* 검색 */}
-        <div className="relative flex-1 max-w-64">
+        <div className="relative flex-1 sm:max-w-64">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-quaternary" width="13" height="13" viewBox="0 0 16 16" fill="none">
             <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" />
             <path d="M12 12l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
