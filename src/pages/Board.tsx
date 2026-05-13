@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
+import { useTourStore } from '@/stores/tourStore'
 import { CompanyCard } from '@/components/card/CompanyCard'
 import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { AddCardModal } from '@/components/card/AddCardModal'
@@ -48,6 +49,9 @@ export function Board() {
   const addMenuRef = useRef<HTMLDivElement>(null)
 
   const { data: applications = [], isLoading } = useApplications()
+  const tourActive = useTourStore((s) => s.active)
+  const tourStep = useTourStore((s) => s.step)
+  const tourNext = useTourStore((s) => s.next)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -99,7 +103,15 @@ export function Board() {
         {/* + 추가 버튼 */}
         <div ref={addMenuRef} className="relative">
           <button
-            onClick={() => setAddMenuOpen(!addMenuOpen)}
+            data-tour="add-card-btn"
+            onClick={() => {
+              if (tourActive && tourStep === 3) {
+                setAddModalStatus('IN_PROGRESS')
+                tourNext()
+              } else {
+                setAddMenuOpen(!addMenuOpen)
+              }
+            }}
             className="flex items-center gap-1.5 bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-3.5 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

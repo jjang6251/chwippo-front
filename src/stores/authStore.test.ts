@@ -6,6 +6,7 @@ const mockUser = {
   nickname: '홍길동',
   email: 'hong@kakao.com',
   role: 'user' as const,
+  onboardedAt: null,
 }
 
 describe('authStore', () => {

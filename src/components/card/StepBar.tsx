@@ -79,6 +79,7 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                     </div>
                   )}
                   <button
+                    {...(i === currentStepIndex + 1 ? { 'data-tour': 'step-node-next' } : {})}
                     onClick={() => onStepClick?.(i)}
                     onMouseEnter={() => setHoveredIndex(i)}
                     onMouseLeave={() => setHoveredIndex(null)}

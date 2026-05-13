@@ -32,6 +32,7 @@ export function MobileNav() {
           <Link
             key={path}
             to={link(path)}
+            {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
             className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors"
           >
             <span className={active ? 'text-brand' : 'text-text-quaternary'}>

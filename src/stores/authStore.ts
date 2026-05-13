@@ -5,6 +5,7 @@ interface User {
   nickname: string
   email: string | null
   role: 'user' | 'admin'
+  onboardedAt: string | null
 }
 
 interface AuthState {

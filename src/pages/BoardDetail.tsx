@@ -26,6 +26,7 @@ import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
 import { toast } from '@/stores/toastStore'
 import { celebrate } from '@/stores/celebrationStore'
+import { useTourStore } from '@/stores/tourStore'
 import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
 
 // --- 드래그 가능한 스텝 아이템 ---
@@ -57,6 +58,7 @@ function SortableStepRow({
         <button
           {...attributes}
           {...listeners}
+          {...(index === 0 ? { 'data-tour': 'drag-handle' } : {})}
           className="flex-none text-text-quaternary hover:text-text-tertiary cursor-grab active:cursor-grabbing p-1 touch-none"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
@@ -138,6 +140,10 @@ export function BoardDetail() {
   const [openStepId, setOpenStepId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'steps' | 'coverletter'>('steps')
 
+  const tourActive = useTourStore((s) => s.active)
+  const tourStep = useTourStore((s) => s.step)
+  const tourNext = useTourStore((s) => s.next)
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
@@ -183,6 +189,7 @@ export function BoardDetail() {
       setShowPassConfirm(true)
     } else {
       updateStep({ id: app.id, stepIndex: index })
+      if (tourActive && tourStep === 7) tourNext()
     }
   }
 
@@ -194,6 +201,8 @@ export function BoardDetail() {
       location: s.location,
     })))
     setShowStepEditor(true)
+    // Delay so modal open animation settles before measuring element position
+    if (tourActive && tourStep === 8) setTimeout(() => tourNext(), 280)
   }
 
   const openTagEditor = () => {
@@ -226,7 +235,11 @@ export function BoardDetail() {
         })),
       },
       {
-        onSuccess: () => { setShowStepEditor(false); toast.show('스텝이 저장됐어요.') },
+        onSuccess: () => {
+          setShowStepEditor(false)
+          toast.show('스텝이 저장됐어요.')
+          if (tourActive && tourStep === 11) tourNext()
+        },
         onError: () => toast.error('저장에 실패했습니다.'),
       },
     )
@@ -381,11 +394,15 @@ export function BoardDetail() {
       <div className="flex gap-1 p-1 bg-surface-2 border border-white/8 rounded-lg mb-4">
         {([
           { v: 'steps' as const, label: '전형 단계' },
-          { v: 'coverletter' as const, label: '자소서' },
+          { v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' },
         ]).map((t) => (
           <button
             key={t.v}
-            onClick={() => setActiveTab(t.v)}
+            onClick={() => {
+              setActiveTab(t.v)
+              if (tourActive && tourStep === 12 && t.v === 'coverletter') tourNext()
+            }}
+            {...('tourAttr' in t ? { 'data-tour': t.tourAttr } : {})}
             className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors
               ${activeTab === t.v ? 'bg-surface-3 text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
           >
@@ -398,7 +415,7 @@ export function BoardDetail() {
         <>
           {/* 스텝바 */}
           {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
-            <div className="border border-white/8 bg-surface-2 rounded-xl p-5 mb-4">
+            <div data-tour="step-bar" className="border border-white/8 bg-surface-2 rounded-xl p-5 mb-4">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-text-primary text-sm font-semibold">진행 상황</h2>
@@ -406,6 +423,7 @@ export function BoardDetail() {
                 </div>
                 {app.status !== 'PASSED' && (
                   <button
+                    data-tour="step-edit-btn"
                     onClick={openStepEditor}
                     className="text-xs text-text-tertiary hover:text-text-secondary border border-white/8 hover:border-white/15 px-2.5 py-1.5 rounded-lg transition-all"
                   >
@@ -490,14 +508,18 @@ export function BoardDetail() {
           </SortableContext>
         </DndContext>
         <button
-          onClick={() => setEditSteps((prev) => [...prev, { id: crypto.randomUUID(), name: '', scheduledDate: null, location: null }])}
+          data-tour="add-step-btn"
+          onClick={() => {
+            setEditSteps((prev) => [...prev, { id: crypto.randomUUID(), name: '', scheduledDate: null, location: null }])
+            if (tourActive && tourStep === 9) tourNext()
+          }}
           className="w-full py-2 text-xs text-text-tertiary border border-dashed border-white/15 rounded-lg hover:border-white/25 hover:text-text-secondary transition-all mb-4"
         >
           + 스텝 추가
         </button>
         <div className="flex gap-2">
           <button onClick={() => setShowStepEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
-          <button onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
+          <button data-tour="save-steps-btn" onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
             {isSavingSteps ? '저장 중...' : '저장'}
           </button>
         </div>
@@ -519,7 +541,7 @@ export function BoardDetail() {
           onClick={() => setShowPassConfirm(false)}
         >
           <div
-            className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
+            className="bg-surface border border-white/8 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-2xl mb-3">🎉</div>
@@ -530,13 +552,13 @@ export function BoardDetail() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowPassConfirm(false)}
-                className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors"
+                className="flex-1 py-3 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={() => { updateStep({ id: app.id, stepIndex: pendingStepIndex }, { onSuccess: () => celebrate(app.companyName) }); setShowPassConfirm(false) }}
-                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
+                className="flex-1 py-3 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
               >
                 합격 처리
               </button>

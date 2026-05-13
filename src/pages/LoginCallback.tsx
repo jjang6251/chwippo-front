@@ -28,8 +28,9 @@ export function LoginCallback() {
     const userNickname = params.get('user_nickname')
     const userRole = params.get('user_role') as 'user' | 'admin'
     const userEmail = params.get('user_email')
+    const userOnboardedAt = params.get('user_onboarded_at')
     if (userId && userNickname && userRole) {
-      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole })
+      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole, onboardedAt: userOnboardedAt })
     }
 
     if (isNew) {

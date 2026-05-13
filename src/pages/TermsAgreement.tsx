@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { toast } from '@/stores/toastStore'
 import { agreeTerms as agreeTermsApi } from '@/api/users'
 
 export function TermsAgreement() {
@@ -28,7 +27,6 @@ export function TermsAgreement() {
       // 동의 기록 실패해도 서비스 이용은 막지 않음
     }
     navigate('/dashboard', { replace: true })
-    toast.show('치뽀에 오신 것을 환영해요! 첫 지원 카드를 추가해보세요.')
   }
 
   return (
