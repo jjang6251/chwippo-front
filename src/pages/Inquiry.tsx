@@ -35,7 +35,7 @@ export function Inquiry() {
       <div className="max-w-lg mx-auto px-4 py-16 flex flex-col items-center text-center gap-4">
         <div className="text-5xl">🙏</div>
         <h2 className="text-lg font-bold">문의가 접수됐어요</h2>
-        <p className="text-sm text-text-muted leading-relaxed">
+        <p className="text-sm text-text-tertiary leading-relaxed">
           답변은 이 앱 안에서 확인할 수 있어요.<br />
           소중한 피드백 감사합니다.
         </p>
@@ -52,7 +52,7 @@ export function Inquiry() {
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <h1 className="text-xl font-bold mb-2">문의하기</h1>
-      <p className="text-sm text-text-muted mb-8">
+      <p className="text-sm text-text-tertiary mb-8">
         버그, 기능 요청, 무엇이든 알려주세요.<br />
         답변은 앱 안 문의 내역에서 확인할 수 있어요.
       </p>
@@ -60,7 +60,7 @@ export function Inquiry() {
       <div className="flex flex-col gap-5">
         {/* 카테고리 드롭다운 */}
         <div>
-          <label className="text-xs font-semibold text-text-muted uppercase tracking-wide block mb-2">
+          <label className="text-xs font-semibold text-text-tertiary uppercase tracking-wide block mb-2">
             카테고리 *
           </label>
           <div className="relative">
@@ -69,31 +69,31 @@ export function Inquiry() {
               onChange={(e) => setCategory(e.target.value)}
               className="w-full appearance-none bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors pr-8 text-text-primary"
             >
-              <option value="" disabled className="bg-surface-2 text-text-muted">카테고리 선택</option>
+              <option value="" disabled className="bg-surface-2 text-text-tertiary">카테고리 선택</option>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c} className="bg-surface-2">{c}</option>
               ))}
             </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-xs">▾</div>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-tertiary text-xs">▾</div>
           </div>
         </div>
 
         {/* 제목 */}
         <div>
-          <label className="text-xs font-semibold text-text-muted uppercase tracking-wide block mb-2">제목 *</label>
+          <label className="text-xs font-semibold text-text-tertiary uppercase tracking-wide block mb-2">제목 *</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={100}
             placeholder="간단하게 설명해주세요"
-            className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-muted"
+            className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
           />
         </div>
 
         {/* 내용 */}
         <div>
-          <label className="text-xs font-semibold text-text-muted uppercase tracking-wide block mb-2">
-            내용 * <span className="normal-case font-normal text-text-muted">(최소 10자)</span>
+          <label className="text-xs font-semibold text-text-tertiary uppercase tracking-wide block mb-2">
+            내용 * <span className="normal-case font-normal text-text-tertiary">(최소 10자)</span>
           </label>
           <textarea
             value={content}
@@ -101,9 +101,9 @@ export function Inquiry() {
             rows={6}
             maxLength={2000}
             placeholder="자세히 알려주실수록 더 빠르게 도움드릴 수 있어요."
-            className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-muted resize-none"
+            className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
           />
-          <p className="text-xs text-text-muted text-right mt-1">{content.length} / 2000</p>
+          <p className="text-xs text-text-tertiary text-right mt-1">{content.length} / 2000</p>
         </div>
 
         <button

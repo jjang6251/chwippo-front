@@ -67,16 +67,16 @@ export function OpsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">관리자</h1>
-          <p className="text-sm text-text-muted mt-1">치뽀 운영 현황</p>
+          <p className="text-sm text-text-tertiary mt-1">치뽀 운영 현황</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
             to="/dashboard"
-            className="text-xs text-text-muted hover:text-text-secondary bg-surface-2 border border-white/8 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs text-text-tertiary hover:text-text-secondary bg-surface-2 border border-white/8 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors"
           >
             ← 치뽀로 돌아가기
           </Link>
-          <span className="text-xs text-text-muted bg-surface-2 border border-white/5 px-3 py-1 rounded-full">admin</span>
+          <span className="text-xs text-text-tertiary bg-surface-2 border border-white/5 px-3 py-1 rounded-full">admin</span>
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export function OpsPage() {
             <p className={`text-3xl font-bold tabular-nums ${color} ${statsLoading ? 'opacity-30' : ''}`}>
               {value.toLocaleString()}
             </p>
-            <p className="text-xs text-text-muted mt-1">{label}</p>
+            <p className="text-xs text-text-tertiary mt-1">{label}</p>
           </div>
         ))}
       </div>
@@ -100,9 +100,9 @@ export function OpsPage() {
         >
           <div>
             <p className="text-sm font-semibold">문의 관리</p>
-            <p className="text-xs text-text-muted mt-0.5">미답변 문의 {stats?.pendingInquiries ?? 0}건</p>
+            <p className="text-xs text-text-tertiary mt-0.5">미답변 문의 {stats?.pendingInquiries ?? 0}건</p>
           </div>
-          <span className="text-text-muted">›</span>
+          <span className="text-text-tertiary">›</span>
         </Link>
       </div>
 
@@ -117,7 +117,7 @@ export function OpsPage() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 days === value
                   ? 'bg-brand/15 border border-brand/30 text-brand'
-                  : 'bg-surface-2 border border-white/8 text-text-muted hover:border-white/20'
+                  : 'bg-surface-2 border border-white/8 text-text-tertiary hover:border-white/20'
               }`}
             >
               {label}
@@ -171,9 +171,9 @@ export function OpsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {kpiCards.map(({ label, value, sub, color }) => (
           <div key={label} className="bg-surface-2 border border-white/5 rounded-xl p-5">
-            <p className="text-xs text-text-muted mb-2">{label}</p>
+            <p className="text-xs text-text-tertiary mb-2">{label}</p>
             <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
-            <p className="text-xs text-text-muted mt-1">{sub}</p>
+            <p className="text-xs text-text-tertiary mt-1">{sub}</p>
           </div>
         ))}
       </div>
@@ -199,7 +199,7 @@ function ChartCard({ title, data, color, loading, unit }: ChartCardProps) {
     <div className="bg-surface-2 border border-white/5 rounded-xl p-5">
       <p className="text-sm font-semibold mb-4">{title}</p>
       {loading || !data ? (
-        <div className="h-40 flex items-center justify-center text-text-muted text-xs">불러오는 중...</div>
+        <div className="h-40 flex items-center justify-center text-text-tertiary text-xs">불러오는 중...</div>
       ) : (
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>

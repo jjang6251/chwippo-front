@@ -10,7 +10,7 @@ const STATUS_LABEL: Record<string, string> = { OPEN: '답변 대기', IN_PROGRES
 const STATUS_COLOR: Record<string, string> = {
   OPEN: 'text-warning bg-warning/10 border-warning/20',
   IN_PROGRESS: 'text-brand bg-brand/10 border-brand/20',
-  CLOSED: 'text-text-muted bg-white/5 border-white/10',
+  CLOSED: 'text-text-tertiary bg-white/5 border-white/10',
 }
 
 export function InquiryDetail() {
@@ -36,7 +36,7 @@ export function InquiryDetail() {
   })
 
   if (isLoading || !data) {
-    return <div className="max-w-lg mx-auto px-4 py-16 text-center text-text-muted text-sm">불러오는 중...</div>
+    return <div className="max-w-lg mx-auto px-4 py-16 text-center text-text-tertiary text-sm">불러오는 중...</div>
   }
 
   const isClosed = data.status === 'CLOSED'
@@ -45,17 +45,17 @@ export function InquiryDetail() {
     <div className="max-w-lg mx-auto px-4 py-8">
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => goBack(navigate, '/inquiry')} className="text-text-muted hover:text-text-primary text-sm transition-colors">← 뒤로</button>
+        <button onClick={() => goBack(navigate, '/inquiry')} className="text-text-tertiary hover:text-text-primary text-sm transition-colors">← 뒤로</button>
       </div>
 
       {/* 문의 정보 */}
       <div className="bg-surface-2 border border-white/8 rounded-xl px-5 py-4 mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[data.status] ?? 'text-text-muted bg-white/5 border-white/10'}`}>
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[data.status] ?? 'text-text-tertiary bg-white/5 border-white/10'}`}>
             {STATUS_LABEL[data.status] ?? data.status}
           </span>
-          <span className="text-xs text-text-muted">{data.category}</span>
-          <span className="text-xs text-text-muted ml-auto">{dayjs(data.created_at).format('YYYY.MM.DD')}</span>
+          <span className="text-xs text-text-tertiary">{data.category}</span>
+          <span className="text-xs text-text-tertiary ml-auto">{dayjs(data.created_at).format('YYYY.MM.DD')}</span>
         </div>
         <h2 className="text-base font-bold mb-2">{data.title}</h2>
         <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{data.content}</p>
@@ -72,7 +72,7 @@ export function InquiryDetail() {
 
       {/* 완료 안내 or 댓글 입력 */}
       {isClosed ? (
-        <div className="text-center py-6 text-sm text-text-muted bg-surface-2 border border-white/5 rounded-xl">
+        <div className="text-center py-6 text-sm text-text-tertiary bg-surface-2 border border-white/5 rounded-xl">
           ✅ 이 문의는 완료 처리됐어요.
         </div>
       ) : (
@@ -83,7 +83,7 @@ export function InquiryDetail() {
             rows={3}
             maxLength={2000}
             placeholder="추가로 궁금한 점이 있으면 남겨주세요..."
-            className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-muted resize-none mb-3"
+            className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none mb-3"
           />
           <div className="flex justify-end">
             <button
@@ -105,11 +105,11 @@ function CommentBubble({ comment, isMe }: { comment: InquiryComment; isMe: boole
     <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
       <div className={`flex items-center gap-1.5 ${isMe ? 'flex-row-reverse' : ''}`}>
         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-          isMe ? 'bg-brand/15 text-brand' : 'bg-white/8 text-text-muted'
+          isMe ? 'bg-brand/15 text-brand' : 'bg-white/8 text-text-tertiary'
         }`}>
           {isMe ? '나' : '치뽀 팀'}
         </span>
-        <span className="text-[10px] text-text-muted">{dayjs(comment.created_at).format('MM.DD HH:mm')}</span>
+        <span className="text-[10px] text-text-tertiary">{dayjs(comment.created_at).format('MM.DD HH:mm')}</span>
       </div>
       <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
         isMe
