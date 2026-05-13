@@ -103,7 +103,7 @@ export function Inquiry() {
             placeholder="자세히 알려주실수록 더 빠르게 도움드릴 수 있어요."
             className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
           />
-          <p className="text-xs text-text-tertiary text-right mt-1">{content.length} / 2000</p>
+          <p className={`text-xs text-right mt-1 ${content.length >= 2000 ? 'text-danger' : content.length >= 1800 ? 'text-warning' : 'text-text-quaternary'}`}>{content.length} / 2000</p>
         </div>
 
         <button

@@ -100,7 +100,7 @@ export function Board() {
         <div ref={addMenuRef} className="relative">
           <button
             onClick={() => setAddMenuOpen(!addMenuOpen)}
-            className="flex items-center gap-1.5 bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors shadow-lg shadow-brand/20"
+            className="flex items-center gap-1.5 bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-3.5 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -147,7 +147,7 @@ export function Board() {
         </div>
 
         {/* 필터 탭 */}
-        <div className="flex items-center gap-1 bg-surface-2 border border-white/6 rounded-lg p-1">
+        <div className="flex items-center gap-0.5 sm:gap-1 bg-surface-2 border border-white/6 rounded-lg p-1 w-full sm:w-auto">
           {FILTER_TABS.map((tab) => {
             const count = tab.key === 'all'
               ? applications.filter((a) => a.status !== 'FAILED').length
@@ -159,7 +159,7 @@ export function Board() {
               <button
                 key={tab.key}
                 onClick={() => setFilter(tab.key)}
-                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all whitespace-nowrap
+                className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 text-xs rounded-md font-medium transition-all whitespace-nowrap text-center
                   ${filter === tab.key
                     ? 'bg-white/10 text-text-primary shadow-sm'
                     : 'text-text-quaternary hover:text-text-secondary'

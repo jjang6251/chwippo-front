@@ -36,7 +36,14 @@ export function InquiryDetail() {
   })
 
   if (isLoading || !data) {
-    return <div className="max-w-lg mx-auto px-4 py-16 text-center text-text-tertiary text-sm">불러오는 중...</div>
+    return (
+      <div className="max-w-lg mx-auto px-4 py-8 flex flex-col gap-4">
+        <div className="h-8 w-20 bg-white/[0.04] rounded-lg animate-pulse" />
+        <div className="h-32 bg-white/[0.03] rounded-xl animate-pulse" />
+        <div className="h-20 bg-white/[0.03] rounded-xl animate-pulse" />
+        <div className="h-24 bg-white/[0.03] rounded-xl animate-pulse" />
+      </div>
+    )
   }
 
   const isClosed = data.status === 'CLOSED'
@@ -45,7 +52,7 @@ export function InquiryDetail() {
     <div className="max-w-lg mx-auto px-4 py-8">
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => goBack(navigate, '/inquiry')} className="text-text-tertiary hover:text-text-primary text-sm transition-colors">← 뒤로</button>
+        <button onClick={() => goBack(navigate, '/inquiry')} className="h-8 flex items-center text-text-tertiary hover:text-text-primary text-sm transition-colors">← 뒤로</button>
       </div>
 
       {/* 문의 정보 */}
