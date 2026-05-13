@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useInterviewReview } from '@/hooks/useDashboard'
 
 export function InterviewReviewCard() {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const { data: items = [] } = useInterviewReview()
 
   if (items.length === 0) return null

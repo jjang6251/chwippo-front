@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useDemoMode } from '@/contexts/demoMode'
 
 const TABS = [
   { label: '대시보드', path: '/dashboard', icon: GridIcon },
@@ -10,24 +11,27 @@ const TABS = [
 
 export function MobileNav() {
   const location = useLocation()
+  const isDemo = useDemoMode()
+  const link = (p: string) => (isDemo ? '/demo' + p : p)
+  const tabs = isDemo ? TABS.filter((t) => t.path !== '/settings') : TABS
 
   const isActive = (path: string) => {
+    const target = link(path)
     if (path === '/settings') {
       return location.pathname.startsWith('/settings') || location.pathname === '/inquiry'
     }
-    if (path === '/board') return location.pathname.startsWith('/board')
-    if (path === '/calendar') return location.pathname === '/calendar'
-    return location.pathname === path
+    if (path === '/board') return location.pathname.startsWith(target)
+    return location.pathname === target
   }
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-white/5 flex safe-area-pb">
-      {TABS.map(({ label, path, icon: Icon }) => {
+      {tabs.map(({ label, path, icon: Icon }) => {
         const active = isActive(path)
         return (
           <Link
             key={path}
-            to={path}
+            to={link(path)}
             className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors"
           >
             <span className={active ? 'text-brand' : 'text-text-quaternary'}>

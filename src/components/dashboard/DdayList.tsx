@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import type { DdayItem } from '@/api/dashboard'
 import { getDdayLabel, getDdayVariant } from '@/utils/dday'
 import { getAvatarColor } from '@/utils/tags'
@@ -16,7 +16,7 @@ const VARIANT_CLASS = {
 }
 
 export function DdayList({ items, isLoading }: DdayListProps) {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
 
   if (isLoading) {
     return (

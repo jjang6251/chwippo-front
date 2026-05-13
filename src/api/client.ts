@@ -35,7 +35,7 @@ apiClient.interceptors.response.use(
       } catch {
         useAuthStore.getState().clearAuth()
         toast.error('로그인이 만료되었습니다.')
-        window.location.href = '/login'
+        window.location.href = '/'
       }
     }
 

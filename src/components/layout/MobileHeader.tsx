@@ -1,4 +1,5 @@
 import { useLocation, Link } from 'react-router-dom'
+import { useDemoMode } from '@/contexts/demoMode'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
@@ -13,19 +14,21 @@ const PAGE_TITLES: Record<string, string> = {
 }
 
 function getTitle(pathname: string): string {
-  if (pathname.startsWith('/board/')) return '카드 상세'
-  if (pathname.startsWith('/inquiry/') && pathname !== '/inquiry/new') return '문의 상세'
-  return PAGE_TITLES[pathname] ?? '치뽀'
+  const path = pathname.startsWith('/demo/') ? pathname.slice(5) : pathname
+  if (path.startsWith('/board/')) return '카드 상세'
+  if (path.startsWith('/inquiry/') && path !== '/inquiry/new') return '문의 상세'
+  return PAGE_TITLES[path] ?? '치뽀'
 }
 
 export function MobileHeader() {
   const { pathname } = useLocation()
+  const isDemo = useDemoMode()
   const title = getTitle(pathname)
 
   return (
     <header className="lg:hidden sticky top-0 z-40 bg-surface border-b border-white/5 flex items-center px-4 h-12">
-      <Link to="/dashboard" className="text-brand font-bold text-base tracking-tight mr-3">
-        치뽀
+      <Link to={isDemo ? '/demo/dashboard' : '/dashboard'} className="text-brand font-bold text-base tracking-tight mr-3">
+        치뽀{isDemo && <span className="ml-1 text-[9px] font-medium text-text-quaternary align-middle">데모</span>}
       </Link>
       <span className="text-white/20 text-sm mr-3">|</span>
       <span className="text-text-secondary text-sm font-medium">{title}</span>

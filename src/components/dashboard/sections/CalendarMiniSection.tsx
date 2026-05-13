@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '@/hooks/useCalendar'
@@ -7,7 +7,7 @@ import { CalendarDayPanel } from '@/components/calendar/CalendarDayPanel'
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
 export function CalendarMiniSection() {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const today = dayjs().format('YYYY-MM-DD')
 
   const [cursor, setCursor] = useState(dayjs().startOf('month'))

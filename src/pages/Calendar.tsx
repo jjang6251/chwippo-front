@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useDemoMode } from '@/contexts/demoMode'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '@/hooks/useCalendar'
 import type { CalendarEvent } from '@/api/calendar'
@@ -472,9 +473,9 @@ export function Calendar() {
               <p className="text-text-quaternary text-xs leading-relaxed">
                 보드에서 서류 마감일이나<br />면접 스텝에 날짜를 등록해보세요
               </p>
-              <Link to="/board" className="mt-1 text-xs font-medium text-brand hover:text-accent transition-colors">
+              <DemoLink to="/board" className="mt-1 text-xs font-medium text-brand hover:text-accent transition-colors">
                 보드로 이동 →
-              </Link>
+              </DemoLink>
             </div>
           )}
 
@@ -549,13 +550,20 @@ export function Calendar() {
   )
 }
 
+function DemoLink({ to, className, children }: { to: string; className?: string; children: React.ReactNode }) {
+  const isDemo = useDemoMode()
+  return <Link to={isDemo ? '/demo' + to : to} className={className}>{children}</Link>
+}
+
 function EventCard({ event }: { event: CalendarEvent }) {
+  const isDemo = useDemoMode()
   const c = COLOR[event.type]
-  const to = event.type === 'exam'
+  const rawTo = event.type === 'exam'
     ? '/myinfo#exam-schedules'
     : event.type === 'interview' && event.stepId
       ? `/board/${event.applicationId}/steps/${event.stepId}`
       : `/board/${event.applicationId}`
+  const to = isDemo ? '/demo' + rawTo : rawTo
   return (
     <Link
       to={to}

@@ -1,11 +1,11 @@
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 
 interface GoalsSectionProps {
   goals: string[]
 }
 
 export function GoalsSection({ goals }: GoalsSectionProps) {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
 
   return (
     <section>

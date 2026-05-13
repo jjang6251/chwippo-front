@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useCoverletter } from '@/hooks/useMyinfo'
 import { toast } from '@/stores/toastStore'
 import type { Coverletter } from '@/api/myinfo'
@@ -14,7 +14,7 @@ const FIELDS: { key: keyof Coverletter; label: string }[] = [
 ]
 
 export function CoverLetterQuickSection() {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const { data, isLoading } = useCoverletter()
   const [openKey, setOpenKey] = useState<string | null>(null)
 

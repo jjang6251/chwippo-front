@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
 import type { DragEndEvent } from '@dnd-kit/core'
@@ -120,7 +121,7 @@ function EditableField({
 // --- 메인 페이지 ---
 export function BoardDetail() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const { data: app, isLoading } = useApplication(id!)
   const { mutate: update } = useUpdateApplication(id!)
   const { mutate: updateStep } = useUpdateCurrentStep()

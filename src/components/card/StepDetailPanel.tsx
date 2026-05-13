@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import dayjs from 'dayjs'
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
 import { getStepType, STEP_TYPE_CONFIG } from '@/utils/stepTemplates'
@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function StepDetailPanel({ appId, step, onClose }: Props) {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const stepType = getStepType(step.name)
   const typeConfig = STEP_TYPE_CONFIG[stepType]
   const [scheduledDate, setScheduledDate] = useState(
