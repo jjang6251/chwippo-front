@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDemoMode } from '@/contexts/demoMode'
 import dayjs from 'dayjs'
 import { useTodayDailyNotes, useCreateDailyNote, useUpdateDailyNote, useDeleteDailyNote, useCarryOverDailyNote } from '@/hooks/useCalendar'
 import type { DailyNote } from '@/api/calendar'
@@ -14,6 +15,7 @@ function slotToLabel(slot: number) {
 }
 
 export function TodosSection() {
+  const isDemo = useDemoMode()
   const today = dayjs().format('YYYY-MM-DD')
   const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
 
@@ -143,7 +145,7 @@ export function TodosSection() {
 
         {/* 캘린더 링크 */}
         <Link
-          to="/calendar"
+          to={isDemo ? '/demo/calendar' : '/calendar'}
           className="flex items-center justify-center gap-1.5 text-[11px] text-text-quaternary hover:text-text-secondary py-1.5 transition-colors group"
         >
           <span>📅</span>

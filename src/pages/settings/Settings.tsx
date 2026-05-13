@@ -16,7 +16,7 @@ export function Settings() {
   async function handleLogout() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
-    navigate('/login')
+    navigate('/')
   }
 
   return (

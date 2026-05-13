@@ -24,6 +24,6 @@ export function AuthGuard() {
   }, [])
 
   if (checking) return null
-  if (!accessToken) return <Navigate to="/login" replace />
+  if (!accessToken) return <Navigate to="/" replace />
   return <Outlet />
 }

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/hooks/useApplications'
@@ -11,7 +12,7 @@ import { getDdayLabel, getDdayVariant } from '@/utils/dday'
 
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
 
   const { data: app, isLoading } = useApplication(appId!)
   const sortedSteps = app ? [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex) : []

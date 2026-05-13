@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import dayjs from 'dayjs'
 import type { Application, UpdateApplicationDto } from '@/types/application'
 import { StepBar } from './StepBar'
@@ -30,7 +30,7 @@ function formatRegisteredDate(dateStr: string): string {
 }
 
 export function CompanyCard({ application, onStartApplication, onSetResult, onCurrentStepClick }: CompanyCardProps) {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showFailConfirm, setShowFailConfirm] = useState(false)

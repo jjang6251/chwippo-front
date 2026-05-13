@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -36,12 +36,20 @@ export function Landing() {
       <header className="sticky top-0 z-50 bg-bg/80 backdrop-blur border-b border-white/5">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <span className="text-lg font-bold tracking-tight">치뽀</span>
-          <button
-            onClick={handleKakaoLogin}
-            className="text-sm font-medium bg-brand hover:bg-accent text-text-primary px-4 py-2 rounded-lg transition-colors"
-          >
-            시작하기
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/demo"
+              className="text-sm font-medium text-text-secondary hover:text-text-primary px-3 py-2 rounded-lg transition-colors"
+            >
+              둘러보기
+            </Link>
+            <button
+              onClick={handleKakaoLogin}
+              className="text-sm font-medium bg-brand hover:bg-accent text-text-primary px-4 py-2 rounded-lg transition-colors"
+            >
+              시작하기
+            </button>
+          </div>
         </div>
       </header>
 
@@ -70,8 +78,14 @@ export function Landing() {
             <KakaoIcon />
             카카오로 무료 시작
           </button>
-          <span className="text-text-quaternary text-xs">무료 · 광고 없음 · 카드 등록 불필요</span>
+          <Link
+            to="/demo"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/[0.04] hover:bg-white/[0.07] border border-white/8 text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
+          >
+            로그인 없이 둘러보기 →
+          </Link>
         </div>
+        <p className="text-text-quaternary text-xs mt-4">무료 · 광고 없음 · 카드 등록 불필요</p>
       </section>
 
       {/* 핵심 기능 미리보기 */}

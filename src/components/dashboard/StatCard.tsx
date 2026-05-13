@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 
 interface StatCardProps {
   label: string
@@ -54,7 +54,7 @@ const ACCENT = {
 }
 
 export function StatCard({ label, value, icon, description, filterKey, accent = 'brand', isLoading }: StatCardProps) {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const c = ACCENT[accent]
 
   return (
