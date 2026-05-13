@@ -96,6 +96,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   return (
     <div
       onClick={handleCardClick}
+      data-tour-card-id={application.id}
       className={`
         relative group border-l-2 rounded-xl p-4 cursor-pointer
         transition-all duration-200

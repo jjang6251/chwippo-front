@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -31,9 +31,21 @@ import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
 import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
 import { useProfile } from '@/hooks/useMyinfo'
 import { useAuthStore } from '@/stores/authStore'
+import { useTourStore } from '@/stores/tourStore'
+import { useDemoMode } from '@/contexts/demoMode'
 
 export function Dashboard() {
   const user = useAuthStore((s) => s.user)
+  const startTour = useTourStore((s) => s.start)
+  const isDemo = useDemoMode()
+
+  useEffect(() => {
+    if (!isDemo && user && user.onboardedAt === null) {
+      startTour()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: dday, isLoading: ddayLoading } = useDdayList()
   const { data: profile } = useProfile()

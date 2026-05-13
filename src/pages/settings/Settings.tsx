@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { useTourStore } from '@/stores/tourStore'
 import { apiClient } from '@/api/client'
 
 const MENU = [
@@ -11,6 +12,7 @@ const MENU = [
 
 export function Settings() {
   const clearAuth = useAuthStore((s) => s.clearAuth)
+  const startTour = useTourStore((s) => s.start)
   const navigate = useNavigate()
 
   async function handleLogout() {
@@ -38,6 +40,20 @@ export function Settings() {
             <span className="text-text-tertiary text-sm">›</span>
           </Link>
         ))}
+      </div>
+
+      <div className="bg-surface-2 border border-white/5 rounded-xl mb-4">
+        <button
+          onClick={startTour}
+          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-white/3 transition-colors"
+        >
+          <span className="text-xl w-7 text-center">🚀</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">온보딩 다시 보기</p>
+            <p className="text-xs text-text-tertiary mt-0.5">치뽀 시작 안내 다시 확인하기</p>
+          </div>
+          <span className="text-text-tertiary text-sm">›</span>
+        </button>
       </div>
 
       <div className="bg-surface-2 border border-white/5 rounded-xl">

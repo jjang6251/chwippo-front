@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
+import { useTourStore } from '@/stores/tourStore'
 import { apiClient } from '@/api/client'
 
 const NAV_ITEMS = [
@@ -26,6 +27,7 @@ export function Sidebar() {
   const showLogin = useLoginModalStore((s) => s.show)
   const link = (p: string) => (isDemo ? '/demo' + p : p)
 
+  const startTour = useTourStore((s) => s.start)
   const [settingsOpen, setSettingsOpen] = useState(
     location.pathname.startsWith('/settings')
   )
@@ -60,6 +62,7 @@ export function Sidebar() {
             <Link
               key={path}
               to={link(path)}
+              {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive(path)
                   ? 'bg-brand/10 text-brand'
@@ -124,6 +127,12 @@ export function Sidebar() {
                       {label}
                     </Link>
                   ))}
+                  <button
+                    onClick={startTour}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-left text-text-quaternary hover:text-text-secondary hover:bg-white/3 transition-colors"
+                  >
+                    온보딩 다시 보기
+                  </button>
                 </div>
               )}
 

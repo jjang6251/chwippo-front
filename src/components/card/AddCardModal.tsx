@@ -5,6 +5,7 @@ import { useCreateApplication } from '@/hooks/useApplications'
 import { serializeTags } from '@/utils/tags'
 import { APPLICATION_TEMPLATES, getApplicationTemplate, recommendTemplate } from '@/utils/stepTemplates'
 import { toast } from '@/stores/toastStore'
+import { useTourStore } from '@/stores/tourStore'
 
 interface AddCardModalProps {
   open: boolean
@@ -20,6 +21,9 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
   const [templateId, setTemplateId] = useState('general')
   const [templateTouched, setTemplateTouched] = useState(false)
   const { mutate: create, isPending } = useCreateApplication()
+  const tourActive = useTourStore((s) => s.active)
+  const tourStep = useTourStore((s) => s.step)
+  const onCardCreated = useTourStore((s) => s.onCardCreated)
 
   const isPlanned = defaultStatus === 'PLANNED'
   // 사용자가 직접 고르기 전까지는 직군 태그·회사명 기반 추천을 따라감
@@ -43,8 +47,9 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
         templateId: !isPlanned ? effectiveTemplateId : undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
           toast.success(`${companyName} 카드가 추가됐어요.`)
+          if (tourActive && tourStep === 4) onCardCreated(data.id)
           handleClose()
         },
         onError: () => toast.error('카드 추가에 실패했습니다.'),
@@ -61,6 +66,12 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
   return (
     <Modal open={open} onClose={handleClose} title={isPlanned ? '지원 예정 추가' : '지원 중으로 추가'}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {tourActive && tourStep === 4 && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-brand/10 border border-brand/20 rounded-lg">
+            <span className="text-brand text-sm">💡</span>
+            <p className="text-xs text-brand/90">회사 이름만 입력해도 지원 단계가 자동 생성돼요</p>
+          </div>
+        )}
         <div>
           <label className="block text-xs text-text-tertiary mb-1.5">회사명 *</label>
           <input

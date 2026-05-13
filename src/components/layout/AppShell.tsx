@@ -4,6 +4,7 @@ import { MobileNav } from './MobileNav'
 import { MobileHeader } from './MobileHeader'
 import { useDemoMode } from '@/contexts/demoMode'
 import { DemoBanner } from '@/components/demo/DemoBanner'
+import { TourOverlay } from '@/components/onboarding/TourOverlay'
 
 export function AppShell() {
   const isDemo = useDemoMode()
@@ -20,6 +21,7 @@ export function AppShell() {
         </div>
       </div>
       <MobileNav />
+      <TourOverlay />
     </div>
   )
 }

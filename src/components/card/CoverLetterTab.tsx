@@ -82,6 +82,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
       {/* 추가 영역 */}
       <div className="border border-white/8 bg-surface-2 rounded-xl p-4">
         <button
+          data-tour="add-question-btn"
           onClick={() => handleAdd()}
           disabled={creating}
           className="w-full py-2.5 text-xs font-medium text-text-secondary border border-dashed border-white/15 rounded-lg
