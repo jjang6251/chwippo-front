@@ -2,12 +2,19 @@
 // TODO: 유료 결제 도입 시 → 결제 수탁업체(PG사) 추가
 // TODO: 사업자 등록 시 → 8조 개인정보 보호책임자에 사업자 정보 추가
 
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export function Privacy() {
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-bg text-text-primary">
       <main className="max-w-2xl mx-auto px-6 py-16">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 py-1 text-sm text-text-quaternary hover:text-text-secondary transition-colors mb-8"
+        >
+          ← 뒤로
+        </button>
         <h1 className="text-2xl font-bold mb-2">개인정보처리방침</h1>
         <p className="text-text-quaternary text-sm mb-12">시행일: 2026년 5월 14일</p>
 
@@ -19,6 +26,7 @@ export function Privacy() {
               ['카카오 로그인', '이메일, 닉네임, 카카오 고유 식별자', '회원 가입 시'],
               ['서비스 이용', '지원 카드, 자소서 답변, 내 정보 창고에 직접 입력한 정보', '서비스 이용 중'],
               ['파일 업로드', '내 정보 창고에 업로드한 PDF·이미지 파일', '파일 업로드 시'],
+              ['계정 관리', '계정 정지 일시 (운영 정책 위반 시에만 기록)', '계정 제한 조치 시'],
             ]}
           />
           <p className="mt-3 text-text-quaternary text-xs">
@@ -32,6 +40,7 @@ export function Privacy() {
             <li>취업 일정·자소서·내 정보 관리 기능 제공</li>
             <li>서비스 개선 및 오류 대응</li>
             <li>공지사항 전달 등 서비스 운영</li>
+            <li>운영 정책 적용 (계정 제한·정지 조치)</li>
           </ul>
         </DocSection>
 
@@ -86,6 +95,7 @@ export function Privacy() {
             <li>개인정보 열람 요청</li>
             <li>개인정보 수정·삭제 요청</li>
             <li>개인정보 처리 정지 요청</li>
+            <li>개인정보 이동 요청 (내 데이터 전체 내보내기 — 설정 → 프로필 설정에서 신청)</li>
             <li>회원 탈퇴 (서비스 내 설정 → 프로필 설정 → 탈퇴)</li>
           </ul>
           <p className="mt-3">

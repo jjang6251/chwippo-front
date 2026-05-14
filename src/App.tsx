@@ -28,6 +28,7 @@ import { Help } from '@/pages/settings/Help'
 import { OpsPage } from '@/pages/ops/OpsPage'
 import { OpsInquiries } from '@/pages/ops/OpsInquiries'
 import { OpsAnnouncements } from '@/pages/ops/OpsAnnouncements'
+import { OpsUsers } from '@/pages/ops/OpsUsers'
 import { TermsAgreement } from '@/pages/TermsAgreement'
 
 export default function App() {
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/ops" element={<OpsPage />} />
             <Route path="/ops/inquiries" element={<OpsInquiries />} />
             <Route path="/ops/announcements" element={<OpsAnnouncements />} />
+            <Route path="/ops/users" element={<OpsUsers />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />

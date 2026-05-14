@@ -32,9 +32,16 @@ apiClient.interceptors.response.use(
         useAuthStore.getState().setAccessToken(accessToken)
         original.headers.Authorization = `Bearer ${accessToken}`
         return apiClient(original)
-      } catch {
+      } catch (refreshErr) {
         useAuthStore.getState().clearAuth()
-        toast.error('로그인이 만료되었습니다.')
+        const msg: string =
+          (refreshErr as { response?: { data?: { message?: string } } })
+            ?.response?.data?.message ?? ''
+        if (msg.includes('정지')) {
+          toast.error('계정이 정지된 상태입니다. 문의하기를 통해 확인해 주세요.')
+        } else {
+          toast.error('로그인이 만료되었습니다.')
+        }
         window.location.href = '/'
       }
     }

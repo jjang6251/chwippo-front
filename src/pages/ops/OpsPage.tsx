@@ -114,6 +114,16 @@ export function OpsPage() {
           </div>
           <span className="text-text-tertiary">›</span>
         </Link>
+        <Link
+          to="/ops/users"
+          className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold">회원 관리</p>
+            <p className="text-xs text-text-tertiary mt-0.5">계정 정지·권한·닉네임 변경 및 감사 로그</p>
+          </div>
+          <span className="text-text-tertiary">›</span>
+        </Link>
       </div>
 
       {/* ── 분석 대시보드 ── */}

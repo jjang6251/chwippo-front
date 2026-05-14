@@ -2,12 +2,19 @@
 // TODO: 사업자 등록 시 → 제1조 운영자 정보에 사업자 번호·주소 추가
 // TODO: 광고 도입 시 → 광고 게재 관련 조항 추가
 
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export function Terms() {
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-bg text-text-primary">
       <main className="max-w-2xl mx-auto px-6 py-16">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 py-1 text-sm text-text-quaternary hover:text-text-secondary transition-colors mb-8"
+        >
+          ← 뒤로
+        </button>
         <h1 className="text-2xl font-bold mb-2">이용약관</h1>
         <p className="text-text-quaternary text-sm mb-12">시행일: 2026년 5월 14일</p>
 
@@ -65,6 +72,18 @@ export function Terms() {
             <li>자동화 스크립트 등으로 서버에 과도한 부하를 주는 행위</li>
             <li>서비스의 정상적인 운영을 방해하는 행위</li>
             <li>관련 법령을 위반하는 행위</li>
+          </ul>
+        </DocSection>
+
+        <DocSection title="제6조의2 (계정 제한 및 정지)">
+          <p className="mb-3">
+            운영자는 회원이 제6조의 금지 행위를 하거나 서비스 운영에 심각한 지장을 초래하는 경우,
+            사전 통보 없이 해당 계정의 이용을 일시 정지하거나 영구 삭제할 수 있습니다.
+          </p>
+          <ul className="space-y-1.5 list-disc list-inside">
+            <li>계정이 정지된 회원은 서비스 로그인이 제한됩니다.</li>
+            <li>계정 정지에 이의가 있는 경우 운영자 이메일(support@chwippo.com)로 문의할 수 있습니다.</li>
+            <li>운영자는 이의 신청을 검토 후 7영업일 이내에 결과를 안내합니다.</li>
           </ul>
         </DocSection>
 
