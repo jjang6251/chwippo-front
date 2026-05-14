@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
-import { useTourStore } from '@/stores/tourStore'
 import { apiClient } from '@/api/client'
 
 const NAV_ITEMS = [
@@ -11,11 +10,6 @@ const NAV_ITEMS = [
   { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
   { label: '캘린더', path: '/calendar', icon: CalendarIcon },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
-] as const
-
-const SETTINGS_SUB = [
-  { label: '프로필 설정', path: '/settings/profile' },
-  { label: '알림 설정', path: '/settings/alarm' },
 ] as const
 
 export function Sidebar() {
@@ -27,10 +21,6 @@ export function Sidebar() {
   const showLogin = useLoginModalStore((s) => s.show)
   const link = (p: string) => (isDemo ? '/demo' + p : p)
 
-  const startTour = useTourStore((s) => s.start)
-  const [settingsOpen, setSettingsOpen] = useState(
-    location.pathname.startsWith('/settings')
-  )
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   const isActive = (path: string) => {
@@ -120,45 +110,18 @@ export function Sidebar() {
             <>
               <div className="h-px bg-white/5 my-2" />
 
-              {/* 설정 (accordion) */}
-              <button
-                onClick={() => setSettingsOpen((o) => !o)}
-                aria-expanded={settingsOpen}
-                aria-controls="settings-submenu"
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-left ${
+              {/* 설정 */}
+              <Link
+                to="/settings"
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isSettingsActive
                     ? 'bg-brand/10 text-brand'
                     : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
                 }`}
               >
                 <SettingsIcon size={16} />
-                <span className="flex-1">설정</span>
-                <span className={`text-xs transition-transform ${settingsOpen ? 'rotate-180' : ''}`}>▾</span>
-              </button>
-
-              {settingsOpen && (
-                <div id="settings-submenu" className="ml-7 flex flex-col gap-0.5">
-                  {SETTINGS_SUB.map(({ label, path }) => (
-                    <Link
-                      key={path}
-                      to={path}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        location.pathname === path
-                          ? 'text-brand bg-brand/8'
-                          : 'text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03]'
-                      }`}
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                  <button
-                    onClick={startTour}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-left text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03] transition-colors"
-                  >
-                    온보딩 다시 보기
-                  </button>
-                </div>
-              )}
+                설정
+              </Link>
 
               {/* 도움말 */}
               <Link

@@ -66,7 +66,14 @@ export function Settings() {
         </button>
       </div>
 
-      <p className="text-center text-xs text-text-tertiary mt-8 opacity-50">치뽀 · 취준생이 만드는 취업 관리 앱</p>
+      <div className="mt-8 flex flex-col items-center gap-2">
+        <div className="flex items-center gap-3 text-xs text-text-quaternary">
+          <Link to="/terms" className="hover:text-text-tertiary transition-colors">이용약관</Link>
+          <span>·</span>
+          <Link to="/privacy" className="hover:text-text-tertiary transition-colors">개인정보처리방침</Link>
+        </div>
+        <p className="text-xs text-text-quaternary">치뽀 · 취준생이 만드는 취업 관리 앱</p>
+      </div>
     </div>
   )
 }
