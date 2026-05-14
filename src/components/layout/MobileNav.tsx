@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useDemoMode } from '@/contexts/demoMode'
+import { useAuthStore } from '@/stores/authStore'
 
 const TABS = [
   { label: '대시보드', path: '/dashboard', icon: GridIcon },
@@ -12,10 +13,16 @@ const TABS = [
 export function MobileNav() {
   const location = useLocation()
   const isDemo = useDemoMode()
+  const user = useAuthStore((s) => s.user)
   const link = (p: string) => (isDemo ? '/demo' + p : p)
-  const tabs = isDemo ? TABS.filter((t) => t.path !== '/settings') : TABS
+
+  const baseTabs = isDemo ? TABS.filter((t) => t.path !== '/settings') : TABS
+  const tabs = (!isDemo && user?.role === 'admin')
+    ? [...baseTabs, { label: '관리자', path: '/ops', icon: AdminIcon }]
+    : baseTabs
 
   const isActive = (path: string) => {
+    if (path === '/ops') return location.pathname.startsWith('/ops')
     const target = link(path)
     if (path === '/settings') {
       return location.pathname.startsWith('/settings') || location.pathname === '/inquiry'
@@ -28,10 +35,11 @@ export function MobileNav() {
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-white/5 flex safe-area-pb">
       {tabs.map(({ label, path, icon: Icon }) => {
         const active = isActive(path)
+        const href = path === '/ops' ? '/ops' : link(path)
         return (
           <Link
             key={path}
-            to={link(path)}
+            to={href}
             {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
             className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors"
           >
@@ -96,6 +104,14 @@ function CalendarIcon({ size }: { size: number }) {
       <line x1="6.5" y1="1.5" x2="6.5" y2="5.5" />
       <line x1="13.5" y1="1.5" x2="13.5" y2="5.5" />
       <circle cx="10" cy="13" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function AdminIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2l2 4 4.5.7-3.2 3.1.8 4.5L10 12l-4.1 2.3.8-4.5L3.5 6.7 8 6z" />
     </svg>
   )
 }

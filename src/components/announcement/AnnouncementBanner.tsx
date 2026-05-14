@@ -1,0 +1,41 @@
+interface Props {
+  title: string
+  body: string
+  onExpand: () => void
+  onDismiss: () => void
+}
+
+export function AnnouncementBanner({ title, body, onExpand, onDismiss }: Props) {
+  return (
+    <div className="w-full bg-brand flex items-start gap-3 px-4 py-2.5 shrink-0">
+      <MegaphoneIcon />
+      <button
+        type="button"
+        onClick={onExpand}
+        className="flex-1 min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2 overflow-hidden text-left hover:opacity-80 transition-opacity"
+      >
+        <span className="text-[13px] font-bold text-text-primary truncate">{title}</span>
+        {body && (
+          <span className="text-xs text-text-primary/65 truncate">{body}</span>
+        )}
+      </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="공지 닫기"
+        className="flex-none w-8 h-8 flex items-center justify-center rounded-lg text-text-primary/60 hover:text-text-primary hover:bg-white/10 transition-colors text-lg leading-none mt-px"
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
+function MegaphoneIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary/80 flex-none mt-0.5">
+      <path d="M13 2L3 6H1a1 1 0 00-1 1v2a1 1 0 001 1h2l10 4V2z" />
+      <path d="M3 9v4" />
+    </svg>
+  )
+}
