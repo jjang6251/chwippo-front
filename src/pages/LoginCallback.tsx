@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
+import { parseNeedsTerms } from '@/utils/authRouting'
 
 export function LoginCallback() {
   const [params] = useSearchParams()
@@ -14,7 +15,7 @@ export function LoginCallback() {
     handled.current = true
 
     const accessToken = params.get('access_token')
-    const isNew = params.get('is_new') === 'true'
+    const needsTerms = parseNeedsTerms(params.get('needs_terms'))
 
     if (!accessToken) {
       toast.error('로그인에 실패했습니다. 다시 시도해주세요.')
@@ -28,12 +29,13 @@ export function LoginCallback() {
     const userNickname = params.get('user_nickname')
     const userRole = params.get('user_role') as 'user' | 'admin'
     const userEmail = params.get('user_email')
+    const userTermsAgreedAt = params.get('user_terms_agreed_at')
     const userOnboardedAt = params.get('user_onboarded_at')
     if (userId && userNickname && userRole) {
-      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole, onboardedAt: userOnboardedAt })
+      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole, termsAgreedAt: userTermsAgreedAt, onboardedAt: userOnboardedAt })
     }
 
-    if (isNew) {
+    if (needsTerms) {
       navigate('/terms-agreement', { replace: true })
     } else {
       navigate('/dashboard', { replace: true })
