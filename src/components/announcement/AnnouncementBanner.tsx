@@ -12,6 +12,7 @@ export function AnnouncementBanner({ title, body, onExpand, onDismiss }: Props) 
       <button
         type="button"
         onClick={onExpand}
+        aria-label={`공지 상세 보기: ${title}`}
         className="flex-1 min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2 overflow-hidden text-left hover:opacity-80 transition-opacity"
       >
         <span className="text-[13px] font-bold text-text-primary truncate">{title}</span>
@@ -33,7 +34,7 @@ export function AnnouncementBanner({ title, body, onExpand, onDismiss }: Props) 
 
 function MegaphoneIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary/80 flex-none mt-0.5">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary/80 flex-none mt-0.5" aria-hidden="true">
       <path d="M13 2L3 6H1a1 1 0 00-1 1v2a1 1 0 001 1h2l10 4V2z" />
       <path d="M3 9v4" />
     </svg>

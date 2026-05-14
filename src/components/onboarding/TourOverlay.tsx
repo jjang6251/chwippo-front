@@ -174,8 +174,13 @@ export function TourOverlay() {
   if (showStop) {
     return (
       <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-        <div className="bg-surface border border-white/8 rounded-xl p-6 w-full max-w-xs shadow-2xl">
-          <h3 className="text-base font-bold text-text-primary mb-1.5">투어를 중단할까요?</h3>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="stop-modal-title"
+          className="bg-surface border border-white/8 rounded-xl p-6 w-full max-w-xs shadow-2xl"
+        >
+          <h3 id="stop-modal-title" className="text-base font-bold text-text-primary mb-1.5">투어를 중단할까요?</h3>
           <p className="text-sm text-text-tertiary mb-6 leading-relaxed">
             언제든 설정에서 '온보딩 다시 보기'를 눌러 다시 볼 수 있어요.
           </p>
@@ -187,7 +192,7 @@ export function TourOverlay() {
               계속하기
             </button>
             <button
-              onClick={stop}
+              onClick={complete}
               className="flex-1 py-2.5 rounded-lg bg-white/8 text-sm font-medium text-text-secondary hover:bg-white/12 transition-colors"
             >
               투어 중단
@@ -500,7 +505,7 @@ function getArrowStyle(
 const FEATURES = [
   {
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="1" y="1" width="16" height="4" rx="1.2" />
         <rect x="1" y="7.5" width="16" height="4" rx="1.2" />
         <rect x="1" y="14" width="9" height="3" rx="1.2" />
@@ -511,7 +516,7 @@ const FEATURES = [
   },
   {
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="1" y="3" width="16" height="14" rx="1.5" />
         <line x1="1" y1="7.5" x2="17" y2="7.5" />
         <line x1="6" y1="1" x2="6" y2="5" />
@@ -524,7 +529,7 @@ const FEATURES = [
   },
   {
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M2 5a2 2 0 012-2h10a2 2 0 012 2v1H2V5z" />
         <path d="M2 6h14v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
         <line x1="6" y1="10.5" x2="12" y2="10.5" />
@@ -538,7 +543,12 @@ const FEATURES = [
 function WelcomeModal({ onNext, onClose }: { onNext: () => void; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[10001] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-xl md:rounded-xl shadow-2xl">
+      <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="welcome-modal-title"
+          className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-xl md:rounded-xl shadow-2xl"
+        >
         <div className="relative flex items-center justify-center px-6 pt-6">
           <span className="text-[10px] font-semibold text-text-quaternary tracking-[0.14em] uppercase">치뽀</span>
           <button
@@ -553,7 +563,7 @@ function WelcomeModal({ onNext, onClose }: { onNext: () => void; onClose: () => 
         </div>
 
         <div className="px-6 pt-6 pb-4">
-          <h2 className="text-base font-bold text-text-primary text-center mb-1">
+          <h2 id="welcome-modal-title" className="text-base font-bold text-text-primary text-center mb-1">
             취업 준비, 이제 한 곳에서
           </h2>
           <p className="text-xs text-text-tertiary text-center mb-5">
@@ -605,7 +615,12 @@ function WrapUpModal({
 }) {
   return (
     <div className="fixed inset-0 z-[10001] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-xl md:rounded-xl shadow-2xl">
+      <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wrapup-modal-title"
+          className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-xl md:rounded-xl shadow-2xl"
+        >
         <div className="relative flex items-center justify-center px-6 pt-6">
           <span className="text-[10px] font-semibold text-text-quaternary tracking-[0.14em] uppercase">치뽀</span>
           <button onClick={onClose} className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/[0.06] transition-colors" aria-label="닫기">
@@ -617,7 +632,7 @@ function WrapUpModal({
 
         <div className="px-6 pt-6 pb-4 text-center">
           <div className="text-4xl mb-4">🎉</div>
-          <h2 className="text-base font-bold text-text-primary mb-2">이제 치뽀를 시작할 준비가 됐어요!</h2>
+          <h2 id="wrapup-modal-title" className="text-base font-bold text-text-primary mb-2">이제 치뽀를 시작할 준비가 됐어요!</h2>
           <div className="mt-4 flex flex-col gap-2.5 text-left">
             <div className="flex items-start gap-3 p-3 bg-white/[0.03] border border-white/[0.05] rounded-xl">
               <span className="text-lg mt-0.5">📅</span>
