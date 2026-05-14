@@ -103,7 +103,7 @@ describe('parseNeedsTerms', () => {
     it('약관 거부 후 재로그인 → needs_terms=true → /terms-agreement 재표시', () => {
       // 유저가 약관 거부 → logout (계정 유지, termsAgreedAt=null) → 재로그인
       // 백엔드: !user.termsAgreedAt = true → needs_terms="true"
-      const param = String(!null)
+      const param = 'true'
       expect(parseNeedsTerms(param)).toBe(true)
       expect(resolvePostLoginDestination(null)).toBe('/terms-agreement')
     })

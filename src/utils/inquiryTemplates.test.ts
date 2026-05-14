@@ -91,7 +91,7 @@ describe('getInquiryTemplate', () => {
 
     it('TEMPLATED_CATEGORIES 외 카테고리는 모두 null 반환', () => {
       ALL_CATEGORIES
-        .filter((cat) => !TEMPLATED_CATEGORIES.includes(cat))
+        .filter((cat) => !TEMPLATED_CATEGORIES.includes(cat as typeof TEMPLATED_CATEGORIES[number]))
         .forEach((cat) => {
           expect(getInquiryTemplate(cat)).toBeNull()
         })
