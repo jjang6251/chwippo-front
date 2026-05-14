@@ -20,7 +20,7 @@ export function AnnouncementModal({ title, body, onDismiss }: Props) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby="announcement-modal-title"
         className="bg-surface border border-white/10 rounded-2xl w-full max-w-sm overflow-hidden"
       >
         {/* 상단 brand 바 */}
@@ -31,7 +31,7 @@ export function AnnouncementModal({ title, body, onDismiss }: Props) {
           <div className="w-12 h-12 rounded-2xl bg-brand flex items-center justify-center mb-4">
             <MegaphoneIcon />
           </div>
-          <h2 className="text-[15px] font-bold text-text-primary leading-snug">{title}</h2>
+          <h2 id="announcement-modal-title" className="text-[15px] font-bold text-text-primary leading-snug">{title}</h2>
         </div>
 
         {/* 구분선 + 본문 + 버튼 */}
@@ -44,6 +44,7 @@ export function AnnouncementModal({ title, body, onDismiss }: Props) {
           <button
             type="button"
             onClick={onDismiss}
+            autoFocus
             className="w-full py-2.5 rounded-xl bg-brand text-text-primary text-sm font-semibold hover:bg-accent transition-colors"
           >
             확인했어요
@@ -56,7 +57,7 @@ export function AnnouncementModal({ title, body, onDismiss }: Props) {
 
 function MegaphoneIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary/90">
+    <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary/90" aria-hidden="true">
       <path d="M13 2L3 6H1a1 1 0 00-1 1v2a1 1 0 001 1h2l10 4V2z" />
       <path d="M3 9v4" />
     </svg>

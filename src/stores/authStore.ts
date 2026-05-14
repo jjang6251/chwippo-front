@@ -6,6 +6,7 @@ interface User {
   email: string | null
   role: 'user' | 'admin'
   onboardedAt: string | null
+  termsAgreedAt: string | null
 }
 
 interface AuthState {

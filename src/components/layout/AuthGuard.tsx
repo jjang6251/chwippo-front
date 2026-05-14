@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
+import { resolvePostLoginDestination } from '@/utils/authRouting'
 
 export function AuthGuard() {
   const { accessToken, setAccessToken, setUser, clearAuth } = useAuthStore()
+  const user = useAuthStore((s) => s.user)
+  const location = useLocation()
   const [checking, setChecking] = useState(!accessToken)
 
   useEffect(() => {
@@ -25,5 +28,10 @@ export function AuthGuard() {
 
   if (checking) return null
   if (!accessToken) return <Navigate to="/" replace />
+  // /terms-agreement 자체는 제외 — 리다이렉트 루프 방지
+  if (user && location.pathname !== '/terms-agreement') {
+    const dest = resolvePostLoginDestination(user.termsAgreedAt)
+    if (dest === '/terms-agreement') return <Navigate to="/terms-agreement" replace />
+  }
   return <Outlet />
 }

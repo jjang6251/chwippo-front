@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
+import { resolvePostLoginDestination } from '@/utils/authRouting'
 
 export function Landing() {
-  const { accessToken, setAccessToken } = useAuthStore()
+  const { accessToken, setAccessToken, setUser } = useAuthStore()
   const navigate = useNavigate()
   const checked = useRef(false)
 
@@ -17,9 +18,10 @@ export function Landing() {
     axios
       .post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true })
       .then(({ data }) => {
-        const token = data.data?.accessToken ?? data.accessToken
-        setAccessToken(token)
-        navigate('/dashboard', { replace: true })
+        const payload = data.data ?? data
+        setAccessToken(payload.accessToken)
+        if (payload.user) setUser(payload.user)
+        navigate(resolvePostLoginDestination(payload.user?.termsAgreedAt), { replace: true })
       })
       .catch(() => { /* refresh 실패는 무시 — 비로그인 상태로 랜딩 표시 */ })
     // 랜딩 첫 진입 시 1회만 자동 로그인 시도

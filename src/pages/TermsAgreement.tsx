@@ -1,14 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { agreeTerms as agreeTermsApi } from '@/api/users'
+import { apiClient } from '@/api/client'
+import { useAuthStore } from '@/stores/authStore'
 
 export function TermsAgreement() {
   const navigate = useNavigate()
+  const clearAuth = useAuthStore((s) => s.clearAuth)
+  const user = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [agreePrivacy, setAgreePrivacy] = useState(false)
   const [expandedTerms, setExpandedTerms] = useState(false)
   const [expandedPrivacy, setExpandedPrivacy] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href)
+    const handler = async () => {
+      try { await apiClient.post('/auth/logout') } catch { /* 무시 */ }
+      clearAuth()
+      navigate('/', { replace: true })
+    }
+    window.addEventListener('popstate', handler)
+    return () => window.removeEventListener('popstate', handler)
+  // clearAuth·navigate는 stable ref
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const allAgreed = agreeTerms && agreePrivacy
 
@@ -26,6 +44,8 @@ export function TermsAgreement() {
     } catch {
       // 동의 기록 실패해도 서비스 이용은 막지 않음
     }
+    // AuthGuard가 termsAgreedAt=null 로 /terms-agreement 로 되돌리지 않도록 즉시 갱신
+    if (user) setUser({ ...user, termsAgreedAt: new Date().toISOString() })
     navigate('/dashboard', { replace: true })
   }
 
@@ -46,6 +66,8 @@ export function TermsAgreement() {
           {/* 전체 동의 */}
           <button
             onClick={handleAllToggle}
+            role="checkbox"
+            aria-checked={allAgreed}
             className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/3 transition-colors text-left"
           >
             <CheckCircle checked={allAgreed} />
@@ -57,7 +79,13 @@ export function TermsAgreement() {
           {/* 이용약관 */}
           <div>
             <div className="flex items-center gap-3 px-5 py-4">
-              <button onClick={() => setAgreeTerms((v) => !v)} className="shrink-0">
+              <button
+                onClick={() => setAgreeTerms((v) => !v)}
+                role="checkbox"
+                aria-checked={agreeTerms}
+                aria-label="이용약관 동의"
+                className="shrink-0 w-8 h-8 flex items-center justify-center"
+              >
                 <CheckCircle checked={agreeTerms} />
               </button>
               <span className={`text-sm flex-1 ${agreeTerms ? 'text-text-primary' : 'text-text-secondary'}`}>
@@ -65,13 +93,15 @@ export function TermsAgreement() {
               </span>
               <button
                 onClick={() => setExpandedTerms((v) => !v)}
+                aria-expanded={expandedTerms}
+                aria-controls="terms-content"
                 className="text-text-quaternary text-xs hover:text-text-tertiary transition-colors"
               >
                 {expandedTerms ? '접기' : '보기'}
               </button>
             </div>
             {expandedTerms && (
-              <div className="px-5 pb-4">
+              <div id="terms-content" className="px-5 pb-4">
                 <div className="bg-bg rounded-lg p-4 text-text-quaternary text-xs leading-relaxed max-h-40 overflow-y-auto">
                   <p className="font-medium text-text-tertiary mb-2">치뽀 이용약관</p>
                   <p>제1조 (목적) 이 약관은 치뽀(이하 "서비스")가 제공하는 취업 일정 관리 서비스의 이용에 관한 조건 및 절차, 서비스 이용자와 서비스 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
@@ -96,7 +126,13 @@ export function TermsAgreement() {
           {/* 개인정보처리방침 */}
           <div>
             <div className="flex items-center gap-3 px-5 py-4">
-              <button onClick={() => setAgreePrivacy((v) => !v)} className="shrink-0">
+              <button
+                onClick={() => setAgreePrivacy((v) => !v)}
+                role="checkbox"
+                aria-checked={agreePrivacy}
+                aria-label="개인정보처리방침 동의"
+                className="shrink-0 w-8 h-8 flex items-center justify-center"
+              >
                 <CheckCircle checked={agreePrivacy} />
               </button>
               <span className={`text-sm flex-1 ${agreePrivacy ? 'text-text-primary' : 'text-text-secondary'}`}>
@@ -104,13 +140,15 @@ export function TermsAgreement() {
               </span>
               <button
                 onClick={() => setExpandedPrivacy((v) => !v)}
+                aria-expanded={expandedPrivacy}
+                aria-controls="privacy-content"
                 className="text-text-quaternary text-xs hover:text-text-tertiary transition-colors"
               >
                 {expandedPrivacy ? '접기' : '보기'}
               </button>
             </div>
             {expandedPrivacy && (
-              <div className="px-5 pb-4">
+              <div id="privacy-content" className="px-5 pb-4">
                 <div className="bg-bg rounded-lg p-4 text-text-quaternary text-xs leading-relaxed max-h-40 overflow-y-auto">
                   <p className="font-medium text-text-tertiary mb-2">개인정보처리방침</p>
                   <p>치뽀는 회원의 개인정보를 중요시하며 정보통신망 이용촉진 및 정보보호 등에 관한 법률과 개인정보 보호법을 준수합니다.</p>
@@ -150,6 +188,21 @@ export function TermsAgreement() {
         <p className="text-text-quaternary text-xs text-center">
           동의 후 치뽀의 모든 기능을 이용할 수 있어요.
         </p>
+
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-white/5" />
+          <button
+            onClick={async () => {
+              try { await apiClient.post('/auth/logout') } catch { /* 무시 */ }
+              clearAuth()
+              navigate('/', { replace: true })
+            }}
+            className="text-text-tertiary text-xs px-3 py-1.5 rounded-lg border border-white/8 hover:bg-white/4 hover:text-text-secondary hover:border-white/15 transition-colors shrink-0"
+          >
+            동의하지 않고 나가기
+          </button>
+          <div className="flex-1 h-px bg-white/5" />
+        </div>
       </div>
     </div>
   )
