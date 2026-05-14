@@ -179,16 +179,20 @@ export function Dashboard() {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-6 sm:space-y-4">
-            {draggableSections.map((s) => (
-              <SectionWrapper
-                key={s.id}
-                id={s.id}
-                editMode={editMode}
-                onRemove={() => handleRemove(s.id)}
-              >
-                {renderSectionContent(s.id)}
-              </SectionWrapper>
-            ))}
+            {draggableSections.map((s) => {
+              const content = renderSectionContent(s.id)
+              if (!content) return null
+              return (
+                <SectionWrapper
+                  key={s.id}
+                  id={s.id}
+                  editMode={editMode}
+                  onRemove={() => handleRemove(s.id)}
+                >
+                  {content}
+                </SectionWrapper>
+              )
+            })}
           </div>
         </SortableContext>
         <DragOverlay dropAnimation={null}>

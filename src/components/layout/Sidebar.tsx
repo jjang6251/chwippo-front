@@ -76,17 +76,41 @@ export function Sidebar() {
 
           {/* Admin link */}
           {!isDemo && user?.role === 'admin' && (
-            <Link
-              to="/ops"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                location.pathname.startsWith('/ops')
-                  ? 'bg-warning/10 text-warning'
-                  : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
-              }`}
-            >
-              <AdminIcon size={16} />
-              관리자
-            </Link>
+            <>
+              <Link
+                to="/ops"
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  location.pathname.startsWith('/ops')
+                    ? 'bg-warning/10 text-warning'
+                    : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
+                }`}
+              >
+                <AdminIcon size={16} />
+                관리자
+              </Link>
+              <div className="ml-7 flex flex-col gap-0.5">
+                  <Link
+                    to="/ops/inquiries"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      location.pathname === '/ops/inquiries'
+                        ? 'text-warning bg-warning/8'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    문의 관리
+                  </Link>
+                  <Link
+                    to="/ops/announcements"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      location.pathname === '/ops/announcements'
+                        ? 'text-warning bg-warning/8'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    공지 관리
+                  </Link>
+              </div>
+            </>
           )}
 
           {/* Spacer pushes bottom items down */}
@@ -121,7 +145,7 @@ export function Sidebar() {
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         location.pathname === path
                           ? 'text-brand bg-brand/8'
-                          : 'text-text-quaternary hover:text-text-secondary hover:bg-white/3'
+                          : 'text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03]'
                       }`}
                     >
                       {label}
@@ -129,7 +153,7 @@ export function Sidebar() {
                   ))}
                   <button
                     onClick={startTour}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-left text-text-quaternary hover:text-text-secondary hover:bg-white/3 transition-colors"
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-left text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03] transition-colors"
                   >
                     온보딩 다시 보기
                   </button>

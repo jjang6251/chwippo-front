@@ -92,8 +92,8 @@ export function OpsPage() {
         ))}
       </div>
 
-      {/* 문의 관리 바로가기 */}
-      <div className="mb-8">
+      {/* 바로가기 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
         <Link
           to="/ops/inquiries"
           className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
@@ -101,6 +101,16 @@ export function OpsPage() {
           <div>
             <p className="text-sm font-semibold">문의 관리</p>
             <p className="text-xs text-text-tertiary mt-0.5">미답변 문의 {stats?.pendingInquiries ?? 0}건</p>
+          </div>
+          <span className="text-text-tertiary">›</span>
+        </Link>
+        <Link
+          to="/ops/announcements"
+          className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold">공지 관리</p>
+            <p className="text-xs text-text-tertiary mt-0.5">배너·모달 공지 등록 및 관리</p>
           </div>
           <span className="text-text-tertiary">›</span>
         </Link>

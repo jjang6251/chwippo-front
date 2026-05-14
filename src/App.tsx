@@ -27,6 +27,7 @@ import { ProfileSettings } from '@/pages/settings/ProfileSettings'
 import { Help } from '@/pages/settings/Help'
 import { OpsPage } from '@/pages/ops/OpsPage'
 import { OpsInquiries } from '@/pages/ops/OpsInquiries'
+import { OpsAnnouncements } from '@/pages/ops/OpsAnnouncements'
 import { TermsAgreement } from '@/pages/TermsAgreement'
 
 export default function App() {
@@ -70,6 +71,7 @@ export default function App() {
           <Route element={<AdminGuard />}>
             <Route path="/ops" element={<OpsPage />} />
             <Route path="/ops/inquiries" element={<OpsInquiries />} />
+            <Route path="/ops/announcements" element={<OpsAnnouncements />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />
