@@ -991,7 +991,7 @@ function DataViewModal({
               <MyinfoGroup label={`자기소개서 문항 (${data.myinfo.coverletters.length})`} items={data.myinfo.coverletters} renderItem={(c) => (
                 <div className="flex flex-col gap-1">
                   <p className="text-xs font-medium text-text-secondary">{String(c.label ?? '—')}</p>
-                  {c.content && (
+                  {!!c.content && (
                     <p className="text-xs text-text-tertiary leading-relaxed whitespace-pre-wrap">
                       {String(c.content)}
                     </p>
