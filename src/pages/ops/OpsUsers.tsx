@@ -522,7 +522,10 @@ function UserDetailModal({
                 label="최근접속"
                 value={user.lastActiveAt ? dayjs(user.lastActiveAt).format('YYYY.MM.DD HH:mm') : '없음'}
               />
-              <InfoItem label="지원 카드" value={`${(user as AdminUserDetail).cardsCount ?? 0}개`} />
+              <InfoItem
+                label="지원 카드"
+                value={`${(user as AdminUserDetail).stats?.applicationCount ?? 0}개`}
+              />
               <InfoItem
                 label="정지 상태"
                 value={isSuspended ? `정지 중 (${dayjs(user.suspendedAt).format('MM.DD')})` : '정상'}
@@ -531,12 +534,17 @@ function UserDetailModal({
             </dl>
           </div>
 
+          {/* 사용량 통계 */}
+          {(user as AdminUserDetail).stats && (
+            <UserStatsBlock stats={(user as AdminUserDetail).stats} />
+          )}
+
           {/* 최근 문의 */}
-          {(user as AdminUserDetail).recentInquiries?.length > 0 && (
+          {((user as AdminUserDetail).recentInquiries?.length ?? 0) > 0 && (
             <div className="px-6 py-3.5 border-b border-white/8">
               <p className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider mb-2">최근 문의</p>
               <div className="flex flex-col gap-1.5">
-                {(user as AdminUserDetail).recentInquiries.slice(0, 3).map((inq) => (
+                {((user as AdminUserDetail).recentInquiries ?? []).slice(0, 3).map((inq) => (
                   <div key={inq.id} className="flex items-center gap-2 text-xs">
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded border flex-shrink-0 ${
@@ -773,6 +781,80 @@ function InfoItem({
     <div className="flex gap-2">
       <dt className="text-text-quaternary w-16 flex-shrink-0">{label}</dt>
       <dd className={`${valueClass} font-medium tabular-nums break-all`}>{value}</dd>
+    </div>
+  )
+}
+
+// ─── 사용량 통계 블록 (어드민 회원 상세) ──────────────────────────────────
+function userStatsFormatBytes(bytes: number): string {
+  if (bytes <= 0) return '0B'
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`
+}
+
+function UserStatsBlock({
+  stats,
+}: {
+  stats: NonNullable<AdminUserDetail['stats']>
+}) {
+  const { storage, myinfoCount } = stats
+  const tone =
+    storage.percentage >= 95
+      ? 'bg-danger'
+      : storage.percentage >= 80
+        ? 'bg-warning'
+        : 'bg-brand'
+
+  const myinfoTotal =
+    myinfoCount.cert +
+    myinfoCount.award +
+    myinfoCount.languageCert +
+    myinfoCount.experience +
+    myinfoCount.coverletterCustom +
+    myinfoCount.document +
+    myinfoCount.education
+
+  return (
+    <div className="px-6 py-3.5 border-b border-white/8 space-y-3">
+      <p className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider">
+        사용량 통계
+      </p>
+
+      {/* 파일 저장 용량 */}
+      <div>
+        <div className="flex items-center justify-between text-xs mb-1.5">
+          <span className="text-text-tertiary">파일 저장 용량</span>
+          <span className="text-text-secondary font-medium tabular-nums">
+            {userStatsFormatBytes(storage.usedBytes)} / {storage.limitMB}MB
+            <span className="text-text-quaternary ml-1.5">({storage.percentage}%)</span>
+          </span>
+        </div>
+        <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
+          <div
+            className={`h-full transition-all ${tone}`}
+            style={{ width: `${Math.min(storage.percentage, 100)}%` }}
+          />
+        </div>
+      </div>
+
+      {/* myinfo 항목 합계 */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-text-tertiary">내 정보 창고 항목 (전체)</span>
+        <span className="text-text-secondary font-medium tabular-nums">{myinfoTotal}개</span>
+      </div>
+
+      {/* myinfo 세부 — 작은 그리드 */}
+      <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-[11px] text-text-quaternary tabular-nums">
+        <span>자격증 {myinfoCount.cert}</span>
+        <span>상장 {myinfoCount.award}</span>
+        <span>어학 {myinfoCount.languageCert}</span>
+        <span>활동 {myinfoCount.experience}</span>
+        <span>자소서 {myinfoCount.coverletterCustom}</span>
+        <span>문서 {myinfoCount.document}</span>
+        <span>학력 {myinfoCount.education}</span>
+      </div>
     </div>
   )
 }

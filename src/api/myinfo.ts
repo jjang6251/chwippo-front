@@ -2,6 +2,17 @@ import { apiClient } from './client'
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
+// ── Storage Usage ─────────────────────────────────────────
+export interface StorageUsage {
+  usedBytes: number
+  limitBytes: number
+  usedMB: number
+  limitMB: number
+  percentage: number
+}
+export const getStorageUsage = () =>
+  apiClient.get('/myinfo/storage-usage').then(unwrap<StorageUsage>)
+
 // ── Types ─────────────────────────────────────────────────
 export interface UserProfile {
   user_id: string
@@ -30,6 +41,7 @@ export interface LanguageCert {
   acquired_at?: string
   expires_at?: string
   file_url?: string
+  file_size_bytes?: number | null
 }
 
 export interface Cert {
@@ -40,6 +52,7 @@ export interface Cert {
   acquired_at?: string
   expires_at?: string
   file_url?: string
+  file_size_bytes?: number | null
 }
 
 export interface Award {
@@ -50,6 +63,7 @@ export interface Award {
   awarded_at?: string
   content?: string
   file_url?: string
+  file_size_bytes?: number | null
 }
 
 export interface Experience {
@@ -144,6 +158,7 @@ export interface Education {
   status?: string         // 재학중/졸업/졸업예정/휴학/수료/편입/중퇴
   location?: string
   file_url?: string
+  file_size_bytes?: number | null
 }
 export const getEducations = () => apiClient.get('/myinfo/educations').then(unwrap<Education[]>)
 export const createEducation = (dto: Omit<Education, 'id'>) =>
@@ -170,11 +185,16 @@ export interface MyDocument {
   title: string
   category?: string
   file_url: string
+  file_size_bytes?: number | null
   created_at: string
 }
 
 export const getDocuments = () => apiClient.get('/myinfo/documents').then(unwrap<MyDocument[]>)
-export const createDocument = (dto: { title: string; category?: string; file_url: string }) =>
-  apiClient.post('/myinfo/documents', dto).then(unwrap<MyDocument>)
+export const createDocument = (dto: {
+  title: string
+  category?: string
+  file_url: string
+  file_size_bytes?: number
+}) => apiClient.post('/myinfo/documents', dto).then(unwrap<MyDocument>)
 export const deleteDocument = (id: string) =>
   apiClient.delete(`/myinfo/documents/${id}`).then(unwrap<void>)

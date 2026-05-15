@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
-import { getAdminStats, getAdminAnalytics, type DayData } from '@/api/admin'
+import { getAdminStats, getAdminAnalytics, type DayData, type GlobalStorage } from '@/api/admin'
 import dayjs from 'dayjs'
 
 const PERIODS = [
@@ -91,6 +91,11 @@ export function OpsPage() {
           </div>
         ))}
       </div>
+
+      {/* 파일 저장 (R2) — 전역 */}
+      {stats?.globalStorage && (
+        <GlobalStorageCard storage={stats.globalStorage} />
+      )}
 
       {/* 바로가기 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
@@ -207,6 +212,50 @@ interface ChartCardProps {
   color: string
   loading: boolean
   unit: string
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return '0B'
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`
+}
+
+function GlobalStorageCard({ storage }: { storage: GlobalStorage }) {
+  const limitBytes = storage.r2FreeLimitGB * 1024 * 1024 * 1024
+  const percentage = limitBytes > 0 ? (storage.totalUsedBytes / limitBytes) * 100 : 0
+  const overWarn = percentage >= 80
+
+  return (
+    <div className="bg-surface-2 border border-white/5 rounded-xl p-5 mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-text-tertiary font-semibold">파일 저장 (Cloudflare R2)</p>
+        <span className="text-[11px] text-text-quaternary">
+          {formatBytes(storage.totalUsedBytes)} / {storage.r2FreeLimitGB}GB 무료 한도
+        </span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden mb-3">
+        <div
+          className={`h-full transition-all ${overWarn ? 'bg-warning' : 'bg-brand'}`}
+          style={{ width: `${Math.min(percentage, 100)}%` }}
+          aria-label={`R2 사용량 ${percentage.toFixed(1)}%`}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <p className="text-text-quaternary">평균 사용량 / 유저</p>
+          <p className="text-text-secondary font-medium">{formatBytes(storage.averageBytes)}</p>
+        </div>
+        <div>
+          <p className="text-text-quaternary">cap 임박 사용자</p>
+          <p className={`font-medium ${storage.nearCapUserCount > 0 ? 'text-warning' : 'text-text-secondary'}`}>
+            {storage.nearCapUserCount}명
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function ChartCard({ title, data, color, loading, unit }: ChartCardProps) {
