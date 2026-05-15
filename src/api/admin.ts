@@ -3,11 +3,19 @@ import type { InquiryDetail } from './inquiries'
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
+export interface GlobalStorage {
+  totalUsedBytes: number
+  averageBytes: number
+  nearCapUserCount: number
+  r2FreeLimitGB: number
+}
+
 export interface AdminStats {
   totalUsers: number
   newUsersMonth: number
   newUsersWeek: number
   pendingInquiries: number
+  globalStorage: GlobalStorage
 }
 
 export interface AdminInquiry {

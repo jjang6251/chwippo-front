@@ -10,9 +10,35 @@ export interface AdminUser {
   suspendedAt: string | null
 }
 
+export interface AdminUserStorageStats {
+  usedBytes: number
+  limitBytes: number
+  usedMB: number
+  limitMB: number
+  percentage: number
+}
+
+export interface AdminUserMyinfoCount {
+  cert: number
+  award: number
+  languageCert: number
+  experience: number
+  coverletterCustom: number
+  document: number
+  education: number
+}
+
+export interface AdminUserStats {
+  storage: AdminUserStorageStats
+  applicationCount: number
+  myinfoCount: AdminUserMyinfoCount
+}
+
 export interface AdminUserDetail extends AdminUser {
-  cardsCount: number
-  recentInquiries: {
+  stats: AdminUserStats
+  /** 일부 운영 페이지의 기존 사용 — backend는 보내지 않을 수 있음 */
+  cardsCount?: number
+  recentInquiries?: {
     id: string
     title: string
     status: string
