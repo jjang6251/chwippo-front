@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { toast } from '@/stores/toastStore'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -8,18 +8,78 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-apiClient.interceptors.request.use((config) => {
+// 요청 body에 file_url 있으면 추적 — 4xx/5xx 응답 시 R2 cleanup 보상 호출용
+type TrackedConfig = InternalAxiosRequestConfig & {
+  _trackedFileUrl?: string
+  _isCleanupCall?: boolean
+  _retry?: boolean
+  /** 인터셉터에서 이미 토스트 노출함 — 호출자 catch 핸들러는 중복 토스트 띄우지 말 것 */
+  _toastShown?: boolean
+}
+
+apiClient.interceptors.request.use((config: TrackedConfig) => {
   const token = useAuthStore.getState().accessToken
   if (token) config.headers.Authorization = `Bearer ${token}`
+
+  // cleanup 자체 호출은 추적·재호출 대상에서 제외 (무한 루프 방지)
+  if (config.url === '/files' && config.method?.toLowerCase() === 'delete') {
+    config._isCleanupCall = true
+  } else {
+    const body = config.data as { file_url?: string; fileUrl?: string } | undefined
+    const fileUrl = body?.file_url ?? body?.fileUrl
+    if (typeof fileUrl === 'string' && fileUrl.startsWith('http')) {
+      config._trackedFileUrl = fileUrl
+    }
+  }
   return config
 })
 
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const original = error.config
+    const original = error.config as TrackedConfig | undefined
 
-    if (error.response?.status === 401 && !original._retry) {
+    // 400 BadRequest: 백엔드 메시지를 토스트로 노출.
+    // R2 cleanup이 동반될 경우 cleanup 분기에서 통합 메시지 띄움 — 여기선 file_url 추적 없을 때만.
+    const status = error.response?.status
+    const backendMsg = (error.response?.data as { message?: string } | undefined)
+      ?.message
+    const trackedFileUrl = original?._trackedFileUrl
+    const willCleanup =
+      typeof status === 'number' &&
+      status >= 400 &&
+      !!trackedFileUrl &&
+      !original?._isCleanupCall &&
+      status !== 401
+
+    if (
+      status === 400 &&
+      typeof backendMsg === 'string' &&
+      backendMsg.length > 0 &&
+      !willCleanup
+    ) {
+      toast.error(backendMsg)
+      if (original) original._toastShown = true
+    }
+
+    // R2 고아 파일 보상 cleanup — file_url 포함 요청이 4xx/5xx로 실패하면
+    // 백엔드에 DELETE /files 호출 + 백엔드 메시지와 cleanup 안내를 한 토스트로 통합.
+    if (willCleanup && trackedFileUrl && original) {
+      original._trackedFileUrl = undefined // 한 번만
+      try {
+        await apiClient.delete('/files', { data: { fileUrl: trackedFileUrl } })
+      } catch {
+        // cleanup 실패해도 무시 (best-effort) — 사용자 경험엔 영향 없음
+      }
+      const combined =
+        backendMsg && backendMsg.length > 0
+          ? `${backendMsg} 다시 첨부해 주세요.`
+          : '저장에 실패했습니다. 파일을 다시 첨부해 주세요.'
+      toast.error(combined)
+      original._toastShown = true
+    }
+
+    if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true
       try {
         const { data } = await axios.post(
