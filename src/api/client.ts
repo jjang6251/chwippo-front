@@ -17,6 +17,67 @@ type TrackedConfig = InternalAxiosRequestConfig & {
   _toastShown?: boolean
 }
 
+interface RefreshResponse {
+  data?: { accessToken?: string }
+  accessToken?: string
+}
+
+/**
+ * /auth/refresh single in-flight queue (LRR P1T1 후속, PR D).
+ * - PR C rotation 도입으로 동시 N개 refresh 호출 시 첫 응답이 옛 token 무효화 → 나머지 fail → logout
+ * - queue로 1번만 호출 + 모든 caller가 같은 결과 공유
+ * - apiClient(interceptor 포함) 대신 plain axios 사용 — 무한 루프 방지
+ */
+let refreshPromise: Promise<string> | null = null
+
+export async function performRefresh(): Promise<string> {
+  if (refreshPromise) return refreshPromise
+  refreshPromise = doRefresh()
+    .catch((err: unknown) => {
+      handleAuthFailure(err)
+      throw err
+    })
+    .finally(() => {
+      refreshPromise = null
+    })
+  return refreshPromise
+}
+
+async function doRefresh(): Promise<string> {
+  const { data } = await axios.post<RefreshResponse>(
+    `${import.meta.env.VITE_API_URL}/auth/refresh`,
+    {},
+    { withCredentials: true },
+  )
+  const accessToken = data.data?.accessToken ?? data.accessToken
+  if (!accessToken) {
+    throw new Error('Refresh 응답에 accessToken이 없습니다.')
+  }
+  useAuthStore.getState().setAccessToken(accessToken)
+  return accessToken
+}
+
+/**
+ * Refresh 실패 시 부수효과 — caller catch와 무관하게 한 번만 실행.
+ * (performRefresh의 단일 promise catch 체인에 부착되어 다중 caller에도 1회만 호출)
+ */
+export function handleAuthFailure(err: unknown): void {
+  useAuthStore.getState().clearAuth()
+  const msg = ((err as { response?: { data?: { message?: string } } })
+    ?.response?.data?.message ?? '') as string
+  if (msg.includes('정지')) {
+    toast.error('계정이 정지된 상태입니다. 문의하기를 통해 확인해 주세요.')
+  } else {
+    toast.error('로그인이 만료되었습니다.')
+  }
+  window.location.href = '/'
+}
+
+/** Test-only: refreshPromise singleton을 reset (vitest 사이 isolation) */
+export function __resetRefreshPromiseForTest(): void {
+  refreshPromise = null
+}
+
 apiClient.interceptors.request.use((config: TrackedConfig) => {
   const token = useAuthStore.getState().accessToken
   if (token) config.headers.Authorization = `Bearer ${token}`
@@ -82,27 +143,12 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true
       try {
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL}/auth/refresh`,
-          {},
-          { withCredentials: true },
-        )
-        // 응답 구조: { data: { accessToken }, message }
-        const accessToken: string = data.data?.accessToken ?? data.accessToken
-        useAuthStore.getState().setAccessToken(accessToken)
-        original.headers.Authorization = `Bearer ${accessToken}`
+        const newAccessToken = await performRefresh()
+        original.headers.Authorization = `Bearer ${newAccessToken}`
         return apiClient(original)
-      } catch (refreshErr) {
-        useAuthStore.getState().clearAuth()
-        const msg: string =
-          (refreshErr as { response?: { data?: { message?: string } } })
-            ?.response?.data?.message ?? ''
-        if (msg.includes('정지')) {
-          toast.error('계정이 정지된 상태입니다. 문의하기를 통해 확인해 주세요.')
-        } else {
-          toast.error('로그인이 만료되었습니다.')
-        }
-        window.location.href = '/'
+      } catch {
+        // handleAuthFailure가 performRefresh catch에서 이미 호출됨 (1회 보장)
+        // 여기선 추가 부수효과 없음 — 원본 error를 caller에 reject로 전파
       }
     }
 
