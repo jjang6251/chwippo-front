@@ -63,13 +63,49 @@ describe('performRefresh', () => {
     mockedAxiosPost.mockResolvedValueOnce({
       data: { data: { accessToken: 'new-token' }, message: 'ok' },
     })
-    const token = await performRefresh()
-    expect(token).toBe('new-token')
+    const result = await performRefresh()
+    expect(result.accessToken).toBe('new-token')
+    expect(result.user).toBeNull()
     expect(useAuthStore.getState().accessToken).toBe('new-token')
     expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
   })
 
-  it('동시 5개 호출 → axios.post 1번만 (queue 동작)', async () => {
+  it('user 포함 응답 → setUser도 호출 + 반환값에 user 포함', async () => {
+    const user = {
+      id: 'u1',
+      nickname: 'tester',
+      email: 'a@b.c',
+      role: 'user' as const,
+      onboardedAt: null,
+      termsAgreedAt: '2026-01-01T00:00:00.000Z',
+    }
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { accessToken: 'tok', user },
+    })
+    const result = await performRefresh()
+    expect(result.accessToken).toBe('tok')
+    expect(result.user).toEqual(user)
+    expect(useAuthStore.getState().user).toEqual(user)
+  })
+
+  it('user 없는 응답 → setUser 호출 안 됨 (기존 user 유지)', async () => {
+    const existing = {
+      id: 'u1',
+      nickname: 'before',
+      email: null,
+      role: 'user' as const,
+      onboardedAt: null,
+      termsAgreedAt: null,
+    }
+    useAuthStore.setState({ user: existing })
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { accessToken: 'tok' },
+    })
+    await performRefresh()
+    expect(useAuthStore.getState().user).toEqual(existing)
+  })
+
+  it('동시 5개 호출 → axios.post 1번만 (queue 동작) + 모두 같은 결과', async () => {
     mockedAxiosPost.mockResolvedValueOnce({
       data: { data: { accessToken: 'shared-token' } },
     })
@@ -80,7 +116,7 @@ describe('performRefresh', () => {
       performRefresh(),
       performRefresh(),
     ])
-    expect(results).toEqual([
+    expect(results.map((r) => r.accessToken)).toEqual([
       'shared-token',
       'shared-token',
       'shared-token',
@@ -96,8 +132,8 @@ describe('performRefresh', () => {
       .mockResolvedValueOnce({ data: { data: { accessToken: 't2' } } })
     const r1 = await performRefresh()
     const r2 = await performRefresh()
-    expect(r1).toBe('t1')
-    expect(r2).toBe('t2')
+    expect(r1.accessToken).toBe('t1')
+    expect(r2.accessToken).toBe('t2')
     expect(mockedAxiosPost).toHaveBeenCalledTimes(2)
   })
 
@@ -105,8 +141,8 @@ describe('performRefresh', () => {
     mockedAxiosPost.mockResolvedValueOnce({
       data: { accessToken: 'flat-token' },
     })
-    const token = await performRefresh()
-    expect(token).toBe('flat-token')
+    const result = await performRefresh()
+    expect(result.accessToken).toBe('flat-token')
   })
 
   it('accessToken 없는 응답 → throw (defensive)', async () => {
@@ -165,6 +201,35 @@ describe('handleAuthFailure', () => {
     handleAuthFailure(new Error('x'))
     expect(useAuthStore.getState().accessToken).toBeNull()
     expect(useAuthStore.getState().user).toBeNull()
+    expect(window.location.href).toBe('/')
+  })
+
+  it('429 → 세션 유지 (clearAuth/redirect 안 함) + rate limit 토스트', () => {
+    const existingUser = {
+      id: 'u',
+      nickname: 'n',
+      email: null,
+      role: 'user' as const,
+      onboardedAt: null,
+      termsAgreedAt: null,
+    }
+    useAuthStore.setState({ accessToken: 'keep-me', user: existingUser })
+    handleAuthFailure({ response: { status: 429 } })
+    // 세션 유지
+    expect(useAuthStore.getState().accessToken).toBe('keep-me')
+    expect(useAuthStore.getState().user).toEqual(existingUser)
+    // redirect 안 함
+    expect(window.location.href).toBe('')
+    // rate limit 토스트
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining('잠시'),
+    )
+  })
+
+  it('429가 아닌 모든 status는 기존 로직 (401, 500 등) — clearAuth + redirect', () => {
+    useAuthStore.setState({ accessToken: 'a', user: null })
+    handleAuthFailure({ response: { status: 401 } })
+    expect(useAuthStore.getState().accessToken).toBeNull()
     expect(window.location.href).toBe('/')
   })
 })
