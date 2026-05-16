@@ -2,7 +2,6 @@
 import type { Application, ApplicationStep } from '@/types/application'
 import type { ApplicationCoverletter } from '@/types/coverletter'
 import type { DashboardStats, DdayItem, InterviewReviewItem } from '@/api/dashboard'
-import type { Todo } from '@/api/todos'
 import type { CalendarEvent, DailyNote } from '@/api/calendar'
 import type { ChecklistItem } from '@/api/stepDetail'
 import type {
@@ -150,14 +149,6 @@ export const DEMO_DDAY: DdayItem[] = [
 
 export const DEMO_INTERVIEW_REVIEW: InterviewReviewItem[] = [
   { stepId: 'demo-a3-s2', stepName: '1차 실무면접', applicationId: 'demo-a3', companyName: '삼성전자' },
-]
-
-// ── 할 일 ───────────────────────────────────────────────────
-export const DEMO_TODOS: Todo[] = [
-  { id: 'demo-t1', user_id: DEMO_USER, content: '카카오 면접 자소서 다시 읽기', date: d(0), is_done: false, created_at: d(0) + 'T00:00:00Z' },
-  { id: 'demo-t2', user_id: DEMO_USER, content: '토스 포트폴리오 PDF 정리', date: d(0), is_done: false, created_at: d(0) + 'T00:00:00Z' },
-  { id: 'demo-t3', user_id: DEMO_USER, content: '삼성 임원면접 회사 리서치', date: d(0), is_done: true, created_at: d(0) + 'T00:00:00Z' },
-  { id: 'demo-t4', user_id: DEMO_USER, content: 'SQLD 기출 3회분 풀기', date: d(-1), is_done: false, created_at: d(-1) + 'T00:00:00Z' },
 ]
 
 // ── 캘린더 ──────────────────────────────────────────────────
