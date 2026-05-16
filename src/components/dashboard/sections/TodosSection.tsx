@@ -83,6 +83,7 @@ export function TodosSection() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleAdd}
             placeholder="할 일 추가 (엔터로 등록)"
+            maxLength={200}
             className="flex-1 bg-transparent text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none"
           />
         </div>

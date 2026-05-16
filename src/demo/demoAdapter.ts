@@ -21,7 +21,6 @@ function resolveGet(url: string): unknown {
     case '/dashboard/stats': return S.DEMO_DASHBOARD_STATS
     case '/dashboard/dday': return S.DEMO_DDAY
     case '/dashboard/interview-review': return S.DEMO_INTERVIEW_REVIEW
-    case '/todos': return S.DEMO_TODOS
     case '/calendar/events': return S.DEMO_CALENDAR_EVENTS
     case '/calendar/daily-notes': return S.DEMO_DAILY_NOTES
     case '/users/me/dashboard-config': return null
