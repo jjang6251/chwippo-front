@@ -17,20 +17,37 @@ type TrackedConfig = InternalAxiosRequestConfig & {
   _toastShown?: boolean
 }
 
+interface RefreshUser {
+  id: string
+  nickname: string
+  email: string | null
+  role: 'user' | 'admin'
+  onboardedAt: string | null
+  termsAgreedAt: string | null
+}
+
 interface RefreshResponse {
-  data?: { accessToken?: string }
+  data?: { accessToken?: string; user?: RefreshUser }
   accessToken?: string
+  user?: RefreshUser
+}
+
+export interface RefreshResult {
+  accessToken: string
+  user: RefreshUser | null
 }
 
 /**
- * /auth/refresh single in-flight queue (LRR P1T1 후속, PR D).
+ * /auth/refresh single in-flight queue (LRR P1T1 후속, PR D + hotfix-auth-refresh-race).
  * - PR C rotation 도입으로 동시 N개 refresh 호출 시 첫 응답이 옛 token 무효화 → 나머지 fail → logout
  * - queue로 1번만 호출 + 모든 caller가 같은 결과 공유
  * - apiClient(interceptor 포함) 대신 plain axios 사용 — 무한 루프 방지
+ * - hotfix: AuthGuard mount-time refresh도 이 queue 사용. dev StrictMode double-fire로 동시 2회
+ *   호출되던 race 제거. user 정보도 같이 store에 반영해 AuthGuard 별도 호출 불필요.
  */
-let refreshPromise: Promise<string> | null = null
+let refreshPromise: Promise<RefreshResult> | null = null
 
-export async function performRefresh(): Promise<string> {
+export async function performRefresh(): Promise<RefreshResult> {
   if (refreshPromise) return refreshPromise
   refreshPromise = doRefresh()
     .catch((err: unknown) => {
@@ -43,25 +60,38 @@ export async function performRefresh(): Promise<string> {
   return refreshPromise
 }
 
-async function doRefresh(): Promise<string> {
+async function doRefresh(): Promise<RefreshResult> {
   const { data } = await axios.post<RefreshResponse>(
     `${import.meta.env.VITE_API_URL}/auth/refresh`,
     {},
     { withCredentials: true },
   )
   const accessToken = data.data?.accessToken ?? data.accessToken
+  const user = data.data?.user ?? data.user ?? null
   if (!accessToken) {
     throw new Error('Refresh 응답에 accessToken이 없습니다.')
   }
   useAuthStore.getState().setAccessToken(accessToken)
-  return accessToken
+  if (user) useAuthStore.getState().setUser(user)
+  return { accessToken, user }
 }
 
 /**
  * Refresh 실패 시 부수효과 — caller catch와 무관하게 한 번만 실행.
  * (performRefresh의 단일 promise catch 체인에 부착되어 다중 caller에도 1회만 호출)
+ *
+ * 분기:
+ * - 429 Too Many Requests: rate limit 도달 — 세션 유효, logout/redirect 금지. 토스트만.
+ * - 401 등 인증 실패: 세션 만료 — clearAuth + 랜딩 redirect.
  */
 export function handleAuthFailure(err: unknown): void {
+  const status = (err as { response?: { status?: number } })?.response?.status
+  if (status === 429) {
+    toast.error(
+      '많은 새로고침 요청에 잠시 제한되었습니다. 60초 뒤에 다시 시도해 주세요.',
+    )
+    return
+  }
   useAuthStore.getState().clearAuth()
   const msg = ((err as { response?: { data?: { message?: string } } })
     ?.response?.data?.message ?? '') as string
@@ -143,7 +173,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true
       try {
-        const newAccessToken = await performRefresh()
+        const { accessToken: newAccessToken } = await performRefresh()
         original.headers.Authorization = `Bearer ${newAccessToken}`
         return apiClient(original)
       } catch {
