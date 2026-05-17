@@ -22,6 +22,9 @@ export function AnnouncementContainer() {
   const [dismissed, setDismissed] = useState(false)
   const [showModal, setShowModal] = useState(false)
 
+  // LRR P1T3 PR K L-4 — auth 로딩 윈도우(userId='') 동안 dismiss 키 오염 차단.
+  // 빈 userId로 dismiss 키 만들어두면 다른 유저 로그인 직후 같은 ''로 매칭될 수 있음.
+  if (!userId) return null
   if (isDemo || isTourActive || isOnboarding || !announcement || isDismissed(userId, announcement.id) || dismissed) return null
 
   function handleDismiss() {
