@@ -453,7 +453,7 @@ function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement
         <Field label="이름" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} onBlur={() => save('name', form.name)} placeholder="홍길동" copyable />
         <Field label="이름 (한자)" value={form.name_hanja} onChange={(v) => setForm(f => ({ ...f, name_hanja: v }))} onBlur={() => save('name_hanja', form.name_hanja)} placeholder="洪吉童" copyable />
         <SelectField label="성별" value={form.gender} onChange={(v) => { setForm(f => ({ ...f, gender: v })); save('gender', v) }} options={['MALE', 'FEMALE']} />
-        <Field label="생년월일" type="date" value={form.birthdate} onChange={(v) => setForm(f => ({ ...f, birthdate: v }))} onBlur={() => save('birthdate', form.birthdate)} />
+        <Field label="생년월일" type="date" value={form.birthdate} onChange={(v) => { setForm(f => ({ ...f, birthdate: v })); save('birthdate', v) }} />
         <Field label="연락처" value={form.phone} onChange={(v) => setForm(f => ({ ...f, phone: v }))} onBlur={() => save('phone', form.phone)} placeholder="010-0000-0000" copyable />
         <Field label="이메일" value={form.email_personal} onChange={(v) => setForm(f => ({ ...f, email_personal: v }))} onBlur={() => save('email_personal', form.email_personal)} placeholder="example@email.com" copyable />
       </div>
@@ -495,8 +495,8 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <SelectField label="군별" value={form.military_branch} onChange={(v) => { setForm(f => ({ ...f, military_branch: v })); save('military_branch', v) }} options={MILITARY_BRANCHES} />
             <SelectField label="전역 구분" value={form.military_type} onChange={(v) => { setForm(f => ({ ...f, military_type: v })); save('military_type', v) }} options={MILITARY_TYPES} />
-            <Field label="입대일" type="date" value={form.military_start} onChange={(v) => setForm(f => ({ ...f, military_start: v }))} onBlur={() => save('military_start', form.military_start)} />
-            <Field label="전역일" type="date" value={form.military_end} onChange={(v) => setForm(f => ({ ...f, military_end: v }))} onBlur={() => save('military_end', form.military_end)} />
+            <Field label="입대일" type="date" value={form.military_start} onChange={(v) => { setForm(f => ({ ...f, military_start: v })); save('military_start', v) }} />
+            <Field label="전역일" type="date" value={form.military_end} onChange={(v) => { setForm(f => ({ ...f, military_end: v })); save('military_end', v) }} />
             <Field label="병과" value={form.military_unit} onChange={(v) => setForm(f => ({ ...f, military_unit: v }))} onBlur={() => save('military_unit', form.military_unit)} placeholder="보병, 통신 등" span />
           </div>
         )
@@ -851,8 +851,8 @@ function EducationItem({ item, onSaved }: { item: Education; onSaved: () => void
           <Field label="학점" value={form.gpa} onChange={(v) => setForm(f => ({ ...f, gpa: v }))} onBlur={() => save('gpa', form.gpa)} placeholder="예: 3.8" />
           <Field label="만점" value={form.gpa_max} onChange={(v) => setForm(f => ({ ...f, gpa_max: v }))} onBlur={() => save('gpa_max', form.gpa_max)} placeholder="예: 4.5" />
         </div>
-        <Field label="입학일" type="date" value={form.start_at} onChange={(v) => setForm(f => ({ ...f, start_at: v }))} onBlur={() => save('start_at', form.start_at)} />
-        <Field label="졸업/예정일" type="date" value={form.end_at} onChange={(v) => setForm(f => ({ ...f, end_at: v }))} onBlur={() => save('end_at', form.end_at)} />
+        <Field label="입학일" type="date" value={form.start_at} onChange={(v) => { setForm(f => ({ ...f, start_at: v })); save('start_at', v) }} />
+        <Field label="졸업/예정일" type="date" value={form.end_at} onChange={(v) => { setForm(f => ({ ...f, end_at: v })); save('end_at', v) }} />
         <Field label="위치" value={form.location} onChange={(v) => setForm(f => ({ ...f, location: v }))} onBlur={() => save('location', form.location)} placeholder="선택 입력" span />
       </div>
 
