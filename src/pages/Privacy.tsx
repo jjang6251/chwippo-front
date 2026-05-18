@@ -1,6 +1,9 @@
-// TODO: AI 기능(F1·F2) 출시 시 → 5조 위탁 업체에 Anthropic 추가, 2조 수집항목에 "AI 처리용 입력 텍스트" 추가
-// TODO: 유료 결제 도입 시 → 결제 수탁업체(PG사) 추가
-// TODO: 사업자 등록 시 → 8조 개인정보 보호책임자에 사업자 정보 추가
+// TODO: AI 기능(F1·F2) 출시 시 → §5 위탁 업체에 Anthropic 추가, §1 수집 항목에 "AI 처리용 입력 텍스트" 추가
+// TODO: 유료 결제 도입 시 → 결제 수탁업체(PG사) 추가, §3 보유 기간에 전자상거래법 5년 명시
+// TODO: 사업자 등록 시 → §8 개인정보 보호책임자에 사업자 정보 추가
+// 갱신 이력:
+// - 2026-05-18 (PR DD, LRR Phase 5-B): §1에 user_profiles 8필드(실명·전화·이메일·생년월일·병역) 명시 + §5 수탁업체 정합 (AWS S3 → R2, Railway·Cloudflare·GitHub Actions 추가)
+// - 2026-05-14: 초안
 
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -16,21 +19,35 @@ export function Privacy() {
           ← 뒤로
         </button>
         <h1 className="text-2xl font-bold mb-2">개인정보처리방침</h1>
-        <p className="text-text-quaternary text-sm mb-12">시행일: 2026년 5월 14일</p>
+        <p className="text-text-quaternary text-sm mb-12">시행일: 2026년 5월 18일</p>
 
         <DocSection title="1. 수집하는 개인정보 항목">
           <p className="mb-3">치뽀는 다음과 같은 개인정보를 수집합니다.</p>
           <Table
             headers={['구분', '항목', '수집 시점']}
             rows={[
-              ['카카오 로그인', '이메일, 닉네임, 카카오 고유 식별자', '회원 가입 시'],
-              ['서비스 이용', '지원 카드, 자소서 답변, 내 정보 창고에 직접 입력한 정보', '서비스 이용 중'],
-              ['파일 업로드', '내 정보 창고에 업로드한 PDF·이미지 파일', '파일 업로드 시'],
+              ['카카오 로그인 (필수)', '이메일, 닉네임, 카카오 고유 식별자', '회원 가입 시'],
+              [
+                '내 정보 창고 — 프로필 (선택)',
+                '실명·한자 이름·성별·생년월일·전화번호·개인 이메일·병역 정보(군별·복무 형태·기간·소속)·학습 목표(목표 자격증 등)',
+                '본인이 직접 입력 시',
+              ],
+              [
+                '내 정보 창고 — 자격·이력 (선택)',
+                '자격증·어학·상장·학력·경력·자기소개서 소재·파일 보관함의 PDF/이미지 파일',
+                '본인이 직접 입력·업로드 시',
+              ],
+              ['지원 관리', '지원 카드(회사명·직무·일정·메모), 회사별 자소서 답변, 시험 일정', '서비스 이용 중'],
+              ['일정·메모', '캘린더 일정·할 일 메모', '서비스 이용 중'],
+              ['고객 응대', '문의 내용·댓글', '문의 작성 시'],
               ['계정 관리', '계정 정지 일시 (운영 정책 위반 시에만 기록)', '계정 제한 조치 시'],
             ]}
           />
           <p className="mt-3 text-text-quaternary text-xs">
-            * 서비스 특성상 민감정보(건강·신념·성적 지향 등)는 수집하지 않습니다.
+            * 프로필·자격 정보는 모두 선택 입력이며, 입력하지 않아도 기본 서비스(지원 카드·일정 관리)는 이용할 수 있습니다.
+          </p>
+          <p className="mt-2 text-text-quaternary text-xs">
+            * 서비스 특성상 PIPA 시행령 18조 민감정보(건강·신념·성적 지향·노조 가입·정치적 견해 등)는 수집하지 않습니다.
           </p>
         </DocSection>
 
@@ -67,13 +84,18 @@ export function Privacy() {
         <DocSection title="5. 개인정보 처리 위탁">
           <p className="mb-3">치뽀는 서비스 제공을 위해 아래 업체에 개인정보 처리를 위탁합니다.</p>
           <Table
-            headers={['수탁 업체', '위탁 내용']}
+            headers={['수탁 업체', '위탁 내용', '국외 이전']}
             rows={[
-              ['Amazon Web Services (AWS)', '파일 저장 (S3)'],
-              ['Kakao Corp.', '소셜 로그인 인증'],
+              ['Kakao Corp.', '소셜 로그인 인증', '국내'],
+              ['Railway Corp.', '데이터베이스·애플리케이션 호스팅', '미국'],
+              ['Cloudflare, Inc.', '파일 저장(R2)·DNS·HTTPS·CDN', '미국·글로벌'],
+              ['GitHub, Inc.', '서비스 가용성 모니터링 (헬스체크 cron)', '미국'],
             ]}
           />
           <p className="mt-3 text-text-quaternary text-xs">
+            * 모든 수탁 업체는 SOC2/ISO27001 등 국제 정보보안 표준을 준수합니다.
+          </p>
+          <p className="mt-2 text-text-quaternary text-xs">
             * 향후 AI 기능 도입 시 입력 텍스트 처리를 위해 AI 서비스 제공업체가 추가될 수 있으며,
             해당 시점에 방침을 업데이트하고 사전 공지합니다.
           </p>
@@ -84,8 +106,8 @@ export function Privacy() {
             보유 기간이 경과하거나 처리 목적이 달성된 개인정보는 지체 없이 파기합니다.
           </p>
           <ul className="space-y-1.5 list-disc list-inside">
-            <li>전자적 파일: 복구 불가능한 방법으로 영구 삭제</li>
-            <li>서버에 저장된 파일(S3): 즉시 삭제 처리</li>
+            <li>데이터베이스 레코드: 회원 탈퇴 시 ON DELETE CASCADE로 즉시 삭제</li>
+            <li>파일 저장소(R2): 회원 탈퇴 시 본인이 업로드한 모든 파일 삭제 처리</li>
           </ul>
         </DocSection>
 
@@ -122,7 +144,9 @@ export function Privacy() {
         </DocSection>
 
         <div className="mt-12 pt-6 border-t border-white/5 text-text-quaternary text-xs">
-          공고일: 2026년 5월 14일 · 시행일: 2026년 5월 14일
+          공고일: 2026년 5월 18일 · 시행일: 2026년 5월 18일 (베타 서비스로 사용자 적어 즉시 시행, 사전 공지는 변경 후 첫 로그인 시 안내)
+          <br />
+          이전 시행일(2026년 5월 14일)의 방침에 비해 §1 수집 항목·§5 위탁 업체 명시를 정합화했으며, 실 처리 범위 변경은 없습니다.
         </div>
       </main>
     </div>
