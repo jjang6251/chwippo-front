@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
+import { useTourStore } from '@/stores/tourStore'
 import { CompanyCard } from '@/components/card/CompanyCard'
 import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { AddCardModal } from '@/components/card/AddCardModal'
@@ -48,6 +49,9 @@ export function Board() {
   const addMenuRef = useRef<HTMLDivElement>(null)
 
   const { data: applications = [], isLoading } = useApplications()
+  const tourActive = useTourStore((s) => s.active)
+  const tourStep = useTourStore((s) => s.step)
+  const tourNext = useTourStore((s) => s.next)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -99,8 +103,16 @@ export function Board() {
         {/* + 추가 버튼 */}
         <div ref={addMenuRef} className="relative">
           <button
-            onClick={() => setAddMenuOpen(!addMenuOpen)}
-            className="flex items-center gap-1.5 bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors shadow-lg shadow-brand/20"
+            data-tour="add-card-btn"
+            onClick={() => {
+              if (tourActive && tourStep === 3) {
+                setAddModalStatus('IN_PROGRESS')
+                tourNext()
+              } else {
+                setAddMenuOpen(!addMenuOpen)
+              }
+            }}
+            className="flex items-center gap-1.5 bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-3.5 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -133,7 +145,7 @@ export function Board() {
       {/* 검색 + 필터 탭 */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {/* 검색 */}
-        <div className="relative flex-1 max-w-64">
+        <div className="relative flex-1 sm:max-w-64">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-quaternary" width="13" height="13" viewBox="0 0 16 16" fill="none">
             <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" />
             <path d="M12 12l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -146,34 +158,42 @@ export function Board() {
           />
         </div>
 
-        {/* 필터 탭 */}
-        <div className="flex items-center gap-1 bg-surface-2 border border-white/6 rounded-lg p-1">
-          {FILTER_TABS.map((tab) => {
-            const count = tab.key === 'all'
-              ? applications.filter((a) => a.status !== 'FAILED').length
-              : tab.key === 'FAILED'
-              ? failedCount
-              : countByStatus(tab.key as ApplicationStatus)
+        {/* 필터 탭 — 모바일: 독립 칩 (가로 스크롤) / sm+: segmented control */}
+        <div
+          className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible sm:flex-none"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          <div role="tablist" aria-label="지원 상태 필터" className="flex items-center gap-1.5 sm:gap-1 whitespace-nowrap sm:bg-surface-2 sm:border sm:border-white/6 sm:rounded-lg sm:p-1">
+            {FILTER_TABS.map((tab) => {
+              const count = tab.key === 'all'
+                ? applications.filter((a) => a.status !== 'FAILED').length
+                : tab.key === 'FAILED'
+                ? failedCount
+                : countByStatus(tab.key as ApplicationStatus)
+              const isActive = filter === tab.key
 
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setFilter(tab.key)}
-                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all whitespace-nowrap
-                  ${filter === tab.key
-                    ? 'bg-white/10 text-text-primary shadow-sm'
-                    : 'text-text-quaternary hover:text-text-secondary'
-                  }`}
-              >
-                {tab.label}
-                {count > 0 && (
-                  <span className={`ml-1.5 text-[10px] ${filter === tab.key ? 'text-text-tertiary' : 'text-text-quaternary'}`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilter(tab.key)}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`flex-none px-3 py-1.5 text-xs rounded-full sm:rounded-md font-medium transition-all whitespace-nowrap text-center border sm:border-transparent
+                    ${isActive
+                      ? 'bg-brand/15 border-brand/30 text-brand sm:bg-white/10 sm:text-text-primary sm:shadow-sm'
+                      : 'bg-white/[0.03] border-white/8 text-text-tertiary hover:text-text-secondary sm:bg-transparent sm:text-text-tertiary'
+                    }`}
+                >
+                  {tab.label}
+                  {count > 0 && (
+                    <span className={`ml-1.5 text-[10px] ${isActive ? 'text-brand/70 sm:text-text-tertiary' : 'text-text-quaternary'}`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 

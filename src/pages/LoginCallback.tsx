@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
+import { parseNeedsTerms } from '@/utils/authRouting'
+import { parseHashParams } from '@/utils/parseHashParams'
 
 export function LoginCallback() {
-  const [params] = useSearchParams()
   const navigate = useNavigate()
   const { setAccessToken, setUser } = useAuthStore()
   const handled = useRef(false)
@@ -13,8 +14,15 @@ export function LoginCallback() {
     if (handled.current) return
     handled.current = true
 
-    const accessToken = params.get('access_token')
-    const isNew = params.get('is_new') === 'true'
+    // Fragment(#)로 토큰 수신 — server access log·Referer 노출 차단
+    const params = parseHashParams(window.location.hash)
+    // fragment 즉시 제거 (history에서 token 깔끔하게 정리)
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+
+    const accessToken = params.access_token
+    const needsTerms = parseNeedsTerms(params.needs_terms ?? null)
 
     if (!accessToken) {
       toast.error('로그인에 실패했습니다. 다시 시도해주세요.')
@@ -24,20 +32,24 @@ export function LoginCallback() {
 
     setAccessToken(accessToken)
 
-    const userId = params.get('user_id')
-    const userNickname = params.get('user_nickname')
-    const userRole = params.get('user_role') as 'user' | 'admin'
-    const userEmail = params.get('user_email')
+    const userId = params.user_id
+    const userNickname = params.user_nickname
+    const userRole = params.user_role as 'user' | 'admin' | undefined
+    const userEmail = params.user_email ?? null
+    const userTermsAgreedAt = params.user_terms_agreed_at ?? null
+    const userOnboardedAt = params.user_onboarded_at ?? null
     if (userId && userNickname && userRole) {
-      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole })
+      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole, termsAgreedAt: userTermsAgreedAt, onboardedAt: userOnboardedAt })
     }
 
-    if (isNew) {
+    if (needsTerms) {
       navigate('/terms-agreement', { replace: true })
     } else {
       navigate('/dashboard', { replace: true })
     }
-  }, [params, navigate, setAccessToken])
+    // setUser는 zustand setter라 stable / window.location.hash는 마운트 1회만 읽음
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, setAccessToken])
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center">

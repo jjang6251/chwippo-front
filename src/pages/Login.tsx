@@ -1,14 +1,17 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 
 export function Login() {
   const { accessToken, setAccessToken } = useAuthStore()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isSuspended = searchParams.get('error') === 'suspended'
 
   useEffect(() => {
     if (accessToken) { navigate('/dashboard', { replace: true }); return }
+    if (isSuspended) return
     // 유효한 refresh 쿠키가 있으면 자동 리다이렉트
     axios
       .post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true })
@@ -17,7 +20,9 @@ export function Login() {
         setAccessToken(token)
         navigate('/dashboard', { replace: true })
       })
-      .catch(() => {})
+      .catch(() => { /* refresh 실패는 무시 — 로그인 화면 유지 */ })
+    // 마운트 시 1회만 자동 로그인 체크
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleKakaoLogin = () => {
@@ -27,6 +32,23 @@ export function Login() {
   return (
     <div className="min-h-screen bg-bg flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
+        {/* 정지 안내 */}
+        {isSuspended && (
+          <div role="alert" className="w-full bg-danger/10 border border-danger/25 rounded-xl px-4 py-3.5 text-center">
+            <p className="text-sm font-semibold text-danger mb-1">계정이 정지되었습니다</p>
+            <p className="text-xs text-danger/70 leading-relaxed">
+              운영 정책 위반으로 계정이 제한되었습니다.<br />
+              문의:{' '}
+              <a
+                href="mailto:support@chwippo.com"
+                className="underline hover:text-danger"
+              >
+                support@chwippo.com
+              </a>
+            </p>
+          </div>
+        )}
+
         {/* 로고 */}
         <div className="flex flex-col items-center gap-3">
           <div className="text-4xl font-bold text-text-primary tracking-tight">치뽀</div>
@@ -46,9 +68,9 @@ export function Login() {
 
         <p className="text-text-tertiary text-xs text-center">
           로그인 시{' '}
-          <a href="/terms" className="underline hover:text-text-secondary">이용약관</a>
+          <Link to="/terms" className="underline hover:text-text-secondary">이용약관</Link>
           {' '}및{' '}
-          <a href="/privacy" className="underline hover:text-text-secondary">개인정보처리방침</a>
+          <Link to="/privacy" className="underline hover:text-text-secondary">개인정보처리방침</Link>
           에 동의한 것으로 간주됩니다.
         </p>
       </div>

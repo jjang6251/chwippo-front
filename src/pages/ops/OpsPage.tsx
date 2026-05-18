@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
-import { getAdminStats, getAdminAnalytics, type DayData } from '@/api/admin'
+import { getAdminStats, getAdminAnalytics, type DayData, type GlobalStorage } from '@/api/admin'
 import dayjs from 'dayjs'
 
 const PERIODS = [
@@ -67,16 +67,16 @@ export function OpsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">관리자</h1>
-          <p className="text-sm text-text-muted mt-1">치뽀 운영 현황</p>
+          <p className="text-sm text-text-tertiary mt-1">치뽀 운영 현황</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
             to="/dashboard"
-            className="text-xs text-text-muted hover:text-text-secondary bg-surface-2 border border-white/8 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs text-text-tertiary hover:text-text-secondary bg-surface-2 border border-white/8 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors"
           >
             ← 치뽀로 돌아가기
           </Link>
-          <span className="text-xs text-text-muted bg-surface-2 border border-white/5 px-3 py-1 rounded-full">admin</span>
+          <span className="text-xs text-text-tertiary bg-surface-2 border border-white/5 px-3 py-1 rounded-full">admin</span>
         </div>
       </div>
 
@@ -87,22 +87,47 @@ export function OpsPage() {
             <p className={`text-3xl font-bold tabular-nums ${color} ${statsLoading ? 'opacity-30' : ''}`}>
               {value.toLocaleString()}
             </p>
-            <p className="text-xs text-text-muted mt-1">{label}</p>
+            <p className="text-xs text-text-tertiary mt-1">{label}</p>
           </div>
         ))}
       </div>
 
-      {/* 문의 관리 바로가기 */}
-      <div className="mb-8">
+      {/* 파일 저장 (R2) — 전역 */}
+      {stats?.globalStorage && (
+        <GlobalStorageCard storage={stats.globalStorage} />
+      )}
+
+      {/* 바로가기 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
         <Link
           to="/ops/inquiries"
           className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
         >
           <div>
             <p className="text-sm font-semibold">문의 관리</p>
-            <p className="text-xs text-text-muted mt-0.5">미답변 문의 {stats?.pendingInquiries ?? 0}건</p>
+            <p className="text-xs text-text-tertiary mt-0.5">미답변 문의 {stats?.pendingInquiries ?? 0}건</p>
           </div>
-          <span className="text-text-muted">›</span>
+          <span className="text-text-tertiary">›</span>
+        </Link>
+        <Link
+          to="/ops/announcements"
+          className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold">공지 관리</p>
+            <p className="text-xs text-text-tertiary mt-0.5">배너·모달 공지 등록 및 관리</p>
+          </div>
+          <span className="text-text-tertiary">›</span>
+        </Link>
+        <Link
+          to="/ops/users"
+          className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold">회원 관리</p>
+            <p className="text-xs text-text-tertiary mt-0.5">계정 정지·권한·닉네임 변경 및 감사 로그</p>
+          </div>
+          <span className="text-text-tertiary">›</span>
         </Link>
       </div>
 
@@ -117,7 +142,7 @@ export function OpsPage() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 days === value
                   ? 'bg-brand/15 border border-brand/30 text-brand'
-                  : 'bg-surface-2 border border-white/8 text-text-muted hover:border-white/20'
+                  : 'bg-surface-2 border border-white/8 text-text-tertiary hover:border-white/20'
               }`}
             >
               {label}
@@ -171,9 +196,9 @@ export function OpsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {kpiCards.map(({ label, value, sub, color }) => (
           <div key={label} className="bg-surface-2 border border-white/5 rounded-xl p-5">
-            <p className="text-xs text-text-muted mb-2">{label}</p>
+            <p className="text-xs text-text-tertiary mb-2">{label}</p>
             <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
-            <p className="text-xs text-text-muted mt-1">{sub}</p>
+            <p className="text-xs text-text-tertiary mt-1">{sub}</p>
           </div>
         ))}
       </div>
@@ -189,6 +214,56 @@ interface ChartCardProps {
   unit: string
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return '0B'
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`
+}
+
+function GlobalStorageCard({ storage }: { storage: GlobalStorage }) {
+  const limitBytes = storage.r2FreeLimitGB * 1024 * 1024 * 1024
+  const percentage = limitBytes > 0 ? (storage.totalUsedBytes / limitBytes) * 100 : 0
+  const overWarn = percentage >= 80
+
+  return (
+    <div className="bg-surface-2 border border-white/5 rounded-xl p-5 mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-text-tertiary font-semibold">파일 저장 (Cloudflare R2)</p>
+        <span className="text-[11px] text-text-quaternary">
+          {formatBytes(storage.totalUsedBytes)} / {storage.r2FreeLimitGB}GB 무료 한도
+        </span>
+      </div>
+      <div
+        role="progressbar"
+        aria-valuenow={Number(percentage.toFixed(1))}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`R2 사용량 ${percentage.toFixed(1)}%`}
+        className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden mb-3"
+      >
+        <div
+          className={`h-full transition-all ${overWarn ? 'bg-warning' : 'bg-brand'}`}
+          style={{ width: `${Math.min(percentage, 100)}%` }}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <p className="text-text-quaternary">평균 사용량 / 유저</p>
+          <p className="text-text-secondary font-medium">{formatBytes(storage.averageBytes)}</p>
+        </div>
+        <div>
+          <p className="text-text-quaternary">cap 임박 사용자</p>
+          <p className={`font-medium ${storage.nearCapUserCount > 0 ? 'text-warning' : 'text-text-secondary'}`}>
+            {storage.nearCapUserCount}명
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ChartCard({ title, data, color, loading, unit }: ChartCardProps) {
   const fmt = (d: string) => dayjs(d).format('M/D')
 
@@ -199,7 +274,7 @@ function ChartCard({ title, data, color, loading, unit }: ChartCardProps) {
     <div className="bg-surface-2 border border-white/5 rounded-xl p-5">
       <p className="text-sm font-semibold mb-4">{title}</p>
       {loading || !data ? (
-        <div className="h-40 flex items-center justify-center text-text-muted text-xs">불러오는 중...</div>
+        <div className="h-40 flex items-center justify-center text-text-tertiary text-xs">불러오는 중...</div>
       ) : (
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>

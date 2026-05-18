@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -31,9 +31,21 @@ import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
 import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
 import { useProfile } from '@/hooks/useMyinfo'
 import { useAuthStore } from '@/stores/authStore'
+import { useTourStore } from '@/stores/tourStore'
+import { useDemoMode } from '@/contexts/demoMode'
 
 export function Dashboard() {
   const user = useAuthStore((s) => s.user)
+  const startTour = useTourStore((s) => s.start)
+  const isDemo = useDemoMode()
+
+  useEffect(() => {
+    if (!isDemo && user && user.onboardedAt === null) {
+      startTour()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: dday, isLoading: ddayLoading } = useDdayList()
   const { data: profile } = useProfile()
@@ -127,12 +139,12 @@ export function Dashboard() {
       <div className="mb-8">
         <p className="text-text-quaternary text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>
         <div className="flex items-end justify-between gap-2">
-          <div className="flex items-end gap-2">
-            <h1 className="text-text-primary text-2xl font-bold leading-tight">
+          <div className="flex items-end gap-2 min-w-0 flex-1">
+            <h1 className="text-text-primary text-2xl font-bold leading-tight truncate">
               안녕하세요,{' '}
               <span className="text-brand">{user?.nickname ?? ''}님</span>
             </h1>
-            <span className="text-xl mb-0.5">👋</span>
+            <span className="text-xl mb-0.5 flex-none">👋</span>
           </div>
           <button
             onClick={() => setEditMode((v) => !v)}
@@ -167,16 +179,20 @@ export function Dashboard() {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-6 sm:space-y-4">
-            {draggableSections.map((s) => (
-              <SectionWrapper
-                key={s.id}
-                id={s.id}
-                editMode={editMode}
-                onRemove={() => handleRemove(s.id)}
-              >
-                {renderSectionContent(s.id)}
-              </SectionWrapper>
-            ))}
+            {draggableSections.map((s) => {
+              const content = renderSectionContent(s.id)
+              if (!content) return null
+              return (
+                <SectionWrapper
+                  key={s.id}
+                  id={s.id}
+                  editMode={editMode}
+                  onRemove={() => handleRemove(s.id)}
+                >
+                  {content}
+                </SectionWrapper>
+              )
+            })}
           </div>
         </SortableContext>
         <DragOverlay dropAnimation={null}>

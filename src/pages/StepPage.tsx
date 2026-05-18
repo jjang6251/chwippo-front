@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/hooks/useApplications'
@@ -11,7 +12,7 @@ import { getDdayLabel, getDdayVariant } from '@/utils/dday'
 
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
 
   const { data: app, isLoading } = useApplication(appId!)
   const sortedSteps = app ? [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex) : []
@@ -219,7 +220,7 @@ export function StepPage() {
         <div className={`transition-colors ${dateRowAccentCls}`}>
           {editingField === 'date' ? (
             <div className="flex items-center gap-3 px-4 py-3">
-              <span className="text-text-quaternary text-sm shrink-0">📅</span>
+              <span className="text-sm shrink-0">📅</span>
               <span className="text-xs text-text-quaternary w-10 shrink-0">날짜</span>
               <input
                 ref={dateInputRef}
@@ -240,7 +241,7 @@ export function StepPage() {
               <span className="text-sm shrink-0">📅</span>
               <span className="text-xs text-text-quaternary w-10 shrink-0">날짜</span>
               {dateDisplayLabel ? (
-                <span className="flex-1 flex items-center gap-2">
+                <span className="flex-1 flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                   <span className="text-sm text-text-primary">{dateDisplayLabel}</span>
                   {timeDisplayLabel && (
                     <span className={`text-sm font-semibold font-mono ${typeConfig.colorCls}`}>{timeDisplayLabel}</span>
@@ -262,7 +263,7 @@ export function StepPage() {
         <div>
           {editingField === 'location' ? (
             <div className="flex items-center gap-3 px-4 py-3">
-              <span className="text-text-quaternary text-sm shrink-0">📍</span>
+              <span className="text-sm shrink-0">📍</span>
               <span className="text-xs text-text-quaternary w-10 shrink-0">장소</span>
               <input
                 ref={locationInputRef}
@@ -364,7 +365,7 @@ export function StepPage() {
       {/* ── 핵심 메모 ──────────────────────────────────── */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
-          <span className="text-xs text-text-quaternary shrink-0">📌 핵심 메모</span>
+          <span className="text-xs text-text-quaternary shrink-0"><span className="text-text-primary">📌</span> 핵심 메모</span>
           <div className="flex-1 h-px bg-white/6" />
           <span className="text-[10px] text-brand/50 shrink-0">D-1·당일 대시보드 표시</span>
         </div>

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useApplications } from '@/hooks/useApplications'
 import { sortApplications } from '@/utils/sortApplications'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
@@ -22,7 +22,7 @@ function getCurrentStepInfo(app: Application) {
 }
 
 export function TopApplicationsSection() {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const { data: applications = [], isLoading } = useApplications()
 
   const starred = applications.filter((a) => a.isStarred && a.status !== 'FAILED')

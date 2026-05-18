@@ -37,6 +37,8 @@ export interface CreateApplicationDto {
   deadline?: string
   jobUrl?: string
   needsDetail?: boolean
+  /** 전형 템플릿 id — IN_PROGRESS 생성 시 초기 스텝 결정 (미지정 시 'general') */
+  templateId?: string
 }
 
 export interface UpdateApplicationDto {

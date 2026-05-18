@@ -1,6 +1,7 @@
 import { Modal } from '@/components/common/Modal'
 import { useUpdateApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
+import { celebrate } from '@/stores/celebrationStore'
 
 interface SetResultModalProps {
   open: boolean
@@ -17,8 +18,9 @@ export function SetResultModal({ open, onClose, applicationId, companyName }: Se
       { status },
       {
         onSuccess: () => {
-          toast.success(status === 'PASSED' ? `🎉 ${companyName} 최종 합격!` : `${companyName} 결과가 기록됐어요.`)
           onClose()
+          if (status === 'PASSED') celebrate(companyName)
+          else toast.success(`${companyName} 결과가 기록됐어요.`)
         },
         onError: () => toast.error('업데이트에 실패했습니다.'),
       },

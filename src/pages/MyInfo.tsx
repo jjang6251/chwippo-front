@@ -7,30 +7,44 @@ import {
   useCerts, useCreateCert, useUpdateCert, useDeleteCert,
   useAwards, useCreateAward, useUpdateAward, useDeleteAward,
   useExperiences, useCreateExperience, useUpdateExperience, useDeleteExperience,
+  useEducations, useCreateEducation, useUpdateEducation, useDeleteEducation,
   useCoverletter, useUpdateCoverletter, useCreateCustomItem, useUpdateCustomItem, useDeleteCustomItem,
   useDocuments, useCreateDocument, useDeleteDocument,
 } from '@/hooks/useMyinfo'
 import { useExamSchedules, useDeleteExamSchedule } from '@/hooks/useExamSchedules'
+import { useMyinfoProgress } from '@/hooks/useMyinfoProgress'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
-import type { LanguageCert, Cert, Award, Experience, CoverletterCustom, MyDocument } from '@/api/myinfo'
+import type { UserProfile, LanguageCert, Cert, Award, Experience, Coverletter, CoverletterCustom, MyDocument, Education, EducationMinor } from '@/api/myinfo'
 import type { ExamSchedule } from '@/types/exam-schedule'
 import { toast } from '@/stores/toastStore'
+
+/** 인터셉터가 이미 토스트를 띄웠으면 중복 알림 안 함 */
+function notifySaveError(err: unknown, fallback = '저장에 실패했어요.') {
+  const shown = (err as { config?: { _toastShown?: boolean } } | null)?.config?._toastShown
+  if (!shown) toast.error(fallback)
+}
 import { CopyButton } from '@/components/myinfo/CopyButton'
 import { FileUpload } from '@/components/myinfo/FileUpload'
+import { EMPTY_SLOT, resolveFileForSubmit, slotFromExisting, type FileSlot } from '@/utils/fileSlot'
+import { clearFileBySource } from '@/utils/myinfoFileActions'
 import { AddExamScheduleModal } from '@/components/myinfo/AddExamScheduleModal'
 import { ConvertExamToCertModal } from '@/components/myinfo/ConvertExamToCertModal'
+import { MyinfoProgressGauge } from '@/components/myinfo/MyinfoProgressGauge'
+import { StorageUsageBar } from '@/components/myinfo/StorageUsageBar'
 
 // ── 섹션 메타데이터 ────────────────────────────────────────
 const SECTIONS = [
   { id: 'profile',        label: '기본 인적사항', icon: '👤', accent: 'brand'   },
+  { id: 'education',      label: '학력',         icon: '🎓', accent: 'success' },
   { id: 'military',       label: '병역사항',     icon: '🪖', accent: 'warning' },
+  { id: 'coverletter',    label: '자소서 소재',   icon: '✍️', accent: 'brand'   },
+  { id: 'experiences',    label: '경험',         icon: '💼', accent: 'success' },
+  { id: 'awards',         label: '수상 내역',     icon: '🏆', accent: 'warning' },
   { id: 'language-certs', label: '어학 자격증',   icon: '🌐', accent: 'success' },
   { id: 'certs',          label: '자격증',       icon: '📜', accent: 'brand'   },
+  // ─── 게이지 미포함 ───
   { id: 'exam-schedules', label: '시험 일정',     icon: '📚', accent: 'violet'  },
-  { id: 'awards',         label: '수상 내역',     icon: '🏆', accent: 'warning' },
-  { id: 'experiences',    label: '경험',         icon: '💼', accent: 'success' },
   { id: 'goals',          label: '스펙 목표',     icon: '🎯', accent: 'danger'  },
-  { id: 'coverletter',    label: '자소서 소재',   icon: '✍️', accent: 'brand'   },
   { id: 'files',          label: '파일 보관함',   icon: '📁', accent: 'success' },
 ] as const
 
@@ -54,18 +68,29 @@ function useSaved() {
 }
 
 // ── 공통 인풋 ──────────────────────────────────────────────
+/** 필수 입력 라벨 — ui-specs.md "필수 입력 필드" 규칙 따름 */
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+  return (
+    <label className="block text-xs text-text-tertiary mb-1.5 font-medium">
+      {label}
+      {required && <span className="text-danger ml-0.5" aria-label="필수 입력">*</span>}
+    </label>
+  )
+}
+
 function Field({
   label, value, onChange, onBlur, type = 'text',
-  placeholder, maxLength, copyable, as, span,
+  placeholder, maxLength, copyable, as, span, required,
 }: {
   label: string; value: string; onChange: (v: string) => void
   onBlur?: () => void; type?: string; placeholder?: string
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
+  required?: boolean
 }) {
-  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all'
+  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all [color-scheme:dark]'
   return (
     <div className={span ? 'col-span-2' : ''}>
-      <label className="block text-xs text-text-tertiary mb-1.5 font-medium">{label}</label>
+      <FieldLabel label={label} required={required} />
       <div className="flex items-start gap-1.5">
         {as === 'textarea'
           ? <textarea value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} placeholder={placeholder} maxLength={maxLength} rows={4} className={cls + ' resize-none'} />
@@ -77,30 +102,35 @@ function Field({
   )
 }
 
-function SelectField({ label, value, onChange, options }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[]
+function SelectField({ label, value, onChange, options, required }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[]; required?: boolean
 }) {
   return (
     <div>
-      <label className="block text-xs text-text-tertiary mb-1.5 font-medium">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
-        <option value="">선택</option>
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
+      <FieldLabel label={label} required={required} />
+      <div className="relative">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
+          <option value="">선택</option>
+          {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
     </div>
   )
 }
 
 // ── 모달 ──────────────────────────────────────────────────
-function Modal({ title, onClose, onSave, children }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode }) {
+function Modal({ title, onClose, onSave, children, saving }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode; saving?: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#0f1011] border border-white/12 rounded-t-2xl sm:rounded-xl w-full max-w-md p-6 space-y-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-        <div className="space-y-3">{children}</div>
-        <div className="flex gap-2 pt-2">
-          <button onClick={onClose} className="flex-1 py-2.5 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors">취소</button>
-          <button onClick={onSave} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent text-text-primary rounded-lg transition-colors">저장</button>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0" onClick={() => { if (!saving) onClose() }}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="bg-surface border border-white/8 rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-text-primary px-6 pt-6 pb-3 shrink-0">{title}</h3>
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-3">{children}</div>
+        <div className="flex gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-white/6 shrink-0">
+          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50">취소</button>
+          <button onClick={onSave} disabled={saving} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent text-text-primary rounded-lg transition-colors disabled:opacity-50">{saving ? '저장 중...' : '저장'}</button>
         </div>
       </div>
     </div>
@@ -110,7 +140,7 @@ function Modal({ title, onClose, onSave, children }: { title: string; onClose: (
 function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: string; onClose: () => void; onConfirm: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#0f1011] border border-white/12 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={`${label} 삭제 확인`} className="bg-surface border border-white/10 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div>
           <p className="text-sm font-semibold text-text-primary mb-1">삭제할까요?</p>
           <p className="text-xs text-text-quaternary">{label}을(를) 삭제하면 복구할 수 없어요.</p>
@@ -208,10 +238,18 @@ function AddButton({ onClick, label = '추가' }: { onClick: () => void; label?:
 // ────────────────────────────────────────────────────────────
 export function MyInfo() {
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const [activeSection, setActiveSection] = useState('profile')
   const isProgrammaticScroll = useRef(false)
   const scrollLockTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const location = useLocation()
+  const { sections: progressSections } = useMyinfoProgress()
+
+  // 활성 탭이 화면 밖이면 가로 스크롤로 중앙으로 끌어옴 (모바일 sticky 칩)
+  useEffect(() => {
+    const btn = tabRefs.current[activeSection]
+    btn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [activeSection])
 
   // URL hash로 진입 시 해당 섹션으로 자동 스크롤 (예: /myinfo#goals)
   useEffect(() => {
@@ -233,21 +271,31 @@ export function MyInfo() {
   }, [location.hash])
 
   useEffect(() => {
+    // scrollY + viewport 상단 100px 지점 기준 — 어느 섹션의 [top, bottom] 안에 들어가는가
     const handleScroll = () => {
       if (isProgrammaticScroll.current) return
-      // 페이지 끝(또는 거의 끝)에 도달하면 무조건 마지막 섹션을 active로
-      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4
+
+      const bounds = SECTIONS.flatMap(({ id }) => {
+        const el = sectionRefs.current[id]
+        if (!el) return []
+        const rect = el.getBoundingClientRect()
+        return [{
+          id: id as string,
+          top: rect.top + window.scrollY,
+          bottom: rect.bottom + window.scrollY,
+        }]
+      })
+
+      // 페이지 끝 도달 시 마지막 섹션 강제 (모바일 주소창 영향 고려해 -10)
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10
       if (atBottom) {
         setActiveSection(SECTIONS[SECTIONS.length - 1].id)
         return
       }
-      const OFFSET = 160
-      const tops = SECTIONS.map(({ id }) => ({
-        id,
-        top: (sectionRefs.current[id]?.getBoundingClientRect().top ?? Infinity) + window.scrollY,
-      }))
-      const scrollPos = window.scrollY + OFFSET
-      const active = [...tops].reverse().find((s) => s.top <= scrollPos)
+
+      // viewport 중앙 지점이 어느 섹션의 [top, bottom] 안에 있는가 — 짧은 섹션도 안정적으로 잡힘
+      const probe = window.scrollY + window.innerHeight / 2
+      const active = bounds.find((b) => b.top <= probe && b.bottom > probe)
       if (active) setActiveSection(active.id)
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -270,9 +318,50 @@ export function MyInfo() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-text-primary text-xl font-bold">내 정보 창고</h1>
-        <p className="text-text-quaternary text-xs mt-1">필드를 벗어나면 자동 저장 · 복사 버튼으로 자소서 작성 시 바로 활용</p>
+        <p className="text-text-tertiary text-xs mt-1.5">이력서·자소서 작성 시 한 번 쓰면 평생 재활용하는 데이터 창고예요</p>
+        <p className="text-text-quaternary text-[11px] mt-0.5">필드를 벗어나면 자동 저장 · 복사 버튼으로 자소서 작성 시 바로 활용</p>
+      </div>
+
+      <div className="mb-6 space-y-3">
+        <MyinfoProgressGauge />
+        <StorageUsageBar />
+      </div>
+
+      {/* 모바일 섹션 점프 칩 — lg 이상에서는 좌측 사이드바로 대체 */}
+      <div className="lg:hidden sticky top-12 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 bg-bg/95 backdrop-blur-sm border-b border-white/5 mb-4">
+        <div
+          className="flex gap-1.5 overflow-x-auto py-2"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {SECTIONS.map((s) => {
+            const isActive = activeSection === s.id
+            const status = progressSections.find((p) => p.id === s.id)
+            return (
+              <button
+                key={s.id}
+                ref={(el) => { tabRefs.current[s.id] = el }}
+                onClick={() => scrollTo(s.id)}
+                className={`flex-none flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all duration-150 border
+                  ${isActive
+                    ? 'bg-brand/15 text-brand border-brand/30'
+                    : 'bg-white/[0.03] text-text-quaternary border-white/8 hover:text-text-secondary hover:bg-white/[0.06]'
+                  }`}
+              >
+                <span>{s.icon}</span>
+                <span>{s.label}</span>
+                {status && status.active && (
+                  status.kind === 'multi'
+                    ? <span className={`text-[10px] font-mono tabular-nums ${status.count > 0 ? 'text-brand/70' : 'text-text-quaternary/50'}`}>({status.count})</span>
+                    : status.filled
+                      ? <span className="text-success text-[10px]">✓</span>
+                      : null
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div className="flex gap-8">
@@ -283,9 +372,17 @@ export function MyInfo() {
             {SECTIONS.map((s) => {
               const ac = ACCENT_STYLE[s.accent as keyof typeof ACCENT_STYLE]
               const isActive = activeSection === s.id
+              const status = progressSections.find((p) => p.id === s.id)
+              const isFirstExcluded = s.id === 'exam-schedules'
               return (
+                <div key={s.id}>
+                  {isFirstExcluded && (
+                    <div className="my-2 px-3">
+                      <div className="h-px bg-white/8" />
+                      <p className="text-[10px] text-text-quaternary/70 font-medium uppercase tracking-wider mt-2">기타</p>
+                    </div>
+                  )}
                 <button
-                  key={s.id}
                   onClick={() => scrollTo(s.id)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150
                     ${isActive
@@ -294,25 +391,34 @@ export function MyInfo() {
                     }`}
                 >
                   <span className={`w-6 h-6 rounded-md flex items-center justify-center text-sm flex-none transition-colors ${isActive ? ac.icon : 'bg-white/6 opacity-70'}`}>{s.icon}</span>
-                  <span className="text-[11px] font-medium truncate">{s.label}</span>
+                  <span className="text-[11px] font-medium truncate flex-1">{s.label}</span>
+                  {status && status.active && (
+                    status.kind === 'multi'
+                      ? <span className={`text-[10px] font-mono tabular-nums flex-none ${status.count > 0 ? 'text-brand' : 'text-text-quaternary/70'}`}>({status.count})</span>
+                      : status.filled
+                        ? <span className="text-success text-[10px] flex-none" aria-label="채움 완료">✓</span>
+                        : <span className="text-text-quaternary/70 text-[10px] flex-none" aria-label="미입력">○</span>
+                  )}
                 </button>
+                </div>
               )
             })}
           </nav>
         </aside>
 
-        {/* 우측 섹션들 */}
+        {/* 우측 섹션들 — SECTIONS 배열 순서와 동일 */}
         <div className="flex-1 space-y-5 min-w-0">
-          <ProfileSection     sectionRef={(el) => { sectionRefs.current['profile'] = el }}        isActive={activeSection === 'profile'} />
-          <MilitarySection    sectionRef={(el) => { sectionRefs.current['military'] = el }}       isActive={activeSection === 'military'} />
-          <LangCertsSection   sectionRef={(el) => { sectionRefs.current['language-certs'] = el }} isActive={activeSection === 'language-certs'} />
-          <CertsSection       sectionRef={(el) => { sectionRefs.current['certs'] = el }}          isActive={activeSection === 'certs'} />
-          <ExamSchedulesSection sectionRef={(el) => { sectionRefs.current['exam-schedules'] = el }} isActive={activeSection === 'exam-schedules'} />
-          <AwardsSection      sectionRef={(el) => { sectionRefs.current['awards'] = el }}         isActive={activeSection === 'awards'} />
-          <ExperiencesSection sectionRef={(el) => { sectionRefs.current['experiences'] = el }}    isActive={activeSection === 'experiences'} />
-          <GoalsSection       sectionRef={(el) => { sectionRefs.current['goals'] = el }}          isActive={activeSection === 'goals'} />
-          <CoverletterSection sectionRef={(el) => { sectionRefs.current['coverletter'] = el }}    isActive={activeSection === 'coverletter'} />
-          <FilesSection       sectionRef={(el) => { sectionRefs.current['files'] = el }}           isActive={activeSection === 'files'} />
+          <ProfileSection       sectionRef={(el) => { sectionRefs.current['profile'] = el }}          isActive={activeSection === 'profile'} />
+          <EducationsSection    sectionRef={(el) => { sectionRefs.current['education'] = el }}        isActive={activeSection === 'education'} />
+          <MilitarySection      sectionRef={(el) => { sectionRefs.current['military'] = el }}         isActive={activeSection === 'military'} />
+          <CoverletterSection   sectionRef={(el) => { sectionRefs.current['coverletter'] = el }}      isActive={activeSection === 'coverletter'} />
+          <ExperiencesSection   sectionRef={(el) => { sectionRefs.current['experiences'] = el }}      isActive={activeSection === 'experiences'} />
+          <AwardsSection        sectionRef={(el) => { sectionRefs.current['awards'] = el }}           isActive={activeSection === 'awards'} />
+          <LangCertsSection     sectionRef={(el) => { sectionRefs.current['language-certs'] = el }}   isActive={activeSection === 'language-certs'} />
+          <CertsSection         sectionRef={(el) => { sectionRefs.current['certs'] = el }}            isActive={activeSection === 'certs'} />
+          <ExamSchedulesSection sectionRef={(el) => { sectionRefs.current['exam-schedules'] = el }}   isActive={activeSection === 'exam-schedules'} />
+          <GoalsSection         sectionRef={(el) => { sectionRefs.current['goals'] = el }}            isActive={activeSection === 'goals'} />
+          <FilesSection         sectionRef={(el) => { sectionRefs.current['files'] = el }}            isActive={activeSection === 'files'} />
         </div>
       </div>
     </div>
@@ -339,11 +445,11 @@ function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement
   }
 
   const save = (key: string, val: string) =>
-    update({ [key]: val || null } as any, { onSuccess: show })
+    update({ [key]: val || null } as Partial<UserProfile>, { onSuccess: show })
 
   return (
     <SectionCard id="profile" sectionRef={sectionRef} saved={saved} isActive={isActive}>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <Field label="이름" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} onBlur={() => save('name', form.name)} placeholder="홍길동" copyable />
         <Field label="이름 (한자)" value={form.name_hanja} onChange={(v) => setForm(f => ({ ...f, name_hanja: v }))} onBlur={() => save('name_hanja', form.name_hanja)} placeholder="洪吉童" copyable />
         <SelectField label="성별" value={form.gender} onChange={(v) => { setForm(f => ({ ...f, gender: v })); save('gender', v) }} options={['MALE', 'FEMALE']} />
@@ -374,7 +480,7 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
   }
 
   const isMale = profile?.gender === 'MALE'
-  const save = (key: string, val: string) => update({ [key]: val || null } as any, { onSuccess: show })
+  const save = (key: string, val: string) => update({ [key]: val || null } as Partial<UserProfile>, { onSuccess: show })
 
   return (
     <SectionCard id="military" sectionRef={sectionRef} saved={saved} isActive={isActive}>
@@ -386,7 +492,7 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
           </div>
         )
         : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <SelectField label="군별" value={form.military_branch} onChange={(v) => { setForm(f => ({ ...f, military_branch: v })); save('military_branch', v) }} options={MILITARY_BRANCHES} />
             <SelectField label="전역 구분" value={form.military_type} onChange={(v) => { setForm(f => ({ ...f, military_type: v })); save('military_type', v) }} options={MILITARY_TYPES} />
             <Field label="입대일" type="date" value={form.military_start} onChange={(v) => setForm(f => ({ ...f, military_start: v }))} onBlur={() => save('military_start', form.military_start)} />
@@ -401,26 +507,48 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
 
 // ── 어학 자격증 ───────────────────────────────────────────
 function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [] } = useLangCerts()
-  const { mutate: create } = useCreateLangCert()
-  const { mutate: update } = useUpdateLangCert()
+  const { data: items = [], isLoading } = useLangCerts()
+  const { mutateAsync: create } = useCreateLangCert()
+  const { mutateAsync: update } = useUpdateLangCert()
   const { mutate: remove } = useDeleteLangCert()
   const [modal, setModal] = useState<null | 'add' | LanguageCert>(null)
   const [deleteTarget, setDeleteTarget] = useState<LanguageCert | null>(null)
-  const emptyForm = { cert_type: '', score_grade: '', issuer: '', cert_number: '', acquired_at: '', expires_at: '', file_url: '' }
+  const emptyForm = { cert_type: '', score_grade: '', issuer: '', cert_number: '', acquired_at: '', expires_at: '' }
   const [form, setForm] = useState(emptyForm)
+  const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
+  const [saving, setSaving] = useState(false)
 
-  const openAdd = () => { setForm(emptyForm); setModal('add') }
-  const openEdit = (item: LanguageCert) => { setForm({ cert_type: item.cert_type, score_grade: item.score_grade ?? '', issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
-  const handleSave = () => {
-    const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as any, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
+  const openAdd = () => { setForm(emptyForm); setSlot(EMPTY_SLOT); setModal('add') }
+  const openEdit = (item: LanguageCert) => {
+    setForm({ cert_type: item.cert_type, score_grade: item.score_grade ?? '', issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '' })
+    setSlot(slotFromExisting(item.file_url, item.file_size_bytes))
+    setModal(item)
+  }
+  const handleSave = async () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      const fileFields = await resolveFileForSubmit(slot, 'myinfo/language-cert')
+      const dto = { ...form, ...fileFields }
+      if (modal === 'add') await create(dto as Omit<LanguageCert, 'id'>)
+      else if (modal && typeof modal === 'object') await update({ id: modal.id, dto: dto as Partial<LanguageCert> })
+      setModal(null)
+    } catch (err) {
+      notifySaveError(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <SectionCard id="language-certs" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+        ))}
+        {!isLoading && items.length === 0 && (
+          <p className="text-text-quaternary text-xs text-center py-4">등록된 어학 자격증이 없어요. <br /><span className="text-text-quaternary/60">TOEIC, OPIC 등 취득한 어학 성적을 추가해보세요.</span></p>
+        )}
         {items.map((item) => (
           <ExpandableItem
             key={item.id}
@@ -447,14 +575,14 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
         <AddButton onClick={openAdd} label="어학 자격증 추가" />
       </div>
       {modal && (
-        <Modal title={modal === 'add' ? '어학 자격증 추가' : '어학 자격증 편집'} onClose={() => setModal(null)} onSave={handleSave}>
-          <SelectField label="종류" value={form.cert_type} onChange={(v) => setForm(f => ({ ...f, cert_type: v }))} options={LANG_CERT_TYPES} />
+        <Modal title={modal === 'add' ? '어학 자격증 추가' : '어학 자격증 편집'} onClose={() => setModal(null)} onSave={handleSave} saving={saving}>
+          <SelectField label="종류" value={form.cert_type} onChange={(v) => setForm(f => ({ ...f, cert_type: v }))} options={LANG_CERT_TYPES} required />
           <Field label="점수·등급" value={form.score_grade} onChange={(v) => setForm(f => ({ ...f, score_grade: v }))} placeholder="990 / 1+" />
           <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder="ETS" />
           <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
           <Field label="취득일" type="date" value={form.acquired_at} onChange={(v) => setForm(f => ({ ...f, acquired_at: v }))} />
           <Field label="만료일" type="date" value={form.expires_at} onChange={(v) => setForm(f => ({ ...f, expires_at: v }))} />
-          <FileUpload value={form.file_url} scope="myinfo/language-cert" onUploaded={(url) => setForm(f => ({ ...f, file_url: url }))} onRemove={() => setForm(f => ({ ...f, file_url: '' }))} />
+          <FileUpload slot={slot} scope="myinfo/language-cert" onChange={setSlot} hint="예: 점수증명서, 성적표" disabled={saving} />
         </Modal>
       )}
       {deleteTarget && <DeleteModal label={deleteTarget.cert_type} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
@@ -464,26 +592,48 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
 
 // ── 자격증 ────────────────────────────────────────────────
 function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [] } = useCerts()
-  const { mutate: create } = useCreateCert()
-  const { mutate: update } = useUpdateCert()
+  const { data: items = [], isLoading } = useCerts()
+  const { mutateAsync: create } = useCreateCert()
+  const { mutateAsync: update } = useUpdateCert()
   const { mutate: remove } = useDeleteCert()
   const [modal, setModal] = useState<null | 'add' | Cert>(null)
   const [deleteTarget, setDeleteTarget] = useState<Cert | null>(null)
-  const emptyForm = { name: '', issuer: '', cert_number: '', acquired_at: '', expires_at: '', file_url: '' }
+  const emptyForm = { name: '', issuer: '', cert_number: '', acquired_at: '', expires_at: '' }
   const [form, setForm] = useState(emptyForm)
+  const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
+  const [saving, setSaving] = useState(false)
 
-  const openAdd = () => { setForm(emptyForm); setModal('add') }
-  const openEdit = (item: Cert) => { setForm({ name: item.name, issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '', file_url: item.file_url ?? '' }); setModal(item) }
-  const handleSave = () => {
-    const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as any, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
+  const openAdd = () => { setForm(emptyForm); setSlot(EMPTY_SLOT); setModal('add') }
+  const openEdit = (item: Cert) => {
+    setForm({ name: item.name, issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '' })
+    setSlot(slotFromExisting(item.file_url, item.file_size_bytes))
+    setModal(item)
+  }
+  const handleSave = async () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      const fileFields = await resolveFileForSubmit(slot, 'myinfo/cert')
+      const dto = { ...form, ...fileFields }
+      if (modal === 'add') await create(dto as Omit<Cert, 'id'>)
+      else if (modal && typeof modal === 'object') await update({ id: modal.id, dto: dto as Partial<Cert> })
+      setModal(null)
+    } catch (err) {
+      notifySaveError(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <SectionCard id="certs" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+        ))}
+        {!isLoading && items.length === 0 && (
+          <p className="text-text-quaternary text-xs text-center py-4">등록된 자격증이 없어요. <br /><span className="text-text-quaternary/60">정보처리기사, 운전면허 등 취득한 자격증을 추가해보세요.</span></p>
+        )}
         {items.map((item) => (
           <ExpandableItem key={item.id} title={item.name} subtitle={[item.issuer, item.acquired_at].filter(Boolean).join(' · ')} badge={item.file_url ? '파일첨부' : undefined} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
             <DetailRow label="자격증명" value={item.name} />
@@ -502,13 +652,13 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
         <AddButton onClick={openAdd} label="자격증 추가" />
       </div>
       {modal && (
-        <Modal title={modal === 'add' ? '자격증 추가' : '자격증 편집'} onClose={() => setModal(null)} onSave={handleSave}>
-          <Field label="자격증명" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="정보처리기사" />
+        <Modal title={modal === 'add' ? '자격증 추가' : '자격증 편집'} onClose={() => setModal(null)} onSave={handleSave} saving={saving}>
+          <Field label="자격증명" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="정보처리기사" required />
           <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder="한국산업인력공단" />
           <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
           <Field label="취득일" type="date" value={form.acquired_at} onChange={(v) => setForm(f => ({ ...f, acquired_at: v }))} />
           <Field label="만료일" type="date" value={form.expires_at} onChange={(v) => setForm(f => ({ ...f, expires_at: v }))} />
-          <FileUpload value={form.file_url} scope="myinfo/cert" onUploaded={(url) => setForm(f => ({ ...f, file_url: url }))} onRemove={() => setForm(f => ({ ...f, file_url: '' }))} />
+          <FileUpload slot={slot} scope="myinfo/cert" onChange={setSlot} hint="예: 자격증, 합격증" disabled={saving} />
         </Modal>
       )}
       {deleteTarget && <DeleteModal label={deleteTarget.name} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
@@ -543,7 +693,7 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
           const isPassed = dday < 0
           const variant = getDdayVariant(dday)
           return (
-            <div key={item.id} className="bg-surface-2 border border-white/8 rounded-lg p-3">
+            <div key={item.id} className="bg-white/[0.02] border border-white/8 rounded-lg p-3">
               <div className="flex items-start gap-3">
                 <div className="flex-none w-9 h-9 rounded-lg bg-violet/15 text-violet flex items-center justify-center text-base">📚</div>
                 <div className="flex-1 min-w-0">
@@ -604,28 +754,307 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
   )
 }
 
+// ── 학력 ──────────────────────────────────────────────────
+const EDUCATION_DEGREES = ['고등학교', '전문대', '대학교 (학사)', '대학원 (석사)', '대학원 (박사)', '기타']
+const EDUCATION_STATUSES = ['재학중', '졸업', '졸업예정', '휴학', '수료', '편입', '중퇴']
+const MINOR_TYPES = ['복수전공', '부전공', '이중전공', '연계전공', '심화전공']
+
+function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+  const { data: items = [], isLoading } = useEducations()
+  const { mutate: create } = useCreateEducation()
+  const { saved, show } = useSaved()
+  const initialized = useRef(false)
+
+  // 진입 시 학력 0개면 빈 row 1개 자동 생성 (한 번만)
+  useEffect(() => {
+    if (initialized.current || isLoading) return
+    initialized.current = true
+    if (items.length === 0) {
+      create({ school_name: '', degree: '대학교 (학사)', status: '재학중' } as Omit<Education, 'id'>)
+    }
+  }, [isLoading, items.length, create])
+
+  const handleAdd = () => {
+    create({ school_name: '', degree: '대학교 (학사)', status: '재학중' } as Omit<Education, 'id'>, {
+      onError: () => toast.error('학력 추가에 실패했어요.'),
+    })
+  }
+
+  return (
+    <SectionCard id="education" sectionRef={sectionRef} saved={saved} isActive={isActive}>
+      <div className="space-y-4">
+        {items.map((item) => (
+          <EducationItem key={item.id} item={item} onSaved={show} />
+        ))}
+        <AddButton onClick={handleAdd} label="학력 추가" />
+      </div>
+    </SectionCard>
+  )
+}
+
+function EducationItem({ item, onSaved }: { item: Education; onSaved: () => void }) {
+  const { mutate: update } = useUpdateEducation()
+  const { mutate: remove } = useDeleteEducation()
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [form, setForm] = useState({
+    school_name: item.school_name ?? '',
+    major:       item.major ?? '',
+    gpa:         item.gpa ?? '',
+    gpa_max:     item.gpa_max ?? '',
+    start_at:    item.start_at ?? '',
+    end_at:      item.end_at ?? '',
+    location:    item.location ?? '',
+  })
+
+  // Education은 인라인 자동저장 — pending file은 별도 state로 추적, item에서 existing 파생.
+  // file이 업로드 끝나면 setPendingFile(null) → derive로 fallback.
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const slot: FileSlot = pendingFile
+    ? { kind: 'pending', file: pendingFile }
+    : slotFromExisting(item.file_url, item.file_size_bytes)
+
+  const save = (
+    key: keyof Education,
+    value: string | number | EducationMinor[] | null,
+  ) => {
+    update({ id: item.id, dto: { [key]: value } as Partial<Education> }, {
+      onSuccess: onSaved,
+      onError: () => toast.error('저장에 실패했어요.'),
+    })
+  }
+
+  const minors = item.minors ?? []
+  const addMinor = (m: EducationMinor) => {
+    if (!m.name.trim()) return
+    save('minors', [...minors, m])
+  }
+  const removeMinor = (idx: number) => {
+    save('minors', minors.filter((_, i) => i !== idx))
+  }
+
+  return (
+    <div className="bg-white/[0.02] border border-white/8 rounded-xl p-4 relative">
+      <button
+        onClick={() => setDeleteOpen(true)}
+        aria-label="학력 삭제"
+        className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-danger hover:bg-danger/8 transition-colors"
+      >
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+      </button>
+
+      <div className="space-y-3 pr-8">
+        <Field label="학교명" value={form.school_name} onChange={(v) => setForm(f => ({ ...f, school_name: v }))} onBlur={() => save('school_name', form.school_name)} placeholder="예: 서울대학교 / ○○고등학교" span required />
+        <SelectField label="학교 단계" value={item.degree ?? ''} onChange={(v) => save('degree', v)} options={EDUCATION_DEGREES} />
+        <SelectField label="상태" value={item.status ?? ''} onChange={(v) => save('status', v)} options={EDUCATION_STATUSES} />
+        <Field label="전공" value={form.major} onChange={(v) => setForm(f => ({ ...f, major: v }))} onBlur={() => save('major', form.major)} placeholder="예: 컴퓨터공학" />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="학점" value={form.gpa} onChange={(v) => setForm(f => ({ ...f, gpa: v }))} onBlur={() => save('gpa', form.gpa)} placeholder="예: 3.8" />
+          <Field label="만점" value={form.gpa_max} onChange={(v) => setForm(f => ({ ...f, gpa_max: v }))} onBlur={() => save('gpa_max', form.gpa_max)} placeholder="예: 4.5" />
+        </div>
+        <Field label="입학일" type="date" value={form.start_at} onChange={(v) => setForm(f => ({ ...f, start_at: v }))} onBlur={() => save('start_at', form.start_at)} />
+        <Field label="졸업/예정일" type="date" value={form.end_at} onChange={(v) => setForm(f => ({ ...f, end_at: v }))} onBlur={() => save('end_at', form.end_at)} />
+        <Field label="위치" value={form.location} onChange={(v) => setForm(f => ({ ...f, location: v }))} onBlur={() => save('location', form.location)} placeholder="선택 입력" span />
+      </div>
+
+      {/* 복수·부전공 영역 */}
+      <div className="mt-4 pt-4 border-t border-white/6">
+        <p className="text-[11px] text-text-tertiary font-medium mb-2">복수·부전공</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {minors.map((m, idx) => (
+            <span key={idx} className="inline-flex items-center gap-1.5 text-[11px] bg-white/5 border border-white/8 rounded-full pl-2.5 pr-1 py-1">
+              <span className="text-text-quaternary">{m.type}</span>
+              <span className="text-text-secondary">·</span>
+              <span className="text-text-primary">{m.name}</span>
+              {m.gpa && (
+                <>
+                  <span className="text-text-secondary">·</span>
+                  <span className="text-text-tertiary font-mono tabular-nums">
+                    {m.gpa}{m.gpa_max ? `/${m.gpa_max}` : ''}
+                  </span>
+                </>
+              )}
+              <button
+                onClick={() => removeMinor(idx)}
+                aria-label="제거"
+                className="w-5 h-5 flex items-center justify-center rounded-full text-text-quaternary hover:text-danger hover:bg-danger/10 transition-colors"
+              >
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1l6 6M7 1L1 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+              </button>
+            </span>
+          ))}
+          <MinorAddChip onAdd={addMinor} />
+        </div>
+      </div>
+
+      {/* 파일 첨부 — 인라인 자동저장: pending 즉시 업로드 + save */}
+      <div className="mt-4 pt-4 border-t border-white/6">
+        <FileUpload
+          slot={slot}
+          scope="myinfo/education"
+          onChange={(newSlot) => {
+            if (newSlot.kind === 'pending') {
+              setPendingFile(newSlot.file)
+              void (async () => {
+                try {
+                  const { file_url, file_size_bytes } = await resolveFileForSubmit(newSlot, 'myinfo/education')
+                  save('file_url', file_url)
+                  save('file_size_bytes', file_size_bytes)
+                } catch {
+                  toast.error('파일 업로드에 실패했어요.')
+                } finally {
+                  setPendingFile(null)
+                }
+              })()
+            } else if (newSlot.kind === 'empty') {
+              setPendingFile(null)
+              save('file_url', null)
+              save('file_size_bytes', null)
+            }
+          }}
+          hint="예: 졸업증명서, 성적증명서, 재학증명서, 학위증명서"
+        />
+      </div>
+
+      {deleteOpen && (
+        <DeleteModal
+          label={item.school_name || '학력'}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={() => { remove(item.id); setDeleteOpen(false) }}
+        />
+      )}
+    </div>
+  )
+}
+
+function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
+  const [open, setOpen] = useState(false)
+  const [type, setType] = useState(MINOR_TYPES[0])
+  const [name, setName] = useState('')
+  const [gpa, setGpa] = useState('')
+  const [gpaMax, setGpaMax] = useState('')
+
+  const reset = () => { setName(''); setGpa(''); setGpaMax(''); setOpen(false) }
+  const submit = () => {
+    if (!name.trim()) return
+    onAdd({
+      type,
+      name: name.trim(),
+      gpa: gpa.trim() || undefined,
+      gpa_max: gpaMax.trim() || undefined,
+    })
+    reset()
+  }
+  const handleEnter = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit()
+    if (e.key === 'Escape') reset()
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 text-[11px] text-text-quaternary hover:text-text-secondary bg-white/3 hover:bg-white/6 border border-white/8 border-dashed rounded-full px-2.5 py-1 transition-colors"
+      >
+        <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 1.5v6M1.5 4.5h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+        추가
+      </button>
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 bg-white/[0.02] border border-white/10 rounded-lg px-2 py-1.5 w-full sm:w-auto">
+      <select
+        value={type}
+        onChange={(e) => setType(e.target.value)}
+        className="text-[11px] bg-white/5 hover:bg-white/8 text-text-secondary px-2 py-1 rounded-md focus:outline-none focus:bg-white/8 transition-colors"
+      >
+        {MINOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+      </select>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={handleEnter}
+        autoFocus
+        placeholder="전공명"
+        className="text-[11px] bg-white/5 text-text-primary placeholder:text-text-quaternary outline-none w-24 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-white/8 transition-colors"
+      />
+      <span className="text-text-quaternary text-[10px]">·</span>
+      <input
+        value={gpa}
+        onChange={(e) => setGpa(e.target.value)}
+        onKeyDown={handleEnter}
+        placeholder="학점"
+        className="text-[11px] bg-white/5 text-text-primary placeholder:text-text-quaternary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-white/8 transition-colors font-mono tabular-nums"
+      />
+      <span className="text-text-quaternary text-[10px]">/</span>
+      <input
+        value={gpaMax}
+        onChange={(e) => setGpaMax(e.target.value)}
+        onKeyDown={handleEnter}
+        placeholder="만점"
+        className="text-[11px] bg-white/5 text-text-primary placeholder:text-text-quaternary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-white/8 transition-colors font-mono tabular-nums"
+      />
+      <button
+        onClick={submit}
+        aria-label="추가"
+        className="w-7 h-7 flex items-center justify-center rounded-full text-brand hover:bg-brand/15 transition-colors ml-auto"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      <button
+        onClick={reset}
+        aria-label="취소"
+        className="w-7 h-7 flex items-center justify-center rounded-full text-text-quaternary hover:text-text-secondary transition-colors"
+      >
+        <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 1l7 7M8 1L1 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+      </button>
+    </div>
+  )
+}
+
 // ── 수상 내역 ─────────────────────────────────────────────
 function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [] } = useAwards()
-  const { mutate: create } = useCreateAward()
-  const { mutate: update } = useUpdateAward()
+  const { data: items = [], isLoading } = useAwards()
+  const { mutateAsync: create } = useCreateAward()
+  const { mutateAsync: update } = useUpdateAward()
   const { mutate: remove } = useDeleteAward()
   const [modal, setModal] = useState<null | 'add' | Award>(null)
   const [deleteTarget, setDeleteTarget] = useState<Award | null>(null)
-  const emptyForm = { contest_name: '', award_name: '', org: '', awarded_at: '', content: '', file_url: '' }
+  const emptyForm = { contest_name: '', award_name: '', org: '', awarded_at: '', content: '' }
   const [form, setForm] = useState(emptyForm)
+  const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
+  const [saving, setSaving] = useState(false)
 
-  const openAdd = () => { setForm(emptyForm); setModal('add') }
-  const openEdit = (item: Award) => { setForm({ contest_name: item.contest_name, award_name: item.award_name ?? '', org: item.org ?? '', awarded_at: item.awarded_at ?? '', content: item.content ?? '', file_url: item.file_url ?? '' }); setModal(item) }
-  const handleSave = () => {
-    const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as any, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
+  const openAdd = () => { setForm(emptyForm); setSlot(EMPTY_SLOT); setModal('add') }
+  const openEdit = (item: Award) => {
+    setForm({ contest_name: item.contest_name, award_name: item.award_name ?? '', org: item.org ?? '', awarded_at: item.awarded_at ?? '', content: item.content ?? '' })
+    setSlot(slotFromExisting(item.file_url, item.file_size_bytes))
+    setModal(item)
+  }
+  const handleSave = async () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      const fileFields = await resolveFileForSubmit(slot, 'myinfo/award')
+      const dto = { ...form, ...fileFields }
+      if (modal === 'add') await create(dto as Omit<Award, 'id'>)
+      else if (modal && typeof modal === 'object') await update({ id: modal.id, dto: dto as Partial<Award> })
+      setModal(null)
+    } catch (err) {
+      notifySaveError(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <SectionCard id="awards" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+        ))}
+        {!isLoading && items.length === 0 && (
+          <p className="text-text-quaternary text-xs text-center py-4">등록된 수상 내역이 없어요. <br /><span className="text-text-quaternary/60">공모전, 교내 대회 수상 이력을 추가해보세요.</span></p>
+        )}
         {items.map((item) => (
           <ExpandableItem key={item.id} title={item.contest_name} subtitle={[item.award_name, item.awarded_at].filter(Boolean).join(' · ')} badge={item.file_url ? '파일첨부' : undefined} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
             <DetailRow label="대회명" value={item.contest_name} />
@@ -644,13 +1073,13 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
         <AddButton onClick={openAdd} label="수상 내역 추가" />
       </div>
       {modal && (
-        <Modal title={modal === 'add' ? '수상 내역 추가' : '수상 내역 편집'} onClose={() => setModal(null)} onSave={handleSave}>
-          <Field label="대회명" value={form.contest_name} onChange={(v) => setForm(f => ({ ...f, contest_name: v }))} placeholder="교내 프로그래밍 대회" />
+        <Modal title={modal === 'add' ? '수상 내역 추가' : '수상 내역 편집'} onClose={() => setModal(null)} onSave={handleSave} saving={saving}>
+          <Field label="대회명" value={form.contest_name} onChange={(v) => setForm(f => ({ ...f, contest_name: v }))} placeholder="교내 프로그래밍 대회" required />
           <Field label="수상명" value={form.award_name} onChange={(v) => setForm(f => ({ ...f, award_name: v }))} placeholder="대상" />
           <Field label="수여기관" value={form.org} onChange={(v) => setForm(f => ({ ...f, org: v }))} />
           <Field label="수상일자" type="date" value={form.awarded_at} onChange={(v) => setForm(f => ({ ...f, awarded_at: v }))} />
           <Field label="수상내용 (200자)" value={form.content} onChange={(v) => setForm(f => ({ ...f, content: v }))} maxLength={200} as="textarea" placeholder="수상 내용을 간략히 적어주세요" />
-          <FileUpload value={form.file_url} scope="myinfo/award" onUploaded={(url) => setForm(f => ({ ...f, file_url: url }))} onRemove={() => setForm(f => ({ ...f, file_url: '' }))} />
+          <FileUpload slot={slot} scope="myinfo/award" onChange={setSlot} hint="예: 상장, 수상 증서" disabled={saving} />
         </Modal>
       )}
       {deleteTarget && <DeleteModal label={deleteTarget.contest_name} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
@@ -660,7 +1089,7 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
 
 // ── 경험 ──────────────────────────────────────────────────
 function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [] } = useExperiences()
+  const { data: items = [], isLoading } = useExperiences()
   const { mutate: create } = useCreateExperience()
   const { mutate: update } = useUpdateExperience()
   const { mutate: remove } = useDeleteExperience()
@@ -673,13 +1102,19 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   const openEdit = (item: Experience) => { setForm({ activity_name: item.activity_name, org: item.org ?? '', start_at: item.start_at ?? '', end_at: item.end_at ?? '', content: item.content ?? '' }); setModal(item) }
   const handleSave = () => {
     const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as any, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as any }, cb)
+    if (modal === 'add') create(form as Omit<Experience, 'id'>, cb)
+    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as Partial<Experience> }, cb)
   }
 
   return (
     <SectionCard id="experiences" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+        ))}
+        {!isLoading && items.length === 0 && (
+          <p className="text-text-quaternary text-xs text-center py-4">등록된 경험이 없어요. <br /><span className="text-text-quaternary/60">동아리, 인턴, 봉사활동 등 다양한 활동을 추가해보세요.</span></p>
+        )}
         {items.map((item) => (
           <ExpandableItem key={item.id} title={item.activity_name} subtitle={[item.org, item.start_at ? `${item.start_at.slice(0, 7)} ~` : ''].filter(Boolean).join(' · ')} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
             <DetailRow label="활동명" value={item.activity_name} />
@@ -692,7 +1127,7 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
       </div>
       {modal && (
         <Modal title={modal === 'add' ? '경험 추가' : '경험 편집'} onClose={() => setModal(null)} onSave={handleSave}>
-          <Field label="활동명" value={form.activity_name} onChange={(v) => setForm(f => ({ ...f, activity_name: v }))} placeholder="교내 개발 동아리" />
+          <Field label="활동명" value={form.activity_name} onChange={(v) => setForm(f => ({ ...f, activity_name: v }))} placeholder="교내 개발 동아리" required />
           <Field label="활동기관" value={form.org} onChange={(v) => setForm(f => ({ ...f, org: v }))} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="시작일" type="date" value={form.start_at} onChange={(v) => setForm(f => ({ ...f, start_at: v }))} />
@@ -724,7 +1159,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   }
 
   const persist = (list: string[]) => {
-    update({ goal_other: list.join('\n') } as any, { onSuccess: show })
+    update({ goal_other: list.join('\n') } as Partial<UserProfile>, { onSuccess: show })
   }
 
   const addGoal = () => {
@@ -752,7 +1187,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           <div key={i} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02]">
             <span className="w-1.5 h-1.5 rounded-full bg-danger/60 flex-none mt-px" />
             <span className="flex-1 text-xs text-text-primary">{goal}</span>
-            <button onClick={() => removeGoal(i)} className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger">
+            <button onClick={() => removeGoal(i)} className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger w-7 h-7 flex items-center justify-center rounded">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
             </button>
           </div>
@@ -779,12 +1214,12 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
 
 // ── 자기소개서 소재 ────────────────────────────────────────
 const COVER_FIELDS: { key: keyof import('@/api/myinfo').Coverletter; label: string; placeholder: string }[] = [
-  { key: 'personality_strength', label: '성격 장점', placeholder: '나의 성격 장점을 구체적인 사례와 함께...' },
-  { key: 'personality_weakness', label: '성격 단점', placeholder: '단점과 함께 극복 노력을...' },
-  { key: 'background', label: '성장 배경', placeholder: '나를 형성한 경험이나 환경...' },
-  { key: 'job_competency', label: '직무 역량·핵심 경험', placeholder: '지원 직무와 연결되는 핵심 역량...' },
-  { key: 'aspiration', label: '입사 후 포부', placeholder: '입사 후 이루고 싶은 목표...' },
+  { key: 'personality', label: '성격 장단점', placeholder: '성격의 장점과 단점, 단점을 극복하려는 노력을 사례와 함께...' },
+  { key: 'background', label: '성장 배경', placeholder: '나를 형성한 경험이나 환경, 가치관에 영향을 준 사건...' },
+  { key: 'job_competency', label: '직무 역량·핵심 경험', placeholder: '지원 직무와 연결되는 핵심 역량과 그것을 보여주는 경험...' },
   { key: 'own_strength', label: '나만의 강점', placeholder: '다른 지원자와 차별화되는 나만의 강점...' },
+  { key: 'collaboration', label: '갈등 해결·협업 경험', placeholder: '팀에서 의견 충돌이나 갈등을 조율한 경험, 협업 과정에서의 역할...' },
+  { key: 'challenge', label: '도전·실패 경험', placeholder: '실패하거나 어려움을 겪었던 경험과 거기서 배운 점...' },
 ]
 
 function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
@@ -803,13 +1238,13 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
 
   if (data && !loaded) {
     const init: Record<string, string> = {}
-    COVER_FIELDS.forEach(({ key }) => { init[key] = (data.coverletter as any)?.[key] ?? '' })
+    COVER_FIELDS.forEach(({ key }) => { init[key] = (data.coverletter as Record<string, string | undefined> | null)?.[key] ?? '' })
     setClForm(init)
     setLoaded(true)
   }
 
   const saveCover = (key: string, val: string) =>
-    updateCover({ [key]: val || null } as any, { onSuccess: show })
+    updateCover({ [key]: val || null } as Partial<Coverletter>, { onSuccess: show })
 
   const handleAddCustom = () => {
     if (!newLabel.trim()) return
@@ -820,24 +1255,28 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   return (
     <SectionCard id="coverletter" sectionRef={sectionRef} saved={saved} isActive={isActive}>
       <div className="space-y-5">
-        {COVER_FIELDS.map(({ key, label, placeholder }) => (
-          <div key={key}>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-text-secondary">{label}</label>
-              <CopyButton value={clForm[key]} />
+        {COVER_FIELDS.map(({ key, label, placeholder }) => {
+          const len = (clForm[key] ?? '').length
+          const counterColor = len >= 2000 ? 'text-danger' : len >= 1800 ? 'text-warning' : 'text-text-quaternary'
+          return (
+            <div key={key}>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-text-secondary">{label}</label>
+                <CopyButton value={clForm[key]} />
+              </div>
+              <textarea
+                value={clForm[key] ?? ''}
+                onChange={(e) => setClForm(f => ({ ...f, [key]: e.target.value }))}
+                onBlur={() => saveCover(key, clForm[key] ?? '')}
+                maxLength={2000}
+                rows={3}
+                placeholder={placeholder}
+                className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
+              />
+              <p className={`text-[10px] ${counterColor} text-right mt-1`}>{len} / 2000</p>
             </div>
-            <textarea
-              value={clForm[key] ?? ''}
-              onChange={(e) => setClForm(f => ({ ...f, [key]: e.target.value }))}
-              onBlur={() => saveCover(key, clForm[key] ?? '')}
-              maxLength={2000}
-              rows={3}
-              placeholder={placeholder}
-              className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
-            />
-            <p className="text-[10px] text-text-quaternary text-right mt-1">{(clForm[key] ?? '').length} / 2000</p>
-          </div>
-        ))}
+          )
+        })}
 
         {/* 커스텀 항목들 */}
         {(data?.custom ?? []).map((item) => (
@@ -877,13 +1316,14 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
 
 function CustomCoverItem({ item, onUpdate, onDelete }: { item: CoverletterCustom; onUpdate: (c: string) => void; onDelete: () => void }) {
   const [value, setValue] = useState(item.content ?? '')
+  const counterColor = value.length >= 2000 ? 'text-danger' : value.length >= 1800 ? 'text-warning' : 'text-text-quaternary'
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-semibold text-text-secondary">{item.label}</label>
         <div className="flex items-center gap-1">
           <CopyButton value={value} />
-          <button onClick={onDelete} className="w-7 h-7 flex items-center justify-center text-text-quaternary hover:text-danger rounded-md hover:bg-danger/8 transition-colors">
+          <button onClick={onDelete} className="w-8 h-8 flex items-center justify-center text-text-quaternary hover:text-danger rounded-md hover:bg-danger/8 transition-colors">
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
           </button>
         </div>
@@ -897,7 +1337,7 @@ function CustomCoverItem({ item, onUpdate, onDelete }: { item: CoverletterCustom
         placeholder={`${item.label}을 작성해보세요`}
         className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
       />
-      <p className="text-[10px] text-text-quaternary text-right mt-1">{value.length} / 2000</p>
+      <p className={`text-[10px] ${counterColor} text-right mt-1`}>{value.length} / 2000</p>
     </div>
   )
 }
@@ -905,40 +1345,92 @@ function CustomCoverItem({ item, onUpdate, onDelete }: { item: CoverletterCustom
 // ── 파일 보관함 ───────────────────────────────────────────
 const DOC_CATEGORIES = ['이력서', '포트폴리오', '성적증명서', '졸업증명서', '자기소개서', '기타(직접입력)']
 
+type ExistingFileSource = '학력' | '어학 자격증' | '자격증' | '수상 내역'
+interface ExistingFile {
+  id: string
+  label: string
+  source: ExistingFileSource
+  file_url: string
+  file_size_bytes: number | null
+}
+
+/** 바이트 → "1.2MB" / "340KB" 표시 */
+function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null || bytes <= 0) return ''
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`
+}
+
 function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
   const { data: langCerts = [] } = useLangCerts()
   const { data: certs = [] } = useCerts()
   const { data: awards = [] } = useAwards()
+  const { data: educations = [] } = useEducations()
   const { data: documents = [] } = useDocuments()
-  const { mutate: createDoc } = useCreateDocument()
+  const { mutateAsync: createDoc } = useCreateDocument()
   const { mutate: deleteDoc } = useDeleteDocument()
+  // 보관함 X 버튼은 "파일만" 비움 — 항목 row는 남김. file_url=''로 PATCH → 백엔드 EmptyToNull + R2 cascade.
+  const { mutate: updateEdu } = useUpdateEducation()
+  const { mutate: updateLangCert } = useUpdateLangCert()
+  const { mutate: updateCert } = useUpdateCert()
+  const { mutate: updateAward } = useUpdateAward()
 
   const [showUpload, setShowUpload] = useState(false)
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('')
   const [customCategory, setCustomCategory] = useState('')
-  const [fileUrl, setFileUrl] = useState('')
+  const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
+  const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<MyDocument | null>(null)
+  const [existingDeleteTarget, setExistingDeleteTarget] = useState<ExistingFile | null>(null)
 
   // 기존 섹션에서 올라간 파일 집계
-  const existingFiles = [
-    ...langCerts.filter(i => i.file_url).map(i => ({ label: i.cert_type, source: '어학 자격증', file_url: i.file_url! })),
-    ...certs.filter(i => i.file_url).map(i => ({ label: i.name, source: '자격증', file_url: i.file_url! })),
-    ...awards.filter(i => i.file_url).map(i => ({ label: i.contest_name, source: '수상 내역', file_url: i.file_url! })),
+  const existingFiles: ExistingFile[] = [
+    ...educations.filter(i => i.file_url).map((i): ExistingFile => ({ id: i.id, label: i.school_name, source: '학력', file_url: i.file_url!, file_size_bytes: i.file_size_bytes ?? null })),
+    ...langCerts.filter(i => i.file_url).map((i): ExistingFile => ({ id: i.id, label: i.cert_type, source: '어학 자격증', file_url: i.file_url!, file_size_bytes: i.file_size_bytes ?? null })),
+    ...certs.filter(i => i.file_url).map((i): ExistingFile => ({ id: i.id, label: i.name, source: '자격증', file_url: i.file_url!, file_size_bytes: i.file_size_bytes ?? null })),
+    ...awards.filter(i => i.file_url).map((i): ExistingFile => ({ id: i.id, label: i.contest_name, source: '수상 내역', file_url: i.file_url!, file_size_bytes: i.file_size_bytes ?? null })),
   ]
 
+  // 보관함에서 X 버튼 = "파일만" 제거 (utils/myinfoFileActions에서 단위 테스트됨)
+  const updaters = {
+    updateEducation: updateEdu as never,
+    updateLangCert: updateLangCert as never,
+    updateCert: updateCert as never,
+    updateAward: updateAward as never,
+  }
+
   const SOURCE_STYLE: Record<string, string> = {
+    '학력':       'bg-success/12 text-success',
     '어학 자격증': 'bg-success/12 text-success',
     '자격증':     'bg-brand/12 text-brand',
     '수상 내역':   'bg-warning/12 text-warning',
   }
 
-  const handleSave = () => {
-    if (!title.trim() || !fileUrl) return
-    const finalCategory = category === '기타(직접입력)' ? customCategory.trim() : category
-    createDoc({ title: title.trim(), category: finalCategory || undefined, file_url: fileUrl })
-    setShowUpload(false)
-    setTitle(''); setCategory(''); setCustomCategory(''); setFileUrl('')
+  const handleSave = async () => {
+    if (!title.trim() || slot.kind === 'empty' || saving) return
+    setSaving(true)
+    try {
+      const { file_url, file_size_bytes } = await resolveFileForSubmit(slot, 'myinfo/document')
+      if (!file_url) {
+        toast.error('파일이 필요합니다.')
+        return
+      }
+      const finalCategory = category === '기타(직접입력)' ? customCategory.trim() : category
+      await createDoc({
+        title: title.trim(),
+        category: finalCategory || undefined,
+        file_url,
+        file_size_bytes: file_size_bytes ?? undefined,
+      })
+      setShowUpload(false)
+      setTitle(''); setCategory(''); setCustomCategory(''); setSlot(EMPTY_SLOT)
+    } catch (err) {
+      notifySaveError(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const isPdf = (url: string) => url.toLowerCase().includes('.pdf') || url.toLowerCase().includes('pdf')
@@ -956,25 +1448,39 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
         {/* 기존 섹션 파일 */}
         {existingFiles.length > 0 && (
           <div>
-            <p className="text-[11px] text-text-quaternary font-semibold mb-2">자격증 · 수상 내역에서 등록한 파일</p>
+            <p className="text-[11px] text-text-quaternary font-semibold mb-2">학력 · 자격증 · 수상 내역에서 등록한 파일</p>
             <div className="space-y-1.5">
-              {existingFiles.map((f, i) => (
-                <a
-                  key={i}
-                  href={f.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 hover:bg-[#161718] transition-all group"
+              {existingFiles.map((f) => (
+                <div
+                  key={`${f.source}-${f.id}`}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 hover:bg-white/[0.04] transition-all group"
                 >
-                  <FileIcon url={f.file_url} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-text-primary truncate group-hover:text-brand transition-colors">{f.label}</p>
-                  </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-none ${SOURCE_STYLE[f.source] ?? 'bg-white/8 text-text-tertiary'}`}>{f.source}</span>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-quaternary flex-none group-hover:text-brand transition-colors">
-                    <path d="M2 10L10 2M10 2H5M10 2v5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </a>
+                  <a
+                    href={f.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-1 min-w-0 items-center gap-3"
+                  >
+                    <FileIcon url={f.file_url} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-text-primary truncate group-hover:text-brand transition-colors">{f.label}</p>
+                    </div>
+                    {f.file_size_bytes != null && f.file_size_bytes > 0 && (
+                      <span className="text-[10px] text-text-quaternary flex-none">{formatBytes(f.file_size_bytes)}</span>
+                    )}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-none ${SOURCE_STYLE[f.source] ?? 'bg-white/8 text-text-tertiary'}`}>{f.source}</span>
+                  </a>
+                  <button
+                    type="button"
+                    aria-label={`${f.label} 항목 삭제`}
+                    onClick={() => setExistingDeleteTarget(f)}
+                    className="flex-none w-8 h-8 flex items-center justify-center text-text-quaternary hover:text-danger transition-colors"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -992,20 +1498,36 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           )}
           <div className="space-y-1.5">
             {documents.map((doc) => (
-              <div key={doc.id} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 transition-all">
-                <FileIcon url={doc.file_url} />
-                <div className="flex-1 min-w-0">
-                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-text-primary hover:text-brand transition-colors truncate block">{doc.title}</a>
-                  {doc.category && <p className="text-[10px] text-text-quaternary mt-0.5">{doc.category}</p>}
-                </div>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-quaternary flex-none">
-                  <path d="M2 10L10 2M10 2H5M10 2v5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <button
-                  onClick={() => setDeleteTarget(doc)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger w-6 h-6 flex items-center justify-center rounded"
+              <div
+                key={doc.id}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 hover:bg-white/[0.04] transition-all group"
+              >
+                <a
+                  href={doc.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-1 min-w-0 items-center gap-3"
                 >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                  <FileIcon url={doc.file_url} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-text-primary truncate group-hover:text-brand transition-colors">{doc.title}</p>
+                  </div>
+                  {doc.file_size_bytes != null && doc.file_size_bytes > 0 && (
+                    <span className="text-[10px] text-text-quaternary flex-none">{formatBytes(doc.file_size_bytes)}</span>
+                  )}
+                  {doc.category && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium flex-none bg-text-tertiary/12 text-text-tertiary">{doc.category}</span>
+                  )}
+                </a>
+                <button
+                  type="button"
+                  aria-label={`${doc.title} 파일 삭제`}
+                  onClick={() => setDeleteTarget(doc)}
+                  className="flex-none w-8 h-8 flex items-center justify-center text-text-quaternary hover:text-danger transition-colors"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
                 </button>
               </div>
             ))}
@@ -1015,7 +1537,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           {showUpload ? (
             <div className="mt-3 p-4 rounded-xl border border-brand/30 bg-brand/4 space-y-3">
               <div>
-                <label className="block text-xs text-text-tertiary mb-1.5 font-medium">파일 제목</label>
+                <FieldLabel label="파일 제목" required />
                 <input
                   autoFocus
                   value={title}
@@ -1026,14 +1548,19 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               </div>
               <div>
                 <label className="block text-xs text-text-tertiary mb-1.5 font-medium">카테고리 (선택)</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
-                >
-                  <option value="">선택 안함</option>
-                  {DOC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="relative">
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
+                  >
+                    <option value="">선택 안함</option>
+                    {DOC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
                 {category === '기타(직접입력)' && (
                   <input
                     value={customCategory}
@@ -1044,22 +1571,28 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                 )}
               </div>
               <div>
-                <label className="block text-xs text-text-tertiary mb-1.5 font-medium">파일</label>
+                <FieldLabel label="파일" required />
                 <FileUpload
-                  value={fileUrl}
-                  scope="documents"
-                  onUploaded={setFileUrl}
-                  onRemove={() => setFileUrl('')}
+                  slot={slot}
+                  scope="myinfo/document"
+                  onChange={setSlot}
+                  disabled={saving}
                 />
               </div>
               <div className="flex gap-2 pt-1">
-                <button onClick={() => { setShowUpload(false); setTitle(''); setCategory(''); setCustomCategory(''); setFileUrl('') }} className="flex-1 py-2 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors">취소</button>
+                <button
+                  onClick={() => { setShowUpload(false); setTitle(''); setCategory(''); setCustomCategory(''); setSlot(EMPTY_SLOT) }}
+                  disabled={saving}
+                  className="flex-1 py-2 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
+                >
+                  취소
+                </button>
                 <button
                   onClick={handleSave}
-                  disabled={!title.trim() || !fileUrl}
+                  disabled={!title.trim() || slot.kind === 'empty' || saving}
                   className="flex-1 py-2 text-xs font-semibold bg-brand hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed text-text-primary rounded-lg transition-colors"
                 >
-                  저장
+                  {saving ? '저장 중...' : '저장'}
                 </button>
               </div>
             </div>
@@ -1084,6 +1617,18 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           label={deleteTarget.title}
           onClose={() => setDeleteTarget(null)}
           onConfirm={() => { deleteDoc(deleteTarget.id); setDeleteTarget(null) }}
+        />
+      )}
+
+      {/* 보관함 X 버튼 → "파일만" 제거. 항목 row는 그대로, file_url=null + R2 cascade로 정리 */}
+      {existingDeleteTarget && (
+        <DeleteModal
+          label={`${existingDeleteTarget.label}의 첨부 파일`}
+          onClose={() => setExistingDeleteTarget(null)}
+          onConfirm={() => {
+            clearFileBySource(existingDeleteTarget.source, existingDeleteTarget.id, updaters)
+            setExistingDeleteTarget(null)
+          }}
         />
       )}
     </SectionCard>

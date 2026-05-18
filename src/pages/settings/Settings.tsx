@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { useTourStore } from '@/stores/tourStore'
 import { apiClient } from '@/api/client'
 
 const MENU = [
@@ -11,12 +13,14 @@ const MENU = [
 
 export function Settings() {
   const clearAuth = useAuthStore((s) => s.clearAuth)
+  const startTour = useTourStore((s) => s.start)
   const navigate = useNavigate()
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   async function handleLogout() {
-    try { await apiClient.post('/auth/logout') } catch {}
+    try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
-    navigate('/login')
+    navigate('/')
   }
 
   return (
@@ -33,16 +37,30 @@ export function Settings() {
             <span className="text-xl w-7 text-center">{icon}</span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{label}</p>
-              <p className="text-xs text-text-muted mt-0.5">{sub}</p>
+              <p className="text-xs text-text-tertiary mt-0.5">{sub}</p>
             </div>
-            <span className="text-text-muted text-sm">›</span>
+            <span className="text-text-tertiary text-sm">›</span>
           </Link>
         ))}
       </div>
 
+      <div className="bg-surface-2 border border-white/5 rounded-xl mb-4">
+        <button
+          onClick={startTour}
+          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-white/3 transition-colors"
+        >
+          <span className="text-xl w-7 text-center">🚀</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">온보딩 다시 보기</p>
+            <p className="text-xs text-text-tertiary mt-0.5">치뽀 시작 안내 다시 확인하기</p>
+          </div>
+          <span className="text-text-tertiary text-sm">›</span>
+        </button>
+      </div>
+
       <div className="bg-surface-2 border border-white/5 rounded-xl">
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogoutModal(true)}
           className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-white/3 transition-colors"
         >
           <span className="text-xl w-7 text-center">🚪</span>
@@ -50,7 +68,38 @@ export function Settings() {
         </button>
       </div>
 
-      <p className="text-center text-xs text-text-muted mt-8 opacity-50">치뽀 · 취준생이 만드는 취업 관리 앱</p>
+      <div className="mt-8 flex flex-col items-center gap-2">
+        <div className="flex items-center gap-3 text-xs text-text-quaternary">
+          <Link to="/terms" className="hover:text-text-tertiary transition-colors">이용약관</Link>
+          <span>·</span>
+          <Link to="/privacy" className="hover:text-text-tertiary transition-colors">개인정보처리방침</Link>
+        </div>
+        <p className="text-xs text-text-quaternary">치뽀 · 취준생이 만드는 취업 관리 앱</p>
+      </div>
+
+      {/* 로그아웃 확인 모달 — 모바일에서 실수 로그아웃 방지 (Sidebar·ProfileSettings와 동일 패턴) */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+            <h3 className="text-base font-bold mb-2">로그아웃 하시겠어요?</h3>
+            <p className="text-sm text-text-quaternary mb-6">로그인 화면으로 이동합니다.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm font-medium text-text-secondary hover:bg-white/4 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent transition-colors"
+              >
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

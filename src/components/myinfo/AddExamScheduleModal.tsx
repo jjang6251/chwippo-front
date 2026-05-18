@@ -23,6 +23,8 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
   const create = useCreateExamSchedule()
   const update = useUpdateExamSchedule(initial?.id ?? '')
 
+  // 모달이 열릴 때 initial / defaultDate를 폼 state에 동기화
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return
     if (initial) {
@@ -44,6 +46,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
       setMemo('')
     }
   }, [open, initial, defaultDate])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!open) return null
 
@@ -69,10 +72,10 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div role="dialog" aria-modal="true" aria-label={isEdit ? '시험 일정 수정' : '시험 일정 추가'} className="relative z-10 w-full max-w-md bg-surface border border-white/8 rounded-t-xl sm:rounded-xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h3 className="text-text-primary text-sm font-semibold">{isEdit ? '시험 일정 수정' : '시험 일정 추가'}</h3>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-white/5 transition-colors" aria-label="닫기">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -81,7 +84,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 space-y-3">
           {/* 시험 종류 */}
           <div>
             <label className="block text-text-tertiary text-[11px] mb-1.5">종류</label>
@@ -101,13 +104,18 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
           {examType === 'language' ? (
             <div>
               <label className="block text-text-tertiary text-[11px] mb-1.5">시험명</label>
-              <select
-                value={certType}
-                onChange={(e) => setCertType(e.target.value)}
-                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
-              >
-                {LANGUAGE_CERT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <div className="relative">
+                <select
+                  value={certType}
+                  onChange={(e) => setCertType(e.target.value)}
+                  className="w-full appearance-none bg-surface-2 border border-white/8 rounded-lg pl-3 pr-9 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors [color-scheme:dark] cursor-pointer"
+                >
+                  {LANGUAGE_CERT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+                  <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
             </div>
           ) : (
             <div>
@@ -129,7 +137,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors [color-scheme:dark]"
               />
             </div>
             <div>
@@ -138,7 +146,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors [color-scheme:dark]"
               />
             </div>
           </div>
@@ -167,7 +175,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
           </div>
         </div>
 
-        <div className="flex gap-2 mt-5">
+        <div className="flex gap-2 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-white/6 shrink-0">
           <button
             onClick={onClose}
             className="flex-1 py-2 rounded-lg border border-white/8 text-text-tertiary text-xs hover:bg-white/5 transition-colors"

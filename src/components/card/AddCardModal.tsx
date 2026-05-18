@@ -3,7 +3,9 @@ import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
 import { useCreateApplication } from '@/hooks/useApplications'
 import { serializeTags } from '@/utils/tags'
+import { APPLICATION_TEMPLATES, getApplicationTemplate, recommendTemplate } from '@/utils/stepTemplates'
 import { toast } from '@/stores/toastStore'
+import { useTourStore } from '@/stores/tourStore'
 
 interface AddCardModalProps {
   open: boolean
@@ -16,9 +18,19 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
   const [jobTitle, setJobTitle] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [deadline, setDeadline] = useState('')
+  const [templateId, setTemplateId] = useState('general')
+  const [templateTouched, setTemplateTouched] = useState(false)
   const { mutate: create, isPending } = useCreateApplication()
+  const tourActive = useTourStore((s) => s.active)
+  const tourStep = useTourStore((s) => s.step)
+  const onCardCreated = useTourStore((s) => s.onCardCreated)
 
   const isPlanned = defaultStatus === 'PLANNED'
+  // 사용자가 직접 고르기 전까지는 직군 태그·회사명 기반 추천을 따라감
+  const effectiveTemplateId = templateTouched
+    ? templateId
+    : recommendTemplate({ jobCategories: tags, companyName })
+  const templatePreview = getApplicationTemplate(effectiveTemplateId).steps.join(' → ')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,10 +44,12 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
         status: defaultStatus,
         deadline: deadline || undefined,
         needsDetail: !isPlanned && !jobTitle.trim(),
+        templateId: !isPlanned ? effectiveTemplateId : undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
           toast.success(`${companyName} 카드가 추가됐어요.`)
+          if (tourActive && tourStep === 4) onCardCreated(data.id)
           handleClose()
         },
         onError: () => toast.error('카드 추가에 실패했습니다.'),
@@ -45,12 +59,19 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
 
   const handleClose = () => {
     setCompanyName(''); setJobTitle(''); setTags([]); setDeadline('')
+    setTemplateId('general'); setTemplateTouched(false)
     onClose()
   }
 
   return (
     <Modal open={open} onClose={handleClose} title={isPlanned ? '지원 예정 추가' : '지원 중으로 추가'}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {tourActive && tourStep === 4 && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-brand/10 border border-brand/20 rounded-lg">
+            <span className="text-brand text-sm">💡</span>
+            <p className="text-xs text-brand/90">회사 이름만 입력해도 지원 단계가 자동 생성돼요</p>
+          </div>
+        )}
         <div>
           <label className="block text-xs text-text-tertiary mb-1.5">회사명 *</label>
           <input
@@ -79,6 +100,29 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
           <label className="block text-xs text-text-tertiary mb-1.5">직군 태그</label>
           <TagSelector selected={tags} onChange={setTags} />
         </div>
+
+        {!isPlanned && (
+          <div>
+            <label>
+              <span className="block text-xs text-text-tertiary mb-1.5">
+                전형 템플릿 <span className="text-text-quaternary">(만든 뒤 단계 자유 편집)</span>
+              </span>
+              <div className="relative">
+                <select
+                  value={effectiveTemplateId}
+                  onChange={(e) => { setTemplateTouched(true); setTemplateId(e.target.value) }}
+                  className="w-full appearance-none bg-surface-3 border border-white/8 rounded-lg pl-3 pr-9 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all [color-scheme:dark] cursor-pointer"
+                >
+                  {APPLICATION_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+                  <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </label>
+            <p className="mt-1.5 text-[11px] text-text-quaternary leading-relaxed">{templatePreview}</p>
+          </div>
+        )}
 
         {!isPlanned && (
           <div>

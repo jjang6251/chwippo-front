@@ -24,17 +24,23 @@ async function mockDashboardApis(page: Parameters<typeof mockAuth>[0]) {
       }),
     })
   )
-  await page.route('http://localhost:3000/todos**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: [
-          { id: 'todo-1', content: '자기소개서 작성', date: new Date().toISOString().slice(0, 10), isDone: false },
-        ],
-      }),
-    })
-  )
+  // v1.0.1부터 todos → calendar/daily-notes로 통합됨
+  await page.route('**/calendar/daily-notes**', (route) => {
+    if (route.request().method() === 'GET') {
+      const today = new Date().toISOString().slice(0, 10)
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            { id: 'note-1', content: '자기소개서 작성', date: today, hourSlot: null, isDone: false, createdAt: new Date().toISOString() },
+          ],
+        }),
+      })
+    } else {
+      route.continue()
+    }
+  })
   await page.route('**/myinfo/profile', (route) =>
     route.fulfill({
       status: 200,

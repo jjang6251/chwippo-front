@@ -1,5 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, QueryClient } from '@tanstack/react-query'
 import * as api from '@/api/myinfo'
+
+const STORAGE_KEY = ['myinfo', 'storage-usage'] as const
+
+/** 파일 첨부 가능 항목의 mutation 후 — 해당 섹션 목록 + storage-usage 같이 무효화 */
+function invalidateWithStorage(qc: QueryClient, section: readonly string[]) {
+  return () => {
+    qc.invalidateQueries({ queryKey: section })
+    qc.invalidateQueries({ queryKey: STORAGE_KEY })
+  }
+}
 
 // ── Profile ───────────────────────────────────────────────
 export function useProfile() {
@@ -21,7 +31,7 @@ export function useCreateLangCert() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.createLangCert,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'language-certs'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'language-certs']),
   })
 }
 export function useUpdateLangCert() {
@@ -29,14 +39,14 @@ export function useUpdateLangCert() {
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: Partial<api.LanguageCert> }) =>
       api.updateLangCert(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'language-certs'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'language-certs']),
   })
 }
 export function useDeleteLangCert() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.deleteLangCert,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'language-certs'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'language-certs']),
   })
 }
 
@@ -48,21 +58,21 @@ export function useCreateCert() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.createCert,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'certs'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'certs']),
   })
 }
 export function useUpdateCert() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: Partial<api.Cert> }) => api.updateCert(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'certs'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'certs']),
   })
 }
 export function useDeleteCert() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.deleteCert,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'certs'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'certs']),
   })
 }
 
@@ -74,25 +84,25 @@ export function useCreateAward() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.createAward,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'awards'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'awards']),
   })
 }
 export function useUpdateAward() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: Partial<api.Award> }) => api.updateAward(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'awards'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'awards']),
   })
 }
 export function useDeleteAward() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.deleteAward,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'awards'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'awards']),
   })
 }
 
-// ── Experiences ───────────────────────────────────────────
+// ── Experiences (파일 없음 — 항목 수 한도만, storage 무관) ─
 export function useExperiences() {
   return useQuery({ queryKey: ['myinfo', 'experiences'], queryFn: api.getExperiences })
 }
@@ -119,7 +129,34 @@ export function useDeleteExperience() {
   })
 }
 
-// ── Coverletter ───────────────────────────────────────────
+// ── Educations ────────────────────────────────────────────
+export function useEducations() {
+  return useQuery({ queryKey: ['myinfo', 'educations'], queryFn: api.getEducations })
+}
+export function useCreateEducation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: api.createEducation,
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'educations']),
+  })
+}
+export function useUpdateEducation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: Partial<api.Education> }) =>
+      api.updateEducation(id, dto),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'educations']),
+  })
+}
+export function useDeleteEducation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: api.deleteEducation,
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'educations']),
+  })
+}
+
+// ── Coverletter (파일 없음) ──────────────────────────────
 export function useCoverletter() {
   return useQuery({ queryKey: ['myinfo', 'coverletter'], queryFn: api.getCoverletter })
 }
@@ -162,13 +199,13 @@ export function useCreateDocument() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.createDocument,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'documents'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'documents']),
   })
 }
 export function useDeleteDocument() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: api.deleteDocument,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myinfo', 'documents'] }),
+    onSuccess: invalidateWithStorage(qc, ['myinfo', 'documents']),
   })
 }

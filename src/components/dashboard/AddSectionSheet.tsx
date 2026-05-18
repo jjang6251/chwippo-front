@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-export interface SectionMeta {
+interface SectionMeta {
   id: string
   label: string
   icon: string
@@ -8,7 +8,7 @@ export interface SectionMeta {
   available: boolean
 }
 
-export const ALL_SECTIONS: SectionMeta[] = [
+const ALL_SECTIONS: SectionMeta[] = [
   { id: 'dday',              label: 'D-day 임박',         icon: '📅', description: '마감일과 면접 일정을 한눈에',           available: true },
   { id: 'todos',             label: '오늘 할 일',         icon: '✅', description: '오늘의 준비 항목 체크',                 available: true },
   { id: 'goals',             label: '내 스펙 목표',       icon: '🎯', description: '설정한 스펙 목표 확인',                 available: true },
@@ -34,9 +34,9 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
   const sections = ALL_SECTIONS.filter((s) => s.id !== 'stats')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-sm bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
+      <div role="dialog" aria-modal="true" aria-label="섹션 관리" className="relative z-10 w-full max-w-sm bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-text-primary text-sm font-semibold">섹션 관리</h3>
           <button
@@ -75,7 +75,7 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
                     <p className="text-text-quaternary text-[11px] truncate">{s.description}</p>
                   </div>
                   {disabled ? (
-                    <span className="flex-none text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 text-text-quaternary">
+                    <span className="flex-none text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-text-quaternary">
                       준비 중
                     </span>
                   ) : isActive ? (

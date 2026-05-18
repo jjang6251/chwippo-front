@@ -64,3 +64,50 @@ export const CHECKLIST_PRESETS: Partial<Record<StepType, string[]>> = {
   interview: ['지원서 재검토', '교통 경로 확인', '복장 준비', '면접관 인원 확인', '예상 질문 답변 복습'],
   document:  ['지원서 최종 확인', '첨부파일 체크', '제출 플랫폼 로그인 확인', '마감 시간 재확인'],
 }
+
+// ── 전형 템플릿 (카드 생성 시 초기 스텝) ──────────────────────
+// 백엔드 chwippo-back/src/applications/application-templates.ts 와 id·스텝이 동일해야 함.
+// 모두 '서류 제출' 시작 / '최종 합격' 끝.
+export interface ApplicationTemplate {
+  id: string
+  label: string
+  steps: string[]
+}
+
+export const APPLICATION_TEMPLATES: ApplicationTemplate[] = [
+  { id: 'general', label: '일반 대기업', steps: ['서류 제출', '1차 면접', '2차 면접', '최종 합격'] },
+  { id: 'it_dev', label: 'IT 개발', steps: ['서류 제출', '코딩테스트·과제', '1차 기술면접', '2차 컬처핏', '최종 합격'] },
+  { id: 'public', label: '공기업·공공', steps: ['서류 제출', '필기(NCS)', '면접', '최종 합격'] },
+  { id: 'finance', label: '금융권', steps: ['서류 제출', '인적성', '1차 실무면접', '2차 PT·토론', '임원면접', '최종 합격'] },
+  { id: 'startup', label: '스타트업', steps: ['서류 제출', '과제 전형', '1차 면접', '대표 면접', '최종 합격'] },
+  { id: 'media', label: '방송·언론', steps: ['서류 제출', '필기', '실무 평가', '면접', '최종 합격'] },
+  { id: 'internship', label: '인턴십·체험형', steps: ['서류 제출', '면접', '최종 합격'] },
+  { id: 'custom', label: '직접 설정', steps: ['서류 제출', '1차 면접', '2차 면접', '최종 합격'] }, // = general, 만든 뒤 편집
+]
+
+const TEMPLATE_BY_ID: Record<string, ApplicationTemplate> = Object.fromEntries(
+  APPLICATION_TEMPLATES.map((t) => [t.id, t]),
+)
+
+export function getApplicationTemplate(id: string | null | undefined): ApplicationTemplate {
+  return (id && TEMPLATE_BY_ID[id]) || TEMPLATE_BY_ID.general
+}
+
+const FINANCE_RE = /은행|증권|보험|카드|캐피탈/
+const PUBLIC_RE = /공사|공단|진흥원|재단|청$/
+const MEDIA_RE = /방송|일보|신문|뉴스|MBC|KBS|SBS|JTBC/
+
+// 직군 태그·회사명·자연어 입력으로 전형 템플릿 추천 (추천일 뿐 — 드롭다운에서 변경 가능)
+export function recommendTemplate(args: {
+  jobCategories?: string[]
+  companyName?: string
+  rawInput?: string
+}): string {
+  const { jobCategories = [], companyName = '', rawInput = '' } = args
+  if (rawInput.includes('인턴')) return 'internship'
+  if (jobCategories.includes('IT개발')) return 'it_dev'
+  if (FINANCE_RE.test(companyName)) return 'finance'
+  if (PUBLIC_RE.test(companyName)) return 'public'
+  if (MEDIA_RE.test(companyName)) return 'media'
+  return 'general'
+}

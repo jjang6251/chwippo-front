@@ -2,7 +2,11 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
+import { requireEnvs } from '@/utils/requireEnvs'
 import './index.css'
+
+// 필수 env 가드 — 누락 시 silent failure(axios baseURL=undefined → 자체 도메인 404) 방지
+requireEnvs(['VITE_API_URL'], import.meta.env)
 
 // 다크모드 항상 켜기 (치뽀는 다크 전용)
 document.documentElement.classList.add('dark')

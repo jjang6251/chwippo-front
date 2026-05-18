@@ -2,6 +2,17 @@ import { apiClient } from './client'
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
+// ── Storage Usage ─────────────────────────────────────────
+export interface StorageUsage {
+  usedBytes: number
+  limitBytes: number
+  usedMB: number
+  limitMB: number
+  percentage: number
+}
+export const getStorageUsage = () =>
+  apiClient.get('/myinfo/storage-usage').then(unwrap<StorageUsage>)
+
 // ── Types ─────────────────────────────────────────────────
 export interface UserProfile {
   user_id: string
@@ -30,6 +41,7 @@ export interface LanguageCert {
   acquired_at?: string
   expires_at?: string
   file_url?: string
+  file_size_bytes?: number | null
 }
 
 export interface Cert {
@@ -40,6 +52,7 @@ export interface Cert {
   acquired_at?: string
   expires_at?: string
   file_url?: string
+  file_size_bytes?: number | null
 }
 
 export interface Award {
@@ -50,6 +63,7 @@ export interface Award {
   awarded_at?: string
   content?: string
   file_url?: string
+  file_size_bytes?: number | null
 }
 
 export interface Experience {
@@ -69,12 +83,12 @@ export interface CoverletterCustom {
 }
 
 export interface Coverletter {
-  personality_strength?: string
-  personality_weakness?: string
-  background?: string
-  job_competency?: string
-  aspiration?: string
-  own_strength?: string
+  personality?: string       // 성격 장단점
+  background?: string        // 성장 배경
+  job_competency?: string    // 직무 역량·핵심 경험
+  own_strength?: string      // 나만의 강점
+  collaboration?: string     // 갈등 해결·협업 경험
+  challenge?: string         // 도전·실패 경험
 }
 
 export interface CoverletterData {
@@ -123,6 +137,37 @@ export const updateExperience = (id: string, dto: Partial<Experience>) =>
 export const deleteExperience = (id: string) =>
   apiClient.delete(`/myinfo/experiences/${id}`).then(unwrap<void>)
 
+// ── Educations ────────────────────────────────────────────
+export interface EducationMinor {
+  type: string    // 복수전공/부전공/이중전공/연계전공/심화전공
+  name: string
+  gpa?: string
+  gpa_max?: string
+}
+export interface Education {
+  id: string
+  school_name: string
+  major?: string
+  minor?: string          // deprecated — minors로 대체
+  minors?: EducationMinor[] | null
+  degree?: string         // 고등학교/전문대/대학교 (학사)/대학원 (석사)/대학원 (박사)/기타
+  gpa?: string
+  gpa_max?: string
+  start_at?: string
+  end_at?: string
+  status?: string         // 재학중/졸업/졸업예정/휴학/수료/편입/중퇴
+  location?: string
+  file_url?: string
+  file_size_bytes?: number | null
+}
+export const getEducations = () => apiClient.get('/myinfo/educations').then(unwrap<Education[]>)
+export const createEducation = (dto: Omit<Education, 'id'>) =>
+  apiClient.post('/myinfo/educations', dto).then(unwrap<Education>)
+export const updateEducation = (id: string, dto: Partial<Education>) =>
+  apiClient.patch(`/myinfo/educations/${id}`, dto).then(unwrap<Education>)
+export const deleteEducation = (id: string) =>
+  apiClient.delete(`/myinfo/educations/${id}`).then(unwrap<void>)
+
 // ── Coverletter ───────────────────────────────────────────
 export const getCoverletter = () => apiClient.get('/myinfo/coverletter').then(unwrap<CoverletterData>)
 export const updateCoverletter = (dto: Partial<Coverletter>) =>
@@ -140,11 +185,16 @@ export interface MyDocument {
   title: string
   category?: string
   file_url: string
+  file_size_bytes?: number | null
   created_at: string
 }
 
 export const getDocuments = () => apiClient.get('/myinfo/documents').then(unwrap<MyDocument[]>)
-export const createDocument = (dto: { title: string; category?: string; file_url: string }) =>
-  apiClient.post('/myinfo/documents', dto).then(unwrap<MyDocument>)
+export const createDocument = (dto: {
+  title: string
+  category?: string
+  file_url: string
+  file_size_bytes?: number
+}) => apiClient.post('/myinfo/documents', dto).then(unwrap<MyDocument>)
 export const deleteDocument = (id: string) =>
   apiClient.delete(`/myinfo/documents/${id}`).then(unwrap<void>)

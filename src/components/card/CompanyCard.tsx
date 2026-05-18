@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import dayjs from 'dayjs'
-import type { Application } from '@/types/application'
+import type { Application, UpdateApplicationDto } from '@/types/application'
 import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
 import { StarToggle } from './StarToggle'
 import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
+import { celebrate } from '@/stores/celebrationStore'
 import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI, getAvatarColor } from '@/utils/tags'
 
 interface CompanyCardProps {
@@ -29,7 +30,7 @@ function formatRegisteredDate(dateStr: string): string {
 }
 
 export function CompanyCard({ application, onStartApplication, onSetResult, onCurrentStepClick }: CompanyCardProps) {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showFailConfirm, setShowFailConfirm] = useState(false)
@@ -95,6 +96,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   return (
     <div
       onClick={handleCardClick}
+      data-tour-card-id={application.id}
       className={`
         relative group border-l-2 rounded-xl p-4 cursor-pointer
         transition-all duration-200
@@ -254,6 +256,9 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           onClick={(e) => { e.stopPropagation(); setShowFailConfirm(false) }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="불합격 처리 확인"
             className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
@@ -266,7 +271,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               <button
                 onClick={() => {
                   updateApp(
-                    { status: 'FAILED' } as any,
+                    { status: 'FAILED' } as UpdateApplicationDto,
                     {
                       onSuccess: () => toast.show(`${application.companyName} 불합격 처리됐어요.`),
                       onError: () => toast.error('처리에 실패했습니다.'),
@@ -290,6 +295,9 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false) }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="카드 삭제 확인"
             className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
@@ -314,6 +322,9 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           onClick={(e) => { e.stopPropagation(); setShowPassConfirm(false) }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="최종 합격 처리 확인"
             className="bg-surface border border-white/10 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
@@ -325,7 +336,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
             <div className="flex gap-2">
               <button onClick={() => setShowPassConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
               <button
-                onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }); setShowPassConfirm(false) }}
+                onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }, { onSuccess: () => celebrate(application.companyName) }); setShowPassConfirm(false) }}
                 className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
               >
                 합격 처리

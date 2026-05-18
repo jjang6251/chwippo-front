@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { useDemoMode } from '@/contexts/demoMode'
+import { useLoginModalStore } from '@/stores/loginModalStore'
 import { apiClient } from '@/api/client'
 
 const NAV_ITEMS = [
@@ -10,31 +12,28 @@ const NAV_ITEMS = [
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
-const SETTINGS_SUB = [
-  { label: '프로필 설정', path: '/settings/profile' },
-  { label: '알림 설정', path: '/settings/alarm' },
-] as const
-
 export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const user = useAuthStore((s) => s.user)
+  const isDemo = useDemoMode()
+  const showLogin = useLoginModalStore((s) => s.show)
+  const link = (p: string) => (isDemo ? '/demo' + p : p)
 
-  const [settingsOpen, setSettingsOpen] = useState(
-    location.pathname.startsWith('/settings')
-  )
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
-  const isActive = (path: string) =>
-    path === '/board' ? location.pathname.startsWith('/board') : location.pathname === path
+  const isActive = (path: string) => {
+    const target = link(path)
+    return path === '/board' ? location.pathname.startsWith(target) : location.pathname === target
+  }
 
   const isSettingsActive = location.pathname.startsWith('/settings')
 
   async function handleLogout() {
-    try { await apiClient.post('/auth/logout') } catch {}
+    try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
-    navigate('/login')
+    navigate('/')
   }
 
   return (
@@ -42,8 +41,8 @@ export function Sidebar() {
       <aside className="hidden lg:flex flex-col w-56 shrink-0 bg-surface border-r border-white/5 min-h-screen sticky top-0 h-screen">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/5">
-          <Link to="/dashboard" className="text-lg font-bold text-brand tracking-tight">
-            치뽀
+          <Link to={link('/dashboard')} className="text-lg font-bold text-brand tracking-tight">
+            치뽀{isDemo && <span className="ml-1.5 text-[10px] font-medium text-text-quaternary align-middle">데모</span>}
           </Link>
         </div>
 
@@ -52,7 +51,8 @@ export function Sidebar() {
           {NAV_ITEMS.map(({ label, path, icon: Icon }) => (
             <Link
               key={path}
-              to={path}
+              to={link(path)}
+              {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive(path)
                   ? 'bg-brand/10 text-brand'
@@ -65,102 +65,118 @@ export function Sidebar() {
           ))}
 
           {/* Admin link */}
-          {user?.role === 'admin' && (
-            <Link
-              to="/ops"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                location.pathname.startsWith('/ops')
-                  ? 'bg-warning/10 text-warning'
-                  : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
-              }`}
-            >
-              <AdminIcon size={16} />
-              관리자
-            </Link>
+          {!isDemo && user?.role === 'admin' && (
+            <>
+              <Link
+                to="/ops"
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  location.pathname.startsWith('/ops')
+                    ? 'bg-warning/10 text-warning'
+                    : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
+                }`}
+              >
+                <AdminIcon size={16} />
+                관리자
+              </Link>
+              <div className="ml-7 flex flex-col gap-0.5">
+                  <Link
+                    to="/ops/inquiries"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      location.pathname === '/ops/inquiries'
+                        ? 'text-warning bg-warning/8'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    문의 관리
+                  </Link>
+                  <Link
+                    to="/ops/announcements"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      location.pathname === '/ops/announcements'
+                        ? 'text-warning bg-warning/8'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    공지 관리
+                  </Link>
+              </div>
+            </>
           )}
 
           {/* Spacer pushes bottom items down */}
           <div className="flex-1" />
 
-          <div className="h-px bg-white/5 my-2" />
+          {!isDemo && (
+            <>
+              <div className="h-px bg-white/5 my-2" />
 
-          {/* 설정 (accordion) */}
-          <button
-            onClick={() => setSettingsOpen((o) => !o)}
-            aria-expanded={settingsOpen}
-            aria-controls="settings-submenu"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-left ${
-              isSettingsActive
-                ? 'bg-brand/10 text-brand'
-                : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
-            }`}
-          >
-            <SettingsIcon size={16} />
-            <span className="flex-1">설정</span>
-            <span className={`text-xs transition-transform ${settingsOpen ? 'rotate-180' : ''}`}>▾</span>
-          </button>
+              {/* 설정 */}
+              <Link
+                to="/settings"
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isSettingsActive
+                    ? 'bg-brand/10 text-brand'
+                    : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
+                }`}
+              >
+                <SettingsIcon size={16} />
+                설정
+              </Link>
 
-          {settingsOpen && (
-            <div id="settings-submenu" className="ml-7 flex flex-col gap-0.5">
-              {SETTINGS_SUB.map(({ label, path }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    location.pathname === path
-                      ? 'text-brand bg-brand/8'
-                      : 'text-text-quaternary hover:text-text-secondary hover:bg-white/3'
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
+              {/* 도움말 */}
+              <Link
+                to="/settings/help"
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  location.pathname === '/settings/help'
+                    ? 'bg-brand/10 text-brand'
+                    : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
+                }`}
+              >
+                <HelpIcon size={16} />
+                도움말
+              </Link>
+
+              {/* 로그아웃 */}
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-white/4 hover:text-text-primary transition-colors text-left"
+              >
+                <LogoutIcon size={16} />
+                로그아웃
+              </button>
+            </>
           )}
-
-          {/* 도움말 */}
-          <Link
-            to="/settings/help"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              location.pathname === '/settings/help'
-                ? 'bg-brand/10 text-brand'
-                : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
-            }`}
-          >
-            <HelpIcon size={16} />
-            도움말
-          </Link>
-
-          {/* 로그아웃 */}
-          <button
-            onClick={() => setShowLogoutModal(true)}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-white/4 hover:text-text-primary transition-colors text-left"
-          >
-            <LogoutIcon size={16} />
-            로그아웃
-          </button>
         </nav>
 
-        {/* 문의하기 CTA */}
+        {/* 하단 CTA */}
         <div className="px-3 py-4 border-t border-white/5">
-          <Link
-            to="/inquiry"
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              location.pathname === '/inquiry'
-                ? 'bg-brand text-text-primary'
-                : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
-            }`}
-          >
-            <ChatIcon size={16} />
-            문의하기
-          </Link>
+          {isDemo ? (
+            <button
+              onClick={showLogin}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold bg-brand text-text-primary hover:bg-accent transition-colors"
+            >
+              가입하고 시작하기 →
+            </button>
+          ) : (
+            <Link
+              to="/inquiry"
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                location.pathname === '/inquiry'
+                  ? 'bg-brand text-text-primary'
+                  : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
+              }`}
+            >
+              <ChatIcon size={16} />
+              문의하기
+            </Link>
+          )}
         </div>
       </aside>
 
       {/* 로그아웃 확인 모달 */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">로그아웃 하시겠어요?</h3>
             <p className="text-sm text-text-quaternary mb-6">로그인 화면으로 이동합니다.</p>
             <div className="flex gap-2">

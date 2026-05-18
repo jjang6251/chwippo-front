@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import type { DdayItem } from '@/api/dashboard'
 import { getDdayLabel } from '@/utils/dday'
 
@@ -7,7 +7,7 @@ interface Props {
 }
 
 export function DdayPinnedCard({ item }: Props) {
-  const navigate = useNavigate()
+  const navigate = useDemoNavigate()
 
   const ddayLabel = getDdayLabel(item.dday)
   const isToday = item.dday === 0

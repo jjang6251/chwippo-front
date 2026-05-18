@@ -115,7 +115,7 @@ test.describe('캘린더 페이지', () => {
     await expect(page.getByText(/월.*일.*\(/).first()).toBeVisible()
   })
 
-  test('이벤트 카드 클릭 시 /board/:id로 이동', async ({ page }) => {
+  test('날짜 클릭 → BottomSheet 열림 → 이벤트 카드 클릭 시 /board/:id로 이동', async ({ page }) => {
     await mockCalendarApis(page)
     await page.route('**/applications/app-uuid-1**', (route) =>
       route.fulfill({
@@ -126,7 +126,11 @@ test.describe('캘린더 페이지', () => {
     )
     await page.goto('/calendar')
 
-    // EventCard는 <Link> → <a> 태그로 렌더링되므로 <a> 요소 대상으로 클릭
+    // 오늘 날짜 셀 클릭 → BottomSheet 열림
+    const todayDate = dayjs().date()
+    await page.locator(`button:has-text("${todayDate}")`).first().click()
+
+    // BottomSheet 안의 EventCard 클릭
     await page.locator('a:has-text("네이버")').first().click()
     await expect(page).toHaveURL(/\/board\/app-uuid-1/)
   })

@@ -34,7 +34,7 @@ export function Help() {
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <h1 className="text-xl font-bold mb-1">도움말</h1>
-      <p className="text-sm text-text-muted mb-8">자주 묻는 질문</p>
+      <p className="text-sm text-text-tertiary mb-8">자주 묻는 질문</p>
 
       <div className="flex flex-col gap-2">
         {FAQ.map(({ q, a }, i) => {
@@ -45,16 +45,17 @@ export function Help() {
               className={`border rounded-xl overflow-hidden transition-colors ${
                 isOpen
                   ? 'bg-brand/5 border-brand/25'
-                  : 'bg-surface-2 border-white/5 hover:border-white/12'
+                  : 'bg-surface-2 border-white/5 hover:border-white/10'
               }`}
             >
               <button
                 onClick={() => setOpen(isOpen ? null : i)}
+                aria-expanded={isOpen}
                 className="w-full text-left px-5 py-4 flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3">
                   <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    isOpen ? 'bg-brand text-text-primary' : 'bg-white/8 text-text-muted'
+                    isOpen ? 'bg-brand text-text-primary' : 'bg-white/8 text-text-tertiary'
                   }`}>
                     Q
                   </span>
@@ -62,7 +63,7 @@ export function Help() {
                     {q}
                   </span>
                 </div>
-                <span className={`text-sm flex-shrink-0 transition-transform font-light ${isOpen ? 'rotate-45 text-brand' : 'text-text-muted'}`}>
+                <span className={`text-sm flex-shrink-0 transition-transform font-light ${isOpen ? 'rotate-45 text-brand' : 'text-text-tertiary'}`}>
                   +
                 </span>
               </button>
@@ -83,7 +84,7 @@ export function Help() {
       <div className="mt-8 bg-surface-2 border border-white/5 rounded-xl p-5 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium mb-0.5">원하는 답변을 찾지 못하셨나요?</p>
-          <p className="text-xs text-text-muted">무엇이든 편하게 물어보세요.</p>
+          <p className="text-xs text-text-tertiary">무엇이든 편하게 물어보세요.</p>
         </div>
         <Link
           to="/inquiry"

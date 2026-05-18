@@ -31,3 +31,7 @@ playwright-report/
 *.njsproj
 *.sln
 *.sw?
+
+
+# Coverage reports
+coverage/
