@@ -36,11 +36,10 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
   const { mutate: updateItem } = useUpdateChecklistItem(appId, step.id)
   const { mutate: deleteItem } = useDeleteChecklistItem(appId, step.id)
 
-  // 날짜/장소 블러 시 자동 저장
-  function handleDateBlur() {
+  function saveScheduledDate(value: string) {
     updateStep({
       stepId: step.id,
-      scheduledDate: scheduledDate ? `${scheduledDate}:00` : null,
+      scheduledDate: value ? `${value}:00+09:00` : null,
     })
   }
 
@@ -114,8 +113,11 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
             <input
               type="datetime-local"
               value={scheduledDate}
-              onChange={(e) => setScheduledDate(e.target.value)}
-              onBlur={handleDateBlur}
+              onChange={(e) => {
+                const v = e.target.value
+                setScheduledDate(v)
+                saveScheduledDate(v)
+              }}
               className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors [color-scheme:dark]"
             />
           </section>
