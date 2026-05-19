@@ -3,7 +3,7 @@ import { apiClient } from './client'
 export interface CalendarEvent {
   date: string
   time: string | null
-  type: 'deadline' | 'step' | 'exam' | 'note'
+  type: 'step' | 'exam' | 'note'
   applicationId: string | null
   stepId: string | null
   examId: string | null

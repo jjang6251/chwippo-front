@@ -38,26 +38,23 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStartKey])
 
-  // All-day row: deadlines (노란) + hourSlot=null daily-notes (파란)
+  // All-day row: hourSlot=null daily-notes (메모)
   const allDayByDate: Record<string, CalendarEvent[]> = {}
   // Time grid: step + exam + hourSlot 있는 note
   const timedByDateHour: Record<string, Record<number, CalendarEvent[]>> = {}
 
   for (const e of events) {
-    if (e.type === 'deadline') {
+    if (e.type === 'note' && !e.time) {
       if (!allDayByDate[e.date]) allDayByDate[e.date] = []
       allDayByDate[e.date].push(e)
-    } else if (e.type === 'note' && !e.time) {
-      if (!allDayByDate[e.date]) allDayByDate[e.date] = []
-      allDayByDate[e.date].push(e)
-    } else if ((e.type === 'step' || e.type === 'exam' || e.type === 'note') && e.time) {
+    } else if (e.time) {
       const [h] = e.time.split(':').map(Number)
       if (h >= 0 && h <= 23) {
         if (!timedByDateHour[e.date]) timedByDateHour[e.date] = {}
         if (!timedByDateHour[e.date][h]) timedByDateHour[e.date][h] = []
         timedByDateHour[e.date][h].push(e)
       }
-    } else if ((e.type === 'step' || e.type === 'exam') && !e.time) {
+    } else if (e.type === 'step' || e.type === 'exam') {
       // 시간 없는 step/exam → 08:00 행에 표시
       if (!timedByDateHour[e.date]) timedByDateHour[e.date] = {}
       if (!timedByDateHour[e.date][8]) timedByDateHour[e.date][8] = []
@@ -121,30 +118,16 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
               key={dateStr}
               className={`px-0.5 py-0.5 border-r border-white/5 last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
             >
-              {allDay.map((e, idx) => {
-                if (e.type === 'deadline') {
-                  return (
-                    <Link
-                      key={idx}
-                      to={`/board/${e.applicationId}`}
-                      className="block text-[9px] font-medium px-1 py-0.5 rounded bg-warning/15 text-warning truncate mb-0.5 hover:bg-warning/20 transition-colors"
-                      title={`${e.companyName} 마감`}
-                    >
-                      {e.companyName} 마감
-                    </Link>
-                  )
-                }
-                // note (시간 없음)
-                return (
-                  <div
-                    key={idx}
-                    className="block text-[9px] font-medium px-1 py-0.5 rounded bg-info/15 text-info truncate mb-0.5"
-                    title={e.content ?? ''}
-                  >
-                    {e.content}
-                  </div>
-                )
-              })}
+              {allDay.map((e, idx) => (
+                // 시간 없는 메모
+                <div
+                  key={idx}
+                  className="block text-[9px] font-medium px-1 py-0.5 rounded bg-info/15 text-info truncate mb-0.5"
+                  title={e.content ?? ''}
+                >
+                  {e.content}
+                </div>
+              ))}
             </div>
           )
         })}
@@ -226,7 +209,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
                           key={idx}
                           to={e.stepId ? `/board/${e.applicationId}/steps/${e.stepId}` : `/board/${e.applicationId}`}
                           onClick={(ev) => ev.stopPropagation()}
-                          className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-info/15 text-info border-l border-info truncate mb-0.5 hover:bg-info/20 transition-colors"
+                          className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-warning/15 text-warning border-l border-warning truncate mb-0.5 hover:bg-warning/20 transition-colors"
                           title={`${e.companyName} ${e.stepName ?? ''}`.trim()}
                         >
                           {e.companyName}

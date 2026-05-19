@@ -58,16 +58,14 @@ export function DdayList({ items, isLoading }: DdayListProps) {
           >
             {/* 타입 아이콘 */}
             <div className={`flex-none w-8 h-8 rounded-lg flex items-center justify-center text-base ${item.type === 'exam' ? 'bg-violet/15 text-violet' : avatarColor}`}>
-              {item.type === 'deadline' ? '📄' : item.type === 'exam' ? '📚' : '🗣️'}
+              {item.type === 'exam' ? '📚' : '📄'}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-text-primary text-xs font-medium truncate">{item.companyName}</p>
               <p className="text-text-quaternary text-[10px] truncate">
-                {item.type === 'deadline'
-                  ? '서류 마감'
-                  : item.type === 'exam'
-                    ? `시험 일정${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`
-                    : `${item.stepName}${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`}
+                {item.type === 'exam'
+                  ? `시험 일정${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`
+                  : `${item.stepName}${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`}
               </p>
             </div>
             <span className={`text-xs font-mono font-semibold flex-none ${VARIANT_CLASS[variant]}`}>
