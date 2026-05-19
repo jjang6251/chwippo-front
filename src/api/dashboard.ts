@@ -8,7 +8,7 @@ export interface DashboardStats {
 }
 
 export interface DdayItem {
-  type: 'deadline' | 'interview' | 'exam'
+  type: 'deadline' | 'step' | 'exam'
   applicationId?: string
   stepId?: string
   examId?: string

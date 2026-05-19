@@ -47,8 +47,10 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
   const { mutate: updateNote } = useUpdateDailyNote(date)
   const { mutate: deleteNote } = useDeleteDailyNote(date)
 
+  // 'note' 타입은 useDailyNotes로 별도 fetch해서 렌더하므로 events에서 제외 (중복 방지)
+  const nonNoteEvents = events.filter((e) => e.type !== 'note')
   const eventsBySlot: Record<number, CalendarEvent[]> = {}
-  for (const e of events) {
+  for (const e of nonNoteEvents) {
     if (e.time) {
       const slot = timeToSlot(e.time)
       if (slot !== null) {
@@ -57,7 +59,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
       }
     }
   }
-  const timelessEvents = events.filter((e) => !e.time)
+  const timelessEvents = nonNoteEvents.filter((e) => !e.time)
 
   const nullSlotNotes = notes.filter((n) => n.hourSlot === null)
   const notesBySlot: Record<number, typeof notes> = {}
@@ -186,18 +188,20 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
                 {slotEvents.map((e, idx) => {
                   const eventTo = e.type === 'exam'
                     ? '/myinfo#exam-schedules'
-                    : e.type === 'interview' && e.stepId
+                    : e.type === 'step' && e.stepId
                       ? `/board/${e.applicationId}/steps/${e.stepId}`
                       : `/board/${e.applicationId}`
-                  const colorClass = e.type === 'interview'
+                  const colorClass = e.type === 'step'
                     ? 'bg-info/15 border-l-2 border-info text-info'
                     : e.type === 'exam'
                       ? 'bg-violet/15 border-l-2 border-violet text-violet'
                       : 'bg-warning/15 border-l-2 border-warning text-warning'
-                  const icon = e.type === 'interview' ? '🗓️' : e.type === 'exam' ? '📚' : '📄'
+                  const icon = e.type === 'step' ? '🗓️' : e.type === 'exam' ? '📚' : '📄'
                   const label = e.type === 'exam'
                     ? e.companyName
-                    : `${e.companyName} ${e.stepName ?? '면접'}`
+                    : e.type === 'deadline'
+                      ? `${e.companyName} 마감`
+                      : `${e.companyName} ${e.stepName ?? ''}`.trim()
                   return (
                     <Link
                       key={idx}
