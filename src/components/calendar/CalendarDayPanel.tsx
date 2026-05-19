@@ -191,17 +191,13 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
                     : e.type === 'step' && e.stepId
                       ? `/board/${e.applicationId}/steps/${e.stepId}`
                       : `/board/${e.applicationId}`
-                  const colorClass = e.type === 'step'
-                    ? 'bg-info/15 border-l-2 border-info text-info'
-                    : e.type === 'exam'
-                      ? 'bg-violet/15 border-l-2 border-violet text-violet'
-                      : 'bg-warning/15 border-l-2 border-warning text-warning'
-                  const icon = e.type === 'step' ? '🗓️' : e.type === 'exam' ? '📚' : '📄'
+                  const colorClass = e.type === 'exam'
+                    ? 'bg-violet/15 border-l-2 border-violet text-violet'
+                    : 'bg-warning/15 border-l-2 border-warning text-warning'
+                  const icon = e.type === 'exam' ? '📚' : '📄'
                   const label = e.type === 'exam'
                     ? e.companyName
-                    : e.type === 'deadline'
-                      ? `${e.companyName} 마감`
-                      : `${e.companyName} ${e.stepName ?? ''}`.trim()
+                    : `${e.companyName} ${e.stepName ?? ''}`.trim()
                   return (
                     <Link
                       key={idx}

@@ -13,21 +13,13 @@ type CalendarView = 'month' | 'week'
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
 const COLOR = {
-  deadline: {
+  step: {
     dot: 'bg-warning',
     pill: 'bg-warning/10 text-warning',
     badge: 'bg-warning/10 text-warning',
     border: 'border-warning/25',
     icon: '📄',
     label: '마감',
-  },
-  step: {
-    dot: 'bg-info',
-    pill: 'bg-info/10 text-info',
-    badge: 'bg-info/10 text-info',
-    border: 'border-info/25',
-    icon: '🗓️',
-    label: '일정',
   },
   exam: {
     dot: 'bg-violet',
@@ -48,7 +40,6 @@ const COLOR = {
 } as const
 
 const TYPE_PRIORITY: Record<CalendarEvent['type'], number> = {
-  deadline: 0,
   step: 0,
   exam: 1,
   note: 2,
@@ -67,7 +58,6 @@ function sortDayEvents(events: CalendarEvent[]): CalendarEvent[] {
 }
 
 function eventLabel(e: CalendarEvent) {
-  if (e.type === 'deadline') return `${e.companyName} 마감`
   if (e.type === 'exam') return e.companyName ?? ''
   if (e.type === 'note') return e.content ?? ''
   return `${e.companyName} ${e.stepName ?? ''}`.trim()
@@ -75,7 +65,6 @@ function eventLabel(e: CalendarEvent) {
 
 function eventPillLabel(e: CalendarEvent) {
   const time = e.time ? e.time.slice(0, 5) : null
-  if (e.type === 'deadline') return `${e.companyName} 마감`
   if (e.type === 'exam') {
     const base = e.companyName ?? ''
     return time ? `${time} ${base}` : base
@@ -177,8 +166,8 @@ export function Calendar() {
     return sortDayEvents(list)
   }, [selectedDate, eventsByDate, weekEvents])
 
-  const deadlineCount = monthlyEvents.filter((e) => e.type === 'deadline').length
   const stepCount = monthlyEvents.filter((e) => e.type === 'step').length
+  const examCount = monthlyEvents.filter((e) => e.type === 'exam').length
 
   function handleSelectDate(dateStr: string) {
     if (dateStr === selectedDate) {
@@ -366,22 +355,22 @@ export function Calendar() {
       </div>
 
       {/* Summary banner (monthly view only) */}
-      {view === 'month' && !monthlyLoading && (deadlineCount > 0 || stepCount > 0) && (
+      {view === 'month' && !monthlyLoading && (stepCount > 0 || examCount > 0) && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-white/5 rounded-xl mb-4">
           <span className="text-xs text-text-quaternary">이번 달</span>
-          {deadlineCount > 0 && (
+          {stepCount > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-warning">
               <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
-              마감 {deadlineCount}건
+              마감 {stepCount}건
             </span>
           )}
-          {deadlineCount > 0 && stepCount > 0 && (
+          {stepCount > 0 && examCount > 0 && (
             <span className="text-white/10">|</span>
           )}
-          {stepCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-info">
-              <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0" />
-              일정 {stepCount}건
+          {examCount > 0 && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-violet">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet shrink-0" />
+              시험 {examCount}건
             </span>
           )}
         </div>
@@ -502,11 +491,11 @@ export function Calendar() {
           {/* Legend */}
           <div className="flex items-center flex-wrap gap-x-5 gap-y-2">
             <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
-              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.deadline.dot}`} />
+              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.step.dot}`} />
               마감
             </div>
             <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
-              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.step.dot}`} />
+              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.note.dot}`} />
               일정·메모
             </div>
             <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
