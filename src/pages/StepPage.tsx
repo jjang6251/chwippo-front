@@ -50,7 +50,9 @@ export function StepPage() {
 
   function handleDateBlur() {
     setEditingField(null)
-    updateStep({ stepId: stepId!, scheduledDate: scheduledDate ? `${scheduledDate}:00` : null })
+  }
+  function saveScheduledDate(value: string) {
+    updateStep({ stepId: stepId!, scheduledDate: value ? `${value}:00+09:00` : null })
   }
   function handleLocationBlur() {
     setEditingField(null)
@@ -226,7 +228,11 @@ export function StepPage() {
                 ref={dateInputRef}
                 type="datetime-local"
                 value={scheduledDate}
-                onChange={(e) => setScheduledDate(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setScheduledDate(v)
+                  saveScheduledDate(v)
+                }}
                 onBlur={handleDateBlur}
                 autoFocus
                 aria-label="일정 날짜 및 시간"
