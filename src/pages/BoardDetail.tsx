@@ -343,7 +343,7 @@ export function BoardDetail() {
               <>
                 <label className="block text-[10px] text-text-quaternary mb-1 truncate">{currentStep.name} 날짜</label>
                 <input
-                  key={currentStep.id}
+                  key={`${currentStep.id}-${currentStep.scheduledDate ?? ''}`}
                   type="date"
                   defaultValue={currentStep.scheduledDate ? dayjs(currentStep.scheduledDate).format('YYYY-MM-DD') : ''}
                   onChange={(e) => {
@@ -351,7 +351,7 @@ export function BoardDetail() {
                     const oldDate = currentStep.scheduledDate ? dayjs(currentStep.scheduledDate).format('YYYY-MM-DD') : ''
                     if (e.target.value !== oldDate) {
                       updateStepDetail(
-                        { stepId: currentStep.id, scheduledDate: e.target.value ? `${e.target.value}T00:00:00` : null },
+                        { stepId: currentStep.id, scheduledDate: e.target.value ? `${e.target.value}T00:00:00+09:00` : null },
                         { onSuccess: () => toast.show('저장됐어요.') },
                       )
                     }
@@ -529,6 +529,7 @@ export function BoardDetail() {
       {/* 스텝 상세 패널 */}
       {openStep && (
         <StepDetailPanel
+          key={openStep.id}
           appId={app.id}
           step={openStep}
           onClose={() => setOpenStepId(null)}
