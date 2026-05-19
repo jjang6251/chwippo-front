@@ -607,8 +607,7 @@ function EventCard({ event }: { event: CalendarEvent }) {
   const to = rawTo ? (isDemo ? '/demo' + rawTo : rawTo) : null
   const title = event.type === 'note' ? (event.content ?? '') : (event.companyName ?? '')
   const subtitle =
-    event.type === 'deadline' ? '마감'
-    : event.type === 'exam' ? '시험 일정'
+    event.type === 'exam' ? '시험 일정'
     : event.type === 'note' ? null
     : event.stepName
   const inner = (
