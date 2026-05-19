@@ -68,7 +68,7 @@ export function Dashboard() {
   const day = dayNames[now.getDay()]
 
   const pinnedItem = dday?.find(
-    (item) => item.type === 'interview' && item.pinnedContent && item.dday <= 1 && item.dday >= 0,
+    (item) => item.type === 'step' && item.pinnedContent && item.dday <= 1 && item.dday >= 0,
   )
 
   const sections = config?.sections ?? []

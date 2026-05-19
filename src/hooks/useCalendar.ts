@@ -30,6 +30,11 @@ export function useTodayDailyNotes() {
   })
 }
 
+function invalidateCalendarAndDday(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['calendar'], refetchType: 'all' })
+  qc.invalidateQueries({ queryKey: ['dashboard', 'dday'], refetchType: 'all' })
+}
+
 export function useCreateDailyNote(date: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -37,6 +42,7 @@ export function useCreateDailyNote(date: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dailyNotes', date] })
       qc.invalidateQueries({ queryKey: ['dailyNotes', 'range'] })
+      invalidateCalendarAndDday(qc)
     },
     onError: () => toast.error('저장에 실패했습니다.'),
   })
@@ -50,6 +56,7 @@ export function useUpdateDailyNote(date: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dailyNotes', date] })
       qc.invalidateQueries({ queryKey: ['dailyNotes', 'range'] })
+      invalidateCalendarAndDday(qc)
     },
     onError: () => toast.error('업데이트에 실패했습니다.'),
   })
@@ -62,6 +69,7 @@ export function useDeleteDailyNote(date: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dailyNotes', date] })
       qc.invalidateQueries({ queryKey: ['dailyNotes', 'range'] })
+      invalidateCalendarAndDday(qc)
     },
     onError: () => toast.error('삭제에 실패했습니다.'),
   })
@@ -75,6 +83,7 @@ export function useCarryOverDailyNote() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dailyNotes', 'range'] })
       qc.invalidateQueries({ queryKey: ['dailyNotes', today] })
+      invalidateCalendarAndDday(qc)
     },
     onError: () => toast.error('이동에 실패했습니다.'),
   })

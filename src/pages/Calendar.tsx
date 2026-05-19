@@ -19,15 +19,15 @@ const COLOR = {
     badge: 'bg-warning/10 text-warning',
     border: 'border-warning/25',
     icon: '📄',
-    label: '서류',
+    label: '마감',
   },
-  interview: {
+  step: {
     dot: 'bg-info',
     pill: 'bg-info/10 text-info',
     badge: 'bg-info/10 text-info',
     border: 'border-info/25',
     icon: '🗓️',
-    label: '면접',
+    label: '일정',
   },
   exam: {
     dot: 'bg-violet',
@@ -37,23 +37,55 @@ const COLOR = {
     icon: '📚',
     label: '시험',
   },
+  note: {
+    dot: 'bg-info',
+    pill: 'bg-info/10 text-info',
+    badge: 'bg-info/10 text-info',
+    border: 'border-info/25',
+    icon: '📝',
+    label: '메모',
+  },
 } as const
 
+const TYPE_PRIORITY: Record<CalendarEvent['type'], number> = {
+  deadline: 0,
+  step: 0,
+  exam: 1,
+  note: 2,
+}
+
+function sortDayEvents(events: CalendarEvent[]): CalendarEvent[] {
+  return [...events].sort((a, b) => {
+    const pa = TYPE_PRIORITY[a.type]
+    const pb = TYPE_PRIORITY[b.type]
+    if (pa !== pb) return pa - pb
+    if (a.time === b.time) return 0
+    if (a.time === null) return -1
+    if (b.time === null) return 1
+    return a.time.localeCompare(b.time)
+  })
+}
+
 function eventLabel(e: CalendarEvent) {
-  if (e.type === 'deadline') return `${e.companyName} 서류`
-  if (e.type === 'exam') return e.companyName
-  const step = e.stepName ?? '면접'
-  return `${e.companyName} ${step}`
+  if (e.type === 'deadline') return `${e.companyName} 마감`
+  if (e.type === 'exam') return e.companyName ?? ''
+  if (e.type === 'note') return e.content ?? ''
+  return `${e.companyName} ${e.stepName ?? ''}`.trim()
 }
 
 function eventPillLabel(e: CalendarEvent) {
-  const base = e.type === 'deadline'
-    ? `${e.companyName} 서류`
-    : e.type === 'exam'
-      ? e.companyName
-      : `${e.companyName} ${e.stepName ?? '면접'}`
-  if (e.time) return `${e.time.slice(0, 5)} ${base}`
-  return base
+  const time = e.time ? e.time.slice(0, 5) : null
+  if (e.type === 'deadline') return `${e.companyName} 마감`
+  if (e.type === 'exam') {
+    const base = e.companyName ?? ''
+    return time ? `${time} ${base}` : base
+  }
+  if (e.type === 'note') {
+    return time ? `${time} ${e.content ?? ''}` : (e.content ?? '')
+  }
+  // step
+  const base = `${e.companyName} ${e.stepName ?? ''}`.trim()
+  return time ? `${time} ${base}` : base
 }
 
 // Korean week starts on Monday
@@ -65,11 +97,19 @@ function getWeekStart(date: dayjs.Dayjs): dayjs.Dayjs {
 
 export function Calendar() {
   const today = dayjs().format('YYYY-MM-DD')
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryDate = searchParams.get('date')
   const initialDate = queryDate && dayjs(queryDate, 'YYYY-MM-DD', true).isValid() ? queryDate : today
 
-  const [view, setView] = useState<CalendarView>('month')
+  const view: CalendarView = searchParams.get('view') === 'week' ? 'week' : 'month'
+  function setView(next: CalendarView) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev)
+      if (next === 'week') params.set('view', 'week')
+      else params.delete('view')
+      return params
+    }, { replace: true })
+  }
   const [cursor, setCursor] = useState(dayjs(initialDate).startOf('month'))
   const [weekCursor, setWeekCursor] = useState(dayjs(initialDate))
   const [selectedDate, setSelectedDate] = useState<string>(initialDate)
@@ -98,7 +138,7 @@ export function Calendar() {
     const weekStartStr = weekStart.format('YYYY-MM-DD')
     const weekEndStr = weekEnd.format('YYYY-MM-DD')
     return combined.filter((e) => {
-      const key = `${e.date}|${e.applicationId}|${e.type}|${e.stepId ?? ''}`
+      const key = `${e.date}|${e.applicationId ?? ''}|${e.type}|${e.stepId ?? ''}|${e.examId ?? ''}|${e.noteId ?? ''}`
       if (seen.has(key)) return false
       seen.add(key)
       return e.date >= weekStartStr && e.date <= weekEndStr
@@ -112,6 +152,9 @@ export function Calendar() {
     for (const e of monthlyEvents) {
       if (!map[e.date]) map[e.date] = []
       map[e.date].push(e)
+    }
+    for (const k of Object.keys(map)) {
+      map[k] = sortDayEvents(map[k])
     }
     return map
   }, [monthlyEvents])
@@ -130,11 +173,12 @@ export function Calendar() {
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return []
     // Try monthlyEvents first; for weekly view also check weekEvents
-    return eventsByDate[selectedDate] ?? weekEvents.filter((e) => e.date === selectedDate)
+    const list = eventsByDate[selectedDate] ?? weekEvents.filter((e) => e.date === selectedDate)
+    return sortDayEvents(list)
   }, [selectedDate, eventsByDate, weekEvents])
 
   const deadlineCount = monthlyEvents.filter((e) => e.type === 'deadline').length
-  const interviewCount = monthlyEvents.filter((e) => e.type === 'interview').length
+  const stepCount = monthlyEvents.filter((e) => e.type === 'step').length
 
   function handleSelectDate(dateStr: string) {
     if (dateStr === selectedDate) {
@@ -322,22 +366,22 @@ export function Calendar() {
       </div>
 
       {/* Summary banner (monthly view only) */}
-      {view === 'month' && !monthlyLoading && (deadlineCount > 0 || interviewCount > 0) && (
+      {view === 'month' && !monthlyLoading && (deadlineCount > 0 || stepCount > 0) && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-white/5 rounded-xl mb-4">
           <span className="text-xs text-text-quaternary">이번 달</span>
           {deadlineCount > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-warning">
               <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
-              서류 마감 {deadlineCount}건
+              마감 {deadlineCount}건
             </span>
           )}
-          {deadlineCount > 0 && interviewCount > 0 && (
+          {deadlineCount > 0 && stepCount > 0 && (
             <span className="text-white/10">|</span>
           )}
-          {interviewCount > 0 && (
+          {stepCount > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-info">
               <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0" />
-              면접 일정 {interviewCount}건
+              일정 {stepCount}건
             </span>
           )}
         </div>
@@ -456,13 +500,19 @@ export function Calendar() {
           )}
 
           {/* Legend */}
-          <div className="flex items-center gap-5">
-            {(['deadline', 'interview'] as const).map((type) => (
-              <div key={type} className="flex items-center gap-1.5 text-xs text-text-quaternary">
-                <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR[type].dot}`} />
-                {type === 'deadline' ? '서류 마감' : '면접 일정'}
-              </div>
-            ))}
+          <div className="flex items-center flex-wrap gap-x-5 gap-y-2">
+            <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
+              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.deadline.dot}`} />
+              마감
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
+              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.step.dot}`} />
+              일정·메모
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
+              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.exam.dot}`} />
+              시험
+            </div>
           </div>
 
           {/* Monthly view: no-events empty state */}
@@ -560,30 +610,49 @@ function EventCard({ event }: { event: CalendarEvent }) {
   const c = COLOR[event.type]
   const rawTo = event.type === 'exam'
     ? '/myinfo#exam-schedules'
-    : event.type === 'interview' && event.stepId
+    : event.type === 'step' && event.stepId
       ? `/board/${event.applicationId}/steps/${event.stepId}`
-      : `/board/${event.applicationId}`
-  const to = isDemo ? '/demo' + rawTo : rawTo
-  return (
-    <Link
-      to={to}
-      className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-white/4 transition-colors group ${c.border}`}
-    >
+      : event.type === 'note'
+        ? null
+        : `/board/${event.applicationId}`
+  const to = rawTo ? (isDemo ? '/demo' + rawTo : rawTo) : null
+  const title = event.type === 'note' ? (event.content ?? '') : (event.companyName ?? '')
+  const subtitle =
+    event.type === 'deadline' ? '마감'
+    : event.type === 'exam' ? '시험 일정'
+    : event.type === 'note' ? null
+    : event.stepName
+  const inner = (
+    <>
       <span className="text-base shrink-0">{c.icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary group-hover:text-brand transition-colors truncate">
-          {event.companyName}
+          {title}
         </p>
-        <p className="text-xs text-text-quaternary mt-0.5">
-          {event.type === 'deadline' ? '서류 마감' : event.type === 'exam' ? '시험 일정' : event.stepName}
-          {event.time && <span className="ml-1.5">· {event.time.slice(0, 5)}</span>}
-          {event.location && <span className="ml-1.5">· {event.location}</span>}
-        </p>
+        {(subtitle || event.time || event.location) && (
+          <p className="text-xs text-text-quaternary mt-0.5">
+            {subtitle}
+            {event.time && <span className={subtitle ? 'ml-1.5' : ''}>{subtitle ? '· ' : ''}{event.time.slice(0, 5)}</span>}
+            {event.location && <span className="ml-1.5">· {event.location}</span>}
+          </p>
+        )}
       </div>
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${c.badge}`}>
         {c.label}
       </span>
-    </Link>
+    </>
+  )
+  if (to) {
+    return (
+      <Link to={to} className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-white/4 transition-colors group ${c.border}`}>
+        {inner}
+      </Link>
+    )
+  }
+  return (
+    <div className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 ${c.border}`}>
+      {inner}
+    </div>
   )
 }
 

@@ -12,8 +12,8 @@ export function useExamSchedules() {
 
 function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['exam-schedules'] })
-  qc.invalidateQueries({ queryKey: ['calendar'] })
-  qc.invalidateQueries({ queryKey: ['dashboard', 'dday'] })
+  qc.invalidateQueries({ queryKey: ['calendar'], refetchType: 'all' })
+  qc.invalidateQueries({ queryKey: ['dashboard', 'dday'], refetchType: 'all' })
   qc.invalidateQueries({ queryKey: ['myinfo'] })
 }
 

@@ -142,8 +142,8 @@ export const DEMO_DASHBOARD_STATS: DashboardStats = { total: 5, inProgress: 3, i
 
 export const DEMO_DDAY: DdayItem[] = [
   { type: 'deadline', applicationId: 'demo-a2', companyName: '토스', date: d(2), dday: 2 },
-  { type: 'interview', applicationId: 'demo-a1', stepId: 'demo-a1-s2', companyName: '카카오', stepName: '1차 기술면접', date: d(3), scheduledTime: '10:00', dday: 3, pinnedContent: '엘리베이터 5층 · 신분증 지참' },
-  { type: 'interview', applicationId: 'demo-a3', stepId: 'demo-a3-s3', companyName: '삼성전자', stepName: '임원면접', date: d(5), scheduledTime: '14:00', dday: 5 },
+  { type: 'step', applicationId: 'demo-a1', stepId: 'demo-a1-s2', companyName: '카카오', stepName: '1차 기술면접', date: d(3), scheduledTime: '10:00', dday: 3, pinnedContent: '엘리베이터 5층 · 신분증 지참' },
+  { type: 'step', applicationId: 'demo-a3', stepId: 'demo-a3-s3', companyName: '삼성전자', stepName: '임원면접', date: d(5), scheduledTime: '14:00', dday: 5 },
   { type: 'exam', examId: 'demo-e1', companyName: 'SQLD 시험', date: d(9), dday: 9 },
 ]
 
@@ -153,11 +153,11 @@ export const DEMO_INTERVIEW_REVIEW: InterviewReviewItem[] = [
 
 // ── 캘린더 ──────────────────────────────────────────────────
 export const DEMO_CALENDAR_EVENTS: CalendarEvent[] = [
-  { date: d(2), time: null, type: 'deadline', applicationId: 'demo-a2', stepId: null, examId: null, companyName: '토스', stepName: '서류 제출', location: null },
-  { date: d(3), time: '10:00', type: 'interview', applicationId: 'demo-a1', stepId: 'demo-a1-s2', examId: null, companyName: '카카오', stepName: '1차 기술면접', location: '판교 카카오 아지트' },
-  { date: d(5), time: '14:00', type: 'interview', applicationId: 'demo-a3', stepId: 'demo-a3-s3', examId: null, companyName: '삼성전자', stepName: '임원면접', location: '서울 서초 사옥' },
-  { date: d(9), time: '09:00', type: 'exam', applicationId: null, stepId: null, examId: 'demo-e1', companyName: 'SQLD 시험', stepName: null, location: '강남 시험장' },
-  { date: d(-7), time: '15:00', type: 'interview', applicationId: 'demo-a3', stepId: 'demo-a3-s2', examId: null, companyName: '삼성전자', stepName: '1차 실무면접', location: '수원 디지털시티' },
+  { date: d(2), time: null, type: 'deadline', applicationId: 'demo-a2', stepId: null, examId: null, noteId: null, companyName: '토스', stepName: '서류 제출', location: null, content: null },
+  { date: d(3), time: '10:00', type: 'step', applicationId: 'demo-a1', stepId: 'demo-a1-s2', examId: null, noteId: null, companyName: '카카오', stepName: '1차 기술면접', location: '판교 카카오 아지트', content: null },
+  { date: d(5), time: '14:00', type: 'step', applicationId: 'demo-a3', stepId: 'demo-a3-s3', examId: null, noteId: null, companyName: '삼성전자', stepName: '임원면접', location: '서울 서초 사옥', content: null },
+  { date: d(9), time: '09:00', type: 'exam', applicationId: null, stepId: null, examId: 'demo-e1', noteId: null, companyName: 'SQLD 시험', stepName: null, location: '강남 시험장', content: null },
+  { date: d(-7), time: '15:00', type: 'step', applicationId: 'demo-a3', stepId: 'demo-a3-s2', examId: null, noteId: null, companyName: '삼성전자', stepName: '1차 실무면접', location: '수원 디지털시티', content: null },
 ]
 
 export const DEMO_DAILY_NOTES: DailyNote[] = [

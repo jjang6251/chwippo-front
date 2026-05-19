@@ -38,31 +38,30 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStartKey])
 
-  // Deadline events by date (all-day row)
-  const deadlinesByDate: Record<string, CalendarEvent[]> = {}
-  // Interview events by date+hour
-  const interviewsByDateHour: Record<string, Record<number, CalendarEvent[]>> = {}
+  // All-day row: deadlines (노란) + hourSlot=null daily-notes (파란)
+  const allDayByDate: Record<string, CalendarEvent[]> = {}
+  // Time grid: step + exam + hourSlot 있는 note
+  const timedByDateHour: Record<string, Record<number, CalendarEvent[]>> = {}
 
   for (const e of events) {
     if (e.type === 'deadline') {
-      if (!deadlinesByDate[e.date]) deadlinesByDate[e.date] = []
-      deadlinesByDate[e.date].push(e)
-    } else if (e.type === 'interview' && e.time) {
+      if (!allDayByDate[e.date]) allDayByDate[e.date] = []
+      allDayByDate[e.date].push(e)
+    } else if (e.type === 'note' && !e.time) {
+      if (!allDayByDate[e.date]) allDayByDate[e.date] = []
+      allDayByDate[e.date].push(e)
+    } else if ((e.type === 'step' || e.type === 'exam' || e.type === 'note') && e.time) {
       const [h] = e.time.split(':').map(Number)
       if (h >= 0 && h <= 23) {
-        if (!interviewsByDateHour[e.date]) interviewsByDateHour[e.date] = {}
-        if (!interviewsByDateHour[e.date][h]) interviewsByDateHour[e.date][h] = []
-        interviewsByDateHour[e.date][h].push(e)
+        if (!timedByDateHour[e.date]) timedByDateHour[e.date] = {}
+        if (!timedByDateHour[e.date][h]) timedByDateHour[e.date][h] = []
+        timedByDateHour[e.date][h].push(e)
       }
-    }
-  }
-
-  // 시간 없는 면접 → 08:00 행에 표시
-  for (const e of events) {
-    if (e.type === 'interview' && !e.time) {
-      if (!interviewsByDateHour[e.date]) interviewsByDateHour[e.date] = {}
-      if (!interviewsByDateHour[e.date][8]) interviewsByDateHour[e.date][8] = []
-      interviewsByDateHour[e.date][8].push(e)
+    } else if ((e.type === 'step' || e.type === 'exam') && !e.time) {
+      // 시간 없는 step/exam → 08:00 행에 표시
+      if (!timedByDateHour[e.date]) timedByDateHour[e.date] = {}
+      if (!timedByDateHour[e.date][8]) timedByDateHour[e.date][8] = []
+      timedByDateHour[e.date][8].push(e)
     }
   }
 
@@ -108,30 +107,44 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
         })}
       </div>
 
-      {/* All-day row (서류 마감) */}
+      {/* All-day row (마감 + 시간 없는 메모) */}
       <div className="grid border-b border-white/5 min-h-[28px]" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
         <div className="flex items-center justify-end px-1 border-r border-white/5">
           <span className="text-[8px] text-text-quaternary font-medium">종일</span>
         </div>
         {days.map((day) => {
           const dateStr = day.format('YYYY-MM-DD')
-          const deadlines = deadlinesByDate[dateStr] ?? []
+          const allDay = allDayByDate[dateStr] ?? []
           const isSelected = dateStr === selectedDate
           return (
             <div
               key={dateStr}
               className={`px-0.5 py-0.5 border-r border-white/5 last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
             >
-              {deadlines.map((e, idx) => (
-                <Link
-                  key={idx}
-                  to={`/board/${e.applicationId}`}
-                  className="block text-[9px] font-medium px-1 py-0.5 rounded bg-warning/15 text-warning truncate mb-0.5 hover:bg-warning/20 transition-colors"
-                  title={`${e.companyName} 서류 마감`}
-                >
-                  {e.companyName}
-                </Link>
-              ))}
+              {allDay.map((e, idx) => {
+                if (e.type === 'deadline') {
+                  return (
+                    <Link
+                      key={idx}
+                      to={`/board/${e.applicationId}`}
+                      className="block text-[9px] font-medium px-1 py-0.5 rounded bg-warning/15 text-warning truncate mb-0.5 hover:bg-warning/20 transition-colors"
+                      title={`${e.companyName} 마감`}
+                    >
+                      {e.companyName} 마감
+                    </Link>
+                  )
+                }
+                // note (시간 없음)
+                return (
+                  <div
+                    key={idx}
+                    className="block text-[9px] font-medium px-1 py-0.5 rounded bg-info/15 text-info truncate mb-0.5"
+                    title={e.content ?? ''}
+                  >
+                    {e.content}
+                  </div>
+                )
+              })}
             </div>
           )
         })}
@@ -167,7 +180,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
               {/* Day cells */}
               {days.map((day) => {
                 const dateStr = day.format('YYYY-MM-DD')
-                const hourEvents = interviewsByDateHour[dateStr]?.[hour] ?? []
+                const hourEvents = timedByDateHour[dateStr]?.[hour] ?? []
                 const isSelected = dateStr === selectedDate
                 const isTodayCell = dateStr === today && isCurrentHour
                 return (
@@ -181,17 +194,45 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
                       isTodayCell ? 'bg-danger/5' : isSelected ? 'bg-brand/5' : ''
                     }`}
                   >
-                    {hourEvents.map((e, idx) => (
-                      <Link
-                        key={idx}
-                        to={e.stepId ? `/board/${e.applicationId}/steps/${e.stepId}` : `/board/${e.applicationId}`}
-                        onClick={(ev) => ev.stopPropagation()}
-                        className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-info/15 text-info border-l border-info truncate mb-0.5 hover:bg-info/20 transition-colors"
-                        title={`${e.companyName} ${e.stepName ?? '면접'}`}
-                      >
-                        {e.companyName}
-                      </Link>
-                    ))}
+                    {hourEvents.map((e, idx) => {
+                      if (e.type === 'exam') {
+                        return (
+                          <Link
+                            key={idx}
+                            to="/myinfo#exam-schedules"
+                            onClick={(ev) => ev.stopPropagation()}
+                            className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-violet/15 text-violet border-l border-violet truncate mb-0.5 hover:bg-violet/20 transition-colors"
+                            title={e.companyName ?? ''}
+                          >
+                            {e.companyName}
+                          </Link>
+                        )
+                      }
+                      if (e.type === 'note') {
+                        return (
+                          <div
+                            key={idx}
+                            onClick={(ev) => ev.stopPropagation()}
+                            className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-info/15 text-info border-l border-info truncate mb-0.5"
+                            title={e.content ?? ''}
+                          >
+                            {e.content}
+                          </div>
+                        )
+                      }
+                      // step
+                      return (
+                        <Link
+                          key={idx}
+                          to={e.stepId ? `/board/${e.applicationId}/steps/${e.stepId}` : `/board/${e.applicationId}`}
+                          onClick={(ev) => ev.stopPropagation()}
+                          className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-info/15 text-info border-l border-info truncate mb-0.5 hover:bg-info/20 transition-colors"
+                          title={`${e.companyName} ${e.stepName ?? ''}`.trim()}
+                        >
+                          {e.companyName}
+                        </Link>
+                      )
+                    })}
                   </div>
                 )
               })}

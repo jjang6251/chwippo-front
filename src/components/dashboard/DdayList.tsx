@@ -44,11 +44,11 @@ export function DdayList({ items, isLoading }: DdayListProps) {
         const avatarColor = getAvatarColor(item.companyName)
         return (
           <button
-            key={`${item.applicationId}-${item.type}`}
+            key={`${item.applicationId ?? ''}-${item.type}-${item.stepId ?? ''}-${item.examId ?? ''}`}
             onClick={() => {
               if (item.type === 'exam') {
                 navigate('/myinfo#exam-schedules')
-              } else if (item.type === 'interview' && item.stepId) {
+              } else if (item.type === 'step' && item.stepId) {
                 navigate(`/board/${item.applicationId}/steps/${item.stepId}`)
               } else if (item.applicationId) {
                 navigate(`/board/${item.applicationId}`)
