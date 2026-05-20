@@ -62,13 +62,13 @@ export function TermsAgreement() {
         </div>
 
         {/* 동의 카드 */}
-        <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden divide-y divide-white/5">
+        <div className="bg-surface-2 border border-line rounded-xl overflow-hidden divide-y divide-line">
           {/* 전체 동의 */}
           <button
             onClick={handleAllToggle}
             role="checkbox"
             aria-checked={allAgreed}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/3 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-card transition-colors text-left"
           >
             <CheckCircle checked={allAgreed} />
             <span className={`text-sm font-semibold ${allAgreed ? 'text-text-primary' : 'text-text-secondary'}`}>
@@ -177,8 +177,8 @@ export function TermsAgreement() {
           disabled={!allAgreed || submitting}
           className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all
             ${allAgreed && !submitting
-              ? 'bg-brand hover:bg-accent text-text-primary shadow-[0_0_20px_rgba(94,106,210,0.3)]'
-              : 'bg-white/5 text-text-quaternary cursor-not-allowed'
+              ? 'bg-brand hover:bg-accent text-text-primary shadow-[0_0_20px_rgba(107,156,127,0.3)]'
+              : 'bg-card text-text-quaternary cursor-not-allowed'
             }
           `}
         >
@@ -190,18 +190,18 @@ export function TermsAgreement() {
         </p>
 
         <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-white/5" />
+          <div className="flex-1 h-px bg-card" />
           <button
             onClick={async () => {
               try { await apiClient.post('/auth/logout') } catch { /* 무시 */ }
               clearAuth()
               navigate('/', { replace: true })
             }}
-            className="text-text-tertiary text-xs px-3 py-1.5 rounded-lg border border-white/8 hover:bg-white/4 hover:text-text-secondary hover:border-white/15 transition-colors shrink-0"
+            className="text-text-tertiary text-xs px-3 py-1.5 rounded-lg border border-line hover:bg-card hover:text-text-secondary hover:border-line-strong transition-colors shrink-0"
           >
             동의하지 않고 나가기
           </button>
-          <div className="flex-1 h-px bg-white/5" />
+          <div className="flex-1 h-px bg-card" />
         </div>
       </div>
     </div>
@@ -212,7 +212,7 @@ function CheckCircle({ checked }: { checked: boolean }) {
   return (
     <span
       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0
-        ${checked ? 'bg-brand border-brand' : 'border-white/20 bg-transparent'}
+        ${checked ? 'bg-brand border-brand' : 'border-line bg-transparent'}
       `}
     >
       {checked && (

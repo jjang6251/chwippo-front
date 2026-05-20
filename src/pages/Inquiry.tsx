@@ -67,7 +67,7 @@ export function Inquiry() {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full appearance-none bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors pr-8 text-text-primary"
+              className="w-full appearance-none bg-surface-2 border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors pr-8 text-text-primary"
             >
               <option value="" disabled className="bg-surface-2 text-text-tertiary">카테고리 선택</option>
               {CATEGORIES.map((c) => (
@@ -86,7 +86,7 @@ export function Inquiry() {
             onChange={(e) => setTitle(e.target.value)}
             maxLength={100}
             placeholder="간단하게 설명해주세요"
-            className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
+            className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
           />
         </div>
 
@@ -101,7 +101,7 @@ export function Inquiry() {
             rows={6}
             maxLength={2000}
             placeholder="자세히 알려주실수록 더 빠르게 도움드릴 수 있어요."
-            className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
+            className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
           />
           <p className={`text-xs text-right mt-1 ${content.length >= 2000 ? 'text-danger' : content.length >= 1800 ? 'text-warning' : 'text-text-quaternary'}`}>{content.length} / 2000</p>
         </div>

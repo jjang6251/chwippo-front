@@ -72,18 +72,18 @@ export function OpsPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/dashboard"
-            className="text-xs text-text-tertiary hover:text-text-secondary bg-surface-2 border border-white/8 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs text-text-tertiary hover:text-text-secondary bg-surface-2 border border-line hover:border-line-strong px-3 py-1.5 rounded-lg transition-colors"
           >
             ← 치뽀로 돌아가기
           </Link>
-          <span className="text-xs text-text-tertiary bg-surface-2 border border-white/5 px-3 py-1 rounded-full">admin</span>
+          <span className="text-xs text-text-tertiary bg-surface-2 border border-line px-3 py-1 rounded-full">admin</span>
         </div>
       </div>
 
       {/* 현황 스탯 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {statCards.map(({ label, value, color }) => (
-          <div key={label} className="bg-surface-2 border border-white/5 rounded-xl p-4">
+          <div key={label} className="bg-surface-2 border border-line rounded-xl p-4">
             <p className={`text-3xl font-bold tabular-nums ${color} ${statsLoading ? 'opacity-30' : ''}`}>
               {value.toLocaleString()}
             </p>
@@ -101,7 +101,7 @@ export function OpsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
         <Link
           to="/ops/inquiries"
-          className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
+          className="flex items-center justify-between bg-surface-2 border border-line rounded-xl px-5 py-4 hover:border-line-strong transition-colors"
         >
           <div>
             <p className="text-sm font-semibold">문의 관리</p>
@@ -111,7 +111,7 @@ export function OpsPage() {
         </Link>
         <Link
           to="/ops/announcements"
-          className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
+          className="flex items-center justify-between bg-surface-2 border border-line rounded-xl px-5 py-4 hover:border-line-strong transition-colors"
         >
           <div>
             <p className="text-sm font-semibold">공지 관리</p>
@@ -121,7 +121,7 @@ export function OpsPage() {
         </Link>
         <Link
           to="/ops/users"
-          className="flex items-center justify-between bg-surface-2 border border-white/5 rounded-xl px-5 py-4 hover:border-white/15 transition-colors"
+          className="flex items-center justify-between bg-surface-2 border border-line rounded-xl px-5 py-4 hover:border-line-strong transition-colors"
         >
           <div>
             <p className="text-sm font-semibold">회원 관리</p>
@@ -142,7 +142,7 @@ export function OpsPage() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 days === value
                   ? 'bg-brand/15 border border-brand/30 text-brand'
-                  : 'bg-surface-2 border border-white/8 text-text-tertiary hover:border-white/20'
+                  : 'bg-surface-2 border border-line text-text-tertiary hover:border-line-strong'
               }`}
             >
               {label}
@@ -195,7 +195,7 @@ export function OpsPage() {
       {/* KPI 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {kpiCards.map(({ label, value, sub, color }) => (
-          <div key={label} className="bg-surface-2 border border-white/5 rounded-xl p-5">
+          <div key={label} className="bg-surface-2 border border-line rounded-xl p-5">
             <p className="text-xs text-text-tertiary mb-2">{label}</p>
             <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
             <p className="text-xs text-text-tertiary mt-1">{sub}</p>
@@ -228,7 +228,7 @@ function GlobalStorageCard({ storage }: { storage: GlobalStorage }) {
   const overWarn = percentage >= 80
 
   return (
-    <div className="bg-surface-2 border border-white/5 rounded-xl p-5 mb-8">
+    <div className="bg-surface-2 border border-line rounded-xl p-5 mb-8">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-text-tertiary font-semibold">파일 저장 (Cloudflare R2)</p>
         <span className="text-[11px] text-text-quaternary">
@@ -241,7 +241,7 @@ function GlobalStorageCard({ storage }: { storage: GlobalStorage }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={`R2 사용량 ${percentage.toFixed(1)}%`}
-        className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden mb-3"
+        className="h-1.5 w-full rounded-full bg-card overflow-hidden mb-3"
       >
         <div
           className={`h-full transition-all ${overWarn ? 'bg-warning' : 'bg-brand'}`}
@@ -271,7 +271,7 @@ function ChartCard({ title, data, color, loading, unit }: ChartCardProps) {
   const tickInterval = data ? Math.max(1, Math.floor(data.length / tickCount)) : 1
 
   return (
-    <div className="bg-surface-2 border border-white/5 rounded-xl p-5">
+    <div className="bg-surface-2 border border-line rounded-xl p-5">
       <p className="text-sm font-semibold mb-4">{title}</p>
       {loading || !data ? (
         <div className="h-40 flex items-center justify-center text-text-tertiary text-xs">불러오는 중...</div>

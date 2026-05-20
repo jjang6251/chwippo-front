@@ -43,7 +43,7 @@ export function SetResultModal({ open, onClose, applicationId, companyName }: Se
         <button
           onClick={() => handleResult('FAILED')}
           disabled={isPending}
-          className="flex-1 py-4 rounded-xl border border-white/10 bg-white/4 hover:bg-white/8 text-text-secondary font-medium text-sm transition-all disabled:opacity-50"
+          className="flex-1 py-4 rounded-xl border border-line bg-card hover:bg-card-strong text-text-secondary font-medium text-sm transition-all disabled:opacity-50"
         >
           불합격
         </button>

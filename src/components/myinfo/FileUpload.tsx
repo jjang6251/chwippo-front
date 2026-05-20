@@ -54,7 +54,7 @@ export function FileUpload({ slot, scope: _scope, onChange, hint, disabled }: Fi
   // ── pending: 파일 선택됨, 아직 업로드 전 ──────────────────
   if (slot.kind === 'pending') {
     return (
-      <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-surface-2 border border-white/8 rounded-lg">
+      <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-surface-2 border border-line rounded-lg">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-text-tertiary flex-none">
           <rect x="2" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
           <path d="M5 5.5h4M5 8h4M5 10.5h2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -83,7 +83,7 @@ export function FileUpload({ slot, scope: _scope, onChange, hint, disabled }: Fi
   if (slot.kind === 'existing') {
     const isPdf = slot.url.toLowerCase().includes('.pdf')
     return (
-      <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-surface-2 border border-white/8 rounded-lg">
+      <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-surface-2 border border-line rounded-lg">
         {isPdf ? (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-danger flex-none">
             <rect x="2" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
@@ -129,7 +129,7 @@ export function FileUpload({ slot, scope: _scope, onChange, hint, disabled }: Fi
               role="dialog"
               aria-modal="true"
               aria-label="파일 첨부 해제 확인"
-              className="bg-surface border border-white/10 rounded-xl w-full max-w-xs p-5 space-y-4"
+              className="bg-surface border border-line rounded-xl w-full max-w-xs p-5 space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div>
@@ -141,7 +141,7 @@ export function FileUpload({ slot, scope: _scope, onChange, hint, disabled }: Fi
               <div className="flex gap-2">
                 <button
                   onClick={() => setConfirmingExistingRemove(false)}
-                  className="flex-1 py-2 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
+                  className="flex-1 py-2 text-xs text-text-secondary border border-line rounded-lg hover:bg-card transition-colors"
                 >
                   취소
                 </button>
@@ -183,7 +183,7 @@ export function FileUpload({ slot, scope: _scope, onChange, hint, disabled }: Fi
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={disabled}
-        className="mt-2 flex items-center gap-1.5 text-xs text-text-quaternary hover:text-text-secondary border border-dashed border-white/12 hover:border-white/20 rounded-lg px-3 py-2 w-full transition-colors disabled:opacity-50"
+        className="mt-2 flex items-center gap-1.5 text-xs text-text-quaternary hover:text-text-secondary border border-dashed border-line hover:border-line-strong rounded-lg px-3 py-2 w-full transition-colors disabled:opacity-50"
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path

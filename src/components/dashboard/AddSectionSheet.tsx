@@ -36,12 +36,12 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label="섹션 관리" className="relative z-10 w-full max-w-sm bg-surface border border-white/8 rounded-t-xl sm:rounded-xl p-5">
+      <div role="dialog" aria-modal="true" aria-label="섹션 관리" className="relative z-10 w-full max-w-sm bg-surface border border-line rounded-t-xl sm:rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-text-primary text-sm font-semibold">섹션 관리</h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-white/5 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-card transition-colors"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -63,10 +63,10 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
                   aria-pressed={isActive}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors
                     ${disabled
-                      ? 'border-white/5 opacity-50 cursor-not-allowed'
+                      ? 'border-line opacity-50 cursor-not-allowed'
                       : isActive
                         ? 'border-brand/40 bg-brand/8 hover:bg-brand/12 cursor-pointer'
-                        : 'border-white/8 hover:bg-white/5 cursor-pointer'
+                        : 'border-line hover:bg-card cursor-pointer'
                     }`}
                 >
                   <span className="text-xl flex-none">{s.icon}</span>
@@ -75,7 +75,7 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
                     <p className="text-text-quaternary text-[11px] truncate">{s.description}</p>
                   </div>
                   {disabled ? (
-                    <span className="flex-none text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-text-quaternary">
+                    <span className="flex-none text-[10px] px-1.5 py-0.5 rounded-full bg-card text-text-quaternary">
                       준비 중
                     </span>
                   ) : isActive ? (
@@ -85,7 +85,7 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
                       </svg>
                     </span>
                   ) : (
-                    <span className="flex-none w-5 h-5 rounded-full border border-white/15" />
+                    <span className="flex-none w-5 h-5 rounded-full border border-line" />
                   )}
                 </button>
               </li>

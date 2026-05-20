@@ -45,7 +45,7 @@ export function Help() {
               className={`border rounded-xl overflow-hidden transition-colors ${
                 isOpen
                   ? 'bg-brand/5 border-brand/25'
-                  : 'bg-surface-2 border-white/5 hover:border-white/10'
+                  : 'bg-surface-2 border-line hover:border-line-strong'
               }`}
             >
               <button
@@ -55,7 +55,7 @@ export function Help() {
               >
                 <div className="flex items-center gap-3">
                   <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    isOpen ? 'bg-brand text-text-primary' : 'bg-white/8 text-text-tertiary'
+                    isOpen ? 'bg-brand text-text-primary' : 'bg-card-strong text-text-tertiary'
                   }`}>
                     Q
                   </span>
@@ -81,7 +81,7 @@ export function Help() {
         })}
       </div>
 
-      <div className="mt-8 bg-surface-2 border border-white/5 rounded-xl p-5 flex items-center justify-between">
+      <div className="mt-8 bg-surface-2 border border-line rounded-xl p-5 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium mb-0.5">원하는 답변을 찾지 못하셨나요?</p>
           <p className="text-xs text-text-tertiary">무엇이든 편하게 물어보세요.</p>

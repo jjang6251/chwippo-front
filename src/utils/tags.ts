@@ -15,7 +15,7 @@ export const JOB_CATEGORY_COLOR: Record<string, string> = {
   '영업':     'text-emerald-400 bg-emerald-400/10 border-emerald-400/25',
   '경영지원': 'text-slate-400 bg-slate-400/10 border-slate-400/25',
   '금융':     'text-yellow-400 bg-yellow-400/10 border-yellow-400/25',
-  '기타':     'text-text-tertiary bg-white/6 border-white/12',
+  '기타':     'text-text-tertiary bg-card border-line',
 }
 
 // DB는 comma-separated string, 프론트는 배열

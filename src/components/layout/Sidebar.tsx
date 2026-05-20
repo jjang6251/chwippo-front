@@ -38,9 +38,9 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col w-56 shrink-0 bg-surface border-r border-white/5 min-h-screen sticky top-0 h-screen">
+      <aside data-nav className="hidden lg:flex flex-col w-56 shrink-0 bg-surface border-r border-line min-h-screen sticky top-0 h-screen">
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-white/5">
+        <div className="px-5 py-5 border-b border-line">
           <Link to={link('/dashboard')} className="text-lg font-bold text-brand tracking-tight">
             치뽀{isDemo && <span className="ml-1.5 text-[10px] font-medium text-text-quaternary align-middle">데모</span>}
           </Link>
@@ -56,7 +56,7 @@ export function Sidebar() {
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive(path)
                   ? 'bg-brand/10 text-brand'
-                  : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
+                  : 'text-text-secondary hover:bg-card hover:text-text-primary'
               }`}
             >
               <Icon size={16} />
@@ -72,7 +72,7 @@ export function Sidebar() {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   location.pathname.startsWith('/ops')
                     ? 'bg-warning/10 text-warning'
-                    : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
+                    : 'text-text-secondary hover:bg-card hover:text-text-primary'
                 }`}
               >
                 <AdminIcon size={16} />
@@ -84,7 +84,7 @@ export function Sidebar() {
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       location.pathname === '/ops/inquiries'
                         ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03]'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card'
                     }`}
                   >
                     문의 관리
@@ -94,7 +94,7 @@ export function Sidebar() {
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       location.pathname === '/ops/announcements'
                         ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-white/[0.03]'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card'
                     }`}
                   >
                     공지 관리
@@ -108,7 +108,7 @@ export function Sidebar() {
 
           {!isDemo && (
             <>
-              <div className="h-px bg-white/5 my-2" />
+              <div className="h-px bg-card my-2" />
 
               {/* 설정 */}
               <Link
@@ -116,7 +116,7 @@ export function Sidebar() {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isSettingsActive
                     ? 'bg-brand/10 text-brand'
-                    : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
+                    : 'text-text-secondary hover:bg-card hover:text-text-primary'
                 }`}
               >
                 <SettingsIcon size={16} />
@@ -129,7 +129,7 @@ export function Sidebar() {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   location.pathname === '/settings/help'
                     ? 'bg-brand/10 text-brand'
-                    : 'text-text-secondary hover:bg-white/4 hover:text-text-primary'
+                    : 'text-text-secondary hover:bg-card hover:text-text-primary'
                 }`}
               >
                 <HelpIcon size={16} />
@@ -139,7 +139,7 @@ export function Sidebar() {
               {/* 로그아웃 */}
               <button
                 onClick={() => setShowLogoutModal(true)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-white/4 hover:text-text-primary transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-card hover:text-text-primary transition-colors text-left"
               >
                 <LogoutIcon size={16} />
                 로그아웃
@@ -149,7 +149,7 @@ export function Sidebar() {
         </nav>
 
         {/* 하단 CTA */}
-        <div className="px-3 py-4 border-t border-white/5">
+        <div className="px-3 py-4 border-t border-line">
           {isDemo ? (
             <button
               onClick={showLogin}
@@ -176,13 +176,13 @@ export function Sidebar() {
       {/* 로그아웃 확인 모달 */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-line rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">로그아웃 하시겠어요?</h3>
             <p className="text-sm text-text-quaternary mb-6">로그인 화면으로 이동합니다.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm font-medium text-text-secondary hover:bg-white/4 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
               >
                 취소
               </button>

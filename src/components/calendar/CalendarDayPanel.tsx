@@ -89,7 +89,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-line shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-text-primary font-semibold text-sm">
             {d.month() + 1}월 {d.date()}일 ({KO_DAYS[d.day()]})
@@ -102,7 +102,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="닫기"
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-white/6 hover:text-text-primary transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card hover:text-text-primary transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M3 3l10 10M13 3L3 13" />
@@ -113,7 +113,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
 
       {/* All-day events */}
       {timelessEvents.length > 0 && (
-        <div className="px-3 py-2 border-b border-white/5 shrink-0 space-y-1">
+        <div className="px-3 py-2 border-b border-line shrink-0 space-y-1">
           <p className="text-[9px] text-text-quaternary font-medium uppercase tracking-wide">종일</p>
           {timelessEvents.map((e, idx) => (
             <Link
@@ -129,7 +129,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
       )}
 
       {/* Unscheduled notes (할 일) — always shown so users can add */}
-      <div className="px-3 py-2 border-b border-white/5 shrink-0 space-y-1">
+      <div className="px-3 py-2 border-b border-line shrink-0 space-y-1">
           <p className="text-[9px] text-text-quaternary font-medium uppercase tracking-wide">📌 할 일</p>
           {nullSlotNotes.map((n) => (
             <div key={n.id} className="flex items-center gap-1.5 group/note">
@@ -137,7 +137,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
                 aria-label={n.isDone ? '완료 취소' : '완료 표시'}
                 onClick={() => updateNote({ id: n.id, isDone: !n.isDone })}
                 className={`relative w-3.5 h-3.5 rounded-sm border shrink-0 flex items-center justify-center transition-colors ${
-                  n.isDone ? 'bg-success border-success text-text-primary' : 'border-white/8 hover:border-success/60'
+                  n.isDone ? 'bg-success border-success text-text-primary' : 'border-line hover:border-success/60'
                 }`}
               >
                 {n.isDone && (
@@ -182,7 +182,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
               </div>
 
               {/* Content */}
-              <div className={`flex-1 border-t px-2 py-1 relative min-h-[56px] ${isHalfHour ? 'border-white/5 border-dashed' : 'border-white/8'}`}>
+              <div className={`flex-1 border-t px-2 py-1 relative min-h-[56px] ${isHalfHour ? 'border-line border-dashed' : 'border-line'}`}>
                 {isCurrentSlot && <div className="absolute left-0 top-0 w-full h-px bg-danger/60" />}
 
                 {slotEvents.map((e, idx) => {
@@ -217,7 +217,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
                       aria-label={n.isDone ? '완료 취소' : '완료 표시'}
                       onClick={() => updateNote({ id: n.id, isDone: !n.isDone })}
                       className={`relative w-3.5 h-3.5 rounded-sm border shrink-0 flex items-center justify-center transition-colors ${
-                        n.isDone ? 'bg-success border-success text-text-primary' : 'border-white/8 hover:border-success/60'
+                        n.isDone ? 'bg-success border-success text-text-primary' : 'border-line hover:border-success/60'
                       }`}
                     >
                       {n.isDone && (
@@ -243,7 +243,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
 
                 {inputSlot === slot ? (
                   <div className="flex items-center gap-1.5">
-                    <div className="w-3.5 h-3.5 rounded-sm border border-white/20 shrink-0" />
+                    <div className="w-3.5 h-3.5 rounded-sm border border-line shrink-0" />
                     <input
                       autoFocus
                       value={inputText}
@@ -296,7 +296,7 @@ function NullSlotInput({ date, createNote }: NullSlotInputProps) {
   if (active) {
     return (
       <div className="flex items-center gap-1.5 mt-1">
-        <div className="w-3.5 h-3.5 rounded-sm border border-white/8 shrink-0" />
+        <div className="w-3.5 h-3.5 rounded-sm border border-line shrink-0" />
         <input
           autoFocus
           value={text}

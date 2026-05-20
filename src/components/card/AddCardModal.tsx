@@ -79,7 +79,7 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="예) 카카오, 네이버, 삼성전자"
-            className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
         </div>
 
@@ -92,7 +92,7 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
             value={jobTitle}
             onChange={(e) => setJobTitle(e.target.value)}
             placeholder="예) 백엔드 개발자, iOS 개발자"
-            className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
         </div>
 
@@ -111,7 +111,7 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
                 <select
                   value={effectiveTemplateId}
                   onChange={(e) => { setTemplateTouched(true); setTemplateId(e.target.value) }}
-                  className="w-full appearance-none bg-surface-3 border border-white/8 rounded-lg pl-3 pr-9 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
+                  className="w-full appearance-none bg-surface-3 border border-line rounded-lg pl-3 pr-9 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
                 >
                   {APPLICATION_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
@@ -131,13 +131,13 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+              className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
           </div>
         )}
 
         <div className="flex gap-2 pt-1">
-          <button type="button" onClick={handleClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">
+          <button type="button" onClick={handleClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">
             취소
           </button>
           <button type="submit" disabled={!companyName.trim() || isPending} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">

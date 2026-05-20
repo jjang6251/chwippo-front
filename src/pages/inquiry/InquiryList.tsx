@@ -8,7 +8,7 @@ const STATUS_LABEL = { OPEN: '답변 대기', IN_PROGRESS: '답변 중', CLOSED:
 const STATUS_COLOR = {
   OPEN: 'text-warning bg-warning/10 border-warning/20',
   IN_PROGRESS: 'text-brand bg-brand/10 border-brand/20',
-  CLOSED: 'text-text-quaternary bg-white/5 border-white/10',
+  CLOSED: 'text-text-quaternary bg-card border-line',
 }
 
 const CATEGORIES = ['전체', '버그 신고', '기능 추가 요청', '기능 개선', '알림 문의', '계정·개인정보', '사용 방법 문의', '기타']
@@ -50,7 +50,7 @@ export function InquiryList() {
           <select
             value={catFilter}
             onChange={(e) => setCatFilter(e.target.value)}
-            className="appearance-none bg-surface-2 border border-white/8 rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
+            className="appearance-none bg-surface-2 border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -63,7 +63,7 @@ export function InquiryList() {
       {isLoading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 bg-white/[0.02] border border-white/6 rounded-xl animate-pulse" />
+            <div key={i} className="h-20 bg-card border border-line rounded-xl animate-pulse" />
           ))}
         </div>
       ) : sorted.length === 0 ? (
@@ -88,13 +88,13 @@ export function InquiryList() {
 function InquiryCard({ item }: { item: Inquiry }) {
   const isClosed = item.status === 'CLOSED'
   const statusLabel = STATUS_LABEL[item.status as keyof typeof STATUS_LABEL] ?? item.status
-  const statusColor = STATUS_COLOR[item.status as keyof typeof STATUS_COLOR] ?? 'text-text-quaternary bg-white/5 border-white/10'
+  const statusColor = STATUS_COLOR[item.status as keyof typeof STATUS_COLOR] ?? 'text-text-quaternary bg-card border-line'
 
   return (
     <Link
       to={`/inquiry/${item.id}`}
-      className={`block border rounded-xl px-5 py-4 transition-colors hover:border-white/20 relative ${
-        isClosed ? 'bg-surface-2/50 border-white/5 opacity-60' : 'bg-surface-2 border-white/8'
+      className={`block border rounded-xl px-5 py-4 transition-colors hover:border-line-strong relative ${
+        isClosed ? 'bg-surface-2/50 border-line opacity-60' : 'bg-surface-2 border-line'
       }`}
     >
       {/* 미읽음 뱃지 */}

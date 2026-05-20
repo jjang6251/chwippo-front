@@ -29,7 +29,7 @@ export function AlarmSettings() {
         {ALARMS.map(({ icon, label, desc }) => (
           <div
             key={label}
-            className="flex items-center gap-4 bg-surface-2 border border-white/5 rounded-xl px-5 py-4 opacity-50"
+            className="flex items-center gap-4 bg-surface-2 border border-line rounded-xl px-5 py-4 opacity-50"
           >
             <span className="text-xl w-7 text-center">{icon}</span>
             <div className="flex-1 min-w-0">
@@ -37,8 +37,8 @@ export function AlarmSettings() {
               <p className="text-xs text-text-tertiary mt-0.5">{desc}</p>
             </div>
             {/* 비활성 토글 */}
-            <div className="relative w-10 h-6 rounded-full bg-white/10 flex-shrink-0 cursor-not-allowed">
-              <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-white/40 transition-transform" />
+            <div className="relative w-10 h-6 rounded-full bg-card-strong flex-shrink-0 cursor-not-allowed">
+              <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-card0 transition-transform" />
             </div>
           </div>
         ))}

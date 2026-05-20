@@ -120,7 +120,7 @@ export function Terms() {
           </p>
         </DocSection>
 
-        <div className="mt-12 pt-6 border-t border-white/5 text-text-quaternary text-xs">
+        <div className="mt-12 pt-6 border-t border-line text-text-quaternary text-xs">
           운영자: 장성원 ·{' '}
           <Link to="/inquiry" className="text-brand hover:underline">문의하기</Link>
         </div>

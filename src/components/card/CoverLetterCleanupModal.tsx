@@ -35,7 +35,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: Cover
   return (
     <Modal open onClose={onClose} title="자소서 정리" width="max-w-lg">
       {/* 무엇을 검사하는지 안내 */}
-      <div className="text-[11px] text-text-quaternary leading-relaxed bg-white/[0.03] border border-white/6 rounded-lg px-3 py-2 mb-4">
+      <div className="text-[11px] text-text-quaternary leading-relaxed bg-card border border-line rounded-lg px-3 py-2 mb-4">
         <span className="text-text-tertiary">맞춤법은 검사하지 않아요.</span> 형식만 정리합니다 —
         연속된 줄바꿈·공백, 줄 앞뒤 공백, 탭, 문장 도중 줄바꿈(쉼표 뒤), 한글 자모 단독(ㅋㅋ), 이모지·그림문자, 전각 공백, 둥근 따옴표, 문장부호 외 특수문자, 글자수 초과.
       </div>
@@ -44,7 +44,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: Cover
         <div className="text-center py-6">
           <div className="text-2xl mb-2">✨</div>
           <p className="text-text-secondary text-sm">정리할 내용이 없어요. 깔끔합니다!</p>
-          <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">
+          <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">
             닫기
           </button>
         </div>
@@ -64,7 +64,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: Cover
           {/* 원본 (문제 부분 강조) */}
           <div className="mb-3">
             <p className="text-[11px] font-medium text-text-tertiary mb-1.5">원본 — 빨간 부분이 정리 대상</p>
-            <div className="max-h-40 overflow-y-auto bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+            <div className="max-h-40 overflow-y-auto bg-surface-2 border border-line rounded-lg px-3 py-2.5 text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
               {highlight(text, ranges)}
             </div>
           </div>
@@ -83,7 +83,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: Cover
           )}
 
           <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">
+            <button onClick={onClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">
               취소
             </button>
             {!onlyOverLimit && (

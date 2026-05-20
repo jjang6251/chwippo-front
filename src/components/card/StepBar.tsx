@@ -13,7 +13,7 @@ interface StepBarProps {
 function ProgressBar({ progress, isPassed, height = 'h-1.5' }: { progress: number; isPassed?: boolean; height?: string }) {
   return (
     <div
-      className={`w-full bg-white/5 rounded-full overflow-hidden ${height}`}
+      className={`w-full bg-card rounded-full overflow-hidden ${height}`}
       role="progressbar"
       aria-valuenow={progress}
       aria-valuemin={0}
@@ -57,7 +57,7 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                 {/* 왼쪽: 첫 셀은 투명 spacer, 나머지는 실제 연결선 */}
                 <div className="flex-1 flex items-center">
                   {!isFirst && (
-                    <div className="w-full h-px overflow-hidden bg-white/8">
+                    <div className="w-full h-px overflow-hidden bg-card-strong">
                       <div
                         className="h-full bg-brand transition-all duration-500 ease-out"
                         style={{ width: i <= currentStepIndex ? '100%' : '0%' }}
@@ -70,12 +70,12 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                 <div className="relative shrink-0">
                   {isHovered && (
                     <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                      <div className="bg-surface-3 border border-white/12 text-text-primary text-[10px] font-medium px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
+                      <div className="bg-surface-3 border border-line text-text-primary text-[10px] font-medium px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
                         {step.name}
                         {isDone && <span className="ml-1.5 text-brand">✓</span>}
                         {isCurrent && <span className="ml-1.5 text-brand">← 현재</span>}
                       </div>
-                      <div className="w-1.5 h-1.5 bg-surface-3 border-r border-b border-white/12 rotate-45 mx-auto -mt-1" />
+                      <div className="w-1.5 h-1.5 bg-surface-3 border-r border-b border-line rotate-45 mx-auto -mt-1" />
                     </div>
                   )}
                   <button
@@ -88,10 +88,10 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                     className={`
                       relative flex-none rounded-full transition-all duration-200 flex items-center justify-center
                       ${nodeSize}
-                      ${isDone ? 'bg-brand shadow-[0_0_6px_rgba(94,106,210,0.4)]' : ''}
-                      ${isCurrent ? 'bg-brand shadow-[0_0_10px_rgba(94,106,210,0.6)]' : ''}
-                      ${!isDone && !isCurrent ? 'bg-white/12 border border-white/8' : ''}
-                      ${onStepClick ? 'cursor-pointer hover:scale-125 hover:shadow-[0_0_12px_rgba(94,106,210,0.5)]' : 'cursor-default'}
+                      ${isDone ? 'bg-brand shadow-[0_0_6px_rgba(107,156,127,0.4)]' : ''}
+                      ${isCurrent ? 'bg-brand shadow-[0_0_10px_rgba(107,156,127,0.6)]' : ''}
+                      ${!isDone && !isCurrent ? 'bg-card-strong border border-line' : ''}
+                      ${onStepClick ? 'cursor-pointer hover:scale-125 hover:shadow-[0_0_12px_rgba(107,156,127,0.5)]' : 'cursor-default'}
                     `}
                   >
                     {isCurrent && (
@@ -108,7 +108,7 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                 {/* 오른쪽: 마지막 셀은 투명 spacer, 나머지는 실제 연결선 */}
                 <div className="flex-1 flex items-center">
                   {!isLast && (
-                    <div className="w-full h-px overflow-hidden bg-white/8">
+                    <div className="w-full h-px overflow-hidden bg-card-strong">
                       <div
                         className="h-full bg-brand transition-all duration-500 ease-out"
                         style={{ width: i < currentStepIndex ? '100%' : '0%' }}
@@ -141,9 +141,9 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                 ${size === 'sm' ? 'text-[8px]' : 'text-[9px] font-medium'}
                 ${isCurrent ? 'text-brand' : ''}
                 ${isDone ? 'text-text-quaternary' : ''}
-                ${!isDone && !isCurrent ? 'text-white/25' : ''}
+                ${!isDone && !isCurrent ? 'text-text-faint' : ''}
                 ${onStepNameClick
-                  ? 'cursor-pointer hover:bg-white/8 hover:text-text-primary'
+                  ? 'cursor-pointer hover:bg-card-strong hover:text-text-primary'
                   : 'cursor-default'
                 }
               `}
@@ -184,7 +184,7 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
               disabled={!onStepNameClick}
               className={`flex items-center gap-1.5 group/cur ${onStepNameClick ? 'cursor-pointer' : 'cursor-default'}`}
             >
-              <span className="w-2 h-2 rounded-full bg-brand shadow-[0_0_6px_rgba(94,106,210,0.6)] inline-block shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-brand shadow-[0_0_6px_rgba(107,156,127,0.6)] inline-block shrink-0" />
               <span
                 className={`text-text-secondary text-sm font-medium transition-colors ${
                   onStepNameClick ? 'group-hover/cur:text-text-primary group-hover/cur:underline underline-offset-2' : ''
