@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import { useCelebrationStore } from '@/stores/celebrationStore'
 
-// brand indigo / accent / success green 만 — 무지개색 X (Linear 절제 미학)
-const PARTICLE_COLORS = ['#5e6ad2', '#7170ff', '#10b981', '#34d399', '#f7f8f8']
+// 합격 축하 — sage + coral + 보조색 (새 톤 정체성)
+const PARTICLE_COLORS = ['#6b9c7f', '#e88b6f', '#7eb393', '#d4b045', '#ebe9e3']
 
 export function CelebrationOverlay() {
   const companyName = useCelebrationStore((s) => s.companyName)

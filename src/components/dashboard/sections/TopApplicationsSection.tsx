@@ -61,7 +61,7 @@ export function TopApplicationsSection() {
               <button
                 key={app.id}
                 onClick={() => navigate(`/board/${app.id}`)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-white/6 hover:border-white/12 hover:bg-[#1d1e20] transition-all text-left"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-white/6 hover:border-white/12 hover:bg-surface-3 transition-all text-left"
               >
                 <div className={`flex-none w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${avatarColor}`}>
                   {app.companyName.charAt(0)}

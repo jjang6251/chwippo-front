@@ -103,9 +103,9 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
         ${STATUS_ACCENT[application.status]}
         ${isFailed ? 'opacity-45 bg-surface-2 border border-white/5 hover:opacity-60' : ''}
         ${isPassed
-          ? 'bg-gradient-to-br from-success/8 to-surface-2 border border-success/20 hover:border-success/35 hover:shadow-lg hover:shadow-success/5'
+          ? 'bg-gradient-to-br from-success/18 to-surface-2 border border-success/30 hover:border-success/45 hover:shadow-lg hover:shadow-success/10'
           : !isFailed
-          ? 'bg-surface-2 border border-white/7 hover:border-white/14 hover:bg-[#1d1e20] hover:shadow-lg hover:shadow-black/30'
+          ? 'bg-surface-2 border border-white/7 hover:border-white/14 hover:bg-surface-3 hover:shadow-lg hover:shadow-black/30'
           : ''
         }
       `}

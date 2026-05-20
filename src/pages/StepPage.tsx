@@ -236,7 +236,7 @@ export function StepPage() {
                 onBlur={handleDateBlur}
                 autoFocus
                 aria-label="일정 날짜 및 시간"
-                className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none [color-scheme:dark]"
+                className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none"
               />
             </div>
           ) : (

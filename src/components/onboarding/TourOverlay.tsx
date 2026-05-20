@@ -451,7 +451,7 @@ function getArrowStyle(
   placement: 'top' | 'bottom' | 'left' | 'right',
 ): React.CSSProperties {
   const size = 7
-  const color = '#0f1011'
+  const color = 'rgb(var(--surface))'
   const border = 'rgba(255,255,255,0.08)'
 
   if (placement === 'bottom') {

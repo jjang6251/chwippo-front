@@ -58,7 +58,7 @@ export function InquiryNew() {
               id="inquiry-category"
               value={category}
               onChange={(e) => handleCategoryChange(e.target.value)}
-              className="w-full appearance-none bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors pr-8 [color-scheme:dark]"
+              className="w-full appearance-none bg-surface-2 border border-white/8 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors pr-8"
             >
               <option value="" disabled>카테고리 선택</option>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}

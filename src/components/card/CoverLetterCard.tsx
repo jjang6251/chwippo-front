@@ -118,7 +118,7 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
               value={category}
               onChange={(e) => onUpdate(cl.id, { category: e.target.value })}
               className="appearance-none bg-surface-3 border border-white/8 rounded-md pl-2 pr-6 py-1 text-[11px] text-text-secondary
-                focus:outline-none focus:border-brand/40 transition-colors [color-scheme:dark] cursor-pointer"
+                focus:outline-none focus:border-brand/40 transition-colors cursor-pointer"
             >
               {COVERLETTER_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -139,7 +139,7 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
             placeholder="없음"
             className="w-16 bg-surface-3 border border-white/8 rounded-md px-2 py-1 font-mono text-[11px] text-text-secondary
-              placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-colors [color-scheme:dark]"
+              placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-colors"
           />
           <span className="text-text-quaternary">자</span>
         </label>

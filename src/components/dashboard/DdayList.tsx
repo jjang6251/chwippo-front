@@ -54,7 +54,7 @@ export function DdayList({ items, isLoading }: DdayListProps) {
                 navigate(`/board/${item.applicationId}`)
               }
             }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-white/6 hover:border-white/12 hover:bg-[#1d1e20] transition-all text-left"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-white/6 hover:border-white/12 hover:bg-surface-3 transition-all text-left"
           >
             {/* 타입 아이콘 */}
             <div className={`flex-none w-8 h-8 rounded-lg flex items-center justify-center text-base ${item.type === 'exam' ? 'bg-violet/15 text-violet' : avatarColor}`}>

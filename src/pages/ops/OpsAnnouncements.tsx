@@ -362,7 +362,7 @@ function AnnouncementFormModal({
                   type="datetime-local"
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
-                  className={`w-full bg-bg border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors text-text-secondary [color-scheme:dark] ${
+                  className={`w-full bg-bg border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors text-text-secondary ${
                     timeRangeError === '시작 시간이 종료 시간보다 같거나 뒤에 있어요.' ? 'border-danger/50' : 'border-white/10'
                   }`}
                 />
@@ -373,7 +373,7 @@ function AnnouncementFormModal({
                   type="datetime-local"
                   value={endsAt}
                   onChange={(e) => setEndsAt(e.target.value)}
-                  className={`w-full bg-bg border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors text-text-secondary [color-scheme:dark] ${
+                  className={`w-full bg-bg border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors text-text-secondary ${
                     timeRangeError ? 'border-danger/50' : 'border-white/10'
                   }`}
                 />
