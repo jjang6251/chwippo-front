@@ -87,7 +87,7 @@ function Field({
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
   required?: boolean
 }) {
-  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all [color-scheme:dark]'
+  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all'
   return (
     <div className={span ? 'col-span-2' : ''}>
       <FieldLabel label={label} required={required} />

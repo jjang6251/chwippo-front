@@ -161,7 +161,7 @@ export function Landing() {
                   <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
                     <span className="w-4 h-4 rounded-full bg-brand/15 border border-brand/25 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path d="M1.5 4L3.5 6L6.5 2" stroke="#5e6ad2" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M1.5 4L3.5 6L6.5 2" stroke="rgb(var(--brand))" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </span>
                     {item}
@@ -231,7 +231,7 @@ export function Landing() {
                   <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
                     <span className="w-4 h-4 rounded-full bg-brand/15 border border-brand/25 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path d="M1.5 4L3.5 6L6.5 2" stroke="#5e6ad2" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M1.5 4L3.5 6L6.5 2" stroke="rgb(var(--brand))" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </span>
                     {item}

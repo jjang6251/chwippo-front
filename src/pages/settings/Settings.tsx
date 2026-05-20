@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useTourStore } from '@/stores/tourStore'
+// useThemeStore — 라이트 모드 재설계 후 다시 활성. 토글 섹션 임시 숨김 상태.
 import { apiClient } from '@/api/client'
 
 const MENU = [
@@ -43,6 +44,8 @@ export function Settings() {
           </Link>
         ))}
       </div>
+
+      {/* 테마 토글 — 라이트 모드 재설계 완료 후 다시 노출 (themeStore·THEME_OPTIONS 추가만 하면 됨) */}
 
       <div className="bg-surface-2 border border-white/5 rounded-xl mb-4">
         <button

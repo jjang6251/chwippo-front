@@ -269,7 +269,7 @@ export function BoardDetail() {
       </button>
 
       {/* 기본 정보 카드 */}
-      <div className={`border rounded-xl p-6 mb-4 ${app.status === 'PASSED' ? 'border-success/25 bg-gradient-to-br from-success/6 to-surface-2' : 'border-white/8 bg-surface-2'}`}>
+      <div className={`border rounded-xl p-6 mb-4 ${app.status === 'PASSED' ? 'border-success/35 bg-gradient-to-br from-success/15 to-surface-2' : 'border-white/8 bg-surface-2'}`}>
         <div className="flex items-start gap-4 mb-5">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold flex-none ${app.status === 'PASSED' ? 'bg-success/15 text-success' : 'bg-brand/12 text-brand'}`}>
             {app.companyName.charAt(0)}
@@ -356,7 +356,7 @@ export function BoardDetail() {
                       )
                     }
                   }}
-                  className="w-full bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-white/14 [color-scheme:dark]"
+                  className="w-full bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-white/14"
                 />
               </>
             ) : (

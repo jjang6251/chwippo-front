@@ -4,6 +4,157 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────────────────
+   디자인 토큰 — sage + coral (따뜻한 무채색 surface)
+   상세는 company/02_design/DESIGN.md 참조.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* 색은 RGB triplet — tailwind opacity modifier(bg-warning/10) 지원 */
+  --bg: 26 24 22;
+  --surface: 35 33 31;
+  --surface-2: 44 42 40;
+  --surface-3: 54 51 48;
+
+  --text-primary: 235 233 227;
+  --text-secondary: 192 189 179;
+  --text-tertiary: 138 135 128;
+  --text-quaternary: 105 103 96;
+
+  --brand: 107 156 127;
+  --brand-hover: 88 138 106;
+  --accent: 232 139 111;
+  --accent-hover: 212 119 90;
+
+  --success: 126 179 147;
+  --warning: 212 176 69;
+  --info: 125 169 184;
+  --violet: 164 139 191;
+  --danger: 212 113 92;
+
+  /* border·shadow는 일반 색이 아니라 그대로 */
+  --border: rgba(235, 233, 227, 0.07);
+  --border-strong: rgba(235, 233, 227, 0.14);
+  --shadow-sm: none;
+  --shadow-md: none;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* TODO: 라이트 모드 전수 재설계 필요 (다크 전제 클래스 토큰화 + surface 계층 재정의)
+     현재는 토글 코드만 들어가 있고 Settings에서 라이트 옵션은 임시 숨김 */
+  --bg: 244 241 234;
+  --surface: 255 255 255;
+  --surface-2: 250 248 242;
+  --surface-3: 235 231 220;
+
+  --text-primary: 26 24 22;
+  --text-secondary: 74 70 64;
+  --text-tertiary: 110 106 98;
+  --text-quaternary: 142 138 130;
+
+  --brand: 74 139 107;
+  --brand-hover: 58 112 83;
+  --accent: 198 102 64;
+  --accent-hover: 168 80 45;
+
+  --success: 74 139 107;
+  --warning: 168 132 30;
+  --info: 77 128 148;
+  --violet: 122 106 153;
+  --danger: 184 80 64;
+
+  --border: rgba(26, 24, 22, 0.10);
+  --border-strong: rgba(26, 24, 22, 0.18);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* 기본 다크 — data-theme 미지정 시 fallback (위와 동일) */
+:root:not([data-theme]) {
+  color-scheme: dark;
+  --bg: 26 24 22;
+  --surface: 35 33 31;
+  --surface-2: 44 42 40;
+  --surface-3: 54 51 48;
+  --text-primary: 235 233 227;
+  --text-secondary: 192 189 179;
+  --text-tertiary: #8a8780;
+  --text-quaternary: #696760;
+  --text-tertiary: 138 135 128;
+  --text-quaternary: 105 103 96;
+  --brand: 107 156 127;
+  --brand-hover: 88 138 106;
+  --accent: 232 139 111;
+  --accent-hover: 212 119 90;
+  --success: 126 179 147;
+  --warning: 212 176 69;
+  --info: 125 169 184;
+  --violet: 164 139 191;
+  --danger: 212 113 92;
+  --border: rgba(235, 233, 227, 0.07);
+  --border-strong: rgba(235, 233, 227, 0.14);
+  --shadow-sm: none;
+  --shadow-md: none;
+}
+
+::selection {
+  background: rgb(var(--brand) / 0.14);
+  color: rgb(var(--text-primary));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   라이트 모드 보강 — 다크 전제 클래스 (border-white/N, bg-white/N) override
+   컴포넌트가 점진적으로 토큰화될 때까지 이 layer가 라이트 모드 구분감 보장.
+   ────────────────────────────────────────────────────────────────────────── */
+:root[data-theme='light'] :where(
+  [class*='border-white/']
+) {
+  border-color: var(--border-strong);
+}
+
+:root[data-theme='light'] :where(
+  .bg-white\/2,
+  .bg-white\/3,
+  .bg-white\/4,
+  .bg-white\/5,
+  .bg-white\/6,
+  .bg-white\/8,
+  .hover\:bg-white\/3:hover,
+  .hover\:bg-white\/4:hover,
+  .hover\:bg-white\/5:hover,
+  .hover\:bg-white\/6:hover,
+  .hover\:bg-white\/8:hover
+) {
+  background-color: rgb(var(--surface-3));
+}
+
+/* 라이트 모드 카드/패널 자동 shadow — surface 계층감 보강 */
+:root[data-theme='light'] :where(
+  .bg-surface-2,
+  .bg-surface
+) {
+  box-shadow: var(--shadow-md);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--text-quaternary));
+}
+
 @layer base {
   html {
     font-family: 'Noto Sans KR', 'Inter Variable', system-ui, sans-serif;

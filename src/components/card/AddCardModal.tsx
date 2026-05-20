@@ -111,7 +111,7 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
                 <select
                   value={effectiveTemplateId}
                   onChange={(e) => { setTemplateTouched(true); setTemplateId(e.target.value) }}
-                  className="w-full appearance-none bg-surface-3 border border-white/8 rounded-lg pl-3 pr-9 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all [color-scheme:dark] cursor-pointer"
+                  className="w-full appearance-none bg-surface-3 border border-white/8 rounded-lg pl-3 pr-9 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
                 >
                   {APPLICATION_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
@@ -131,7 +131,7 @@ export function AddCardModal({ open, onClose, defaultStatus = 'IN_PROGRESS' }: A
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all [color-scheme:dark]"
+              className="w-full bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
           </div>
         )}
