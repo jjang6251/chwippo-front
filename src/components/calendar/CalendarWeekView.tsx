@@ -76,8 +76,8 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
 
   return (
     <div className="bg-surface-2 border border-line rounded-xl overflow-hidden">
-      {/* Day headers — 스크롤과 분리 */}
-      <div className="grid border-b border-line" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
+      {/* Day headers — 스크롤과 분리. pr-2로 아래 time grid의 scrollbar(8px) width 매칭 */}
+      <div className="grid border-b border-line pr-2" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
         <div className="border-r border-line" />
         {days.map((day) => {
           const dateStr = day.format('YYYY-MM-DD')
@@ -104,37 +104,36 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
         })}
       </div>
 
-      {/* All-day row (마감 + 시간 없는 메모) */}
-      <div className="grid border-b border-line min-h-[28px]" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
-        <div className="flex items-center justify-end px-1 border-r border-line">
-          <span className="text-[8px] text-text-quaternary font-medium">종일</span>
+      {/* Time grid — 내부 스크롤 (h-[480px] 고정 높이). 종일 row를 안에 sticky로 두어 스크롤바 width 동기화 */}
+      <div ref={scrollRef} className="overflow-y-scroll relative" style={{ height: `${GRID_HEIGHT}px`, scrollbarGutter: 'stable' }}>
+        {/* All-day row (마감 + 시간 없는 메모) — sticky로 상단 고정 */}
+        <div className="sticky top-0 z-20 grid border-b border-line min-h-[28px] bg-surface-2" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
+          <div className="flex items-center justify-end px-1 border-r border-line">
+            <span className="text-[8px] text-text-quaternary font-medium">종일</span>
+          </div>
+          {days.map((day) => {
+            const dateStr = day.format('YYYY-MM-DD')
+            const allDay = allDayByDate[dateStr] ?? []
+            const isSelected = dateStr === selectedDate
+            return (
+              <div
+                key={dateStr}
+                className={`min-w-0 overflow-hidden px-0.5 py-0.5 border-r border-line last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
+              >
+                {allDay.map((e, idx) => (
+                  <div
+                    key={idx}
+                    className="block text-[9px] font-medium px-1 py-0.5 rounded bg-info/15 text-info truncate mb-0.5"
+                    title={e.content ?? ''}
+                  >
+                    {e.content}
+                  </div>
+                ))}
+              </div>
+            )
+          })}
         </div>
-        {days.map((day) => {
-          const dateStr = day.format('YYYY-MM-DD')
-          const allDay = allDayByDate[dateStr] ?? []
-          const isSelected = dateStr === selectedDate
-          return (
-            <div
-              key={dateStr}
-              className={`px-0.5 py-0.5 border-r border-line last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
-            >
-              {allDay.map((e, idx) => (
-                // 시간 없는 메모
-                <div
-                  key={idx}
-                  className="block text-[9px] font-medium px-1 py-0.5 rounded bg-info/15 text-info truncate mb-0.5"
-                  title={e.content ?? ''}
-                >
-                  {e.content}
-                </div>
-              ))}
-            </div>
-          )
-        })}
-      </div>
 
-      {/* Time grid — 내부 스크롤 (h-[480px] 고정 높이) */}
-      <div ref={scrollRef} className="overflow-y-auto relative" style={{ height: `${GRID_HEIGHT}px` }}>
         {/* 현재 시각 표시선 (오늘이 이번 주에 있을 때만) */}
         {todayInWeek && (
           <div
@@ -152,7 +151,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
             <div
               key={hour}
               className="grid border-b border-line last:border-b-0"
-              style={{ gridTemplateColumns: '44px repeat(7, 1fr)', minHeight: `${ROW_HEIGHT}px` }}
+              style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))', minHeight: `${ROW_HEIGHT}px` }}
             >
               {/* Hour label */}
               <div className="flex items-start justify-end px-1.5 pt-1 border-r border-line shrink-0">
@@ -173,7 +172,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
                     tabIndex={0}
                     onClick={() => onSelectDate(dateStr)}
                     onKeyDown={(e) => e.key === 'Enter' && onSelectDate(dateStr)}
-                    className={`cursor-pointer border-r border-line last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-card ${
+                    className={`min-w-0 overflow-hidden cursor-pointer border-r border-line last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-card ${
                       isTodayCell ? 'bg-danger/5' : isSelected ? 'bg-brand/5' : ''
                     }`}
                   >
