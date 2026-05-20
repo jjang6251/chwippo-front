@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark" data-palette="a">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>치뽀 — 디자인 톤 비교 (반응형)</title>
+  <style>
+    /* ──────────────────────────────────────────────
+       옵션 A — Linear-like 인디고 (정밀·차분)
+       ────────────────────────────────────────────── */
+    :root[data-palette='a'][data-theme='dark'] {
+      color-scheme: dark;
+      --bg: #131217;
+      --surface: #1b1a22;
+      --surface-2: #22212a;
+      --surface-3: #2b2a35;
+      --text-primary: #f4f4f7;
+      --text-secondary: #c8c7d1;
+      --text-tertiary: #8e8d9a;
+      --text-quaternary: #6a6975;
+      --border: rgba(244, 244, 247, 0.06);
+      --border-strong: rgba(244, 244, 247, 0.12);
+      --brand: #6f7adb;
+      --brand-hover: #5e6ad2;
+      --brand-bg: rgba(111, 122, 219, 0.14);
+      --warning: #e8a04a; --warning-bg: rgba(232, 160, 74, 0.14);
+      --info: #7ba9c4; --info-bg: rgba(123, 169, 196, 0.14);
+      --violet: #a48bbf; --violet-bg: rgba(164, 139, 191, 0.14);
+    }
+    :root[data-palette='a'][data-theme='light'] {
+      color-scheme: light;
+      --bg: #f0eef4; --surface: #ffffff; --surface-2: #f8f7fb; --surface-3: #e8e6ee;
+      --text-primary: #1b1a22; --text-secondary: #4a4855; --text-tertiary: #6e6c79; --text-quaternary: #8e8d9a;
+      --border: rgba(27, 26, 34, 0.10); --border-strong: rgba(27, 26, 34, 0.18);
+      --brand: #4a52b8; --brand-hover: #383fa0; --brand-bg: rgba(74, 82, 184, 0.10);
+      --warning: #b8761c; --warning-bg: rgba(184, 118, 28, 0.10);
+      --info: #4a7d96; --info-bg: rgba(74, 125, 150, 0.10);
+      --violet: #7d65a0; --violet-bg: rgba(125, 101, 160, 0.10);
+    }
+
+    /* ──────────────────────────────────────────────
+       옵션 B — Notion-like 무채색 + 단일 파랑 액센트 (미니멀)
+       ────────────────────────────────────────────── */
+    :root[data-palette='b'][data-theme='dark'] {
+      color-scheme: dark;
+      --bg: #191919; --surface: #232323; --surface-2: #2a2a2a; --surface-3: #353535;
+      --text-primary: #f5f5f5; --text-secondary: #c8c8c8; --text-tertiary: #8a8a8a; --text-quaternary: #666666;
+      --border: rgba(255, 255, 255, 0.06); --border-strong: rgba(255, 255, 255, 0.12);
+      --brand: #4a90e2; --brand-hover: #3a7bc8; --brand-bg: rgba(74, 144, 226, 0.14);
+      --warning: #e8b04a; --warning-bg: rgba(232, 176, 74, 0.14);
+      --info: #74c0a8; --info-bg: rgba(116, 192, 168, 0.14);
+      --violet: #b094d4; --violet-bg: rgba(176, 148, 212, 0.14);
+    }
+    :root[data-palette='b'][data-theme='light'] {
+      color-scheme: light;
+      --bg: #f7f7f5; --surface: #ffffff; --surface-2: #fbfbf9; --surface-3: #ebebe8;
+      --text-primary: #1a1a1a; --text-secondary: #4a4a4a; --text-tertiary: #6e6e6e; --text-quaternary: #909090;
+      --border: rgba(0, 0, 0, 0.08); --border-strong: rgba(0, 0, 0, 0.14);
+      --brand: #2570c2; --brand-hover: #1a5aa3; --brand-bg: rgba(37, 112, 194, 0.10);
+      --warning: #b88815; --warning-bg: rgba(184, 136, 21, 0.10);
+      --info: #2d8c70; --info-bg: rgba(45, 140, 112, 0.10);
+      --violet: #7a5cb0; --violet-bg: rgba(122, 92, 176, 0.10);
+    }
+
+    /* ──────────────────────────────────────────────
+       옵션 C — Sage/네이처 (짙은 그린 + 베이지) (차분·신뢰)
+       ────────────────────────────────────────────── */
+    :root[data-palette='c'][data-theme='dark'] {
+      color-scheme: dark;
+      --bg: #1a1816; --surface: #23211f; --surface-2: #2c2a28; --surface-3: #363330;
+      --text-primary: #ebe9e3; --text-secondary: #c0bdb3; --text-tertiary: #8a8780; --text-quaternary: #696760;
+      --border: rgba(235, 233, 227, 0.07); --border-strong: rgba(235, 233, 227, 0.14);
+      --brand: #6b9c7f; --brand-hover: #588a6a; --brand-bg: rgba(107, 156, 127, 0.14);
+      --accent: #e88b6f; --accent-hover: #d4775a; --accent-bg: rgba(232, 139, 111, 0.14);
+      --warning: #d4b045; --warning-bg: rgba(212, 176, 69, 0.14);
+      --info: #7da9b8; --info-bg: rgba(125, 169, 184, 0.14);
+      --violet: #a896bd; --violet-bg: rgba(168, 150, 189, 0.14);
+      --success: #7eb393; --success-bg: rgba(126, 179, 147, 0.14);
+    }
+    :root[data-palette='c'][data-theme='light'] {
+      color-scheme: light;
+      --bg: #f4f1ea; --surface: #ffffff; --surface-2: #faf8f2; --surface-3: #ebe7dc;
+      --text-primary: #1a1816; --text-secondary: #4a4640; --text-tertiary: #6e6a62; --text-quaternary: #8e8a82;
+      --border: rgba(26, 24, 22, 0.10); --border-strong: rgba(26, 24, 22, 0.18);
+      --brand: #4a8b6b; --brand-hover: #3a7053; --brand-bg: rgba(74, 139, 107, 0.10);
+      --accent: #c66640; --accent-hover: #a8502d; --accent-bg: rgba(198, 102, 64, 0.10);
+      --warning: #a8841e; --warning-bg: rgba(168, 132, 30, 0.10);
+      --info: #4d8094; --info-bg: rgba(77, 128, 148, 0.10);
+      --violet: #7a6a99; --violet-bg: rgba(122, 106, 153, 0.10);
+      --success: #4a8b6b; --success-bg: rgba(74, 139, 107, 0.10);
+    }
+
+    /* ──────────────────────────────────────────────
+       옵션 D — 옐로우 친근 (활기·따뜻)
+       ────────────────────────────────────────────── */
+    :root[data-palette='d'][data-theme='dark'] {
+      color-scheme: dark;
+      --bg: #1c1a14; --surface: #2a2620; --surface-2: #322e26; --surface-3: #3d382e;
+      --text-primary: #f4f0e6; --text-secondary: #c9c4b5; --text-tertiary: #908a78; --text-quaternary: #6c6757;
+      --border: rgba(244, 240, 230, 0.07); --border-strong: rgba(244, 240, 230, 0.14);
+      --brand: #f0c020; --brand-hover: #d4a800; --brand-bg: rgba(240, 192, 32, 0.14);
+      --warning: #e88c4a; --warning-bg: rgba(232, 140, 74, 0.14);
+      --info: #7ba89e; --info-bg: rgba(123, 168, 158, 0.14);
+      --violet: #a48bbf; --violet-bg: rgba(164, 139, 191, 0.14);
+    }
+    :root[data-palette='d'][data-theme='light'] {
+      color-scheme: light;
+      --bg: #fefdf6; --surface: #ffffff; --surface-2: #fcfbf2; --surface-3: #f0ebd8;
+      --text-primary: #1c1a14; --text-secondary: #4a4838; --text-tertiary: #6e6a55; --text-quaternary: #908d7a;
+      --border: rgba(28, 26, 20, 0.10); --border-strong: rgba(28, 26, 20, 0.18);
+      --brand: #c89000; --brand-hover: #a87600; --brand-bg: rgba(200, 144, 0, 0.12);
+      --warning: #c46028; --warning-bg: rgba(196, 96, 40, 0.10);
+      --info: #4a8070; --info-bg: rgba(74, 128, 112, 0.10);
+      --violet: #7a6594; --violet-bg: rgba(122, 101, 148, 0.10);
+    }
+
+    /* ──────────────────────────────────────────────
+       라이트 전용 shadow
+       ────────────────────────────────────────────── */
+    :root[data-theme='light'] {
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    :root[data-theme='dark'] {
+      --shadow-sm: none;
+      --shadow-md: none;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      transition: background 0.2s, color 0.2s;
+    }
+    ::selection { background: var(--brand-bg); color: var(--text-primary); }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+    .app { display: flex; min-height: 100vh; padding-bottom: 0; }
+    .sidebar {
+      width: 200px; background: var(--surface); border-right: 1px solid var(--border);
+      padding: 20px 16px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .sidebar h1 { font-size: 18px; font-weight: 700; color: var(--brand); letter-spacing: -0.02em; }
+    .sidebar nav { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+    .sidebar nav a {
+      padding: 8px 12px; border-radius: 8px; font-size: 13px;
+      color: var(--text-tertiary); text-decoration: none; transition: all 0.15s;
+    }
+    .sidebar nav a:hover { background: var(--surface-2); color: var(--text-secondary); }
+    .sidebar nav a.active { background: var(--surface-3); color: var(--text-primary); font-weight: 500; }
+
+    .main { flex: 1; padding: 28px; max-width: 1100px; min-width: 0; }
+
+    /* 모바일 하단 탭바 (기본 숨김) */
+    .mobile-nav {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+    .mobile-nav-inner { display: grid; grid-template-columns: repeat(4, 1fr); }
+    .mobile-nav a {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 4px; color: var(--text-quaternary); text-decoration: none;
+      font-size: 10px; font-weight: 500;
+    }
+    .mobile-nav a.active { color: var(--brand); }
+    .mobile-nav a .icon { font-size: 18px; }
+
+    /* 모바일 상단 헤더 (모바일에서만 보임) */
+    .mobile-topbar {
+      display: none;
+      position: sticky; top: 0; z-index: 40;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      align-items: center; justify-content: space-between;
+    }
+    .mobile-topbar h1 { font-size: 16px; font-weight: 700; color: var(--brand); }
+
+    /* 반응형 — md(768px) 미만은 모바일 */
+    @media (max-width: 767px) {
+      .sidebar { display: none; }
+      .mobile-topbar { display: flex; }
+      .mobile-nav { display: block; }
+      .main { padding: 16px 16px calc(80px + env(safe-area-inset-bottom, 0px)); }
+      .input-grid { grid-template-columns: 1fr; }
+      .steps { flex-direction: column; }
+      .controls { flex-direction: column; align-items: stretch; gap: 8px; }
+      .card-header { padding: 16px; }
+      .step-bar, .memo, .calendar-preview, .passed-card { padding: 16px; }
+      .company-row { flex-wrap: wrap; }
+      .dday-badge { margin-left: 0; margin-top: 8px; }
+    }
+
+    .controls {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .palette-toggle, .theme-toggle {
+      display: flex; gap: 2px; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: 8px; padding: 3px;
+    }
+    .palette-toggle button, .theme-toggle button {
+      padding: 5px 12px; background: transparent; border: 0; border-radius: 6px;
+      font-size: 12px; color: var(--text-quaternary); cursor: pointer; transition: all 0.15s;
+      font-weight: 500;
+    }
+    .palette-toggle button.active, .theme-toggle button.active {
+      background: var(--surface-3); color: var(--text-primary);
+    }
+    .palette-name {
+      font-size: 13px; color: var(--text-secondary); font-weight: 600;
+    }
+
+    .card-header {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow-md);
+    }
+    .company-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+    .company-avatar {
+      width: 48px; height: 48px; background: var(--brand-bg); color: var(--brand);
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700;
+    }
+    .company-name { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+    .company-meta { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+    .dday-badge {
+      margin-left: auto; padding: 6px 14px; background: var(--warning-bg);
+      color: var(--warning); border: 1px solid var(--warning);
+      border-radius: 999px; font-size: 13px; font-weight: 600; font-family: 'DM Mono', monospace;
+    }
+
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+    .tag {
+      padding: 3px 10px; background: var(--surface-3); color: var(--text-secondary);
+      border-radius: 999px; font-size: 11px; font-weight: 500;
+    }
+    .tag-add { background: transparent; border: 1px dashed var(--border-strong); color: var(--text-quaternary); }
+
+    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .field label { display: block; font-size: 10px; color: var(--text-quaternary); margin-bottom: 4px; font-weight: 500; }
+    .field input, .field select {
+      width: 100%; background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--text-primary);
+      outline: none; transition: border 0.15s;
+    }
+    .field input:focus, .field select:focus { border-color: var(--brand); }
+
+    .section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 24px 0 12px; }
+
+    .step-bar {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; box-shadow: var(--shadow-md);
+    }
+    .progress-track { height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+    .progress-fill { height: 100%; width: 40%; background: var(--brand); border-radius: 3px; }
+    .steps { display: flex; gap: 8px; }
+    .step {
+      flex: 1; padding: 10px; background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 8px; cursor: pointer; transition: all 0.15s;
+    }
+    .step:hover { border-color: var(--border-strong); }
+    .step.done { opacity: 0.6; }
+    .step.current { border-color: var(--brand); background: var(--brand-bg); }
+    .step-icon { font-size: 14px; }
+    .step-name { font-size: 12px; font-weight: 600; color: var(--text-primary); margin-top: 4px; }
+    .step-date { font-size: 10px; color: var(--text-tertiary); font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+    .memo {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; margin-top: 16px; box-shadow: var(--shadow-md);
+    }
+    .memo textarea {
+      width: 100%; min-height: 80px; background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px; font-size: 12px; color: var(--text-primary);
+      font-family: inherit; resize: vertical; outline: none;
+    }
+
+    .calendar-preview {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; margin-top: 16px; box-shadow: var(--shadow-md);
+    }
+    .pills { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .pill { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; display: inline-block; width: fit-content; }
+    .pill-step { background: var(--warning-bg); color: var(--warning); border-left: 3px solid var(--warning); }
+    .pill-note { background: var(--info-bg); color: var(--info); border-left: 3px solid var(--info); }
+    .pill-exam { background: var(--violet-bg); color: var(--violet); border-left: 3px solid var(--violet); }
+
+    /* coral 액센트 — 합격 카드·pinned 강조 */
+    .passed-card {
+      background: linear-gradient(135deg, var(--accent-bg), var(--surface-2));
+      border: 1px solid var(--accent);
+      border-radius: 12px; padding: 20px; margin-top: 16px;
+      box-shadow: var(--shadow-md);
+    }
+    .passed-header { display: flex; align-items: center; gap: 12px; }
+    .passed-icon {
+      width: 36px; height: 36px; background: var(--accent-bg); color: var(--accent);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .passed-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .passed-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+    .pinned-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; background: var(--accent-bg); color: var(--accent);
+      border: 1px solid var(--accent); border-radius: 999px;
+      font-size: 10px; font-weight: 600; margin-left: 8px;
+    }
+
+    .btn-primary {
+      background: var(--brand); color: white; border: 0;
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--brand-hover); }
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    }
+    .btn-secondary:hover { background: var(--surface-3); color: var(--text-primary); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>치뽀</h1>
+      <nav>
+        <a href="#">📊 대시보드</a>
+        <a href="#" class="active">📋 보드</a>
+        <a href="#">📅 캘린더</a>
+        <a href="#">👤 내정보</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <!-- 모바일 상단 헤더 -->
+      <div class="mobile-topbar">
+        <h1>치뽀</h1>
+        <span style="font-size: 12px; color: var(--text-tertiary);">보드</span>
+      </div>
+
+      <div class="controls">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <span class="palette-name" id="palette-name">A — Linear 인디고</span>
+          <div class="palette-toggle">
+            <button id="pal-a" class="active" onclick="setPalette('a', 'A — Linear 인디고')">A</button>
+            <button id="pal-b" onclick="setPalette('b', 'B — Notion 무채색')">B</button>
+            <button id="pal-c" onclick="setPalette('c', 'C — Sage 그린')">C</button>
+            <button id="pal-d" onclick="setPalette('d', 'D — 옐로우 친근')">D</button>
+          </div>
+        </div>
+        <div class="theme-toggle">
+          <button id="th-dark" class="active" onclick="setTheme('dark')">다크</button>
+          <button id="th-light" onclick="setTheme('light')">라이트</button>
+        </div>
+      </div>
+
+      <div class="card-header">
+        <div class="company-row">
+          <div class="company-avatar">카</div>
+          <div>
+            <div class="company-name">카카오</div>
+            <div class="company-meta">백엔드 개발자 · IT개발</div>
+          </div>
+          <span class="dday-badge">D-3</span>
+        </div>
+        <div class="tags">
+          <span class="tag">자료구조</span>
+          <span class="tag">시스템 설계</span>
+          <span class="tag tag-add">+ 태그 추가</span>
+        </div>
+        <div class="input-grid">
+          <div class="field"><label>1차 기술면접 날짜</label><input type="date" value="2026-05-25" /></div>
+          <div class="field"><label>채용공고 URL</label><input type="text" value="https://careers.kakao.com" /></div>
+        </div>
+      </div>
+
+      <div class="section-title">진행 단계</div>
+      <div class="step-bar">
+        <div class="progress-track"><div class="progress-fill"></div></div>
+        <div class="steps">
+          <div class="step done"><div class="step-icon">📄</div><div class="step-name">서류전형</div><div class="step-date">5/05 마감</div></div>
+          <div class="step done"><div class="step-icon">💻</div><div class="step-name">코딩테스트</div><div class="step-date">5/12 14:00</div></div>
+          <div class="step current"><div class="step-icon">🗣️</div><div class="step-name">1차 기술면접 <span class="pinned-badge">📌 pinned</span></div><div class="step-date">5/25 14:00</div></div>
+          <div class="step"><div class="step-icon">👥</div><div class="step-name">2차 컬처핏</div><div class="step-date">—</div></div>
+          <div class="step"><div class="step-icon">🎉</div><div class="step-name">최종합격</div><div class="step-date">—</div></div>
+        </div>
+      </div>
+
+      <div class="memo">
+        <div class="section-title" style="margin-top: 0;">메모</div>
+        <textarea placeholder="면접 준비 메모...">면접관 2명 · 기술 면접 위주 · 시스템 설계 준비</textarea>
+      </div>
+
+      <!-- 합격 카드 강조 (coral 액센트) -->
+      <div class="passed-card">
+        <div class="passed-header">
+          <div class="passed-icon">🎉</div>
+          <div style="flex: 1;">
+            <div class="passed-title">네이버 — 최종 합격!</div>
+            <div class="passed-meta">서비스 기획 · 2026-05-10 합격 통보</div>
+          </div>
+          <span style="font-size: 11px; color: var(--accent); font-weight: 600;">축하해요</span>
+        </div>
+      </div>
+
+      <div class="calendar-preview">
+        <div class="section-title" style="margin-top: 0;">캘린더 pill 예시 — 5/25</div>
+        <div class="pills">
+          <span class="pill pill-step">카카오 1차 기술면접 14:00</span>
+          <span class="pill pill-note">10:00 면접 복습</span>
+          <span class="pill pill-exam">SQLD 시험 09:00</span>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+          <button class="btn-primary">저장</button>
+          <button class="btn-secondary">취소</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 모바일 하단 탭바 -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="#"><span class="icon">📊</span><span>대시보드</span></a>
+      <a href="#" class="active"><span class="icon">📋</span><span>보드</span></a>
+      <a href="#"><span class="icon">📅</span><span>캘린더</span></a>
+      <a href="#"><span class="icon">👤</span><span>내정보</span></a>
+    </div>
+  </nav>
+
+  <script>
+    function setPalette(p, name) {
+      document.documentElement.setAttribute('data-palette', p);
+      ['a','b','c','d'].forEach(x => document.getElementById('pal-'+x).classList.toggle('active', x === p));
+      document.getElementById('palette-name').textContent = name;
+    }
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('th-dark').classList.toggle('active', theme === 'dark');
+      document.getElementById('th-light').classList.toggle('active', theme === 'light');
+    }
+  </script>
+</body>
+</html>

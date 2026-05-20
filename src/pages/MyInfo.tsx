@@ -87,7 +87,7 @@ function Field({
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
   required?: boolean
 }) {
-  const cls = 'w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all [color-scheme:dark]'
+  const cls = 'w-full bg-card border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all'
   return (
     <div className={span ? 'col-span-2' : ''}>
       <FieldLabel label={label} required={required} />
@@ -109,7 +109,7 @@ function SelectField({ label, value, onChange, options, required }: {
     <div>
       <FieldLabel label={label} required={required} />
       <div className="relative">
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-card border border-line rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
           <option value="">선택</option>
           {options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -125,11 +125,11 @@ function SelectField({ label, value, onChange, options, required }: {
 function Modal({ title, onClose, onSave, children, saving }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode; saving?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0" onClick={() => { if (!saving) onClose() }}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="bg-surface border border-white/8 rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="bg-surface border border-line rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold text-text-primary px-6 pt-6 pb-3 shrink-0">{title}</h3>
         <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-3">{children}</div>
-        <div className="flex gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-white/6 shrink-0">
-          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50">취소</button>
+        <div className="flex gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-line shrink-0">
+          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 text-xs text-text-secondary border border-line rounded-lg hover:bg-card transition-colors disabled:opacity-50">취소</button>
           <button onClick={onSave} disabled={saving} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent text-text-primary rounded-lg transition-colors disabled:opacity-50">{saving ? '저장 중...' : '저장'}</button>
         </div>
       </div>
@@ -140,13 +140,13 @@ function Modal({ title, onClose, onSave, children, saving }: { title: string; on
 function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: string; onClose: () => void; onConfirm: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label={`${label} 삭제 확인`} className="bg-surface border border-white/10 rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={`${label} 삭제 확인`} className="bg-surface border border-line rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div>
           <p className="text-sm font-semibold text-text-primary mb-1">삭제할까요?</p>
           <p className="text-xs text-text-quaternary">{label}을(를) 삭제하면 복구할 수 없어요.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 text-xs border border-white/10 text-text-secondary rounded-lg hover:bg-white/5 transition-colors">취소</button>
+          <button onClick={onClose} className="flex-1 py-2.5 text-xs border border-line text-text-secondary rounded-lg hover:bg-card transition-colors">취소</button>
           <button onClick={onConfirm} className="flex-1 py-2.5 text-xs font-semibold bg-danger/90 hover:bg-danger text-text-primary rounded-lg transition-colors">삭제</button>
         </div>
       </div>
@@ -161,9 +161,9 @@ function SectionCard({ id, sectionRef, saved, isActive, children }: {
   const meta = SECTIONS.find(s => s.id === id)!
   const ac = ACCENT_STYLE[meta.accent as keyof typeof ACCENT_STYLE]
   return (
-    <section id={id} ref={sectionRef as React.RefCallback<HTMLElement>} className={`rounded-xl transition-all duration-300 bg-white/[0.02] overflow-hidden
+    <section id={id} ref={sectionRef as React.RefCallback<HTMLElement>} className={`rounded-xl transition-all duration-300 bg-card overflow-hidden
       ${isActive ? `${ac.activeBorder} ${ac.activeGlow}` : ac.border}`}>
-      <div className="px-6 py-4 border-b border-white/6 flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-line flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base ${ac.icon}`}>{meta.icon}</span>
           <h2 className="text-sm font-semibold text-text-primary">{meta.label}</h2>
@@ -186,26 +186,26 @@ function ExpandableItem({ title, subtitle, badge, onEdit, onDelete, children }: 
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className={`rounded-xl border transition-all duration-200 ${open ? 'border-brand/30 bg-brand/4' : 'border-white/8 bg-white/[0.02] hover:border-white/14'}`}>
+    <div className={`rounded-xl border transition-all duration-200 ${open ? 'border-brand/30 bg-brand/4' : 'border-line bg-card hover:border-line-strong'}`}>
       <button className="w-full flex items-center gap-3 px-4 py-3 text-left" onClick={() => setOpen(!open)}>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-text-primary truncate">{title}</p>
           {subtitle && <p className="text-[11px] text-text-quaternary truncate mt-0.5">{subtitle}</p>}
         </div>
-        {badge && <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/8 text-text-tertiary border border-white/8">{badge}</span>}
+        {badge && <span className="text-[10px] px-2 py-0.5 rounded-full bg-card-strong text-text-tertiary border border-line">{badge}</span>}
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={`text-text-quaternary flex-none transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
           <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
       {open && (
-        <div className="px-4 pb-4 border-t border-white/6">
+        <div className="px-4 pb-4 border-t border-line">
           <div className="pt-4 space-y-3">{children}</div>
-          <div className="flex gap-2 mt-4 pt-3 border-t border-white/6">
-            <button onClick={onEdit} className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-white/8 border border-white/8 transition-colors">
+          <div className="flex gap-2 mt-4 pt-3 border-t border-line">
+            <button onClick={onEdit} className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-card-strong border border-line transition-colors">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
               편집
             </button>
-            <button onClick={onDelete} className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger/8 border border-white/8 hover:border-danger/20 transition-colors">
+            <button onClick={onDelete} className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger/8 border border-line hover:border-danger/20 transition-colors">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
               삭제
             </button>
@@ -228,7 +228,7 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 
 function AddButton({ onClick, label = '추가' }: { onClick: () => void; label?: string }) {
   return (
-    <button onClick={onClick} className="w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-white/10 hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5">
+    <button onClick={onClick} className="w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
       {label}
     </button>
@@ -330,7 +330,7 @@ export function MyInfo() {
       </div>
 
       {/* 모바일 섹션 점프 칩 — lg 이상에서는 좌측 사이드바로 대체 */}
-      <div className="lg:hidden sticky top-12 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 bg-bg/95 backdrop-blur-sm border-b border-white/5 mb-4">
+      <div className="lg:hidden sticky top-12 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 bg-bg/95 backdrop-blur-sm border-b border-line mb-4">
         <div
           className="flex gap-1.5 overflow-x-auto py-2"
           style={{ scrollbarWidth: 'none' }}
@@ -346,7 +346,7 @@ export function MyInfo() {
                 className={`flex-none flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all duration-150 border
                   ${isActive
                     ? 'bg-brand/15 text-brand border-brand/30'
-                    : 'bg-white/[0.03] text-text-quaternary border-white/8 hover:text-text-secondary hover:bg-white/[0.06]'
+                    : 'bg-card text-text-quaternary border-line hover:text-text-secondary hover:bg-card'
                   }`}
               >
                 <span>{s.icon}</span>
@@ -378,7 +378,7 @@ export function MyInfo() {
                 <div key={s.id}>
                   {isFirstExcluded && (
                     <div className="my-2 px-3">
-                      <div className="h-px bg-white/8" />
+                      <div className="h-px bg-card-strong" />
                       <p className="text-[10px] text-text-quaternary/70 font-medium uppercase tracking-wider mt-2">기타</p>
                     </div>
                   )}
@@ -386,11 +386,11 @@ export function MyInfo() {
                   onClick={() => scrollTo(s.id)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150
                     ${isActive
-                      ? 'bg-white/8 text-text-primary border-l-2 border-brand pl-[10px]'
-                      : 'text-text-quaternary hover:text-text-secondary hover:bg-white/4 border-l-2 border-transparent pl-[10px]'
+                      ? 'bg-card-strong text-text-primary border-l-2 border-brand pl-[10px]'
+                      : 'text-text-quaternary hover:text-text-secondary hover:bg-card border-l-2 border-transparent pl-[10px]'
                     }`}
                 >
-                  <span className={`w-6 h-6 rounded-md flex items-center justify-center text-sm flex-none transition-colors ${isActive ? ac.icon : 'bg-white/6 opacity-70'}`}>{s.icon}</span>
+                  <span className={`w-6 h-6 rounded-md flex items-center justify-center text-sm flex-none transition-colors ${isActive ? ac.icon : 'bg-card opacity-70'}`}>{s.icon}</span>
                   <span className="text-[11px] font-medium truncate flex-1">{s.label}</span>
                   {status && status.active && (
                     status.kind === 'multi'
@@ -544,7 +544,7 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
     <SectionCard id="language-certs" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
         {isLoading && [1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+          <div key={i} className="h-12 rounded-xl bg-card animate-pulse" />
         ))}
         {!isLoading && items.length === 0 && (
           <p className="text-text-quaternary text-xs text-center py-4">등록된 어학 자격증이 없어요. <br /><span className="text-text-quaternary/60">TOEIC, OPIC 등 취득한 어학 성적을 추가해보세요.</span></p>
@@ -629,7 +629,7 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
     <SectionCard id="certs" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
         {isLoading && [1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+          <div key={i} className="h-12 rounded-xl bg-card animate-pulse" />
         ))}
         {!isLoading && items.length === 0 && (
           <p className="text-text-quaternary text-xs text-center py-4">등록된 자격증이 없어요. <br /><span className="text-text-quaternary/60">정보처리기사, 운전면허 등 취득한 자격증을 추가해보세요.</span></p>
@@ -693,7 +693,7 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
           const isPassed = dday < 0
           const variant = getDdayVariant(dday)
           return (
-            <div key={item.id} className="bg-white/[0.02] border border-white/8 rounded-lg p-3">
+            <div key={item.id} className="bg-card border border-line rounded-lg p-3">
               <div className="flex items-start gap-3">
                 <div className="flex-none w-9 h-9 rounded-lg bg-violet/15 text-violet flex items-center justify-center text-base">📚</div>
                 <div className="flex-1 min-w-0">
@@ -708,7 +708,7 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
                   {item.memo && <p className="text-text-tertiary text-[11px] mt-1 line-clamp-2">{item.memo}</p>}
                 </div>
               </div>
-              <div className="flex gap-2 mt-3 pt-3 border-t border-white/6 flex-wrap">
+              <div className="flex gap-2 mt-3 pt-3 border-t border-line flex-wrap">
                 {isPassed && (
                   <button
                     onClick={() => setConvertTarget(item)}
@@ -721,14 +721,14 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
                 <div className="flex-1" />
                 <button
                   onClick={() => setModal(item)}
-                  className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-white/8 border border-white/8 transition-colors"
+                  className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-card-strong border border-line transition-colors"
                 >
                   <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
                   편집
                 </button>
                 <button
                   onClick={() => setDeleteTarget(item)}
-                  className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger/8 border border-white/8 hover:border-danger/20 transition-colors"
+                  className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger/8 border border-line hover:border-danger/20 transition-colors"
                 >
                   <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
                   삭제
@@ -833,7 +833,7 @@ function EducationItem({ item, onSaved }: { item: Education; onSaved: () => void
   }
 
   return (
-    <div className="bg-white/[0.02] border border-white/8 rounded-xl p-4 relative">
+    <div className="bg-card border border-line rounded-xl p-4 relative">
       <button
         onClick={() => setDeleteOpen(true)}
         aria-label="학력 삭제"
@@ -857,11 +857,11 @@ function EducationItem({ item, onSaved }: { item: Education; onSaved: () => void
       </div>
 
       {/* 복수·부전공 영역 */}
-      <div className="mt-4 pt-4 border-t border-white/6">
+      <div className="mt-4 pt-4 border-t border-line">
         <p className="text-[11px] text-text-tertiary font-medium mb-2">복수·부전공</p>
         <div className="flex flex-wrap items-center gap-1.5">
           {minors.map((m, idx) => (
-            <span key={idx} className="inline-flex items-center gap-1.5 text-[11px] bg-white/5 border border-white/8 rounded-full pl-2.5 pr-1 py-1">
+            <span key={idx} className="inline-flex items-center gap-1.5 text-[11px] bg-card border border-line rounded-full pl-2.5 pr-1 py-1">
               <span className="text-text-quaternary">{m.type}</span>
               <span className="text-text-secondary">·</span>
               <span className="text-text-primary">{m.name}</span>
@@ -887,7 +887,7 @@ function EducationItem({ item, onSaved }: { item: Education; onSaved: () => void
       </div>
 
       {/* 파일 첨부 — 인라인 자동저장: pending 즉시 업로드 + save */}
-      <div className="mt-4 pt-4 border-t border-white/6">
+      <div className="mt-4 pt-4 border-t border-line">
         <FileUpload
           slot={slot}
           scope="myinfo/education"
@@ -953,7 +953,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-[11px] text-text-quaternary hover:text-text-secondary bg-white/3 hover:bg-white/6 border border-white/8 border-dashed rounded-full px-2.5 py-1 transition-colors"
+        className="inline-flex items-center gap-1 text-[11px] text-text-quaternary hover:text-text-secondary bg-card hover:bg-card border border-line border-dashed rounded-full px-2.5 py-1 transition-colors"
       >
         <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 1.5v6M1.5 4.5h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
         추가
@@ -961,11 +961,11 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
     )
   }
   return (
-    <div className="flex flex-wrap items-center gap-1.5 bg-white/[0.02] border border-white/10 rounded-lg px-2 py-1.5 w-full sm:w-auto">
+    <div className="flex flex-wrap items-center gap-1.5 bg-card border border-line rounded-lg px-2 py-1.5 w-full sm:w-auto">
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
-        className="text-[11px] bg-white/5 hover:bg-white/8 text-text-secondary px-2 py-1 rounded-md focus:outline-none focus:bg-white/8 transition-colors"
+        className="text-[11px] bg-card hover:bg-card-strong text-text-secondary px-2 py-1 rounded-md focus:outline-none focus:bg-card-strong transition-colors"
       >
         {MINOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
       </select>
@@ -975,7 +975,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
         onKeyDown={handleEnter}
         autoFocus
         placeholder="전공명"
-        className="text-[11px] bg-white/5 text-text-primary placeholder:text-text-quaternary outline-none w-24 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-white/8 transition-colors"
+        className="text-[11px] bg-card text-text-primary placeholder:text-text-quaternary outline-none w-24 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors"
       />
       <span className="text-text-quaternary text-[10px]">·</span>
       <input
@@ -983,7 +983,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
         onChange={(e) => setGpa(e.target.value)}
         onKeyDown={handleEnter}
         placeholder="학점"
-        className="text-[11px] bg-white/5 text-text-primary placeholder:text-text-quaternary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-white/8 transition-colors font-mono tabular-nums"
+        className="text-[11px] bg-card text-text-primary placeholder:text-text-quaternary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors font-mono tabular-nums"
       />
       <span className="text-text-quaternary text-[10px]">/</span>
       <input
@@ -991,7 +991,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
         onChange={(e) => setGpaMax(e.target.value)}
         onKeyDown={handleEnter}
         placeholder="만점"
-        className="text-[11px] bg-white/5 text-text-primary placeholder:text-text-quaternary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-white/8 transition-colors font-mono tabular-nums"
+        className="text-[11px] bg-card text-text-primary placeholder:text-text-quaternary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors font-mono tabular-nums"
       />
       <button
         onClick={submit}
@@ -1050,7 +1050,7 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
     <SectionCard id="awards" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
         {isLoading && [1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+          <div key={i} className="h-12 rounded-xl bg-card animate-pulse" />
         ))}
         {!isLoading && items.length === 0 && (
           <p className="text-text-quaternary text-xs text-center py-4">등록된 수상 내역이 없어요. <br /><span className="text-text-quaternary/60">공모전, 교내 대회 수상 이력을 추가해보세요.</span></p>
@@ -1110,7 +1110,7 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
     <SectionCard id="experiences" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
         {isLoading && [1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+          <div key={i} className="h-12 rounded-xl bg-card animate-pulse" />
         ))}
         {!isLoading && items.length === 0 && (
           <p className="text-text-quaternary text-xs text-center py-4">등록된 경험이 없어요. <br /><span className="text-text-quaternary/60">동아리, 인턴, 봉사활동 등 다양한 활동을 추가해보세요.</span></p>
@@ -1184,7 +1184,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           <p className="text-xs text-text-quaternary text-center py-3">목표를 추가해보세요. 대시보드에서도 볼 수 있어요 🎯</p>
         )}
         {goals.map((goal, i) => (
-          <div key={i} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02]">
+          <div key={i} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card">
             <span className="w-1.5 h-1.5 rounded-full bg-danger/60 flex-none mt-px" />
             <span className="flex-1 text-xs text-text-primary">{goal}</span>
             <button onClick={() => removeGoal(i)} className="opacity-0 group-hover:opacity-100 transition-opacity text-text-quaternary hover:text-danger w-7 h-7 flex items-center justify-center rounded">
@@ -1200,7 +1200,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               onChange={(e) => setNewGoal(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) addGoal(); if (e.key === 'Escape') setAdding(false) }}
               placeholder="목표를 입력하세요 (예: TOEIC 900점 달성)"
-              className="flex-1 bg-white/[0.02] border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
+              className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
             />
             <button onClick={() => setAdding(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
           </div>
@@ -1271,7 +1271,7 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
                 maxLength={2000}
                 rows={3}
                 placeholder={placeholder}
-                className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
+                className="w-full bg-card border border-line rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
               />
               <p className={`text-[10px] ${counterColor} text-right mt-1`}>{len} / 2000</p>
             </div>
@@ -1297,12 +1297,12 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
               onChange={(e) => setNewLabel(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAddCustom(); if (e.key === 'Escape') setAddingLabel(false) }}
               placeholder="항목명 입력 (예: 해외 경험)"
-              className="flex-1 bg-white/[0.02] border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
+              className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
             />
             <button onClick={() => setAddingLabel(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
           </div>
         ) : (
-          <button onClick={() => setAddingLabel(true)} className="w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-white/10 hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5">
+          <button onClick={() => setAddingLabel(true)} className="w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
             항목 직접 추가
           </button>
@@ -1335,7 +1335,7 @@ function CustomCoverItem({ item, onUpdate, onDelete }: { item: CoverletterCustom
         maxLength={2000}
         rows={3}
         placeholder={`${item.label}을 작성해보세요`}
-        className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
+        className="w-full bg-card border border-line rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
       />
       <p className={`text-[10px] ${counterColor} text-right mt-1`}>{value.length} / 2000</p>
     </div>
@@ -1453,7 +1453,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               {existingFiles.map((f) => (
                 <div
                   key={`${f.source}-${f.id}`}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 hover:bg-white/[0.04] transition-all group"
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card hover:border-line-strong hover:bg-card transition-all group"
                 >
                   <a
                     href={f.file_url}
@@ -1468,7 +1468,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                     {f.file_size_bytes != null && f.file_size_bytes > 0 && (
                       <span className="text-[10px] text-text-quaternary flex-none">{formatBytes(f.file_size_bytes)}</span>
                     )}
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-none ${SOURCE_STYLE[f.source] ?? 'bg-white/8 text-text-tertiary'}`}>{f.source}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-none ${SOURCE_STYLE[f.source] ?? 'bg-card-strong text-text-tertiary'}`}>{f.source}</span>
                   </a>
                   <button
                     type="button"
@@ -1488,7 +1488,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
 
         {/* 구분선 */}
         {existingFiles.length > 0 && (
-          <div className="border-t border-white/6" />
+          <div className="border-t border-line" />
         )}
 
         {/* 직접 올린 파일들 */}
@@ -1500,7 +1500,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/8 bg-white/[0.02] hover:border-white/16 hover:bg-white/[0.04] transition-all group"
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card hover:border-line-strong hover:bg-card transition-all group"
               >
                 <a
                   href={doc.file_url}
@@ -1543,7 +1543,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="예: 2025 토익 성적표, 개인 포트폴리오"
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
+                  className="w-full bg-card border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
                 />
               </div>
               <div>
@@ -1552,7 +1552,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
+                    className="w-full bg-card border border-line rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
                   >
                     <option value="">선택 안함</option>
                     {DOC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -1566,7 +1566,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
                     placeholder="카테고리 직접 입력"
-                    className="mt-2 w-full bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
+                    className="mt-2 w-full bg-card border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
                   />
                 )}
               </div>
@@ -1583,7 +1583,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                 <button
                   onClick={() => { setShowUpload(false); setTitle(''); setCategory(''); setCustomCategory(''); setSlot(EMPTY_SLOT) }}
                   disabled={saving}
-                  className="flex-1 py-2 text-xs text-text-secondary border border-white/10 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
+                  className="flex-1 py-2 text-xs text-text-secondary border border-line rounded-lg hover:bg-card transition-colors disabled:opacity-50"
                 >
                   취소
                 </button>
@@ -1599,7 +1599,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           ) : (
             <button
               onClick={() => setShowUpload(true)}
-              className="mt-1.5 w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-white/10 hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5"
+              className="mt-1.5 w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
               파일 올리기

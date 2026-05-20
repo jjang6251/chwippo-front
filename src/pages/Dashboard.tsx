@@ -68,7 +68,7 @@ export function Dashboard() {
   const day = dayNames[now.getDay()]
 
   const pinnedItem = dday?.find(
-    (item) => item.type === 'interview' && item.pinnedContent && item.dday <= 1 && item.dday >= 0,
+    (item) => item.type === 'step' && item.pinnedContent && item.dday <= 1 && item.dday >= 0,
   )
 
   const sections = config?.sections ?? []
@@ -151,7 +151,7 @@ export function Dashboard() {
             className={`flex-none text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${
               editMode
                 ? 'bg-brand/20 border-brand/40 text-brand'
-                : 'bg-white/5 border-white/8 text-text-quaternary hover:text-text-tertiary'
+                : 'bg-card border-line text-text-quaternary hover:text-text-tertiary'
             }`}
           >
             {editMode ? '완료' : '섹션 편집'}
@@ -171,7 +171,7 @@ export function Dashboard() {
       )}
 
       {/* stats 섹션 — 항상 최상단 고정, 드래그 없음 */}
-      <div className="mb-6 bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+      <div className="mb-6 bg-card border border-line[0.07] rounded-xl p-4">
         <StatsSection stats={stats} isLoading={statsLoading} />
       </div>
 
@@ -197,7 +197,7 @@ export function Dashboard() {
         </SortableContext>
         <DragOverlay dropAnimation={null}>
           {activeId ? (
-            <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 shadow-2xl shadow-black/40 cursor-grabbing">
+            <div className="bg-card border border-line[0.07] rounded-xl p-4 shadow-2xl shadow-black/40 cursor-grabbing">
               {renderSectionContent(activeId)}
             </div>
           ) : null}
@@ -207,7 +207,7 @@ export function Dashboard() {
       {/* 섹션 추가 (항상 노출) */}
       <button
         onClick={() => setShowAddSheet(true)}
-        className="mt-4 w-full py-3 rounded-xl border border-dashed border-white/15 text-text-quaternary text-xs hover:border-brand/40 hover:text-brand transition-colors"
+        className="mt-4 w-full py-3 rounded-xl border border-dashed border-line text-text-quaternary text-xs hover:border-brand/40 hover:text-brand transition-colors"
       >
         + 섹션 추가
       </button>

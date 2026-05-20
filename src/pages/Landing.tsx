@@ -35,7 +35,7 @@ export function Landing() {
   return (
     <div className="min-h-screen bg-bg text-text-primary">
       {/* 헤더 */}
-      <header className="sticky top-0 z-50 bg-bg/80 backdrop-blur border-b border-white/5">
+      <header className="sticky top-0 z-50 bg-bg/80 backdrop-blur border-b border-line">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="text-lg font-bold tracking-tight">치뽀</Link>
           <nav aria-label="메인 네비게이션" className="flex items-center gap-2">
@@ -86,7 +86,7 @@ export function Landing() {
             </button>
             <Link
               to="/demo"
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/[0.04] hover:bg-white/[0.07] border border-white/8 text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-card hover:bg-card border border-line text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
             >
               로그인 없이 둘러보기 →
             </Link>
@@ -97,13 +97,13 @@ export function Landing() {
         {/* GIF placeholder */}
         <div className="relative mx-auto max-w-3xl">
           <div className="absolute inset-0 rounded-2xl bg-brand/5 blur-3xl -z-10 scale-95" />
-          <div className="bg-surface-2 border border-white/8 rounded-2xl overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+          <div className="bg-surface-2 border border-line rounded-2xl overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
             {/* 브라우저 크롬 */}
-            <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5 bg-surface">
-              <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
-              <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
-              <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
-              <div className="ml-3 flex-1 bg-white/[0.04] rounded px-3 py-1 text-xs text-text-quaternary font-mono">
+            <div className="flex items-center gap-1.5 px-4 py-3 border-b border-line bg-surface">
+              <span className="w-2.5 h-2.5 rounded-full bg-card-strong" />
+              <span className="w-2.5 h-2.5 rounded-full bg-card-strong" />
+              <span className="w-2.5 h-2.5 rounded-full bg-card-strong" />
+              <div className="ml-3 flex-1 bg-card rounded px-3 py-1 text-xs text-text-quaternary font-mono">
                 app.chwippo.com/board
               </div>
             </div>
@@ -132,7 +132,7 @@ export function Landing() {
       </section>
 
       {/* 섹션① — 지원 추가 한 번에 */}
-      <section className="border-t border-white/5 py-20">
+      <section className="border-t border-line py-20">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* 이미지 (모바일: 위, 데스크탑: 좌) */}
@@ -161,7 +161,7 @@ export function Landing() {
                   <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
                     <span className="w-4 h-4 rounded-full bg-brand/15 border border-brand/25 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path d="M1.5 4L3.5 6L6.5 2" stroke="#5e6ad2" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M1.5 4L3.5 6L6.5 2" stroke="rgb(var(--brand))" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </span>
                     {item}
@@ -174,7 +174,7 @@ export function Landing() {
       </section>
 
       {/* 섹션② — 여러 회사 한눈에 */}
-      <section className="border-t border-white/5 bg-surface py-20">
+      <section className="border-t border-line bg-surface py-20">
         <div className="max-w-3xl mx-auto px-6">
           {/* 텍스트 */}
           <div className="text-center mb-10">
@@ -189,7 +189,7 @@ export function Landing() {
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {['D-day 뱃지', '월별 캘린더', '임박 마감 강조', '회사별 필터'].map((tag) => (
-                <span key={tag} className="text-xs text-text-tertiary bg-white/[0.04] border border-white/8 rounded-full px-3 py-1">
+                <span key={tag} className="text-xs text-text-tertiary bg-card border border-line rounded-full px-3 py-1">
                   {tag}
                 </span>
               ))}
@@ -204,7 +204,7 @@ export function Landing() {
       </section>
 
       {/* 섹션③ — 자소서 정보 창고 */}
-      <section className="border-t border-white/5 py-20">
+      <section className="border-t border-line py-20">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <ScreenshotPlaceholder
@@ -231,7 +231,7 @@ export function Landing() {
                   <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
                     <span className="w-4 h-4 rounded-full bg-brand/15 border border-brand/25 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path d="M1.5 4L3.5 6L6.5 2" stroke="#5e6ad2" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M1.5 4L3.5 6L6.5 2" stroke="rgb(var(--brand))" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </span>
                     {item}
@@ -249,7 +249,7 @@ export function Landing() {
       </section>
 
       {/* 섹션④ — AI 티저 */}
-      <section className="border-t border-white/5 bg-surface py-20">
+      <section className="border-t border-line bg-surface py-20">
         <div className="max-w-2xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 bg-success/10 border border-success/20 text-success text-xs font-medium px-3 py-1.5 rounded-full mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
@@ -267,8 +267,8 @@ export function Landing() {
               { title: 'AI 자소서 초안', desc: '경험 키워드 몇 가지만 입력하면 자소서 초안을 만들어줘요.', badge: '자소서 탭' },
               { title: 'AI 면접 질문 뽑기', desc: '내 자소서와 회사 정보를 분석해 예상 면접 질문을 뽑아줘요.', badge: '면접 단계' },
             ].map(({ title, desc, badge }) => (
-              <div key={title} className="bg-surface-2 border border-white/5 rounded-xl p-4">
-                <span className="inline-block text-[10px] font-medium text-text-quaternary bg-white/[0.04] border border-white/8 rounded-full px-2 py-0.5 mb-3">
+              <div key={title} className="bg-surface-2 border border-line rounded-xl p-4">
+                <span className="inline-block text-[10px] font-medium text-text-quaternary bg-card border border-line rounded-full px-2 py-0.5 mb-3">
                   {badge}
                 </span>
                 <h3 className="text-sm font-semibold mb-1.5">{title}</h3>
@@ -280,7 +280,7 @@ export function Landing() {
       </section>
 
       {/* 섹션⑤ — 같이 만들어가는 서비스 */}
-      <section className="border-t border-white/5 py-20">
+      <section className="border-t border-line py-20">
         <div className="max-w-xl mx-auto px-6 text-center">
           <p className="text-brand text-sm font-medium mb-4">함께 만들어가는 서비스</p>
           <h2 className="text-2xl sm:text-3xl font-bold mb-4 leading-snug">
@@ -293,13 +293,13 @@ export function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={handleKakaoLogin}
-              className="w-full sm:w-auto bg-brand hover:bg-accent text-text-primary font-semibold text-sm px-8 py-3.5 rounded-xl transition-colors shadow-[0_0_24px_rgba(94,106,210,0.25)]"
+              className="w-full sm:w-auto bg-brand hover:bg-accent text-text-primary font-semibold text-sm px-8 py-3.5 rounded-xl transition-colors shadow-[0_0_24px_rgba(107,156,127,0.25)]"
             >
               지금 무료로 시작하기
             </button>
             <Link
               to="/inquiry"
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/[0.04] hover:bg-white/[0.07] border border-white/8 text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-card hover:bg-card border border-line text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
             >
               문의하기 →
             </Link>
@@ -310,7 +310,7 @@ export function Landing() {
       </main>
 
       {/* 푸터 */}
-      <footer className="border-t border-white/5 py-8">
+      <footer className="border-t border-line py-8">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-text-quaternary text-xs">
           <span className="font-semibold text-text-tertiary">치뽀</span>
           <div className="flex items-center gap-6">
@@ -326,7 +326,7 @@ export function Landing() {
 
 function SectionBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-block text-xs font-medium text-text-quaternary bg-white/[0.04] border border-white/8 rounded-full px-3 py-1 mb-4">
+    <span className="inline-block text-xs font-medium text-text-quaternary bg-card border border-line rounded-full px-3 py-1 mb-4">
       {children}
     </span>
   )
@@ -340,7 +340,7 @@ interface ScreenshotPlaceholderProps {
 
 function ScreenshotPlaceholder({ src, alt, label }: ScreenshotPlaceholderProps) {
   return (
-    <div className="bg-surface-2 border border-white/8 rounded-xl overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.4)]">
+    <div className="bg-surface-2 border border-line rounded-xl overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.4)]">
       <img
         src={src}
         alt={alt}

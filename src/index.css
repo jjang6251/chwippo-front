@@ -4,6 +4,173 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────────────────
+   디자인 토큰 — sage + coral (따뜻한 무채색 surface)
+   상세는 company/02_design/DESIGN.md 참조.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* 색은 RGB triplet — tailwind opacity modifier(bg-warning/10) 지원 */
+  --bg: 26 24 22;
+  --surface: 35 33 31;
+  --surface-2: 44 42 40;
+  --surface-3: 54 51 48;
+
+  --text-primary: 235 233 227;
+  --text-secondary: 192 189 179;
+  --text-tertiary: 138 135 128;
+  --text-quaternary: 105 103 96;
+
+  --brand: 107 156 127;
+  --brand-hover: 88 138 106;
+  --accent: 232 139 111;
+  --accent-hover: 212 119 90;
+
+  --success: 126 179 147;
+  --warning: 212 176 69;
+  --info: 125 169 184;
+  --violet: 164 139 191;
+  --danger: 212 113 92;
+
+  /* border·shadow는 일반 색이 아니라 그대로 */
+  --border: rgba(235, 233, 227, 0.07);
+  --border-strong: rgba(235, 233, 227, 0.14);
+
+  /* 의미 토큰 — 카드·hover·구분선·약한 텍스트. 다크는 옛 bg-white/N alpha와 동일. */
+  --card: rgba(255, 255, 255, 0.04);
+  --card-hover: rgba(255, 255, 255, 0.06);
+  --card-strong: rgba(255, 255, 255, 0.08);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --divider: rgba(255, 255, 255, 0.08);
+  --text-faint: rgba(255, 255, 255, 0.30);
+
+  --shadow-sm: none;
+  --shadow-md: none;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* surface 계층 contrast 적당히 — bg(베이지) ↔ surface(화이트) ~6% 차이 + shadow로 보강 */
+  --bg: 240 234 222;
+  --surface: 255 255 255;
+  --surface-2: 252 248 240;
+  --surface-3: 235 230 217;
+
+  --text-primary: 26 24 22;
+  --text-secondary: 74 70 64;
+  --text-tertiary: 110 106 98;
+  --text-quaternary: 142 138 130;
+
+  --brand: 74 139 107;
+  --brand-hover: 58 112 83;
+  --accent: 198 102 64;
+  --accent-hover: 168 80 45;
+
+  --success: 74 139 107;
+  --warning: 168 132 30;
+  --info: 77 128 148;
+  --violet: 122 106 153;
+  --danger: 184 80 64;
+
+  --border: rgba(26, 24, 22, 0.10);
+  --border-strong: rgba(26, 24, 22, 0.18);
+
+  /* 라이트 의미 토큰 — 화이트~베이지 surface + 어두운 line */
+  --card: rgb(252, 248, 240);
+  --card-hover: rgb(235, 230, 217);
+  --card-strong: rgb(245, 240, 228);
+  --line: rgba(26, 24, 22, 0.10);
+  --line-strong: rgba(26, 24, 22, 0.18);
+  --divider: rgba(26, 24, 22, 0.10);
+  --text-faint: rgba(26, 24, 22, 0.45);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* 기본 다크 — data-theme 미지정 시 fallback (위와 동일) */
+:root:not([data-theme]) {
+  color-scheme: dark;
+  --bg: 26 24 22;
+  --surface: 35 33 31;
+  --surface-2: 44 42 40;
+  --surface-3: 54 51 48;
+  --text-primary: 235 233 227;
+  --text-secondary: 192 189 179;
+  --text-tertiary: #8a8780;
+  --text-quaternary: #696760;
+  --text-tertiary: 138 135 128;
+  --text-quaternary: 105 103 96;
+  --brand: 107 156 127;
+  --brand-hover: 88 138 106;
+  --accent: 232 139 111;
+  --accent-hover: 212 119 90;
+  --success: 126 179 147;
+  --warning: 212 176 69;
+  --info: 125 169 184;
+  --violet: 164 139 191;
+  --danger: 212 113 92;
+  --border: rgba(235, 233, 227, 0.07);
+  --border-strong: rgba(235, 233, 227, 0.14);
+  --shadow-sm: none;
+  --shadow-md: none;
+}
+
+::selection {
+  background: rgb(var(--brand) / 0.14);
+  color: rgb(var(--text-primary));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   라이트 모드 카드 자동 shadow — surface 계층감 보강.
+   컴포넌트들이 의미 토큰(bg-card·bg-card-strong·bg-surface-2)을 사용하므로
+   surface 계층에 자동 shadow 적용해 라이트에서 카드 경계 명확.
+   ────────────────────────────────────────────────────────────────────────── */
+:root[data-theme='light'] :where(
+  .bg-surface, .bg-surface-2, .bg-card, .bg-card-strong
+) {
+  box-shadow: var(--shadow-md);
+}
+
+/* nav·sidebar·하단탭은 shadow 제외 (chrome surface는 평평하게) */
+:root[data-theme='light'] [data-nav] {
+  box-shadow: none;
+}
+
+/* 단, 사이드바·하단탭 같은 chrome surface는 shadow 제외 (selector로 한정 어려우니
+   필요 시 컴포넌트에 .no-shadow 클래스로 끌 수 있게 — 임시) */
+:root[data-theme='light'] .no-shadow {
+  box-shadow: none !important;
+}
+
+/* PASSED 카드 그라데이션 — 라이트에선 강조 충분(/30), 다크에선 살짝 진하므로 약화 */
+:root[data-theme='dark'] .passed-card {
+  background-image: linear-gradient(
+    to bottom right,
+    rgb(var(--success) / 0.18),
+    rgb(var(--success) / 0.04)
+  ) !important;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--text-quaternary));
+}
+
 @layer base {
   html {
     font-family: 'Noto Sans KR', 'Inter Variable', system-ui, sans-serif;

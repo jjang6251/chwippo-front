@@ -27,7 +27,7 @@ export const COVERLETTER_CATEGORY_STYLE: Record<string, string> = {
   '직무역량·핵심경험': 'text-violet-400 bg-violet-400/10 border-violet-400/25',
   '협업·갈등경험': 'text-rose-400 bg-rose-400/10 border-rose-400/25',
   '도전·실패경험': 'text-orange-400 bg-orange-400/10 border-orange-400/25',
-  '기타': 'text-text-tertiary bg-white/6 border-white/12',
+  '기타': 'text-text-tertiary bg-card border-line',
 }
 
 export const coverletterCategory = (c: string | null) =>

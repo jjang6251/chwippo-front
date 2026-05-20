@@ -22,16 +22,16 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
 
 function CardSkeleton() {
   return (
-    <div className="bg-surface-2 border border-white/6 rounded-xl p-4 animate-pulse">
+    <div className="bg-surface-2 border border-line rounded-xl p-4 animate-pulse">
       <div className="flex items-start gap-2.5 mb-4">
-        <div className="w-9 h-9 rounded-lg bg-white/6" />
+        <div className="w-9 h-9 rounded-lg bg-card" />
         <div className="flex-1">
-          <div className="h-3.5 bg-white/6 rounded w-24 mb-2" />
-          <div className="h-2.5 bg-white/4 rounded w-16" />
+          <div className="h-3.5 bg-card rounded w-24 mb-2" />
+          <div className="h-2.5 bg-card rounded w-16" />
         </div>
       </div>
-      <div className="h-2 bg-white/6 rounded w-full mb-1" />
-      <div className="h-2 bg-white/4 rounded w-3/4" />
+      <div className="h-2 bg-card rounded w-full mb-1" />
+      <div className="h-2 bg-card rounded w-3/4" />
     </div>
   )
 }
@@ -121,18 +121,18 @@ export function Board() {
           </button>
 
           {addMenuOpen && (
-            <div className="absolute right-0 top-10 z-20 bg-surface border border-white/10 rounded-xl shadow-2xl py-1.5 w-44 animate-fadeInUp">
+            <div className="absolute right-0 top-10 z-20 bg-surface border border-line rounded-xl shadow-2xl py-1.5 w-44 animate-fadeInUp">
               <button
                 onClick={() => { setAddModalStatus('PLANNED'); setAddMenuOpen(false) }}
-                className="w-full text-left px-4 py-2.5 text-xs text-text-secondary hover:bg-white/5 transition-colors"
+                className="w-full text-left px-4 py-2.5 text-xs text-text-secondary hover:bg-card transition-colors"
               >
                 <span className="block font-medium text-text-primary">지원 예정 추가</span>
                 <span className="text-text-quaternary">회사명만 입력</span>
               </button>
-              <div className="my-1 border-t border-white/6" />
+              <div className="my-1 border-t border-line" />
               <button
                 onClick={() => { setAddModalStatus('IN_PROGRESS'); setAddMenuOpen(false) }}
-                className="w-full text-left px-4 py-2.5 text-xs text-text-secondary hover:bg-white/5 transition-colors"
+                className="w-full text-left px-4 py-2.5 text-xs text-text-secondary hover:bg-card transition-colors"
               >
                 <span className="block font-medium text-text-primary">지원 중으로 추가</span>
                 <span className="text-text-quaternary">스텝 자동 생성</span>
@@ -154,7 +154,7 @@ export function Board() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="회사명, 직무명 검색"
-            className="w-full bg-surface-2 border border-white/8 rounded-lg pl-8 pr-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/15 transition-all"
+            className="w-full bg-surface-2 border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/15 transition-all"
           />
         </div>
 
@@ -163,7 +163,7 @@ export function Board() {
           className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible sm:flex-none"
           style={{ scrollbarWidth: 'none' }}
         >
-          <div role="tablist" aria-label="지원 상태 필터" className="flex items-center gap-1.5 sm:gap-1 whitespace-nowrap sm:bg-surface-2 sm:border sm:border-white/6 sm:rounded-lg sm:p-1">
+          <div role="tablist" aria-label="지원 상태 필터" className="flex items-center gap-1.5 sm:gap-1 whitespace-nowrap sm:bg-surface-2 sm:border sm:border-line sm:rounded-lg sm:p-1">
             {FILTER_TABS.map((tab) => {
               const count = tab.key === 'all'
                 ? applications.filter((a) => a.status !== 'FAILED').length
@@ -180,8 +180,8 @@ export function Board() {
                   aria-selected={isActive}
                   className={`flex-none px-3 py-1.5 text-xs rounded-full sm:rounded-md font-medium transition-all whitespace-nowrap text-center border sm:border-transparent
                     ${isActive
-                      ? 'bg-brand/15 border-brand/30 text-brand sm:bg-white/10 sm:text-text-primary sm:shadow-sm'
-                      : 'bg-white/[0.03] border-white/8 text-text-tertiary hover:text-text-secondary sm:bg-transparent sm:text-text-tertiary'
+                      ? 'bg-brand/15 border-brand/30 text-brand sm:bg-card-strong sm:text-text-primary sm:shadow-sm'
+                      : 'bg-card border-line text-text-tertiary hover:text-text-secondary sm:bg-transparent sm:text-text-tertiary'
                     }`}
                 >
                   {tab.label}

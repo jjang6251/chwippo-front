@@ -22,7 +22,7 @@ export function DdayList({ items, isLoading }: DdayListProps) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-12 bg-surface-2 border border-white/6 rounded-lg animate-pulse" />
+          <div key={i} className="h-12 bg-surface-2 border border-line rounded-lg animate-pulse" />
         ))}
       </div>
     )
@@ -44,30 +44,28 @@ export function DdayList({ items, isLoading }: DdayListProps) {
         const avatarColor = getAvatarColor(item.companyName)
         return (
           <button
-            key={`${item.applicationId}-${item.type}`}
+            key={`${item.applicationId ?? ''}-${item.type}-${item.stepId ?? ''}-${item.examId ?? ''}`}
             onClick={() => {
               if (item.type === 'exam') {
                 navigate('/myinfo#exam-schedules')
-              } else if (item.type === 'interview' && item.stepId) {
+              } else if (item.type === 'step' && item.stepId) {
                 navigate(`/board/${item.applicationId}/steps/${item.stepId}`)
               } else if (item.applicationId) {
                 navigate(`/board/${item.applicationId}`)
               }
             }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-white/6 hover:border-white/12 hover:bg-[#1d1e20] transition-all text-left"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-line hover:border-line-strong hover:bg-surface-3 transition-all text-left"
           >
             {/* 타입 아이콘 */}
             <div className={`flex-none w-8 h-8 rounded-lg flex items-center justify-center text-base ${item.type === 'exam' ? 'bg-violet/15 text-violet' : avatarColor}`}>
-              {item.type === 'deadline' ? '📄' : item.type === 'exam' ? '📚' : '🗣️'}
+              {item.type === 'exam' ? '📚' : '📄'}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-text-primary text-xs font-medium truncate">{item.companyName}</p>
               <p className="text-text-quaternary text-[10px] truncate">
-                {item.type === 'deadline'
-                  ? '서류 마감'
-                  : item.type === 'exam'
-                    ? `시험 일정${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`
-                    : `${item.stepName}${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`}
+                {item.type === 'exam'
+                  ? `시험 일정${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`
+                  : `${item.stepName}${item.scheduledTime && item.scheduledTime !== '00:00' ? ` · ${item.scheduledTime}` : ''}`}
               </p>
             </div>
             <span className={`text-xs font-mono font-semibold flex-none ${VARIANT_CLASS[variant]}`}>

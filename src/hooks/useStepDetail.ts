@@ -23,7 +23,11 @@ export function useUpdateStep(appId: string) {
   return useMutation({
     mutationFn: ({ stepId, ...body }: { stepId: string } & UpdateStepBody) =>
       updateStep(appId, stepId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['applications', appId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['applications'], refetchType: 'all' })
+      qc.invalidateQueries({ queryKey: ['calendar'], refetchType: 'all' })
+      qc.invalidateQueries({ queryKey: ['dashboard', 'dday'], refetchType: 'all' })
+    },
     onError: () => toast.error('저장에 실패했습니다.'),
   })
 }

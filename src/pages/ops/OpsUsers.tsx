@@ -26,7 +26,7 @@ function RoleBadge({ role }: { role: string }) {
       </span>
     )
   return (
-    <span className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-md border text-text-tertiary bg-white/[0.04] border-white/10">
+    <span className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-md border text-text-tertiary bg-card border-line">
       일반
     </span>
   )
@@ -67,7 +67,7 @@ function FilterSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
-        className="appearance-none bg-surface-2 border border-white/10 rounded-lg pl-3 pr-7 py-2 text-xs text-text-secondary outline-none focus:border-brand/50 transition-colors cursor-pointer hover:border-white/20"
+        className="appearance-none bg-surface-2 border border-line rounded-lg pl-3 pr-7 py-2 text-xs text-text-secondary outline-none focus:border-brand/50 transition-colors cursor-pointer hover:border-line-strong"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -145,9 +145,9 @@ export function OpsUsers() {
         >
           ← 관리자
         </Link>
-        <span className="text-white/15">/</span>
+        <span className="text-text-faint">/</span>
         <h1 className="text-lg font-bold text-text-primary">회원 관리</h1>
-        <span className="ml-auto text-xs text-text-quaternary bg-white/[0.04] border border-white/8 px-2.5 py-1 rounded-full">
+        <span className="ml-auto text-xs text-text-quaternary bg-card border border-line px-2.5 py-1 rounded-full">
           총 {total.toLocaleString()}명
         </span>
       </div>
@@ -171,7 +171,7 @@ export function OpsUsers() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="닉네임 검색"
             aria-label="닉네임 검색"
-            className="w-full bg-surface-2 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-xs text-text-secondary outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
+            className="w-full bg-surface-2 border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-text-secondary outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
           />
         </div>
         <FilterSelect
@@ -211,10 +211,10 @@ export function OpsUsers() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-white/10">
+          <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.03]">
+                <tr className="border-b border-line bg-card">
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider">닉네임</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider hidden md:table-cell">이메일</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider">역할</th>
@@ -242,7 +242,7 @@ export function OpsUsers() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-xs border border-white/10 rounded-lg text-text-tertiary hover:border-white/20 hover:text-text-secondary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1.5 text-xs border border-line rounded-lg text-text-tertiary hover:border-line-strong hover:text-text-secondary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 이전
               </button>
@@ -252,7 +252,7 @@ export function OpsUsers() {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 text-xs border border-white/10 rounded-lg text-text-tertiary hover:border-white/20 hover:text-text-secondary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1.5 text-xs border border-line rounded-lg text-text-tertiary hover:border-line-strong hover:text-text-secondary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 다음
               </button>
@@ -287,8 +287,8 @@ function UserRow({ user, onSelect }: { user: AdminUser; onSelect: () => void }) 
       role="button"
       aria-label={`${user.nickname} 상세 보기`}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
-      className={`border-b border-white/[0.06] last:border-0 transition-colors cursor-pointer group focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand/40
-        ${isSuspended ? 'bg-danger/[0.04]' : 'hover:bg-white/[0.03]'}
+      className={`border-b border-line[0.06] last:border-0 transition-colors cursor-pointer group focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand/40
+        ${isSuspended ? 'bg-danger/[0.04]' : 'hover:bg-card'}
       `}
       onClick={onSelect}
     >
@@ -331,10 +331,10 @@ function UserRow({ user, onSelect }: { user: AdminUser; onSelect: () => void }) 
 
 function TableSkeleton() {
   return (
-    <div className="overflow-x-auto rounded-xl border border-white/10">
+    <div className="overflow-x-auto rounded-xl border border-line">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-white/10 bg-white/[0.03]">
+          <tr className="border-b border-line bg-card">
             {['닉네임', '이메일', '역할', '상태', '가입일', '최근접속', ''].map((h) => (
               <th key={h} className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider">{h}</th>
             ))}
@@ -342,10 +342,10 @@ function TableSkeleton() {
         </thead>
         <tbody>
           {Array.from({ length: 8 }).map((_, i) => (
-            <tr key={i} className="border-b border-white/[0.06] last:border-0">
+            <tr key={i} className="border-b border-line[0.06] last:border-0">
               {[100, 150, 60, 50, 80, 110, 30].map((w, j) => (
                 <td key={j} className="px-4 py-3.5">
-                  <div className="h-3 rounded bg-white/[0.06] animate-pulse" style={{ width: w }} />
+                  <div className="h-3 rounded bg-card animate-pulse" style={{ width: w }} />
                 </td>
               ))}
             </tr>
@@ -456,22 +456,22 @@ function UserDetailModal({
   if (isLoading || !user) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-        <div className="bg-surface border border-white/10 rounded-xl w-full max-w-lg p-6 flex flex-col gap-4">
+        <div className="bg-surface border border-line rounded-xl w-full max-w-lg p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/[0.06] animate-pulse flex-shrink-0" />
+            <div className="w-10 h-10 rounded-full bg-card animate-pulse flex-shrink-0" />
             <div className="flex-1 flex flex-col gap-2">
-              <div className="h-3.5 rounded bg-white/[0.06] animate-pulse w-1/3" />
-              <div className="h-2.5 rounded bg-white/[0.04] animate-pulse w-1/2" />
+              <div className="h-3.5 rounded bg-card animate-pulse w-1/3" />
+              <div className="h-2.5 rounded bg-card animate-pulse w-1/2" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-3 rounded bg-white/[0.05] animate-pulse" />
+              <div key={i} className="h-3 rounded bg-card animate-pulse" />
             ))}
           </div>
           <div className="flex flex-col gap-2 pt-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-9 rounded-lg bg-white/[0.04] animate-pulse" />
+              <div key={i} className="h-9 rounded-lg bg-card animate-pulse" />
             ))}
           </div>
         </div>
@@ -491,9 +491,9 @@ function UserDetailModal({
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <div className="bg-surface border border-white/10 rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="bg-surface border border-line rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
           {/* 헤더 */}
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-white/8">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-line">
             <div className="w-10 h-10 rounded-full bg-brand/20 border border-brand/30 flex items-center justify-center text-brand font-bold flex-shrink-0">
               {user.nickname[0]}
             </div>
@@ -515,7 +515,7 @@ function UserDetailModal({
           </div>
 
           {/* 정보 그리드 */}
-          <div className="px-6 py-3.5 border-b border-white/8 bg-white/[0.015]">
+          <div className="px-6 py-3.5 border-b border-line bg-card">
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
               <InfoItem label="가입일" value={dayjs(user.createdAt).format('YYYY.MM.DD')} />
               <InfoItem
@@ -541,7 +541,7 @@ function UserDetailModal({
 
           {/* 최근 문의 */}
           {((user as AdminUserDetail).recentInquiries?.length ?? 0) > 0 && (
-            <div className="px-6 py-3.5 border-b border-white/8">
+            <div className="px-6 py-3.5 border-b border-line">
               <p className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider mb-2">최근 문의</p>
               <div className="flex flex-col gap-1.5">
                 {((user as AdminUserDetail).recentInquiries ?? []).slice(0, 3).map((inq) => (
@@ -549,7 +549,7 @@ function UserDetailModal({
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded border flex-shrink-0 ${
                         inq.status === 'CLOSED'
-                          ? 'text-text-quaternary bg-white/[0.04] border-white/10'
+                          ? 'text-text-quaternary bg-card border-line'
                           : 'text-brand bg-brand/10 border-brand/20'
                       }`}
                     >
@@ -576,7 +576,7 @@ function UserDetailModal({
                     onChange={(e) => setRenameValue(e.target.value)}
                     placeholder="새 닉네임 입력"
                     maxLength={100}
-                    className="flex-1 bg-bg border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
+                    className="flex-1 bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
                     autoFocus
                   />
                   <button
@@ -591,7 +591,7 @@ function UserDetailModal({
                   </button>
                   <button
                     onClick={() => { setRenameMode(false); setRenameValue('') }}
-                    className="px-3 py-2 border border-white/10 text-text-tertiary text-sm rounded-lg hover:border-white/20 transition-colors"
+                    className="px-3 py-2 border border-line text-text-tertiary text-sm rounded-lg hover:border-line-strong transition-colors"
                   >
                     취소
                   </button>
@@ -615,13 +615,13 @@ function UserDetailModal({
                     placeholder="경고 사유를 입력하세요 (audit log에 기록됩니다)"
                     rows={3}
                     maxLength={500}
-                    className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
+                    className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
                     autoFocus
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={() => { setWarnMode(false); setWarnValue('') }}
-                      className="flex-1 py-2 border border-white/10 text-text-tertiary text-sm rounded-lg hover:border-white/20 transition-colors"
+                      className="flex-1 py-2 border border-line text-text-tertiary text-sm rounded-lg hover:border-line-strong transition-colors"
                     >
                       취소
                     </button>
@@ -659,7 +659,7 @@ function UserDetailModal({
               disabled={exportMut.isPending}
             />
 
-            <div className="h-px bg-white/[0.06] my-0.5" />
+            <div className="h-px bg-card my-0.5" />
 
             {/* 정지 / 해제 */}
             <ActionButton
@@ -697,7 +697,7 @@ function UserDetailModal({
               }
             />
 
-            <div className="h-px bg-white/[0.06] my-0.5" />
+            <div className="h-px bg-card my-0.5" />
 
             {/* 계정 삭제 */}
             <ActionButton
@@ -735,13 +735,13 @@ function UserDetailModal({
           aria-label={confirm.title}
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4"
         >
-          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+          <div className="bg-surface border border-line rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">{confirm.title}</h3>
             <p className="text-sm text-text-tertiary mb-6">{confirm.description}</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setConfirm(null)}
-                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm text-text-secondary hover:bg-white/[0.04] transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card transition-colors"
               >
                 취소
               </button>
@@ -817,7 +817,7 @@ function UserStatsBlock({
     myinfoCount.education
 
   return (
-    <div className="px-6 py-3.5 border-b border-white/8 space-y-3">
+    <div className="px-6 py-3.5 border-b border-line space-y-3">
       <p className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider">
         사용량 통계
       </p>
@@ -837,7 +837,7 @@ function UserStatsBlock({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label={`파일 저장 용량 ${storage.percentage}%`}
-          className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden"
+          className="h-1.5 w-full rounded-full bg-card overflow-hidden"
         >
           <div
             className={`h-full transition-all ${tone}`}
@@ -876,10 +876,10 @@ const APP_STATUS_LABEL: Record<string, string> = {
 }
 
 const APP_STATUS_COLOR: Record<string, string> = {
-  PLANNED: 'text-text-tertiary bg-white/[0.04] border-white/10',
+  PLANNED: 'text-text-tertiary bg-card border-line',
   IN_PROGRESS: 'text-brand bg-brand/10 border-brand/20',
   PASSED: 'text-success bg-success/10 border-success/20',
-  FAILED: 'text-text-quaternary bg-white/[0.03] border-white/8',
+  FAILED: 'text-text-quaternary bg-card border-line',
 }
 
 function DataViewModal({
@@ -908,9 +908,9 @@ function DataViewModal({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-surface border border-white/10 rounded-xl w-full max-w-2xl max-h-[88vh] flex flex-col">
+      <div className="bg-surface border border-line rounded-xl w-full max-w-2xl max-h-[88vh] flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/8 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line flex-shrink-0">
           <div>
             <h2 className="font-bold text-text-primary">{nickname}</h2>
             <p className="text-xs text-text-quaternary mt-0.5">데이터 조회</p>
@@ -937,7 +937,7 @@ function DataViewModal({
                   <div key={key} className={`flex gap-2 text-xs ${isObj ? 'flex-col' : ''}`}>
                     <span className="text-text-quaternary font-mono flex-shrink-0 w-40">{key}</span>
                     {isObj ? (
-                      <pre className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2.5 text-[11px] text-text-secondary font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all">
+                      <pre className="bg-card border border-line[0.06] rounded-lg px-3 py-2.5 text-[11px] text-text-secondary font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all">
                         {JSON.stringify(val, null, 2)}
                       </pre>
                     ) : (
@@ -961,7 +961,7 @@ function DataViewModal({
                 {data.applications.map((app) => (
                   <div
                     key={app.id}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06]"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-card border border-line[0.06]"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-text-primary truncate">{app.companyName}</p>
@@ -971,7 +971,7 @@ function DataViewModal({
                     </div>
                     <span
                       className={`text-[10px] font-medium px-2 py-0.5 rounded border flex-shrink-0 ${
-                        APP_STATUS_COLOR[app.status] ?? 'text-text-quaternary bg-white/[0.04] border-white/10'
+                        APP_STATUS_COLOR[app.status] ?? 'text-text-quaternary bg-card border-line'
                       }`}
                     >
                       {APP_STATUS_LABEL[app.status] ?? app.status}
@@ -995,13 +995,13 @@ function DataViewModal({
                 {data.inquiries.map((inq) => (
                   <div
                     key={inq.id}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06]"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-card border border-line[0.06]"
                   >
                     <p className="flex-1 text-sm text-text-secondary truncate">{inq.title}</p>
                     <span
                       className={`text-[10px] font-medium px-2 py-0.5 rounded border flex-shrink-0 ${
                         inq.status === 'CLOSED'
-                          ? 'text-text-quaternary bg-white/[0.04] border-white/10'
+                          ? 'text-text-quaternary bg-card border-line'
                           : 'text-brand bg-brand/10 border-brand/20'
                       }`}
                     >
@@ -1122,7 +1122,7 @@ function MyinfoGroup<T extends Record<string, unknown>>({
       ) : (
         <div className="flex flex-col gap-1.5">
           {items.map((item, i) => (
-            <div key={String(item.id ?? i)} className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+            <div key={String(item.id ?? i)} className="px-3 py-2.5 rounded-lg bg-card border border-line[0.06]">
               {renderItem(item)}
             </div>
           ))}
@@ -1161,7 +1161,7 @@ function ActionButton({
   variant?: 'default' | 'warning' | 'danger' | 'safe'
 }) {
   const variantClass = {
-    default: 'border-white/10 text-text-secondary hover:border-white/20 hover:text-text-primary hover:bg-white/[0.03]',
+    default: 'border-line text-text-secondary hover:border-line-strong hover:text-text-primary hover:bg-card',
     warning: 'border-warning/20 text-warning/80 hover:border-warning/35 hover:text-warning hover:bg-warning/5',
     danger: 'border-danger/20 text-danger/80 hover:border-danger/35 hover:text-danger hover:bg-danger/5',
     safe: 'border-success/20 text-success/80 hover:border-success/35 hover:text-success hover:bg-success/5',

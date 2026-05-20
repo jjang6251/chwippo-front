@@ -21,7 +21,7 @@ export function CopyButton({ value }: CopyButtonProps) {
       disabled={isEmpty}
       title="복사"
       className={`flex-none w-7 h-7 flex items-center justify-center rounded-md transition-colors
-        ${isEmpty ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/8 cursor-pointer'}`}
+        ${isEmpty ? 'opacity-30 cursor-not-allowed' : 'hover:bg-card-strong cursor-pointer'}`}
     >
       {copied ? (
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="text-success">

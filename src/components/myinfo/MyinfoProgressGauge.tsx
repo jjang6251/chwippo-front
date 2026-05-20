@@ -35,7 +35,7 @@ export function MyinfoProgressGauge() {
   }
 
   if (isLoading) {
-    return <div className="h-28 bg-surface-2 border border-white/6 rounded-xl animate-pulse" />
+    return <div className="h-28 bg-surface-2 border border-line rounded-xl animate-pulse" />
   }
 
   return (
@@ -45,7 +45,7 @@ export function MyinfoProgressGauge() {
       tabIndex={!isComplete && firstEmptyId ? 0 : undefined}
       onKeyDown={(e) => { if (!isComplete && firstEmptyId && (e.key === 'Enter' || e.key === ' ')) handleClick() }}
       aria-label={`내 정보 작성 완성도 ${percent}%`}
-      className={`bg-surface-2 border border-white/6 rounded-xl p-4 flex items-center gap-4 transition-all ${!isComplete && firstEmptyId ? 'hover:border-white/12 hover:bg-[#1d1e20] cursor-pointer' : ''}`}
+      className={`bg-surface-2 border border-line rounded-xl p-4 flex items-center gap-4 transition-all ${!isComplete && firstEmptyId ? 'hover:border-line-strong hover:bg-surface-3 cursor-pointer' : ''}`}
     >
       {/* 원형 게이지 */}
       <div className="relative flex-none" style={{ width: SIZE, height: SIZE }}>
@@ -64,7 +64,7 @@ export function MyinfoProgressGauge() {
             cy={SIZE / 2}
             r={RADIUS}
             fill="none"
-            stroke="rgba(255,255,255,0.06)"
+            stroke="var(--line)"
             strokeWidth={STROKE}
           />
           <circle

@@ -21,7 +21,7 @@ export function AnnouncementModal({ title, body, onDismiss }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="announcement-modal-title"
-        className="bg-surface border border-white/10 rounded-2xl w-full max-w-sm overflow-hidden"
+        className="bg-surface border border-line rounded-2xl w-full max-w-sm overflow-hidden"
       >
         {/* 상단 brand 바 */}
         <div className="h-1 bg-brand w-full" />
@@ -35,7 +35,7 @@ export function AnnouncementModal({ title, body, onDismiss }: Props) {
         </div>
 
         {/* 구분선 + 본문 + 버튼 */}
-        <div className="border-t border-white/5 px-6 pt-5 pb-6 flex flex-col gap-5">
+        <div className="border-t border-line px-6 pt-5 pb-6 flex flex-col gap-5">
           <div className="max-h-[35vh] overflow-y-auto">
             <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap text-center">
               {body}

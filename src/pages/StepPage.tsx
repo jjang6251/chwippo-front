@@ -118,7 +118,7 @@ export function StepPage() {
   const statusBadge = {
     done:     { label: '완료됨', cls: 'text-success bg-success/8 border-success/25' },
     current:  { label: '진행중', cls: 'text-info bg-info/8 border-info/25' },
-    upcoming: { label: '대기중', cls: 'text-text-quaternary bg-white/4 border-white/10' },
+    upcoming: { label: '대기중', cls: 'text-text-quaternary bg-card border-line' },
   }[stepStatus]
 
   // 날짜 표시 포맷
@@ -182,7 +182,7 @@ export function StepPage() {
           <span className="text-text-quaternary text-xs font-mono">{stepIdx + 1} / {sortedSteps.length}</span>
           {checklist.length > 0 && (
             <>
-              <span className="text-white/15">·</span>
+              <span className="text-text-faint">·</span>
               <span className="text-text-quaternary text-xs">체크리스트 {doneCount}/{checklist.length}</span>
             </>
           )}
@@ -190,24 +190,24 @@ export function StepPage() {
       </div>
 
       {/* 이전/다음 네비게이션 */}
-      <div className="flex items-center border border-white/6 rounded-xl mb-6 overflow-hidden">
+      <div className="flex items-center border border-line rounded-xl mb-6 overflow-hidden">
         <button
           onClick={() => prevStep && navigate(`/board/${appId}/steps/${prevStep.id}`)}
           disabled={!prevStep}
           aria-label={prevStep ? `이전 단계: ${prevStep.name}` : '처음 단계'}
-          className="flex-1 flex items-center gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-white/4 transition-colors disabled:cursor-default"
+          className="flex-1 flex items-center gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card transition-colors disabled:cursor-default"
         >
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
             <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span className="text-xs text-text-quaternary truncate">{prevStep ? prevStep.name : '처음 단계'}</span>
         </button>
-        <div className="w-px h-5 bg-white/6" />
+        <div className="w-px h-5 bg-card" />
         <button
           onClick={() => nextStep && navigate(`/board/${appId}/steps/${nextStep.id}`)}
           disabled={!nextStep}
           aria-label={nextStep ? `다음 단계: ${nextStep.name}` : '마지막 단계'}
-          className="flex-1 flex items-center justify-end gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-white/4 transition-colors disabled:cursor-default"
+          className="flex-1 flex items-center justify-end gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card transition-colors disabled:cursor-default"
         >
           <span className="text-xs text-text-quaternary truncate">{nextStep ? nextStep.name : '마지막 단계'}</span>
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
@@ -217,7 +217,7 @@ export function StepPage() {
       </div>
 
       {/* ── Properties 바 ─────────────────────────────── */}
-      <div className="rounded-xl border border-white/6 overflow-hidden mb-6">
+      <div className="rounded-xl border border-line overflow-hidden mb-6">
         {/* 날짜 행 */}
         <div className={`transition-colors ${dateRowAccentCls}`}>
           {editingField === 'date' ? (
@@ -236,13 +236,13 @@ export function StepPage() {
                 onBlur={handleDateBlur}
                 autoFocus
                 aria-label="일정 날짜 및 시간"
-                className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none [color-scheme:dark]"
+                className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none"
               />
             </div>
           ) : (
             <button
               onClick={() => { setEditingField('date'); setTimeout(() => dateInputRef.current?.focus(), 0) }}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card transition-colors text-left"
             >
               <span className="text-sm shrink-0">📅</span>
               <span className="text-xs text-text-quaternary w-10 shrink-0">날짜</span>
@@ -263,7 +263,7 @@ export function StepPage() {
           )}
         </div>
 
-        <div className="h-px bg-white/5 mx-3" />
+        <div className="h-px bg-card mx-3" />
 
         {/* 장소 행 */}
         <div>
@@ -286,7 +286,7 @@ export function StepPage() {
           ) : (
             <button
               onClick={() => { setEditingField('location'); setTimeout(() => locationInputRef.current?.focus(), 0) }}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card transition-colors text-left"
             >
               <span className="text-sm shrink-0">📍</span>
               <span className="text-xs text-text-quaternary w-10 shrink-0">장소</span>
@@ -302,7 +302,7 @@ export function StepPage() {
       <div>
         <div className="flex items-center gap-3 mb-3">
           <span className="text-xs text-text-quaternary shrink-0">준비 체크리스트</span>
-          <div className="flex-1 h-px bg-white/6" />
+          <div className="flex-1 h-px bg-card" />
           <div className="flex items-center gap-2 shrink-0">
             {checklist.length > 0 && (
               <span className="text-[10px] text-text-quaternary font-mono">{doneCount}/{checklist.length}</span>
@@ -326,11 +326,11 @@ export function StepPage() {
 
         <div className="space-y-1 mb-6">
           {checklist.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 group py-1 px-1 rounded-lg hover:bg-white/3 transition-colors">
+            <div key={item.id} className="flex items-center gap-3 group py-1 px-1 rounded-lg hover:bg-card transition-colors">
               <button
                 onClick={() => updateItem({ itemId: item.id, isDone: !item.isDone })}
                 className={`relative w-[17px] h-[17px] rounded border shrink-0 flex items-center justify-center transition-colors after:content-[''] after:absolute after:inset-[-8px] ${
-                  item.isDone ? 'bg-brand border-brand' : 'border-white/20 hover:border-brand/60'
+                  item.isDone ? 'bg-brand border-brand' : 'border-line hover:border-brand/60'
                 }`}
               >
                 {item.isDone && (
@@ -353,7 +353,7 @@ export function StepPage() {
             </div>
           ))}
           <div className="flex items-center gap-3 py-1 px-1">
-            <div className="w-[17px] h-[17px] rounded border border-white/10 shrink-0" />
+            <div className="w-[17px] h-[17px] rounded border border-line shrink-0" />
             <input
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
@@ -372,7 +372,7 @@ export function StepPage() {
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
           <span className="text-xs text-text-quaternary shrink-0"><span className="text-text-primary">📌</span> 핵심 메모</span>
-          <div className="flex-1 h-px bg-white/6" />
+          <div className="flex-1 h-px bg-card" />
           <span className="text-[10px] text-brand/50 shrink-0">D-1·당일 대시보드 표시</span>
         </div>
         <div className="pl-1">
@@ -391,7 +391,7 @@ export function StepPage() {
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
           <span className="text-xs text-text-quaternary shrink-0">준비 노트</span>
-          <div className="flex-1 h-px bg-white/6" />
+          <div className="flex-1 h-px bg-card" />
         </div>
         <div className="pl-1">
           <StepNoteEditor
@@ -428,7 +428,7 @@ export function StepPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowPassedModal(false)}
-            className="flex-1 py-2.5 rounded-lg border border-white/10 text-text-secondary text-sm hover:bg-white/4 transition-colors"
+            className="flex-1 py-2.5 rounded-lg border border-line text-text-secondary text-sm hover:bg-card transition-colors"
           >
             취소
           </button>
@@ -447,15 +447,15 @@ export function StepPage() {
 function PageSkeleton() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 animate-pulse">
-      <div className="h-3 bg-white/6 rounded w-24 mb-5" />
-      <div className="h-24 bg-white/5 rounded-xl mb-1" />
-      <div className="h-10 bg-white/4 rounded-xl mb-6" />
-      <div className="h-20 bg-white/[0.03] rounded-xl mb-6" />
-      <div className="h-3 bg-white/5 rounded w-32 mb-4" />
+      <div className="h-3 bg-card rounded w-24 mb-5" />
+      <div className="h-24 bg-card rounded-xl mb-1" />
+      <div className="h-10 bg-card rounded-xl mb-6" />
+      <div className="h-20 bg-card rounded-xl mb-6" />
+      <div className="h-3 bg-card rounded w-32 mb-4" />
       <div className="space-y-2.5">
-        <div className="h-7 bg-white/4 rounded-lg" />
-        <div className="h-7 bg-white/4 rounded-lg" />
-        <div className="h-7 bg-white/3 rounded-lg w-3/4" />
+        <div className="h-7 bg-card rounded-lg" />
+        <div className="h-7 bg-card rounded-lg" />
+        <div className="h-7 bg-card rounded-lg w-3/4" />
       </div>
     </div>
   )

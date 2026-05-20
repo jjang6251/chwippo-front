@@ -74,11 +74,11 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
       {/* Slide-over panel — 모바일: 헤더 아래·MobileNav 위 / 데스크탑: 풀 높이 */}
       <div
         ref={panelRef}
-        className="fixed top-12 lg:top-0 right-0 z-50 bottom-[calc(env(safe-area-inset-bottom)+4rem)] lg:bottom-0 w-full max-w-sm bg-surface border-l border-white/8 flex flex-col shadow-2xl lg:shadow-none"
+        className="fixed top-12 lg:top-0 right-0 z-50 bottom-[calc(env(safe-area-inset-bottom)+4rem)] lg:bottom-0 w-full max-w-sm bg-surface border-l border-line flex flex-col shadow-2xl lg:shadow-none"
         style={{ animation: 'slideInRight 0.2s ease-out' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/6 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-sm shrink-0">{typeConfig.icon}</span>
             <h2 className="text-text-primary font-semibold text-sm truncate">{step.name}</h2>
@@ -88,7 +88,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
             <button
               onClick={() => navigate(`/board/${appId}/steps/${step.id}`)}
               title="전체 화면으로 열기"
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-white/6 hover:text-text-primary transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card hover:text-text-primary transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 2h4v4M14 2l-5 5M6 14H2v-4M2 14l5-5" />
@@ -96,7 +96,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
             </button>
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-white/6 hover:text-text-primary transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card hover:text-text-primary transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M3 3l10 10M13 3L3 13" />
@@ -118,7 +118,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
                 setScheduledDate(v)
                 saveScheduledDate(v)
               }}
-              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors [color-scheme:dark]"
+              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
             />
           </section>
 
@@ -131,7 +131,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
               onChange={(e) => setLocation(e.target.value)}
               onBlur={handleLocationBlur}
               placeholder="예: 강남역 3번 출구 위워크 3층"
-              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
             />
           </section>
 
@@ -159,7 +159,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
                   <button
                     onClick={() => updateItem({ itemId: item.id, isDone: !item.isDone })}
                     className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
-                      item.isDone ? 'bg-brand border-brand' : 'border-white/20 hover:border-brand/60'
+                      item.isDone ? 'bg-brand border-brand' : 'border-line hover:border-brand/60'
                     }`}
                   >
                     {item.isDone && (
@@ -186,7 +186,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
 
               {/* 새 항목 입력 */}
               <div className="flex items-center gap-2.5">
-                <div className="w-4 h-4 rounded border border-white/10 shrink-0" />
+                <div className="w-4 h-4 rounded border border-line shrink-0" />
                 <input
                   ref={inputRef}
                   value={inputText}

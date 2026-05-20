@@ -22,7 +22,7 @@ export function DdayPinnedCard({ item }: Props) {
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-brand text-xs font-semibold">{ddayLabel}</span>
             {isToday && (
-              <span className="text-[10px] font-medium text-white/70 bg-brand/20 px-1.5 py-0.5 rounded-full">오늘</span>
+              <span className="text-[10px] font-medium text-text-faint bg-brand/20 px-1.5 py-0.5 rounded-full">오늘</span>
             )}
           </div>
           <p className="text-text-primary text-sm font-semibold">{item.companyName}</p>

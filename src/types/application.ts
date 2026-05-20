@@ -18,7 +18,6 @@ export interface Application {
   jobTitle: string | null
   jobCategory: string | null
   status: ApplicationStatus
-  deadline: string | null
   jobUrl: string | null
   memo: string | null
   currentStepIndex: number
@@ -34,6 +33,7 @@ export interface CreateApplicationDto {
   jobTitle?: string
   jobCategory?: string
   status?: 'PLANNED' | 'IN_PROGRESS'
+  /** 서류 마감일 — 백엔드에서 첫 step.scheduled_date에 저장 (호환 입력 채널) */
   deadline?: string
   jobUrl?: string
   needsDetail?: boolean
@@ -46,6 +46,7 @@ export interface UpdateApplicationDto {
   jobTitle?: string
   jobCategory?: string
   status?: ApplicationStatus
+  /** 서류 마감일 — 백엔드에서 첫 step.scheduled_date에 저장 (호환 입력 채널) */
   deadline?: string
   jobUrl?: string
   memo?: string

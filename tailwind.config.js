@@ -9,39 +9,45 @@ export default {
         mono: ["'DM Mono'", "'Berkeley Mono'", 'ui-monospace', 'monospace'],
       },
       colors: {
-        // Backgrounds
-        bg: '#08090a',
-        surface: '#0f1011',
-        'surface-2': '#191a1b',
-        'surface-3': '#28282c',
+        // 색은 RGB triplet 변수 + tailwind opacity modifier 지원 (bg-warning/10 등)
+        bg: 'rgb(var(--bg) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-2': 'rgb(var(--surface-2) / <alpha-value>)',
+        'surface-3': 'rgb(var(--surface-3) / <alpha-value>)',
 
-        // Brand
-        brand: '#5e6ad2',
-        accent: '#7170ff',
-        'accent-hover': '#828fff',
+        brand: 'rgb(var(--brand) / <alpha-value>)',
+        'brand-hover': 'rgb(var(--brand-hover) / <alpha-value>)',
+        accent: 'rgb(var(--accent) / <alpha-value>)',
+        'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
 
-        // Text
-        'text-primary': '#f7f8f8',
-        'text-secondary': '#d0d6e0',
-        'text-tertiary': '#8a8f98',
-        'text-quaternary': '#62666d',
+        'text-primary': 'rgb(var(--text-primary) / <alpha-value>)',
+        'text-secondary': 'rgb(var(--text-secondary) / <alpha-value>)',
+        'text-tertiary': 'rgb(var(--text-tertiary) / <alpha-value>)',
+        'text-quaternary': 'rgb(var(--text-quaternary) / <alpha-value>)',
 
-        // Status
-        success: '#10b981',
-        'success-strong': '#27a644',
-        danger: '#f87171',
-        warning: '#fb923c',
-        info: '#7170ff',
-        violet: '#a78bfa',
+        success: 'rgb(var(--success) / <alpha-value>)',
+        'success-strong': 'rgb(var(--success) / <alpha-value>)',
+        danger: 'rgb(var(--danger) / <alpha-value>)',
+        warning: 'rgb(var(--warning) / <alpha-value>)',
+        info: 'rgb(var(--info) / <alpha-value>)',
+        violet: 'rgb(var(--violet) / <alpha-value>)',
+
+        // 의미 토큰 — `bg-white/N`·`text-white/N` 대체용. alpha 미리 박혀있는 완전한 값.
+        card: 'var(--card)',
+        'card-hover': 'var(--card-hover)',
+        'card-strong': 'var(--card-strong)',
+        'text-faint': 'var(--text-faint)',
       },
       borderColor: {
-        DEFAULT: 'rgba(255,255,255,0.08)',
-        subtle: 'rgba(255,255,255,0.05)',
-        strong: 'rgba(255,255,255,0.14)',
+        DEFAULT: 'var(--border)',
+        subtle: 'var(--border)',
+        strong: 'var(--border-strong)',
+        line: 'var(--line)',
+        'line-strong': 'var(--line-strong)',
       },
-      backgroundColor: {
-        card: 'rgba(255,255,255,0.02)',
-        'card-hover': 'rgba(255,255,255,0.03)',
+      divideColor: {
+        DEFAULT: 'var(--divider)',
+        line: 'var(--divider)',
       },
       borderRadius: {
         badge: '9999px',

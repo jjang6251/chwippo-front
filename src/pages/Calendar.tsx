@@ -13,21 +13,13 @@ type CalendarView = 'month' | 'week'
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
 const COLOR = {
-  deadline: {
+  step: {
     dot: 'bg-warning',
     pill: 'bg-warning/10 text-warning',
     badge: 'bg-warning/10 text-warning',
     border: 'border-warning/25',
     icon: '📄',
-    label: '서류',
-  },
-  interview: {
-    dot: 'bg-info',
-    pill: 'bg-info/10 text-info',
-    badge: 'bg-info/10 text-info',
-    border: 'border-info/25',
-    icon: '🗓️',
-    label: '면접',
+    label: '마감',
   },
   exam: {
     dot: 'bg-violet',
@@ -37,23 +29,52 @@ const COLOR = {
     icon: '📚',
     label: '시험',
   },
+  note: {
+    dot: 'bg-info',
+    pill: 'bg-info/10 text-info',
+    badge: 'bg-info/10 text-info',
+    border: 'border-info/25',
+    icon: '📝',
+    label: '메모',
+  },
 } as const
 
+const TYPE_PRIORITY: Record<CalendarEvent['type'], number> = {
+  step: 0,
+  exam: 1,
+  note: 2,
+}
+
+function sortDayEvents(events: CalendarEvent[]): CalendarEvent[] {
+  return [...events].sort((a, b) => {
+    const pa = TYPE_PRIORITY[a.type]
+    const pb = TYPE_PRIORITY[b.type]
+    if (pa !== pb) return pa - pb
+    if (a.time === b.time) return 0
+    if (a.time === null) return -1
+    if (b.time === null) return 1
+    return a.time.localeCompare(b.time)
+  })
+}
+
 function eventLabel(e: CalendarEvent) {
-  if (e.type === 'deadline') return `${e.companyName} 서류`
-  if (e.type === 'exam') return e.companyName
-  const step = e.stepName ?? '면접'
-  return `${e.companyName} ${step}`
+  if (e.type === 'exam') return e.companyName ?? ''
+  if (e.type === 'note') return e.content ?? ''
+  return `${e.companyName} ${e.stepName ?? ''}`.trim()
 }
 
 function eventPillLabel(e: CalendarEvent) {
-  const base = e.type === 'deadline'
-    ? `${e.companyName} 서류`
-    : e.type === 'exam'
-      ? e.companyName
-      : `${e.companyName} ${e.stepName ?? '면접'}`
-  if (e.time) return `${e.time.slice(0, 5)} ${base}`
-  return base
+  const time = e.time ? e.time.slice(0, 5) : null
+  if (e.type === 'exam') {
+    const base = e.companyName ?? ''
+    return time ? `${time} ${base}` : base
+  }
+  if (e.type === 'note') {
+    return time ? `${time} ${e.content ?? ''}` : (e.content ?? '')
+  }
+  // step
+  const base = `${e.companyName} ${e.stepName ?? ''}`.trim()
+  return time ? `${time} ${base}` : base
 }
 
 // Korean week starts on Monday
@@ -65,11 +86,19 @@ function getWeekStart(date: dayjs.Dayjs): dayjs.Dayjs {
 
 export function Calendar() {
   const today = dayjs().format('YYYY-MM-DD')
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryDate = searchParams.get('date')
   const initialDate = queryDate && dayjs(queryDate, 'YYYY-MM-DD', true).isValid() ? queryDate : today
 
-  const [view, setView] = useState<CalendarView>('month')
+  const view: CalendarView = searchParams.get('view') === 'week' ? 'week' : 'month'
+  function setView(next: CalendarView) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev)
+      if (next === 'week') params.set('view', 'week')
+      else params.delete('view')
+      return params
+    }, { replace: true })
+  }
   const [cursor, setCursor] = useState(dayjs(initialDate).startOf('month'))
   const [weekCursor, setWeekCursor] = useState(dayjs(initialDate))
   const [selectedDate, setSelectedDate] = useState<string>(initialDate)
@@ -98,7 +127,7 @@ export function Calendar() {
     const weekStartStr = weekStart.format('YYYY-MM-DD')
     const weekEndStr = weekEnd.format('YYYY-MM-DD')
     return combined.filter((e) => {
-      const key = `${e.date}|${e.applicationId}|${e.type}|${e.stepId ?? ''}`
+      const key = `${e.date}|${e.applicationId ?? ''}|${e.type}|${e.stepId ?? ''}|${e.examId ?? ''}|${e.noteId ?? ''}`
       if (seen.has(key)) return false
       seen.add(key)
       return e.date >= weekStartStr && e.date <= weekEndStr
@@ -112,6 +141,9 @@ export function Calendar() {
     for (const e of monthlyEvents) {
       if (!map[e.date]) map[e.date] = []
       map[e.date].push(e)
+    }
+    for (const k of Object.keys(map)) {
+      map[k] = sortDayEvents(map[k])
     }
     return map
   }, [monthlyEvents])
@@ -130,11 +162,12 @@ export function Calendar() {
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return []
     // Try monthlyEvents first; for weekly view also check weekEvents
-    return eventsByDate[selectedDate] ?? weekEvents.filter((e) => e.date === selectedDate)
+    const list = eventsByDate[selectedDate] ?? weekEvents.filter((e) => e.date === selectedDate)
+    return sortDayEvents(list)
   }, [selectedDate, eventsByDate, weekEvents])
 
-  const deadlineCount = monthlyEvents.filter((e) => e.type === 'deadline').length
-  const interviewCount = monthlyEvents.filter((e) => e.type === 'interview').length
+  const stepCount = monthlyEvents.filter((e) => e.type === 'step').length
+  const examCount = monthlyEvents.filter((e) => e.type === 'exam').length
 
   function handleSelectDate(dateStr: string) {
     if (dateStr === selectedDate) {
@@ -224,18 +257,18 @@ export function Calendar() {
             </button>
 
             {pickerOpen && (
-              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/8 rounded-xl shadow-2xl p-4 w-56 max-w-[calc(100vw-2rem)] animate-fadeInUp">
+              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-line rounded-xl shadow-2xl p-4 w-56 max-w-[calc(100vw-2rem)] animate-fadeInUp">
                 <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setPickerYear((y) => y - 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4" /></svg>
                   </button>
                   <span className="text-text-primary text-sm font-semibold">{pickerYear}년</span>
                   <button
                     onClick={() => setPickerYear((y) => y + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4" /></svg>
                   </button>
@@ -251,7 +284,7 @@ export function Calendar() {
                         className={`py-1.5 rounded-lg text-xs font-medium transition-colors
                           ${isSelected ? 'bg-brand text-text-primary' : ''}
                           ${!isSelected && isCurrentMonth ? 'text-brand border border-brand/30' : ''}
-                          ${!isSelected && !isCurrentMonth ? 'text-text-secondary hover:bg-white/6' : ''}
+                          ${!isSelected && !isCurrentMonth ? 'text-text-secondary hover:bg-card' : ''}
                         `}
                       >
                         {i + 1}월
@@ -265,7 +298,7 @@ export function Calendar() {
 
           <button
             onClick={goToday}
-            className="text-xs font-medium px-2.5 py-1 rounded-md border border-white/10 text-text-tertiary hover:text-text-secondary hover:border-white/20 transition-colors"
+            className="text-xs font-medium px-2.5 py-1 rounded-md border border-line text-text-tertiary hover:text-text-secondary hover:border-line-strong transition-colors"
           >
             오늘
           </button>
@@ -282,11 +315,11 @@ export function Calendar() {
 
         <div className="flex items-center justify-between sm:justify-end gap-2">
           {/* View toggle */}
-          <div className="flex items-center bg-surface-2 border border-white/5 rounded-lg p-0.5">
+          <div className="flex items-center bg-surface-2 border border-line rounded-lg p-0.5">
             <button
               onClick={switchToMonthView}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                view === 'month' ? 'bg-white/8 text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
+                view === 'month' ? 'bg-card-strong text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
               }`}
             >
               월별
@@ -294,7 +327,7 @@ export function Calendar() {
             <button
               onClick={switchToWeekView}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                view === 'week' ? 'bg-white/8 text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
+                view === 'week' ? 'bg-card-strong text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
               }`}
             >
               주별
@@ -306,14 +339,14 @@ export function Calendar() {
             <button
               onClick={view === 'month' ? prevMonth : prevWeek}
               aria-label={view === 'month' ? '이전 달' : '이전 주'}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
             >
               <ChevronLeft />
             </button>
             <button
               onClick={view === 'month' ? nextMonth : nextWeek}
               aria-label={view === 'month' ? '다음 달' : '다음 주'}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
             >
               <ChevronRight />
             </button>
@@ -322,22 +355,22 @@ export function Calendar() {
       </div>
 
       {/* Summary banner (monthly view only) */}
-      {view === 'month' && !monthlyLoading && (deadlineCount > 0 || interviewCount > 0) && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-white/5 rounded-xl mb-4">
+      {view === 'month' && !monthlyLoading && (stepCount > 0 || examCount > 0) && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-line rounded-xl mb-4">
           <span className="text-xs text-text-quaternary">이번 달</span>
-          {deadlineCount > 0 && (
+          {stepCount > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-warning">
               <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
-              서류 마감 {deadlineCount}건
+              마감 {stepCount}건
             </span>
           )}
-          {deadlineCount > 0 && interviewCount > 0 && (
-            <span className="text-white/10">|</span>
+          {stepCount > 0 && examCount > 0 && (
+            <span className="text-text-faint">|</span>
           )}
-          {interviewCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-info">
-              <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0" />
-              면접 일정 {interviewCount}건
+          {examCount > 0 && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-violet">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet shrink-0" />
+              시험 {examCount}건
             </span>
           )}
         </div>
@@ -350,9 +383,9 @@ export function Calendar() {
 
           {view === 'month' ? (
             /* Monthly grid */
-            <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden">
+            <div className="bg-surface-2 border border-line rounded-xl overflow-hidden">
               {/* Day-of-week header */}
-              <div className="grid grid-cols-7 border-b border-white/5">
+              <div className="grid grid-cols-7 border-b border-line">
                 {DAY_LABELS.map((d, i) => (
                   <div
                     key={d}
@@ -368,14 +401,14 @@ export function Calendar() {
               {monthlyLoading ? (
                 <div className="grid grid-cols-7">
                   {Array.from({ length: 35 }).map((_, i) => (
-                    <div key={i} className="h-16 sm:h-20 border-b border-r border-white/5 animate-pulse bg-white/2" />
+                    <div key={i} className="h-16 sm:h-20 border-b border-r border-line animate-pulse bg-card" />
                   ))}
                 </div>
               ) : (
                 <div className="grid grid-cols-7">
                   {cells.map((day, i) => {
                     if (!day) {
-                      return <div key={`empty-${i}`} className="min-h-[64px] sm:min-h-[80px] border-b border-r border-white/5" />
+                      return <div key={`empty-${i}`} className="min-h-[64px] sm:min-h-[80px] border-b border-r border-line" />
                     }
                     const dateStr = day.format('YYYY-MM-DD')
                     const dayEvents = eventsByDate[dateStr] ?? []
@@ -392,10 +425,10 @@ export function Calendar() {
                       <button
                         key={dateStr}
                         onClick={() => handleSelectDate(dateStr)}
-                        className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-white/5 transition-colors text-left w-full
+                        className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-line transition-colors text-left w-full
                           ${isLastRow ? 'border-b-0' : ''}
                           ${(i + 1) % 7 === 0 ? 'border-r-0' : ''}
-                          ${isSelected ? 'bg-brand/8' : 'hover:bg-white/3'}
+                          ${isSelected ? 'bg-brand/8' : 'hover:bg-card'}
                           ${isPast ? 'opacity-50' : ''}
                         `}
                       >
@@ -456,13 +489,19 @@ export function Calendar() {
           )}
 
           {/* Legend */}
-          <div className="flex items-center gap-5">
-            {(['deadline', 'interview'] as const).map((type) => (
-              <div key={type} className="flex items-center gap-1.5 text-xs text-text-quaternary">
-                <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR[type].dot}`} />
-                {type === 'deadline' ? '서류 마감' : '면접 일정'}
-              </div>
-            ))}
+          <div className="flex items-center flex-wrap gap-x-5 gap-y-2">
+            <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
+              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.step.dot}`} />
+              마감
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
+              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.note.dot}`} />
+              일정·메모
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-text-quaternary">
+              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${COLOR.exam.dot}`} />
+              시험
+            </div>
           </div>
 
           {/* Monthly view: no-events empty state */}
@@ -488,7 +527,7 @@ export function Calendar() {
               {selectedDateEvents.length === 0 ? (
                 <button
                   onClick={() => setBottomSheetOpen(true)}
-                  className="w-full text-text-quaternary text-sm py-5 text-center bg-surface-2 border border-white/5 rounded-xl hover:bg-white/3 transition-colors"
+                  className="w-full text-text-quaternary text-sm py-5 text-center bg-surface-2 border border-line rounded-xl hover:bg-card transition-colors"
                 >
                   이 날 일정이 없어요 · 탭해서 메모 추가
                 </button>
@@ -510,7 +549,7 @@ export function Calendar() {
         </div>
 
         {/* Desktop side panel */}
-        <div className="hidden lg:flex w-64 xl:w-72 shrink-0 sticky top-20 bg-surface border border-white/8 rounded-xl overflow-hidden flex-col" style={{ height: 'calc(100vh - 96px)' }}>
+        <div className="hidden lg:flex w-64 xl:w-72 shrink-0 sticky top-20 bg-surface border border-line rounded-xl overflow-hidden flex-col" style={{ height: 'calc(100vh - 96px)' }}>
           <CalendarDayPanel
             date={selectedDate}
             events={selectedDateEvents}
@@ -528,10 +567,10 @@ export function Calendar() {
 
       {/* Mobile bottom sheet */}
       {bottomSheetOpen && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-white/10 rounded-t-2xl flex flex-col animate-slideUp" style={{ height: '65vh' }}>
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl flex flex-col animate-slideUp" style={{ height: '65vh' }}>
           {/* Drag handle */}
           <div className="flex justify-center pt-2.5 pb-1 shrink-0">
-            <div className="w-8 h-1 bg-white/20 rounded-full" />
+            <div className="w-8 h-1 bg-card0 rounded-full" />
           </div>
           <CalendarDayPanel
             date={selectedDate}
@@ -560,30 +599,48 @@ function EventCard({ event }: { event: CalendarEvent }) {
   const c = COLOR[event.type]
   const rawTo = event.type === 'exam'
     ? '/myinfo#exam-schedules'
-    : event.type === 'interview' && event.stepId
+    : event.type === 'step' && event.stepId
       ? `/board/${event.applicationId}/steps/${event.stepId}`
-      : `/board/${event.applicationId}`
-  const to = isDemo ? '/demo' + rawTo : rawTo
-  return (
-    <Link
-      to={to}
-      className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-white/4 transition-colors group ${c.border}`}
-    >
+      : event.type === 'note'
+        ? null
+        : `/board/${event.applicationId}`
+  const to = rawTo ? (isDemo ? '/demo' + rawTo : rawTo) : null
+  const title = event.type === 'note' ? (event.content ?? '') : (event.companyName ?? '')
+  const subtitle =
+    event.type === 'exam' ? '시험 일정'
+    : event.type === 'note' ? null
+    : event.stepName
+  const inner = (
+    <>
       <span className="text-base shrink-0">{c.icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary group-hover:text-brand transition-colors truncate">
-          {event.companyName}
+          {title}
         </p>
-        <p className="text-xs text-text-quaternary mt-0.5">
-          {event.type === 'deadline' ? '서류 마감' : event.type === 'exam' ? '시험 일정' : event.stepName}
-          {event.time && <span className="ml-1.5">· {event.time.slice(0, 5)}</span>}
-          {event.location && <span className="ml-1.5">· {event.location}</span>}
-        </p>
+        {(subtitle || event.time || event.location) && (
+          <p className="text-xs text-text-quaternary mt-0.5">
+            {subtitle}
+            {event.time && <span className={subtitle ? 'ml-1.5' : ''}>{subtitle ? '· ' : ''}{event.time.slice(0, 5)}</span>}
+            {event.location && <span className="ml-1.5">· {event.location}</span>}
+          </p>
+        )}
       </div>
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${c.badge}`}>
         {c.label}
       </span>
-    </Link>
+    </>
+  )
+  if (to) {
+    return (
+      <Link to={to} className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-card transition-colors group ${c.border}`}>
+        {inner}
+      </Link>
+    )
+  }
+  return (
+    <div className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 ${c.border}`}>
+      {inner}
+    </div>
   )
 }
 

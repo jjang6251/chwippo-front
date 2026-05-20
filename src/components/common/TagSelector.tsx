@@ -25,7 +25,7 @@ export function TagSelector({ selected, onChange }: TagSelectorProps) {
             type="button"
             onClick={() => toggle(cat)}
             className={`px-2.5 py-1 text-xs rounded-full border transition-all font-medium
-              ${isSelected ? colorClass : 'bg-white/4 border-white/8 text-text-quaternary hover:border-white/15 hover:text-text-tertiary'}
+              ${isSelected ? colorClass : 'bg-card border-line text-text-quaternary hover:border-line-strong hover:text-text-tertiary'}
             `}
           >
             {JOB_CATEGORY_EMOJI[cat]} {cat}

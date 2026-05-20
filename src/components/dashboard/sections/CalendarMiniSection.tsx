@@ -56,13 +56,13 @@ export function CalendarMiniSection() {
 
       <div className="flex flex-col md:flex-row gap-3">
         {/* 좌측: 미니 캘린더 그리드 */}
-        <div className="md:w-3/5 bg-surface-2 border border-white/6 rounded-lg p-3">
+        <div className="md:w-3/5 bg-surface-2 border border-line rounded-lg p-3">
           {/* 월 헤더 + 이동 버튼 */}
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => setCursor((c) => c.subtract(1, 'month'))}
               aria-label="이전 달"
-              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/6 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M6.5 1.5L3 5l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -74,7 +74,7 @@ export function CalendarMiniSection() {
             <button
               onClick={() => setCursor((c) => c.add(1, 'month'))}
               aria-label="다음 달"
-              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/6 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M3.5 1.5L7 5l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -116,9 +116,9 @@ export function CalendarMiniSection() {
                   aria-pressed={isSelected}
                   className={`
                     relative aspect-square flex flex-col items-center justify-center rounded-md text-[11px] transition-colors
-                    ${isSelected && !isToday ? 'bg-white/10 text-text-primary font-semibold' : ''}
+                    ${isSelected && !isToday ? 'bg-card-strong text-text-primary font-semibold' : ''}
                     ${isToday ? 'bg-brand text-text-primary font-semibold' : ''}
-                    ${!isSelected && !isToday ? 'hover:bg-white/5' : ''}
+                    ${!isSelected && !isToday ? 'hover:bg-card' : ''}
                     ${!isToday && !isSelected && dow === 0 ? 'text-danger/80' : ''}
                     ${!isToday && !isSelected && dow === 6 ? 'text-brand/80' : ''}
                     ${!isToday && !isSelected && dow !== 0 && dow !== 6 ? 'text-text-secondary' : ''}
@@ -138,7 +138,7 @@ export function CalendarMiniSection() {
         </div>
 
         {/* 우측: 선택 날짜 패널 (CalendarDayPanel 재사용) */}
-        <div className="md:w-2/5 h-[360px] md:h-[420px] overflow-hidden rounded-lg border border-white/6 bg-surface-2">
+        <div className="md:w-2/5 h-[360px] md:h-[420px] overflow-hidden rounded-lg border border-line bg-surface-2">
           <CalendarDayPanel date={selectedDate} events={dayEvents} />
         </div>
       </div>

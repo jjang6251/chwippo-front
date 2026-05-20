@@ -12,11 +12,19 @@ export function useApplication(id: string) {
   return useQuery({ queryKey: [...QUERY_KEY, id], queryFn: () => applicationsApi.get(id) })
 }
 
+function invalidateCalendarAndDday(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['calendar'], refetchType: 'all' })
+  qc.invalidateQueries({ queryKey: ['dashboard', 'dday'], refetchType: 'all' })
+}
+
 export function useCreateApplication() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (dto: CreateApplicationDto) => applicationsApi.create(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY, refetchType: 'all' })
+      invalidateCalendarAndDday(qc)
+    },
   })
 }
 
@@ -24,7 +32,10 @@ export function useUpdateApplication(id: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (dto: UpdateApplicationDto) => applicationsApi.update(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY, refetchType: 'all' })
+      invalidateCalendarAndDday(qc)
+    },
   })
 }
 
@@ -50,7 +61,10 @@ export function useUpdateSteps(id: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (dto: UpdateStepsDto) => applicationsApi.updateSteps(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY, refetchType: 'all' })
+      invalidateCalendarAndDday(qc)
+    },
   })
 }
 
@@ -58,6 +72,9 @@ export function useDeleteApplication() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => applicationsApi.remove(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY, refetchType: 'all' })
+      invalidateCalendarAndDday(qc)
+    },
   })
 }

@@ -38,51 +38,47 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStartKey])
 
-  // Deadline events by date (all-day row)
-  const deadlinesByDate: Record<string, CalendarEvent[]> = {}
-  // Interview events by date+hour
-  const interviewsByDateHour: Record<string, Record<number, CalendarEvent[]>> = {}
+  // All-day row: hourSlot=null daily-notes (메모)
+  const allDayByDate: Record<string, CalendarEvent[]> = {}
+  // Time grid: step + exam + hourSlot 있는 note
+  const timedByDateHour: Record<string, Record<number, CalendarEvent[]>> = {}
 
   for (const e of events) {
-    if (e.type === 'deadline') {
-      if (!deadlinesByDate[e.date]) deadlinesByDate[e.date] = []
-      deadlinesByDate[e.date].push(e)
-    } else if (e.type === 'interview' && e.time) {
+    if (e.type === 'note' && !e.time) {
+      if (!allDayByDate[e.date]) allDayByDate[e.date] = []
+      allDayByDate[e.date].push(e)
+    } else if (e.time) {
       const [h] = e.time.split(':').map(Number)
       if (h >= 0 && h <= 23) {
-        if (!interviewsByDateHour[e.date]) interviewsByDateHour[e.date] = {}
-        if (!interviewsByDateHour[e.date][h]) interviewsByDateHour[e.date][h] = []
-        interviewsByDateHour[e.date][h].push(e)
+        if (!timedByDateHour[e.date]) timedByDateHour[e.date] = {}
+        if (!timedByDateHour[e.date][h]) timedByDateHour[e.date][h] = []
+        timedByDateHour[e.date][h].push(e)
       }
-    }
-  }
-
-  // 시간 없는 면접 → 08:00 행에 표시
-  for (const e of events) {
-    if (e.type === 'interview' && !e.time) {
-      if (!interviewsByDateHour[e.date]) interviewsByDateHour[e.date] = {}
-      if (!interviewsByDateHour[e.date][8]) interviewsByDateHour[e.date][8] = []
-      interviewsByDateHour[e.date][8].push(e)
+    } else if (e.type === 'step' || e.type === 'exam') {
+      // 시간 없는 step/exam → 08:00 행에 표시
+      if (!timedByDateHour[e.date]) timedByDateHour[e.date] = {}
+      if (!timedByDateHour[e.date][8]) timedByDateHour[e.date][8] = []
+      timedByDateHour[e.date][8].push(e)
     }
   }
 
   if (isLoading) {
     return (
-      <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden animate-pulse">
-        <div className="h-14 bg-white/2 border-b border-white/5" />
-        <div className="h-8 bg-white/1 border-b border-white/5" />
+      <div className="bg-surface-2 border border-line rounded-xl overflow-hidden animate-pulse">
+        <div className="h-14 bg-card border-b border-line" />
+        <div className="h-8 bg-card border-b border-line" />
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-11 border-b border-white/5 bg-white/1" />
+          <div key={i} className="h-11 border-b border-line bg-card" />
         ))}
       </div>
     )
   }
 
   return (
-    <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden">
-      {/* Day headers — 스크롤과 분리 */}
-      <div className="grid border-b border-white/5" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
-        <div className="border-r border-white/5" />
+    <div className="bg-surface-2 border border-line rounded-xl overflow-hidden">
+      {/* Day headers — 스크롤과 분리. pr-2로 아래 time grid의 scrollbar(8px) width 매칭 */}
+      <div className="grid border-b border-line pr-2" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
+        <div className="border-r border-line" />
         {days.map((day) => {
           const dateStr = day.format('YYYY-MM-DD')
           const isSelected = dateStr === selectedDate
@@ -93,7 +89,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
             <button
               key={dateStr}
               onClick={() => onSelectDate(dateStr)}
-              className={`py-2 text-center transition-colors hover:bg-white/3 border-r border-white/5 last:border-r-0 ${isSelected ? 'bg-brand/8' : ''}`}
+              className={`py-2 text-center transition-colors hover:bg-card border-r border-line last:border-r-0 ${isSelected ? 'bg-brand/8' : ''}`}
             >
               <div className={`text-[10px] font-medium ${isSun ? 'text-danger/70' : isSat ? 'text-info/70' : 'text-text-quaternary'}`}>
                 {KO_DAYS[day.day()]}
@@ -108,37 +104,36 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
         })}
       </div>
 
-      {/* All-day row (서류 마감) */}
-      <div className="grid border-b border-white/5 min-h-[28px]" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
-        <div className="flex items-center justify-end px-1 border-r border-white/5">
-          <span className="text-[8px] text-text-quaternary font-medium">종일</span>
+      {/* Time grid — 내부 스크롤 (h-[480px] 고정 높이). 종일 row를 안에 sticky로 두어 스크롤바 width 동기화 */}
+      <div ref={scrollRef} className="overflow-y-scroll relative" style={{ height: `${GRID_HEIGHT}px`, scrollbarGutter: 'stable' }}>
+        {/* All-day row (마감 + 시간 없는 메모) — sticky로 상단 고정 */}
+        <div className="sticky top-0 z-20 grid border-b border-line min-h-[28px] bg-surface-2" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
+          <div className="flex items-center justify-end px-1 border-r border-line">
+            <span className="text-[8px] text-text-quaternary font-medium">종일</span>
+          </div>
+          {days.map((day) => {
+            const dateStr = day.format('YYYY-MM-DD')
+            const allDay = allDayByDate[dateStr] ?? []
+            const isSelected = dateStr === selectedDate
+            return (
+              <div
+                key={dateStr}
+                className={`min-w-0 overflow-hidden px-0.5 py-0.5 border-r border-line last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
+              >
+                {allDay.map((e, idx) => (
+                  <div
+                    key={idx}
+                    className="block text-[9px] font-medium px-1 py-0.5 rounded bg-info/15 text-info truncate mb-0.5"
+                    title={e.content ?? ''}
+                  >
+                    {e.content}
+                  </div>
+                ))}
+              </div>
+            )
+          })}
         </div>
-        {days.map((day) => {
-          const dateStr = day.format('YYYY-MM-DD')
-          const deadlines = deadlinesByDate[dateStr] ?? []
-          const isSelected = dateStr === selectedDate
-          return (
-            <div
-              key={dateStr}
-              className={`px-0.5 py-0.5 border-r border-white/5 last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
-            >
-              {deadlines.map((e, idx) => (
-                <Link
-                  key={idx}
-                  to={`/board/${e.applicationId}`}
-                  className="block text-[9px] font-medium px-1 py-0.5 rounded bg-warning/15 text-warning truncate mb-0.5 hover:bg-warning/20 transition-colors"
-                  title={`${e.companyName} 서류 마감`}
-                >
-                  {e.companyName}
-                </Link>
-              ))}
-            </div>
-          )
-        })}
-      </div>
 
-      {/* Time grid — 내부 스크롤 (h-[480px] 고정 높이) */}
-      <div ref={scrollRef} className="overflow-y-auto relative" style={{ height: `${GRID_HEIGHT}px` }}>
         {/* 현재 시각 표시선 (오늘이 이번 주에 있을 때만) */}
         {todayInWeek && (
           <div
@@ -155,11 +150,11 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
           return (
             <div
               key={hour}
-              className="grid border-b border-white/5 last:border-b-0"
-              style={{ gridTemplateColumns: '44px repeat(7, 1fr)', minHeight: `${ROW_HEIGHT}px` }}
+              className="grid border-b border-line last:border-b-0"
+              style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))', minHeight: `${ROW_HEIGHT}px` }}
             >
               {/* Hour label */}
-              <div className="flex items-start justify-end px-1.5 pt-1 border-r border-white/5 shrink-0">
+              <div className="flex items-start justify-end px-1.5 pt-1 border-r border-line shrink-0">
                 <span className={`text-[9px] font-mono select-none ${isCurrentHour ? 'text-danger font-semibold' : 'text-text-quaternary'}`}>
                   {String(hour).padStart(2, '0')}:00
                 </span>
@@ -167,7 +162,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
               {/* Day cells */}
               {days.map((day) => {
                 const dateStr = day.format('YYYY-MM-DD')
-                const hourEvents = interviewsByDateHour[dateStr]?.[hour] ?? []
+                const hourEvents = timedByDateHour[dateStr]?.[hour] ?? []
                 const isSelected = dateStr === selectedDate
                 const isTodayCell = dateStr === today && isCurrentHour
                 return (
@@ -177,21 +172,49 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
                     tabIndex={0}
                     onClick={() => onSelectDate(dateStr)}
                     onKeyDown={(e) => e.key === 'Enter' && onSelectDate(dateStr)}
-                    className={`cursor-pointer border-r border-white/5 last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-white/2 ${
+                    className={`min-w-0 overflow-hidden cursor-pointer border-r border-line last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-card ${
                       isTodayCell ? 'bg-danger/5' : isSelected ? 'bg-brand/5' : ''
                     }`}
                   >
-                    {hourEvents.map((e, idx) => (
-                      <Link
-                        key={idx}
-                        to={e.stepId ? `/board/${e.applicationId}/steps/${e.stepId}` : `/board/${e.applicationId}`}
-                        onClick={(ev) => ev.stopPropagation()}
-                        className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-info/15 text-info border-l border-info truncate mb-0.5 hover:bg-info/20 transition-colors"
-                        title={`${e.companyName} ${e.stepName ?? '면접'}`}
-                      >
-                        {e.companyName}
-                      </Link>
-                    ))}
+                    {hourEvents.map((e, idx) => {
+                      if (e.type === 'exam') {
+                        return (
+                          <Link
+                            key={idx}
+                            to="/myinfo#exam-schedules"
+                            onClick={(ev) => ev.stopPropagation()}
+                            className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-violet/15 text-violet border-l border-violet truncate mb-0.5 hover:bg-violet/20 transition-colors"
+                            title={e.companyName ?? ''}
+                          >
+                            {e.companyName}
+                          </Link>
+                        )
+                      }
+                      if (e.type === 'note') {
+                        return (
+                          <div
+                            key={idx}
+                            onClick={(ev) => ev.stopPropagation()}
+                            className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-info/15 text-info border-l border-info truncate mb-0.5"
+                            title={e.content ?? ''}
+                          >
+                            {e.content}
+                          </div>
+                        )
+                      }
+                      // step
+                      return (
+                        <Link
+                          key={idx}
+                          to={e.stepId ? `/board/${e.applicationId}/steps/${e.stepId}` : `/board/${e.applicationId}`}
+                          onClick={(ev) => ev.stopPropagation()}
+                          className="block text-[9px] font-medium px-1 py-0.5 rounded-sm bg-warning/15 text-warning border-l border-warning truncate mb-0.5 hover:bg-warning/20 transition-colors"
+                          title={`${e.companyName} ${e.stepName ?? ''}`.trim()}
+                        >
+                          {e.companyName}
+                        </Link>
+                      )
+                    })}
                   </div>
                 )
               })}

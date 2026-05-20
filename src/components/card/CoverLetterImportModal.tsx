@@ -98,7 +98,7 @@ export function CoverLetterImportModal({
   return (
     <Modal open onClose={onClose} title="문항 답변 가져오기" width="max-w-md">
       {/* 소스 전환 */}
-      <div className="flex gap-1 p-1 bg-surface-2 border border-white/8 rounded-lg mb-4">
+      <div className="flex gap-1 p-1 bg-surface-2 border border-line rounded-lg mb-4">
         {(
           [
             { v: 'card' as Source, label: '다른 카드에서' },
@@ -129,7 +129,7 @@ export function CoverLetterImportModal({
       <div className="max-h-72 overflow-y-auto -mx-1 px-1 space-y-1.5">
         {isLoading ? (
           <div className="space-y-1.5">
-            {[0, 1, 2].map((i) => <div key={i} className="h-12 bg-white/4 rounded-lg animate-pulse" />)}
+            {[0, 1, 2].map((i) => <div key={i} className="h-12 bg-card rounded-lg animate-pulse" />)}
           </div>
         ) : items.length === 0 ? (
           <p className="text-text-quaternary text-xs text-center py-8">
@@ -141,7 +141,7 @@ export function CoverLetterImportModal({
           items.map((item) => {
             const isSel = item.key === selectedKey
             return (
-              <div key={item.key} className={`rounded-lg border transition-colors ${isSel ? 'border-brand/40 bg-brand/5' : 'border-white/6 bg-surface-2 hover:border-white/12'}`}>
+              <div key={item.key} className={`rounded-lg border transition-colors ${isSel ? 'border-brand/40 bg-brand/5' : 'border-line bg-surface-2 hover:border-line-strong'}`}>
                 <button
                   onClick={() => setSelectedKey(isSel ? null : item.key)}
                   className="w-full text-left px-3 py-2.5"
@@ -158,7 +158,7 @@ export function CoverLetterImportModal({
                     <button
                       onClick={() => apply('append')}
                       disabled={!currentAnswer.trim()}
-                      className="flex-1 py-1.5 text-[11px] font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-md transition-colors disabled:opacity-30 disabled:hover:bg-white/5"
+                      className="flex-1 py-1.5 text-[11px] font-medium text-text-secondary bg-card hover:bg-card-strong rounded-md transition-colors disabled:opacity-30 disabled:hover:bg-card"
                     >
                       답변 끝에 추가
                     </button>

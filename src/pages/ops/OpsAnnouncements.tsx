@@ -108,7 +108,7 @@ export function OpsAnnouncements() {
       {/* 삭제 확인 모달 */}
       {deleteTarget && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
-          <div role="dialog" aria-modal="true" aria-label="공지 삭제 확인" className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+          <div role="dialog" aria-modal="true" aria-label="공지 삭제 확인" className="bg-surface border border-line rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">공지를 삭제할까요?</h3>
             <p className="text-sm text-text-tertiary mb-1 truncate">"{deleteTarget.title}"</p>
             <p className="text-sm text-text-quaternary mb-6">삭제하면 되돌릴 수 없어요.</p>
@@ -116,7 +116,7 @@ export function OpsAnnouncements() {
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm text-text-secondary hover:bg-white/4 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card transition-colors"
               >
                 취소
               </button>
@@ -154,10 +154,10 @@ function AnnouncementRow({
   return (
     <div className={`border rounded-xl px-5 py-4 transition-colors ${
       isExpired
-        ? 'bg-surface-2/30 border-white/4 opacity-50'
+        ? 'bg-surface-2/30 border-line opacity-50'
         : item.active
-          ? 'bg-surface-2 border-white/8'
-          : 'bg-surface-2/40 border-white/5 opacity-60'
+          ? 'bg-surface-2 border-line'
+          : 'bg-surface-2/40 border-line opacity-60'
     }`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
@@ -166,7 +166,7 @@ function AnnouncementRow({
               {TYPE_LABEL[item.type]}
             </span>
             {isExpired ? (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border text-text-quaternary bg-white/4 border-white/8">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border text-text-quaternary bg-card border-line">
                 만료
               </span>
             ) : item.active ? (
@@ -197,7 +197,7 @@ function AnnouncementRow({
             className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
               item.active
                 ? 'text-success hover:bg-success/10'
-                : 'text-text-quaternary hover:bg-white/5'
+                : 'text-text-quaternary hover:bg-card'
             }`}
           >
             {item.active ? '●' : '○'}
@@ -205,7 +205,7 @@ function AnnouncementRow({
           <button
             type="button"
             onClick={onEdit}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-secondary hover:bg-white/5 transition-colors text-xs"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors text-xs"
           >
             ✎
           </button>
@@ -279,14 +279,14 @@ function AnnouncementFormModal({
         role="dialog"
         aria-modal="true"
         aria-label={initial ? '공지 수정' : '새 공지 작성'}
-        className="bg-surface border border-white/10 rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]"
+        className="bg-surface border border-line rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]"
       >
-        <div className="flex items-center gap-2 px-6 py-4 border-b border-white/5">
+        <div className="flex items-center gap-2 px-6 py-4 border-b border-line">
           <h2 className="text-base font-bold flex-1">{initial ? '공지 수정' : '새 공지 작성'}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-primary hover:bg-white/5 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-primary hover:bg-card transition-colors"
           >
             ×
           </button>
@@ -302,7 +302,7 @@ function AnnouncementFormModal({
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 100))}
               placeholder="공지 제목"
-              className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
+              className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
             />
           </div>
 
@@ -316,7 +316,7 @@ function AnnouncementFormModal({
               onChange={(e) => setBody(e.target.value.slice(0, 500))}
               rows={4}
               placeholder="공지 내용을 입력하세요"
-              className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
+              className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
             />
           </div>
 
@@ -362,8 +362,8 @@ function AnnouncementFormModal({
                   type="datetime-local"
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
-                  className={`w-full bg-bg border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors text-text-secondary [color-scheme:dark] ${
-                    timeRangeError === '시작 시간이 종료 시간보다 같거나 뒤에 있어요.' ? 'border-danger/50' : 'border-white/10'
+                  className={`w-full bg-bg border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors text-text-secondary ${
+                    timeRangeError === '시작 시간이 종료 시간보다 같거나 뒤에 있어요.' ? 'border-danger/50' : 'border-line'
                   }`}
                 />
               </div>
@@ -373,8 +373,8 @@ function AnnouncementFormModal({
                   type="datetime-local"
                   value={endsAt}
                   onChange={(e) => setEndsAt(e.target.value)}
-                  className={`w-full bg-bg border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors text-text-secondary [color-scheme:dark] ${
-                    timeRangeError ? 'border-danger/50' : 'border-white/10'
+                  className={`w-full bg-bg border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors text-text-secondary ${
+                    timeRangeError ? 'border-danger/50' : 'border-line'
                   }`}
                 />
               </div>
@@ -387,7 +387,7 @@ function AnnouncementFormModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-white/5">
+        <div className="px-6 py-4 border-t border-line">
           <button
             type="button"
             onClick={() => mutation.mutate()}

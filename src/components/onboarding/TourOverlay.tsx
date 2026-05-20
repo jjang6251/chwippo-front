@@ -178,7 +178,7 @@ export function TourOverlay() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="stop-modal-title"
-          className="bg-surface border border-white/8 rounded-xl p-6 w-full max-w-xs shadow-2xl"
+          className="bg-surface border border-line rounded-xl p-6 w-full max-w-xs shadow-2xl"
         >
           <h3 id="stop-modal-title" className="text-base font-bold text-text-primary mb-1.5">투어를 중단할까요?</h3>
           <p className="text-sm text-text-tertiary mb-6 leading-relaxed">
@@ -187,13 +187,13 @@ export function TourOverlay() {
           <div className="flex gap-2.5">
             <button
               onClick={() => setShowStop(false)}
-              className="flex-1 py-2.5 rounded-lg border border-white/8 text-sm font-medium text-text-secondary hover:bg-white/4 transition-colors"
+              className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
             >
               계속하기
             </button>
             <button
               onClick={complete}
-              className="flex-1 py-2.5 rounded-lg bg-white/8 text-sm font-medium text-text-secondary hover:bg-white/12 transition-colors"
+              className="flex-1 py-2.5 rounded-lg bg-card-strong text-sm font-medium text-text-secondary hover:bg-card-strong transition-colors"
             >
               투어 중단
             </button>
@@ -291,8 +291,8 @@ function Spotlight({ rect, isClick }: { rect: DOMRect | null; isClick: boolean }
           style={{
             position: 'fixed', left: x, top: y, width: w, height: h,
             zIndex: 10000, borderRadius: BORDER_R,
-            border: '1.5px solid rgba(94,106,210,0.7)',
-            boxShadow: '0 0 0 1px rgba(94,106,210,0.15), 0 0 24px rgba(94,106,210,0.2)',
+            border: '1.5px solid rgba(107,156,127,0.7)',
+            boxShadow: '0 0 0 1px rgba(107,156,127,0.15), 0 0 24px rgba(107,156,127,0.2)',
             pointerEvents: 'none',
           }}
         />
@@ -378,7 +378,7 @@ function TourTooltip({ rect, placement, title, desc, step, total, canGoBack, isC
   return (
     <div
       style={{ position: 'fixed', top, bottom, left, width: w, zIndex: 10001 }}
-      className={`bg-surface border border-white/8 rounded-xl shadow-2xl shadow-black/50 transition-all duration-200 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'}`}
+      className={`bg-surface border border-line rounded-xl shadow-2xl shadow-black/50 transition-all duration-200 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'}`}
     >
       {/* Arrow (only when anchored to an element) */}
       {rect && <div style={{ ...arrowStyle, position: 'absolute', pointerEvents: 'none' }} />}
@@ -398,14 +398,14 @@ function TourTooltip({ rect, placement, title, desc, step, total, canGoBack, isC
               <span
                 key={i}
                 className={`h-1 rounded-full transition-all duration-200 ${
-                  i + 1 === step ? 'bg-brand w-3.5' : i + 1 < step ? 'bg-brand/40 w-1' : 'bg-white/15 w-1'
+                  i + 1 === step ? 'bg-brand w-3.5' : i + 1 < step ? 'bg-brand/40 w-1' : 'bg-card-strong w-1'
                 }`}
               />
             ))}
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/6 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
             aria-label="투어 닫기"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -451,8 +451,8 @@ function getArrowStyle(
   placement: 'top' | 'bottom' | 'left' | 'right',
 ): React.CSSProperties {
   const size = 7
-  const color = '#0f1011'
-  const border = 'rgba(255,255,255,0.08)'
+  const color = 'rgb(var(--surface))'
+  const border = 'var(--line)'
 
   if (placement === 'bottom') {
     return {
@@ -547,13 +547,13 @@ function WelcomeModal({ onNext, onClose }: { onNext: () => void; onClose: () => 
           role="dialog"
           aria-modal="true"
           aria-labelledby="welcome-modal-title"
-          className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-xl md:rounded-xl shadow-2xl"
+          className="w-full md:max-w-[420px] bg-surface border border-line[0.06] rounded-t-xl md:rounded-xl shadow-2xl"
         >
         <div className="relative flex items-center justify-center px-6 pt-6">
           <span className="text-[10px] font-semibold text-text-quaternary tracking-[0.14em] uppercase">치뽀</span>
           <button
             onClick={onClose}
-            className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
+            className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
             aria-label="닫기"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -572,7 +572,7 @@ function WelcomeModal({ onNext, onClose }: { onNext: () => void; onClose: () => 
           </p>
           <div className="grid grid-cols-3 gap-2.5">
             {FEATURES.map(({ icon, label, desc }) => (
-              <div key={label} className="flex flex-col items-center gap-2 rounded-xl p-3 bg-white/[0.03] border border-white/[0.06]">
+              <div key={label} className="flex flex-col items-center gap-2 rounded-xl p-3 bg-card border border-line[0.06]">
                 <span className="text-brand">{icon}</span>
                 <span className="text-[11px] font-semibold text-text-primary">{label}</span>
                 <span className="text-[10px] text-text-quaternary text-center leading-snug whitespace-pre-line">{desc}</span>
@@ -619,11 +619,11 @@ function WrapUpModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="wrapup-modal-title"
-          className="w-full md:max-w-[420px] bg-surface border border-white/[0.06] rounded-t-xl md:rounded-xl shadow-2xl"
+          className="w-full md:max-w-[420px] bg-surface border border-line[0.06] rounded-t-xl md:rounded-xl shadow-2xl"
         >
         <div className="relative flex items-center justify-center px-6 pt-6">
           <span className="text-[10px] font-semibold text-text-quaternary tracking-[0.14em] uppercase">치뽀</span>
-          <button onClick={onClose} className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-white/[0.06] transition-colors" aria-label="닫기">
+          <button onClick={onClose} className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors" aria-label="닫기">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
@@ -634,14 +634,14 @@ function WrapUpModal({
           <div className="text-4xl mb-4">🎉</div>
           <h2 id="wrapup-modal-title" className="text-base font-bold text-text-primary mb-2">이제 치뽀를 시작할 준비가 됐어요!</h2>
           <div className="mt-4 flex flex-col gap-2.5 text-left">
-            <div className="flex items-start gap-3 p-3 bg-white/[0.03] border border-white/[0.05] rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-card border border-line[0.05] rounded-xl">
               <span className="text-lg mt-0.5">📅</span>
               <div>
                 <p className="text-xs font-semibold text-text-primary">캘린더</p>
                 <p className="text-[11px] text-text-quaternary mt-0.5">마감·면접 일정을 한눈에 확인할 수 있어요</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-white/[0.03] border border-white/[0.05] rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-card border border-line[0.05] rounded-xl">
               <span className="text-lg mt-0.5">📁</span>
               <div>
                 <p className="text-xs font-semibold text-text-primary">내 정보 창고</p>

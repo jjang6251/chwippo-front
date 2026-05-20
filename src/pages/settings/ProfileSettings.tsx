@@ -34,9 +34,9 @@ export function ProfileSettings() {
       <h1 className="text-xl font-bold mb-6">프로필 설정</h1>
 
       {/* 계정 정보 */}
-      <section className="bg-surface-2 border border-white/5 rounded-xl p-5 mb-4">
+      <section className="bg-surface-2 border border-line rounded-xl p-5 mb-4">
         <h2 className="text-sm font-semibold mb-3">계정 정보</h2>
-        <div className="flex items-center justify-between py-2 border-b border-white/5">
+        <div className="flex items-center justify-between py-2 border-b border-line">
           <span className="text-sm text-text-quaternary">이메일</span>
           <span className="text-sm">{user?.email ?? '—'}</span>
         </div>
@@ -47,7 +47,7 @@ export function ProfileSettings() {
       </section>
 
       {/* 로그아웃 */}
-      <section className="bg-surface-2 border border-white/5 rounded-xl p-5 mb-4">
+      <section className="bg-surface-2 border border-line rounded-xl p-5 mb-4">
         <button
           onClick={() => setShowLogoutModal(true)}
           className="w-full flex items-center justify-between text-sm text-text-secondary hover:text-text-primary transition-colors py-1"
@@ -74,13 +74,13 @@ export function ProfileSettings() {
       {/* 로그아웃 확인 모달 */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-line rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">로그아웃 하시겠어요?</h3>
             <p className="text-sm text-text-quaternary mb-6">로그인 화면으로 이동합니다.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm font-medium text-text-secondary hover:bg-white/4 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
               >
                 취소
               </button>
@@ -98,7 +98,7 @@ export function ProfileSettings() {
       {/* 탈퇴 확인 모달 */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div role="dialog" aria-modal="true" aria-label="계정 탈퇴 확인" className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-sm">
+          <div role="dialog" aria-modal="true" aria-label="계정 탈퇴 확인" className="bg-surface border border-line rounded-xl p-6 w-full max-w-sm">
             <h3 className="text-base font-bold mb-2">정말 탈퇴하시겠어요?</h3>
             <p className="text-sm text-text-quaternary mb-6 leading-relaxed">
               지원 카드, 내 정보, 파일 등 모든 데이터가 즉시 삭제되며
@@ -107,7 +107,7 @@ export function ProfileSettings() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm font-medium text-text-secondary hover:bg-white/4 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
               >
                 취소
               </button>

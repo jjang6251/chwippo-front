@@ -84,7 +84,7 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
           <CopyButton value={answer} />
           <button
             onClick={() => setEditing(true)}
-            className="flex items-center gap-1 text-[11px] text-text-tertiary hover:text-text-secondary border border-white/8 hover:border-white/15 px-2 py-1 rounded-md transition-colors"
+            className="flex items-center gap-1 text-[11px] text-text-tertiary hover:text-text-secondary border border-line hover:border-line-strong px-2 py-1 rounded-md transition-colors"
           >
             <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
               <path d="M11.5 2.5l2 2-9 9H2.5v-2l9-9z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -98,7 +98,7 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
 
   // ── 편집 모드 ─────────────────────────────────────
   return (
-    <div className="px-4 sm:px-5 py-4 sm:py-5 bg-white/[0.025]">
+    <div className="px-4 sm:px-5 py-4 sm:py-5 bg-card">
       <label className="block text-[11px] font-medium text-text-tertiary mb-1.5">문항</label>
       <textarea
         value={question}
@@ -106,8 +106,8 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
         onBlur={saveQuestion}
         rows={2}
         placeholder="예: 우리 회사에 지원한 동기를 작성해 주세요."
-        className="w-full resize-none bg-surface-3 border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary leading-relaxed
-          placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 hover:border-white/14 transition-colors"
+        className="w-full resize-none bg-surface-3 border border-line rounded-lg px-3 py-2 text-sm text-text-primary leading-relaxed
+          placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 hover:border-line-strong transition-colors"
       />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 mb-3 text-[11px] text-text-tertiary">
@@ -117,8 +117,8 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
             <select
               value={category}
               onChange={(e) => onUpdate(cl.id, { category: e.target.value })}
-              className="appearance-none bg-surface-3 border border-white/8 rounded-md pl-2 pr-6 py-1 text-[11px] text-text-secondary
-                focus:outline-none focus:border-brand/40 transition-colors [color-scheme:dark] cursor-pointer"
+              className="appearance-none bg-surface-3 border border-line rounded-md pl-2 pr-6 py-1 text-[11px] text-text-secondary
+                focus:outline-none focus:border-brand/40 transition-colors cursor-pointer"
             >
               {COVERLETTER_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -138,8 +138,8 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
             onBlur={saveLimit}
             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
             placeholder="없음"
-            className="w-16 bg-surface-3 border border-white/8 rounded-md px-2 py-1 font-mono text-[11px] text-text-secondary
-              placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-colors [color-scheme:dark]"
+            className="w-16 bg-surface-3 border border-line rounded-md px-2 py-1 font-mono text-[11px] text-text-secondary
+              placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-colors"
           />
           <span className="text-text-quaternary">자</span>
         </label>
@@ -153,18 +153,18 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
         maxLength={maxLength}
         rows={8}
         placeholder="답변을 작성하세요. (자동 저장)"
-        className="w-full resize-y bg-surface-3 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-text-primary leading-relaxed
-          placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 hover:border-white/14 transition-colors min-h-[160px]"
+        className="w-full resize-y bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary leading-relaxed
+          placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 hover:border-line-strong transition-colors min-h-[160px]"
       />
       <div className="flex items-center justify-between mt-1.5">
         <span className="text-[10px] text-text-quaternary">최대 {maxLength.toLocaleString()}자까지 입력</span>
         <span className={`font-mono text-[11px] ${over ? 'text-danger' : 'text-text-quaternary'}`}>{countLabel}</span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-white/6">
+      <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-line">
         <button
           onClick={() => setShowImport(true)}
-          className="text-[11px] text-text-tertiary hover:text-text-secondary border border-white/8 hover:border-white/15 px-2.5 py-1.5 rounded-md transition-colors"
+          className="text-[11px] text-text-tertiary hover:text-text-secondary border border-line hover:border-line-strong px-2.5 py-1.5 rounded-md transition-colors"
         >
           📋 답변 가져오기
         </button>
@@ -172,7 +172,7 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
           onClick={() => setShowCleanup(true)}
           disabled={!answer.trim()}
           title="맞춤법이 아닌 형식(줄바꿈·공백·이모지·특수문자 등)을 정리합니다"
-          className="text-[11px] text-text-tertiary hover:text-text-secondary border border-white/8 hover:border-white/15 px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:hover:text-text-tertiary disabled:hover:border-white/8"
+          className="text-[11px] text-text-tertiary hover:text-text-secondary border border-line hover:border-line-strong px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:hover:text-text-tertiary disabled:hover:border-line-strong"
         >
           🔍 자소서 검사
         </button>

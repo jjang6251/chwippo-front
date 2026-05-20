@@ -6,6 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="치뽀 — 취준생을 위한 취업 일정·자소서·면접 올인원 관리 웹앱" />
     <title>치뽀 — 취업 일정 관리</title>
+    <script>
+      // FOUC 방지 — React mount 전에 테마 적용. (localStorage 우선 + 미설정 시 system OS 설정 따름)
+      (function () {
+        try {
+          var stored = localStorage.getItem('chwippo-theme');
+          var theme = stored === 'light' || stored === 'system' || stored === 'dark' ? stored : 'system';
+          var resolved = theme === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+            : theme;
+          document.documentElement.setAttribute('data-theme', resolved);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

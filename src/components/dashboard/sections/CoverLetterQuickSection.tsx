@@ -43,7 +43,7 @@ export function CoverLetterQuickSection() {
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-9 bg-surface-2 border border-white/6 rounded-lg animate-pulse" />
+            <div key={i} className="h-9 bg-surface-2 border border-line rounded-lg animate-pulse" />
           ))}
         </div>
       ) : filledCount === 0 ? (
@@ -65,12 +65,12 @@ export function CoverLetterQuickSection() {
             const hasContent = content.length > 0
 
             return (
-              <li key={f.key} className="bg-surface-2 border border-white/6 rounded-lg overflow-hidden">
+              <li key={f.key} className="bg-surface-2 border border-line rounded-lg overflow-hidden">
                 <button
                   onClick={() => setOpenKey(isOpen ? null : f.key)}
                   disabled={!hasContent}
                   className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors
-                    ${hasContent ? 'hover:bg-white/5 cursor-pointer' : 'cursor-default opacity-50'}
+                    ${hasContent ? 'hover:bg-card cursor-pointer' : 'cursor-default opacity-50'}
                   `}
                 >
                   <span className={`text-xs font-medium ${hasContent ? 'text-text-secondary' : 'text-text-quaternary'}`}>
