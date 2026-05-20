@@ -22,7 +22,7 @@ export function useCreateApplication() {
   return useMutation({
     mutationFn: (dto: CreateApplicationDto) => applicationsApi.create(dto),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY })
+      qc.invalidateQueries({ queryKey: QUERY_KEY, refetchType: 'all' })
       invalidateCalendarAndDday(qc)
     },
   })
@@ -33,7 +33,7 @@ export function useUpdateApplication(id: string) {
   return useMutation({
     mutationFn: (dto: UpdateApplicationDto) => applicationsApi.update(id, dto),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY })
+      qc.invalidateQueries({ queryKey: QUERY_KEY, refetchType: 'all' })
       invalidateCalendarAndDday(qc)
     },
   })
@@ -62,7 +62,7 @@ export function useUpdateSteps(id: string) {
   return useMutation({
     mutationFn: (dto: UpdateStepsDto) => applicationsApi.updateSteps(id, dto),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY })
+      qc.invalidateQueries({ queryKey: QUERY_KEY, refetchType: 'all' })
       invalidateCalendarAndDday(qc)
     },
   })
@@ -73,7 +73,7 @@ export function useDeleteApplication() {
   return useMutation({
     mutationFn: (id: string) => applicationsApi.remove(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY })
+      qc.invalidateQueries({ queryKey: QUERY_KEY, refetchType: 'all' })
       invalidateCalendarAndDday(qc)
     },
   })

@@ -3,16 +3,16 @@ import type { Application } from '@/types/application'
 function getNextActionDate(app: Application): number {
   const sorted = [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex)
   const currentStep = sorted[app.currentStepIndex]
-
-  const scheduledDate = currentStep?.scheduledDate ?? null
-  const dateStr = scheduledDate ?? app.deadline
+  const dateStr = currentStep?.scheduledDate ?? null
 
   if (!dateStr) return Infinity
   return new Date(dateStr).getTime()
 }
 
-function getDeadlineMs(app: Application): number {
-  return app.deadline ? new Date(app.deadline).getTime() : Infinity
+function getFirstStepDateMs(app: Application): number {
+  const sorted = [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex)
+  const firstScheduled = sorted[0]?.scheduledDate
+  return firstScheduled ? new Date(firstScheduled).getTime() : Infinity
 }
 
 function getCreatedAtMs(app: Application): number {
@@ -26,9 +26,9 @@ function compareByNextAction(a: Application, b: Application): number {
   return getCreatedAtMs(b) - getCreatedAtMs(a)
 }
 
-function compareByDeadline(a: Application, b: Application): number {
-  const dateA = getDeadlineMs(a)
-  const dateB = getDeadlineMs(b)
+function compareByFirstStepDate(a: Application, b: Application): number {
+  const dateA = getFirstStepDateMs(a)
+  const dateB = getFirstStepDateMs(b)
   if (dateA !== dateB) return dateA - dateB
   return getCreatedAtMs(b) - getCreatedAtMs(a)
 }
@@ -52,7 +52,7 @@ export function sortApplications(apps: Application[]): Application[] {
   return [
     ...starredActive.sort(compareByNextAction),
     ...normalActive.sort(compareByNextAction),
-    ...starredPassed.sort(compareByDeadline),
-    ...normalPassed.sort(compareByDeadline),
+    ...starredPassed.sort(compareByFirstStepDate),
+    ...normalPassed.sort(compareByFirstStepDate),
   ]
 }
