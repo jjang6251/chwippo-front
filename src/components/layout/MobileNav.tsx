@@ -32,7 +32,7 @@ export function MobileNav() {
   }
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-white/5 flex safe-area-pb">
+    <nav data-nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line flex safe-area-pb">
       {tabs.map(({ label, path, icon: Icon }) => {
         const active = isActive(path)
         const href = path === '/ops' ? '/ops' : link(path)

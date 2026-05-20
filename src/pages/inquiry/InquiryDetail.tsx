@@ -10,7 +10,7 @@ const STATUS_LABEL: Record<string, string> = { OPEN: '답변 대기', IN_PROGRES
 const STATUS_COLOR: Record<string, string> = {
   OPEN: 'text-warning bg-warning/10 border-warning/20',
   IN_PROGRESS: 'text-brand bg-brand/10 border-brand/20',
-  CLOSED: 'text-text-tertiary bg-white/5 border-white/10',
+  CLOSED: 'text-text-tertiary bg-card border-line',
 }
 
 export function InquiryDetail() {
@@ -38,10 +38,10 @@ export function InquiryDetail() {
   if (isLoading || !data) {
     return (
       <div className="max-w-lg mx-auto px-4 py-8 flex flex-col gap-4">
-        <div className="h-8 w-20 bg-white/[0.04] rounded-lg animate-pulse" />
-        <div className="h-32 bg-white/[0.03] rounded-xl animate-pulse" />
-        <div className="h-20 bg-white/[0.03] rounded-xl animate-pulse" />
-        <div className="h-24 bg-white/[0.03] rounded-xl animate-pulse" />
+        <div className="h-8 w-20 bg-card rounded-lg animate-pulse" />
+        <div className="h-32 bg-card rounded-xl animate-pulse" />
+        <div className="h-20 bg-card rounded-xl animate-pulse" />
+        <div className="h-24 bg-card rounded-xl animate-pulse" />
       </div>
     )
   }
@@ -56,9 +56,9 @@ export function InquiryDetail() {
       </div>
 
       {/* 문의 정보 */}
-      <div className="bg-surface-2 border border-white/8 rounded-xl px-5 py-4 mb-6">
+      <div className="bg-surface-2 border border-line rounded-xl px-5 py-4 mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[data.status] ?? 'text-text-tertiary bg-white/5 border-white/10'}`}>
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[data.status] ?? 'text-text-tertiary bg-card border-line'}`}>
             {STATUS_LABEL[data.status] ?? data.status}
           </span>
           <span className="text-xs text-text-tertiary">{data.category}</span>
@@ -79,18 +79,18 @@ export function InquiryDetail() {
 
       {/* 완료 안내 or 댓글 입력 */}
       {isClosed ? (
-        <div className="text-center py-6 text-sm text-text-tertiary bg-surface-2 border border-white/5 rounded-xl">
+        <div className="text-center py-6 text-sm text-text-tertiary bg-surface-2 border border-line rounded-xl">
           ✅ 이 문의는 완료 처리됐어요.
         </div>
       ) : (
-        <div className="bg-surface-2 border border-white/8 rounded-xl p-4">
+        <div className="bg-surface-2 border border-line rounded-xl p-4">
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={3}
             maxLength={2000}
             placeholder="추가로 궁금한 점이 있으면 남겨주세요..."
-            className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none mb-3"
+            className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none mb-3"
           />
           <div className="flex justify-end">
             <button
@@ -112,7 +112,7 @@ function CommentBubble({ comment, isMe }: { comment: InquiryComment; isMe: boole
     <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
       <div className={`flex items-center gap-1.5 ${isMe ? 'flex-row-reverse' : ''}`}>
         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-          isMe ? 'bg-brand/15 text-brand' : 'bg-white/8 text-text-tertiary'
+          isMe ? 'bg-brand/15 text-brand' : 'bg-card-strong text-text-tertiary'
         }`}>
           {isMe ? '나' : '치뽀 팀'}
         </span>
@@ -121,7 +121,7 @@ function CommentBubble({ comment, isMe }: { comment: InquiryComment; isMe: boole
       <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
         isMe
           ? 'bg-brand/15 text-text-primary rounded-tr-sm'
-          : 'bg-surface border border-white/8 text-text-secondary rounded-tl-sm'
+          : 'bg-surface border border-line text-text-secondary rounded-tl-sm'
       }`}>
         {comment.content}
       </div>

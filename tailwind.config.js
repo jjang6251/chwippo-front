@@ -31,15 +31,23 @@ export default {
         warning: 'rgb(var(--warning) / <alpha-value>)',
         info: 'rgb(var(--info) / <alpha-value>)',
         violet: 'rgb(var(--violet) / <alpha-value>)',
+
+        // 의미 토큰 — `bg-white/N`·`text-white/N` 대체용. alpha 미리 박혀있는 완전한 값.
+        card: 'var(--card)',
+        'card-hover': 'var(--card-hover)',
+        'card-strong': 'var(--card-strong)',
+        'text-faint': 'var(--text-faint)',
       },
       borderColor: {
         DEFAULT: 'var(--border)',
         subtle: 'var(--border)',
         strong: 'var(--border-strong)',
+        line: 'var(--line)',
+        'line-strong': 'var(--line-strong)',
       },
-      backgroundColor: {
-        card: 'var(--surface-2)',
-        'card-hover': 'var(--surface-3)',
+      divideColor: {
+        DEFAULT: 'var(--divider)',
+        line: 'var(--divider)',
       },
       borderRadius: {
         badge: '9999px',

@@ -44,11 +44,11 @@ const ACCENT = {
     label:    'text-info/80',
   },
   neutral: {
-    border:   'border-white/8',
-    iconBg:   'bg-white/8 text-text-tertiary',
+    border:   'border-line',
+    iconBg:   'bg-card-strong text-text-tertiary',
     value:    'text-text-primary',
     glow:     '',
-    gradient: 'from-white/[0.05]',
+    gradient: 'from-card',
     label:    'text-text-secondary',
   },
 }
@@ -61,7 +61,7 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
     <div
       onClick={() => filterKey && navigate(`/board?filter=${filterKey}`)}
       className={`
-        bg-gradient-to-b ${c.gradient} to-white/[0.04]
+        bg-gradient-to-b ${c.gradient} to-card
         border ${c.border} rounded-xl p-3.5
         transition-all duration-200 flex flex-col gap-2.5
         ${filterKey ? `cursor-pointer hover:brightness-110 hover:shadow-lg ${c.glow}` : ''}
@@ -84,7 +84,7 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
 
       {/* 숫자 */}
       {isLoading ? (
-        <div className="h-8 w-8 bg-white/8 rounded animate-pulse" />
+        <div className="h-8 w-8 bg-card-strong rounded animate-pulse" />
       ) : (
         <p className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums leading-none ${c.value}`}>{value ?? 0}</p>
       )}

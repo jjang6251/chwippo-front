@@ -40,7 +40,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {[0, 1].map((i) => <div key={i} className="h-48 bg-surface-2 border border-white/8 rounded-xl animate-pulse" />)}
+        {[0, 1].map((i) => <div key={i} className="h-48 bg-surface-2 border border-line rounded-xl animate-pulse" />)}
       </div>
     )
   }
@@ -50,7 +50,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
   return (
     <div className="space-y-3">
       {list.length === 0 ? (
-        <div className="border border-dashed border-white/12 bg-surface-2/40 rounded-xl px-6 py-10 text-center">
+        <div className="border border-dashed border-line bg-surface-2/40 rounded-xl px-6 py-10 text-center">
           <div className="text-2xl mb-2">📝</div>
           <p className="text-text-secondary text-sm font-medium mb-1">자소서 문항을 모아보세요</p>
           <p className="text-text-quaternary text-xs leading-relaxed mb-5">
@@ -66,7 +66,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
           </button>
         </div>
       ) : (
-        <div className="border border-white/8 bg-surface-2 rounded-xl divide-y divide-white/6 overflow-hidden">
+        <div className="border border-line bg-surface-2 rounded-xl divide-y divide-line overflow-hidden">
           {list.map((cl) => (
             <CoverLetterCard
               key={cl.id}
@@ -80,12 +80,12 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
       )}
 
       {/* 추가 영역 */}
-      <div className="border border-white/8 bg-surface-2 rounded-xl p-4">
+      <div className="border border-line bg-surface-2 rounded-xl p-4">
         <button
           data-tour="add-question-btn"
           onClick={() => handleAdd()}
           disabled={creating}
-          className="w-full py-2.5 text-xs font-medium text-text-secondary border border-dashed border-white/15 rounded-lg
+          className="w-full py-2.5 text-xs font-medium text-text-secondary border border-dashed border-line rounded-lg
             hover:border-brand/40 hover:text-text-primary transition-colors disabled:opacity-40"
         >
           + 문항 추가
@@ -97,7 +97,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
               key={q.label}
               onClick={() => handleAdd(q.question, q.category)}
               disabled={creating}
-              className="text-[11px] text-text-tertiary bg-surface-3 border border-white/8 hover:border-brand/40 hover:text-text-secondary
+              className="text-[11px] text-text-tertiary bg-surface-3 border border-line hover:border-brand/40 hover:text-text-secondary
                 px-2 py-1 rounded-full transition-colors disabled:opacity-40"
             >
               + {q.label}
@@ -112,7 +112,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
           이 문항과 작성한 답변이 삭제됩니다. 되돌릴 수 없어요.
         </p>
         <div className="flex gap-2">
-          <button onClick={() => setPendingDelete(null)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
+          <button onClick={() => setPendingDelete(null)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
           <button onClick={confirmDelete} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-danger/80 hover:bg-danger rounded-lg transition-colors">삭제</button>
         </div>
       </Modal>

@@ -15,7 +15,7 @@ export function TodayScheduleSection({ items, isLoading }: TodayScheduleSectionP
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="h-12 bg-surface-2 border border-white/6 rounded-lg animate-pulse" />
+            <div key={i} className="h-12 bg-surface-2 border border-line rounded-lg animate-pulse" />
           ))}
         </div>
       ) : !todayItems || todayItems.length === 0 ? (

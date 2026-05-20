@@ -74,10 +74,10 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label={isEdit ? '시험 일정 수정' : '시험 일정 추가'} className="relative z-10 w-full max-w-md bg-surface border border-white/8 rounded-t-xl sm:rounded-xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
+      <div role="dialog" aria-modal="true" aria-label={isEdit ? '시험 일정 수정' : '시험 일정 추가'} className="relative z-10 w-full max-w-md bg-surface border border-line rounded-t-xl sm:rounded-xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h3 className="text-text-primary text-sm font-semibold">{isEdit ? '시험 일정 수정' : '시험 일정 추가'}</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-white/5 transition-colors" aria-label="닫기">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-card transition-colors" aria-label="닫기">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
@@ -91,11 +91,11 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
             <div className="flex gap-2">
               <button
                 onClick={() => setExamType('language')}
-                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${examType === 'language' ? 'border-violet/40 bg-violet/10 text-violet' : 'border-white/8 text-text-quaternary hover:bg-white/5'}`}
+                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${examType === 'language' ? 'border-violet/40 bg-violet/10 text-violet' : 'border-line text-text-quaternary hover:bg-card'}`}
               >어학</button>
               <button
                 onClick={() => setExamType('cert')}
-                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${examType === 'cert' ? 'border-violet/40 bg-violet/10 text-violet' : 'border-white/8 text-text-quaternary hover:bg-white/5'}`}
+                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${examType === 'cert' ? 'border-violet/40 bg-violet/10 text-violet' : 'border-line text-text-quaternary hover:bg-card'}`}
               >자격증</button>
             </div>
           </div>
@@ -108,7 +108,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 <select
                   value={certType}
                   onChange={(e) => setCertType(e.target.value)}
-                  className="w-full appearance-none bg-surface-2 border border-white/8 rounded-lg pl-3 pr-9 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors cursor-pointer"
+                  className="w-full appearance-none bg-surface-2 border border-line rounded-lg pl-3 pr-9 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors cursor-pointer"
                 >
                   {LANGUAGE_CERT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -124,7 +124,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="예: 정보처리기사 필기"
-                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
               />
             </div>
           )}
@@ -137,7 +137,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
               />
             </div>
             <div>
@@ -146,7 +146,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
               />
             </div>
           </div>
@@ -158,7 +158,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="예: 홍익대학교 종합교육관"
-              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
+              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
             />
           </div>
 
@@ -170,15 +170,15 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
               onChange={(e) => setMemo(e.target.value)}
               rows={2}
               placeholder="준비물, 목표 점수 등"
-              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors resize-none"
+              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors resize-none"
             />
           </div>
         </div>
 
-        <div className="flex gap-2 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-white/6 shrink-0">
+        <div className="flex gap-2 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-line shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 py-2 rounded-lg border border-white/8 text-text-tertiary text-xs hover:bg-white/5 transition-colors"
+            className="flex-1 py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card transition-colors"
           >취소</button>
           <button
             onClick={handleSubmit}

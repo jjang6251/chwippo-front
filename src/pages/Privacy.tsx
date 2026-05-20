@@ -143,7 +143,7 @@ export function Privacy() {
           </p>
         </DocSection>
 
-        <div className="mt-12 pt-6 border-t border-white/5 text-text-quaternary text-xs">
+        <div className="mt-12 pt-6 border-t border-line text-text-quaternary text-xs">
           공고일: 2026년 5월 18일 · 시행일: 2026년 5월 18일 (베타 서비스로 사용자 적어 즉시 시행, 사전 공지는 변경 후 첫 로그인 시 안내)
           <br />
           이전 시행일(2026년 5월 14일)의 방침에 비해 §1 수집 항목·§5 위탁 업체 명시를 정합화했으며, 실 처리 범위 변경은 없습니다.
@@ -167,7 +167,7 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
     <div className="overflow-x-auto mt-2">
       <table className="w-full text-xs border-collapse">
         <thead>
-          <tr className="border-b border-white/8">
+          <tr className="border-b border-line">
             {headers.map((h) => (
               <th key={h} className="text-left text-text-quaternary font-medium py-2 pr-4 whitespace-nowrap">
                 {h}
@@ -177,7 +177,7 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-white/5">
+            <tr key={i} className="border-b border-line">
               {row.map((cell, j) => (
                 <td key={j} className="py-2 pr-4 text-text-secondary align-top">
                   {cell}

@@ -16,7 +16,7 @@ export function ToastContainer() {
             animate-[fadeInUp_0.2s_ease-out]
             ${t.type === 'error' ? 'bg-danger/10 border border-danger/30 text-danger' : ''}
             ${t.type === 'success' ? 'bg-success/10 border border-success/30 text-success' : ''}
-            ${t.type === 'info' ? 'bg-surface-2 border border-white/8 text-text-primary' : ''}
+            ${t.type === 'info' ? 'bg-surface-2 border border-line text-text-primary' : ''}
           `}
         >
           {t.message}

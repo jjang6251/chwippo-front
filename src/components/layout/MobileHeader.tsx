@@ -26,11 +26,11 @@ export function MobileHeader() {
   const title = getTitle(pathname)
 
   return (
-    <header className="lg:hidden sticky top-0 z-40 bg-surface border-b border-white/5 flex items-center px-4 h-12">
+    <header className="lg:hidden sticky top-0 z-40 bg-surface border-b border-line flex items-center px-4 h-12">
       <Link to={isDemo ? '/demo/dashboard' : '/dashboard'} className="text-brand font-bold text-base tracking-tight mr-3">
         치뽀{isDemo && <span className="ml-1 text-[9px] font-medium text-text-quaternary align-middle">데모</span>}
       </Link>
-      <span className="text-white/20 text-sm mr-3">|</span>
+      <span className="text-text-faint text-sm mr-3">|</span>
       <span className="text-text-secondary text-sm font-medium">{title}</span>
     </header>
   )

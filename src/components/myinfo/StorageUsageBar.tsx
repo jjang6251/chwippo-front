@@ -11,15 +11,15 @@ export function StorageUsageBar() {
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-white/5 bg-surface px-4 py-3">
-        <div className="h-3 w-32 animate-pulse rounded bg-white/5" />
+      <div className="rounded-lg border border-line bg-surface px-4 py-3">
+        <div className="h-3 w-32 animate-pulse rounded bg-card" />
       </div>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="rounded-lg border border-white/5 bg-surface px-4 py-3 text-text-tertiary text-xs">
+      <div className="rounded-lg border border-line bg-surface px-4 py-3 text-text-tertiary text-xs">
         사용량 조회 실패
       </div>
     )
@@ -29,7 +29,7 @@ export function StorageUsageBar() {
   const tone = getTone(percentage)
 
   return (
-    <div className="rounded-lg border border-white/5 bg-surface px-4 py-3">
+    <div className="rounded-lg border border-line bg-surface px-4 py-3">
       <div className="flex items-center justify-between text-xs mb-2">
         <span className="text-text-tertiary">파일 저장 용량</span>
         <span className={`font-medium ${tone.textClass}`}>
@@ -42,7 +42,7 @@ export function StorageUsageBar() {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={`파일 저장 용량 ${percentage}%`}
-        className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden"
+        className="h-1.5 w-full rounded-full bg-card overflow-hidden"
       >
         <div
           className={`h-full transition-all ${tone.barClass}`}

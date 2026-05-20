@@ -52,7 +52,7 @@ export function EditorToolbar({ editor }: Props) {
   ]
 
   return (
-    <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-white/8 flex-wrap">
+    <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-line flex-wrap">
       {tools.map((t) => (
         <button
           key={t.label}
@@ -65,7 +65,7 @@ export function EditorToolbar({ editor }: Props) {
           className={`min-w-[28px] h-7 px-1.5 rounded text-xs font-medium transition-colors ${
             t.active()
               ? 'bg-brand/20 text-brand'
-              : 'text-text-quaternary hover:bg-white/6 hover:text-text-secondary'
+              : 'text-text-quaternary hover:bg-card hover:text-text-secondary'
           }`}
         >
           {t.label}

@@ -14,7 +14,7 @@ const STATUS_LABEL: Record<string, string> = { OPEN: '미답변', IN_PROGRESS: '
 const STATUS_COLOR: Record<string, string> = {
   OPEN: 'text-danger bg-danger/10 border-danger/20',
   IN_PROGRESS: 'text-brand bg-brand/10 border-brand/20',
-  CLOSED: 'text-text-tertiary bg-white/5 border-white/10',
+  CLOSED: 'text-text-tertiary bg-card border-line',
 }
 const CATEGORIES = ['전체', '버그 신고', '기능 추가 요청', '기능 개선', '알림 문의', '계정·개인정보', '사용 방법 문의', '기타']
 
@@ -92,7 +92,7 @@ export function OpsInquiries() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="appearance-none bg-surface-2 border border-white/8 rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
+            className="appearance-none bg-surface-2 border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
           >
             <option value="전체">전체 상태</option>
             <option value="OPEN">미답변</option>
@@ -106,7 +106,7 @@ export function OpsInquiries() {
           <select
             value={catFilter}
             onChange={(e) => setCatFilter(e.target.value)}
-            className="appearance-none bg-surface-2 border border-white/8 rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
+            className="appearance-none bg-surface-2 border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -132,9 +132,9 @@ export function OpsInquiries() {
       {/* 상세 모달 */}
       {selectedId && detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-surface border border-white/10 rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+          <div className="bg-surface border border-line rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
             {/* 모달 헤더 */}
-            <div className="flex items-center gap-2 px-6 py-4 border-b border-white/5">
+            <div className="flex items-center gap-2 px-6 py-4 border-b border-line">
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[detail.status]}`}>
                 {STATUS_LABEL[detail.status]}
               </span>
@@ -143,7 +143,7 @@ export function OpsInquiries() {
             </div>
 
             {/* 사용자 컨텍스트 바 */}
-            <div className="flex items-center gap-2 flex-wrap px-6 py-2.5 bg-white/[0.02] border-b border-white/5 text-[11px] text-text-tertiary">
+            <div className="flex items-center gap-2 flex-wrap px-6 py-2.5 bg-card border-b border-line text-[11px] text-text-tertiary">
               <span className="text-text-secondary font-semibold">
                 {detail.user_nickname ?? '탈퇴한 사용자'}
                 {detail.user_short_id && (
@@ -179,18 +179,18 @@ export function OpsInquiries() {
 
             {/* 입력 영역 */}
             {detail.status !== 'CLOSED' ? (
-              <div className="px-6 py-4 border-t border-white/5">
+              <div className="px-6 py-4 border-t border-line">
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   rows={3}
                   placeholder="사용자에게 답변을 남겨주세요..."
-                  className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none mb-3"
+                  className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none mb-3"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowCloseConfirm(true)}
-                    className="px-4 py-2 border border-white/15 text-text-tertiary text-sm rounded-lg hover:border-white/30 hover:text-text-secondary transition-colors"
+                    className="px-4 py-2 border border-line text-text-tertiary text-sm rounded-lg hover:border-line-strong hover:text-text-secondary transition-colors"
                   >
                     이슈 닫기
                   </button>
@@ -204,7 +204,7 @@ export function OpsInquiries() {
                 </div>
               </div>
             ) : (
-              <div className="px-6 py-4 border-t border-white/5 text-center text-sm text-text-tertiary">
+              <div className="px-6 py-4 border-t border-line text-center text-sm text-text-tertiary">
                 ✅ 완료된 문의입니다.
               </div>
             )}
@@ -215,13 +215,13 @@ export function OpsInquiries() {
       {/* 닫기 확인 모달 — z-[60]으로 상세 모달(z-50) 위에 렌더링 */}
       {showCloseConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
-          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+          <div className="bg-surface border border-line rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">이슈를 닫을까요?</h3>
             <p className="text-sm text-text-tertiary mb-6">사용자에게 완료로 표시되고, 댓글을 더 이상 남길 수 없어요.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowCloseConfirm(false)}
-                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm text-text-secondary hover:bg-white/4 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card transition-colors"
               >
                 취소
               </button>
@@ -247,8 +247,8 @@ function AdminInquiryCard({ item, onSelect, selected }: { item: AdminInquiry; on
       onClick={onSelect}
       className={`text-left border rounded-xl px-5 py-4 transition-colors relative ${
         selected ? 'border-brand/40 bg-brand/5' :
-        isClosed ? 'bg-surface-2/50 border-white/5 opacity-60' :
-        'bg-surface-2 border-white/8 hover:border-white/20'
+        isClosed ? 'bg-surface-2/50 border-line opacity-60' :
+        'bg-surface-2 border-line hover:border-line-strong'
       }`}
     >
       {item.admin_unread > 0 && (
@@ -278,13 +278,13 @@ function AdminCommentBubble({ comment }: { comment: InquiryComment }) {
   return (
     <div className={`flex flex-col gap-1 ${isAdmin ? 'items-end' : 'items-start'}`}>
       <div className={`flex items-center gap-1.5 ${isAdmin ? 'flex-row-reverse' : ''}`}>
-        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isAdmin ? 'bg-brand/15 text-brand' : 'bg-white/8 text-text-tertiary'}`}>
+        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isAdmin ? 'bg-brand/15 text-brand' : 'bg-card-strong text-text-tertiary'}`}>
           {isAdmin ? '치뽀 팀' : '사용자'}
         </span>
         <span className="text-[10px] text-text-tertiary">{dayjs(comment.created_at).format('MM.DD HH:mm')}</span>
       </div>
       <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-        isAdmin ? 'bg-brand/15 text-text-primary rounded-tr-sm' : 'bg-surface-2 border border-white/8 text-text-secondary rounded-tl-sm'
+        isAdmin ? 'bg-brand/15 text-text-primary rounded-tr-sm' : 'bg-surface-2 border border-line text-text-secondary rounded-tl-sm'
       }`}>
         {comment.content}
       </div>

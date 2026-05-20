@@ -22,7 +22,7 @@ export function DdayList({ items, isLoading }: DdayListProps) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-12 bg-surface-2 border border-white/6 rounded-lg animate-pulse" />
+          <div key={i} className="h-12 bg-surface-2 border border-line rounded-lg animate-pulse" />
         ))}
       </div>
     )
@@ -54,7 +54,7 @@ export function DdayList({ items, isLoading }: DdayListProps) {
                 navigate(`/board/${item.applicationId}`)
               }
             }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-white/6 hover:border-white/12 hover:bg-surface-3 transition-all text-left"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-2 border border-line hover:border-line-strong hover:bg-surface-3 transition-all text-left"
           >
             {/* 타입 아이콘 */}
             <div className={`flex-none w-8 h-8 rounded-lg flex items-center justify-center text-base ${item.type === 'exam' ? 'bg-violet/15 text-violet' : avatarColor}`}>

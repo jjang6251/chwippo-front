@@ -8,7 +8,7 @@ const variantClass: Record<string, string> = {
   danger: 'text-danger bg-danger/10 border-danger/25',
   warning: 'text-warning bg-warning/10 border-warning/25',
   info: 'text-brand bg-brand/10 border-brand/25',
-  muted: 'text-text-quaternary bg-white/5 border-white/10',
+  muted: 'text-text-quaternary bg-card border-line',
 }
 
 export function DdayBadge({ deadline }: DdayBadgeProps) {

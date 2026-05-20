@@ -2,8 +2,14 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useTourStore } from '@/stores/tourStore'
-// useThemeStore — 라이트 모드 재설계 후 다시 활성. 토글 섹션 임시 숨김 상태.
+import { useThemeStore, type Theme } from '@/stores/themeStore'
 import { apiClient } from '@/api/client'
+
+const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
+  { value: 'dark', label: '다크', icon: '🌙' },
+  { value: 'light', label: '라이트', icon: '☀️' },
+  { value: 'system', label: '시스템', icon: '🖥️' },
+]
 
 const MENU = [
   { label: '프로필 설정', sub: '닉네임 변경, 계정 탈퇴', path: '/settings/profile', icon: '👤' },
@@ -15,6 +21,8 @@ const MENU = [
 export function Settings() {
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const startTour = useTourStore((s) => s.start)
+  const theme = useThemeStore((s) => s.theme)
+  const setTheme = useThemeStore((s) => s.setTheme)
   const navigate = useNavigate()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
@@ -28,12 +36,12 @@ export function Settings() {
     <div className="max-w-lg mx-auto px-4 py-8">
       <h1 className="text-xl font-bold mb-6">설정</h1>
 
-      <div className="bg-surface-2 border border-white/5 rounded-xl divide-y divide-white/5 mb-4">
+      <div className="bg-surface-2 border border-line rounded-xl divide-y divide-line mb-4">
         {MENU.map(({ label, sub, path, icon }) => (
           <Link
             key={path}
             to={path}
-            className="flex items-center gap-4 px-5 py-4 hover:bg-white/3 transition-colors"
+            className="flex items-center gap-4 px-5 py-4 hover:bg-card transition-colors"
           >
             <span className="text-xl w-7 text-center">{icon}</span>
             <div className="flex-1 min-w-0">
@@ -45,12 +53,39 @@ export function Settings() {
         ))}
       </div>
 
-      {/* 테마 토글 — 라이트 모드 재설계 완료 후 다시 노출 (themeStore·THEME_OPTIONS 추가만 하면 됨) */}
+      <div className="bg-surface-2 border border-line rounded-xl mb-4 px-5 py-4">
+        <div className="flex items-center gap-4 mb-3">
+          <span className="text-xl w-7 text-center">🎨</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">테마</p>
+            <p className="text-xs text-text-tertiary mt-0.5">다크 / 라이트 / 시스템 설정 따름</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {THEME_OPTIONS.map(({ value, label, icon }) => {
+            const active = theme === value
+            return (
+              <button
+                key={value}
+                onClick={() => setTheme(value)}
+                className={`flex flex-col items-center gap-1 py-3 rounded-lg border text-xs font-medium transition-colors ${
+                  active
+                    ? 'bg-brand/12 border-brand text-brand'
+                    : 'bg-surface-3 border-strong text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <span className="text-lg">{icon}</span>
+                <span>{label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-      <div className="bg-surface-2 border border-white/5 rounded-xl mb-4">
+      <div className="bg-surface-2 border border-line rounded-xl mb-4">
         <button
           onClick={startTour}
-          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-white/3 transition-colors"
+          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card transition-colors"
         >
           <span className="text-xl w-7 text-center">🚀</span>
           <div className="flex-1 min-w-0">
@@ -61,10 +96,10 @@ export function Settings() {
         </button>
       </div>
 
-      <div className="bg-surface-2 border border-white/5 rounded-xl">
+      <div className="bg-surface-2 border border-line rounded-xl">
         <button
           onClick={() => setShowLogoutModal(true)}
-          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-white/3 transition-colors"
+          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card transition-colors"
         >
           <span className="text-xl w-7 text-center">🚪</span>
           <span className="text-sm font-medium text-text-secondary">로그아웃</span>
@@ -83,13 +118,13 @@ export function Settings() {
       {/* 로그아웃 확인 모달 — 모바일에서 실수 로그아웃 방지 (Sidebar·ProfileSettings와 동일 패턴) */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-xs">
+          <div role="dialog" aria-modal="true" aria-label="로그아웃 확인" className="bg-surface border border-line rounded-xl p-6 w-full max-w-xs">
             <h3 className="text-base font-bold mb-2">로그아웃 하시겠어요?</h3>
             <p className="text-sm text-text-quaternary mb-6">로그인 화면으로 이동합니다.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-white/10 text-sm font-medium text-text-secondary hover:bg-white/4 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
               >
                 취소
               </button>

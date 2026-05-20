@@ -19,7 +19,7 @@ export function StarToggle({ starred, onToggle, size = 'sm', disabled }: StarTog
         ${btnSize} flex items-center justify-center rounded-md transition-colors
         ${starred
           ? 'text-warning hover:bg-warning/10'
-          : 'text-text-quaternary hover:text-text-secondary hover:bg-white/6'
+          : 'text-text-quaternary hover:text-text-secondary hover:bg-card'
         }
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
       `}

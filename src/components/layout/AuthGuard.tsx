@@ -36,7 +36,7 @@ export function AuthGuard() {
       <div className="min-h-screen bg-bg text-text-primary flex items-center justify-center px-4">
         <div
           role="alert"
-          className="w-full max-w-sm bg-white/[0.02] border border-white/8 rounded-xl px-6 py-8 text-center"
+          className="w-full max-w-sm bg-card border border-line rounded-xl px-6 py-8 text-center"
         >
           <h2 className="text-base font-semibold mb-2">
             많은 새로고침 요청에 잠시 제한되었습니다

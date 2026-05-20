@@ -64,21 +64,21 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
 
   if (isLoading) {
     return (
-      <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden animate-pulse">
-        <div className="h-14 bg-white/2 border-b border-white/5" />
-        <div className="h-8 bg-white/1 border-b border-white/5" />
+      <div className="bg-surface-2 border border-line rounded-xl overflow-hidden animate-pulse">
+        <div className="h-14 bg-card border-b border-line" />
+        <div className="h-8 bg-card border-b border-line" />
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-11 border-b border-white/5 bg-white/1" />
+          <div key={i} className="h-11 border-b border-line bg-card" />
         ))}
       </div>
     )
   }
 
   return (
-    <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden">
+    <div className="bg-surface-2 border border-line rounded-xl overflow-hidden">
       {/* Day headers — 스크롤과 분리 */}
-      <div className="grid border-b border-white/5" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
-        <div className="border-r border-white/5" />
+      <div className="grid border-b border-line" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
+        <div className="border-r border-line" />
         {days.map((day) => {
           const dateStr = day.format('YYYY-MM-DD')
           const isSelected = dateStr === selectedDate
@@ -89,7 +89,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
             <button
               key={dateStr}
               onClick={() => onSelectDate(dateStr)}
-              className={`py-2 text-center transition-colors hover:bg-white/3 border-r border-white/5 last:border-r-0 ${isSelected ? 'bg-brand/8' : ''}`}
+              className={`py-2 text-center transition-colors hover:bg-card border-r border-line last:border-r-0 ${isSelected ? 'bg-brand/8' : ''}`}
             >
               <div className={`text-[10px] font-medium ${isSun ? 'text-danger/70' : isSat ? 'text-info/70' : 'text-text-quaternary'}`}>
                 {KO_DAYS[day.day()]}
@@ -105,8 +105,8 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
       </div>
 
       {/* All-day row (마감 + 시간 없는 메모) */}
-      <div className="grid border-b border-white/5 min-h-[28px]" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
-        <div className="flex items-center justify-end px-1 border-r border-white/5">
+      <div className="grid border-b border-line min-h-[28px]" style={{ gridTemplateColumns: '44px repeat(7, 1fr)' }}>
+        <div className="flex items-center justify-end px-1 border-r border-line">
           <span className="text-[8px] text-text-quaternary font-medium">종일</span>
         </div>
         {days.map((day) => {
@@ -116,7 +116,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
           return (
             <div
               key={dateStr}
-              className={`px-0.5 py-0.5 border-r border-white/5 last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
+              className={`px-0.5 py-0.5 border-r border-line last:border-r-0 min-h-[28px] ${isSelected ? 'bg-brand/5' : ''}`}
             >
               {allDay.map((e, idx) => (
                 // 시간 없는 메모
@@ -151,11 +151,11 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
           return (
             <div
               key={hour}
-              className="grid border-b border-white/5 last:border-b-0"
+              className="grid border-b border-line last:border-b-0"
               style={{ gridTemplateColumns: '44px repeat(7, 1fr)', minHeight: `${ROW_HEIGHT}px` }}
             >
               {/* Hour label */}
-              <div className="flex items-start justify-end px-1.5 pt-1 border-r border-white/5 shrink-0">
+              <div className="flex items-start justify-end px-1.5 pt-1 border-r border-line shrink-0">
                 <span className={`text-[9px] font-mono select-none ${isCurrentHour ? 'text-danger font-semibold' : 'text-text-quaternary'}`}>
                   {String(hour).padStart(2, '0')}:00
                 </span>
@@ -173,7 +173,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
                     tabIndex={0}
                     onClick={() => onSelectDate(dateStr)}
                     onKeyDown={(e) => e.key === 'Enter' && onSelectDate(dateStr)}
-                    className={`cursor-pointer border-r border-white/5 last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-white/2 ${
+                    className={`cursor-pointer border-r border-line last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-card ${
                       isTodayCell ? 'bg-danger/5' : isSelected ? 'bg-brand/5' : ''
                     }`}
                   >

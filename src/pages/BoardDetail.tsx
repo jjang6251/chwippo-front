@@ -71,7 +71,7 @@ function SortableStepRow({
         <input
           value={item.name}
           onChange={(e) => onChange(item.id, e.target.value)}
-          className="flex-1 bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all"
+          className="flex-1 bg-surface-3 border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all"
         />
         <button
           onClick={() => onRemove(item.id)}
@@ -112,7 +112,7 @@ function EditableField({
     onKeyDown: (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLElement).blur() },
     placeholder,
     className: `w-full bg-transparent focus:outline-none transition-all rounded-md px-2 py-1 -mx-2 -my-1
-      ${focused ? 'bg-surface-3 ring-1 ring-brand/30' : 'hover:bg-white/4'}
+      ${focused ? 'bg-surface-3 ring-1 ring-brand/30' : 'hover:bg-card'}
       ${className}`,
   }
 
@@ -269,7 +269,7 @@ export function BoardDetail() {
       </button>
 
       {/* 기본 정보 카드 */}
-      <div className={`border rounded-xl p-6 mb-4 ${app.status === 'PASSED' ? 'border-success/35 bg-gradient-to-br from-success/15 to-surface-2' : 'border-white/8 bg-surface-2'}`}>
+      <div className={`border rounded-xl p-6 mb-4 ${app.status === 'PASSED' ? 'border-success/35 bg-gradient-to-br from-success/15 to-surface-2' : 'border-line bg-surface-2'}`}>
         <div className="flex items-start gap-4 mb-5">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold flex-none ${app.status === 'PASSED' ? 'bg-success/15 text-success' : 'bg-brand/12 text-brand'}`}>
             {app.companyName.charAt(0)}
@@ -330,7 +330,7 @@ export function BoardDetail() {
           }
           <button
             onClick={openTagEditor}
-            className="text-xs text-text-quaternary hover:text-text-secondary border border-dashed border-white/12 hover:border-white/20 px-2.5 py-1 rounded-full transition-all"
+            className="text-xs text-text-quaternary hover:text-text-secondary border border-dashed border-line hover:border-line-strong px-2.5 py-1 rounded-full transition-all"
           >
             {currentTags.length > 0 ? '+ 태그 수정' : '+ 태그 추가'}
           </button>
@@ -356,7 +356,7 @@ export function BoardDetail() {
                       )
                     }
                   }}
-                  className="w-full bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-white/14"
+                  className="w-full bg-surface-3 border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-line-strong"
                 />
               </>
             ) : (
@@ -373,11 +373,11 @@ export function BoardDetail() {
                 defaultValue={app.jobUrl ?? ''}
                 onBlur={(e) => { if (e.target.value !== (app.jobUrl ?? '')) save('jobUrl')(e.target.value) }}
                 placeholder="https://"
-                className="flex-1 min-w-0 bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-all hover:border-white/14"
+                className="flex-1 min-w-0 bg-surface-3 border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-all hover:border-line-strong"
               />
               {app.jobUrl && (
                 <a href={app.jobUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex-none px-2 py-2 bg-surface-3 border border-white/8 rounded-lg text-text-quaternary hover:text-text-secondary text-xs transition-colors">
+                  className="flex-none px-2 py-2 bg-surface-3 border border-line rounded-lg text-text-quaternary hover:text-text-secondary text-xs transition-colors">
                   ↗
                 </a>
               )}
@@ -387,7 +387,7 @@ export function BoardDetail() {
       </div>
 
       {/* 탭: 전형 단계 / 자소서 */}
-      <div className="flex gap-1 p-1 bg-surface-2 border border-white/8 rounded-lg mb-4">
+      <div className="flex gap-1 p-1 bg-surface-2 border border-line rounded-lg mb-4">
         {([
           { v: 'steps' as const, label: '전형 단계' },
           { v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' },
@@ -411,7 +411,7 @@ export function BoardDetail() {
         <>
           {/* 스텝바 */}
           {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
-            <div data-tour="step-bar" className="border border-white/8 bg-surface-2 rounded-xl p-5 mb-4">
+            <div data-tour="step-bar" className="border border-line bg-surface-2 rounded-xl p-5 mb-4">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-text-primary text-sm font-semibold">진행 상황</h2>
@@ -421,7 +421,7 @@ export function BoardDetail() {
                   <button
                     data-tour="step-edit-btn"
                     onClick={openStepEditor}
-                    className="text-xs text-text-tertiary hover:text-text-secondary border border-white/8 hover:border-white/15 px-2.5 py-1.5 rounded-lg transition-all"
+                    className="text-xs text-text-tertiary hover:text-text-secondary border border-line hover:border-line-strong px-2.5 py-1.5 rounded-lg transition-all"
                   >
                     스텝 편집
                   </button>
@@ -453,7 +453,7 @@ export function BoardDetail() {
           )}
 
           {/* 메모 */}
-          <div className="border border-white/8 bg-surface-2 rounded-xl p-5">
+          <div className="border border-line bg-surface-2 rounded-xl p-5">
             <h2 className="text-text-primary text-sm font-semibold mb-3">메모</h2>
             <EditableField
               value={app.memo ?? ''}
@@ -480,7 +480,7 @@ export function BoardDetail() {
       <Modal open={showTagEditor} onClose={() => setShowTagEditor(false)} title="직군 태그 편집">
         <TagSelector selected={editTags} onChange={setEditTags} />
         <div className="flex gap-2 mt-5">
-          <button onClick={() => setShowTagEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
+          <button onClick={() => setShowTagEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
           <button onClick={handleSaveTags} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors">저장</button>
         </div>
       </Modal>
@@ -509,12 +509,12 @@ export function BoardDetail() {
             setEditSteps((prev) => [...prev, { id: crypto.randomUUID(), name: '', scheduledDate: null, location: null }])
             if (tourActive && tourStep === 9) tourNext()
           }}
-          className="w-full py-2 text-xs text-text-tertiary border border-dashed border-white/15 rounded-lg hover:border-white/25 hover:text-text-secondary transition-all mb-4"
+          className="w-full py-2 text-xs text-text-tertiary border border-dashed border-line rounded-lg hover:border-line-strong hover:text-text-secondary transition-all mb-4"
         >
           + 스텝 추가
         </button>
         <div className="flex gap-2">
-          <button onClick={() => setShowStepEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors">취소</button>
+          <button onClick={() => setShowStepEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
           <button data-tour="save-steps-btn" onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
             {isSavingSteps ? '저장 중...' : '저장'}
           </button>
@@ -541,7 +541,7 @@ export function BoardDetail() {
             role="dialog"
             aria-modal="true"
             aria-label="최종 합격 처리 확인"
-            className="bg-surface border border-white/8 rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
+            className="bg-surface border border-line rounded-xl p-6 w-80 shadow-2xl animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-2xl mb-3">🎉</div>
@@ -552,7 +552,7 @@ export function BoardDetail() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowPassConfirm(false)}
-                className="flex-1 py-3 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors"
+                className="flex-1 py-3 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors"
               >
                 취소
               </button>
@@ -573,13 +573,13 @@ export function BoardDetail() {
 function DetailSkeleton() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 animate-pulse">
-      <div className="h-3 bg-white/6 rounded w-24 mb-6" />
-      <div className="border border-white/8 bg-surface-2 rounded-xl p-6 mb-4">
+      <div className="h-3 bg-card rounded w-24 mb-6" />
+      <div className="border border-line bg-surface-2 rounded-xl p-6 mb-4">
         <div className="flex gap-4 mb-5">
-          <div className="w-12 h-12 bg-white/6 rounded-xl" />
-          <div className="flex-1"><div className="h-5 bg-white/8 rounded w-32 mb-2" /><div className="h-3 bg-white/5 rounded w-24" /></div>
+          <div className="w-12 h-12 bg-card rounded-xl" />
+          <div className="flex-1"><div className="h-5 bg-card-strong rounded w-32 mb-2" /><div className="h-3 bg-card rounded w-24" /></div>
         </div>
-        <div className="grid grid-cols-2 gap-3"><div className="h-9 bg-white/5 rounded-lg" /><div className="h-9 bg-white/5 rounded-lg" /></div>
+        <div className="grid grid-cols-2 gap-3"><div className="h-9 bg-card rounded-lg" /><div className="h-9 bg-card rounded-lg" /></div>
       </div>
     </div>
   )

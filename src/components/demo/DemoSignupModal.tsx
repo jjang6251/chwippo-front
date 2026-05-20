@@ -27,7 +27,7 @@ export function DemoSignupModal() {
       </button>
       <button
         onClick={hide}
-        className="block w-full text-center py-3 text-xs font-medium text-text-secondary bg-white/5 hover:bg-white/8 rounded-lg transition-colors"
+        className="block w-full text-center py-3 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors"
       >
         더 둘러보기
       </button>

@@ -50,7 +50,7 @@ export function TodosSection() {
         </div>
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-9 bg-surface-2 border border-white/5 rounded-lg animate-pulse" />
+            <div key={i} className="h-9 bg-surface-2 border border-line rounded-lg animate-pulse" />
           ))}
         </div>
       </section>
@@ -65,7 +65,7 @@ export function TodosSection() {
           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
             doneCount === totalCount
               ? 'bg-success/15 text-success border border-success/20'
-              : 'bg-white/8 text-text-tertiary border border-white/10'
+              : 'bg-card-strong text-text-tertiary border border-line'
           }`}>
             {doneCount} / {totalCount} 완료
           </span>
@@ -74,7 +74,7 @@ export function TodosSection() {
 
       <div className="space-y-3">
         {/* 입력창 */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] border border-white/8 rounded-lg focus-within:border-brand/40 focus-within:ring-1 focus-within:ring-brand/15 transition-all">
+        <div className="flex items-center gap-2 px-3 py-2 bg-card border border-line rounded-lg focus-within:border-brand/40 focus-within:ring-1 focus-within:ring-brand/15 transition-all">
           <svg className="text-text-quaternary flex-none" width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
@@ -172,12 +172,12 @@ interface NoteItemProps {
 
 function NoteItem({ note, timeLabel, onToggle, onDelete, onCarryOver, carryOverButton, dimmed }: NoteItemProps) {
   return (
-    <div className={`group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/4 transition-colors ${dimmed ? 'opacity-60' : ''}`}>
+    <div className={`group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-card transition-colors ${dimmed ? 'opacity-60' : ''}`}>
       <button
         aria-label={note.isDone ? '완료 취소' : '완료 표시'}
         onClick={onToggle}
         className={`flex-none w-4 h-4 rounded border transition-colors ${
-          note.isDone ? 'bg-success border-success' : 'border-white/8 hover:border-success/60'
+          note.isDone ? 'bg-success border-success' : 'border-line hover:border-success/60'
         }`}
       >
         {note.isDone && (

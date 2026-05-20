@@ -257,18 +257,18 @@ export function Calendar() {
             </button>
 
             {pickerOpen && (
-              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-white/8 rounded-xl shadow-2xl p-4 w-56 max-w-[calc(100vw-2rem)] animate-fadeInUp">
+              <div className="absolute top-full mt-2 left-0 z-30 bg-surface border border-line rounded-xl shadow-2xl p-4 w-56 max-w-[calc(100vw-2rem)] animate-fadeInUp">
                 <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setPickerYear((y) => y - 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4" /></svg>
                   </button>
                   <span className="text-text-primary text-sm font-semibold">{pickerYear}년</span>
                   <button
                     onClick={() => setPickerYear((y) => y + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4" /></svg>
                   </button>
@@ -284,7 +284,7 @@ export function Calendar() {
                         className={`py-1.5 rounded-lg text-xs font-medium transition-colors
                           ${isSelected ? 'bg-brand text-text-primary' : ''}
                           ${!isSelected && isCurrentMonth ? 'text-brand border border-brand/30' : ''}
-                          ${!isSelected && !isCurrentMonth ? 'text-text-secondary hover:bg-white/6' : ''}
+                          ${!isSelected && !isCurrentMonth ? 'text-text-secondary hover:bg-card' : ''}
                         `}
                       >
                         {i + 1}월
@@ -298,7 +298,7 @@ export function Calendar() {
 
           <button
             onClick={goToday}
-            className="text-xs font-medium px-2.5 py-1 rounded-md border border-white/10 text-text-tertiary hover:text-text-secondary hover:border-white/20 transition-colors"
+            className="text-xs font-medium px-2.5 py-1 rounded-md border border-line text-text-tertiary hover:text-text-secondary hover:border-line-strong transition-colors"
           >
             오늘
           </button>
@@ -315,11 +315,11 @@ export function Calendar() {
 
         <div className="flex items-center justify-between sm:justify-end gap-2">
           {/* View toggle */}
-          <div className="flex items-center bg-surface-2 border border-white/5 rounded-lg p-0.5">
+          <div className="flex items-center bg-surface-2 border border-line rounded-lg p-0.5">
             <button
               onClick={switchToMonthView}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                view === 'month' ? 'bg-white/8 text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
+                view === 'month' ? 'bg-card-strong text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
               }`}
             >
               월별
@@ -327,7 +327,7 @@ export function Calendar() {
             <button
               onClick={switchToWeekView}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                view === 'week' ? 'bg-white/8 text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
+                view === 'week' ? 'bg-card-strong text-text-primary' : 'text-text-quaternary hover:text-text-secondary'
               }`}
             >
               주별
@@ -339,14 +339,14 @@ export function Calendar() {
             <button
               onClick={view === 'month' ? prevMonth : prevWeek}
               aria-label={view === 'month' ? '이전 달' : '이전 주'}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
             >
               <ChevronLeft />
             </button>
             <button
               onClick={view === 'month' ? nextMonth : nextWeek}
               aria-label={view === 'month' ? '다음 달' : '다음 주'}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-white/6 hover:text-text-primary transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
             >
               <ChevronRight />
             </button>
@@ -356,7 +356,7 @@ export function Calendar() {
 
       {/* Summary banner (monthly view only) */}
       {view === 'month' && !monthlyLoading && (stepCount > 0 || examCount > 0) && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-white/5 rounded-xl mb-4">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 border border-line rounded-xl mb-4">
           <span className="text-xs text-text-quaternary">이번 달</span>
           {stepCount > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-warning">
@@ -365,7 +365,7 @@ export function Calendar() {
             </span>
           )}
           {stepCount > 0 && examCount > 0 && (
-            <span className="text-white/10">|</span>
+            <span className="text-text-faint">|</span>
           )}
           {examCount > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-violet">
@@ -383,9 +383,9 @@ export function Calendar() {
 
           {view === 'month' ? (
             /* Monthly grid */
-            <div className="bg-surface-2 border border-white/5 rounded-xl overflow-hidden">
+            <div className="bg-surface-2 border border-line rounded-xl overflow-hidden">
               {/* Day-of-week header */}
-              <div className="grid grid-cols-7 border-b border-white/5">
+              <div className="grid grid-cols-7 border-b border-line">
                 {DAY_LABELS.map((d, i) => (
                   <div
                     key={d}
@@ -401,14 +401,14 @@ export function Calendar() {
               {monthlyLoading ? (
                 <div className="grid grid-cols-7">
                   {Array.from({ length: 35 }).map((_, i) => (
-                    <div key={i} className="h-16 sm:h-20 border-b border-r border-white/5 animate-pulse bg-white/2" />
+                    <div key={i} className="h-16 sm:h-20 border-b border-r border-line animate-pulse bg-card" />
                   ))}
                 </div>
               ) : (
                 <div className="grid grid-cols-7">
                   {cells.map((day, i) => {
                     if (!day) {
-                      return <div key={`empty-${i}`} className="min-h-[64px] sm:min-h-[80px] border-b border-r border-white/5" />
+                      return <div key={`empty-${i}`} className="min-h-[64px] sm:min-h-[80px] border-b border-r border-line" />
                     }
                     const dateStr = day.format('YYYY-MM-DD')
                     const dayEvents = eventsByDate[dateStr] ?? []
@@ -425,10 +425,10 @@ export function Calendar() {
                       <button
                         key={dateStr}
                         onClick={() => handleSelectDate(dateStr)}
-                        className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-white/5 transition-colors text-left w-full
+                        className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-line transition-colors text-left w-full
                           ${isLastRow ? 'border-b-0' : ''}
                           ${(i + 1) % 7 === 0 ? 'border-r-0' : ''}
-                          ${isSelected ? 'bg-brand/8' : 'hover:bg-white/3'}
+                          ${isSelected ? 'bg-brand/8' : 'hover:bg-card'}
                           ${isPast ? 'opacity-50' : ''}
                         `}
                       >
@@ -527,7 +527,7 @@ export function Calendar() {
               {selectedDateEvents.length === 0 ? (
                 <button
                   onClick={() => setBottomSheetOpen(true)}
-                  className="w-full text-text-quaternary text-sm py-5 text-center bg-surface-2 border border-white/5 rounded-xl hover:bg-white/3 transition-colors"
+                  className="w-full text-text-quaternary text-sm py-5 text-center bg-surface-2 border border-line rounded-xl hover:bg-card transition-colors"
                 >
                   이 날 일정이 없어요 · 탭해서 메모 추가
                 </button>
@@ -549,7 +549,7 @@ export function Calendar() {
         </div>
 
         {/* Desktop side panel */}
-        <div className="hidden lg:flex w-64 xl:w-72 shrink-0 sticky top-20 bg-surface border border-white/8 rounded-xl overflow-hidden flex-col" style={{ height: 'calc(100vh - 96px)' }}>
+        <div className="hidden lg:flex w-64 xl:w-72 shrink-0 sticky top-20 bg-surface border border-line rounded-xl overflow-hidden flex-col" style={{ height: 'calc(100vh - 96px)' }}>
           <CalendarDayPanel
             date={selectedDate}
             events={selectedDateEvents}
@@ -567,10 +567,10 @@ export function Calendar() {
 
       {/* Mobile bottom sheet */}
       {bottomSheetOpen && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-white/10 rounded-t-2xl flex flex-col animate-slideUp" style={{ height: '65vh' }}>
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl flex flex-col animate-slideUp" style={{ height: '65vh' }}>
           {/* Drag handle */}
           <div className="flex justify-center pt-2.5 pb-1 shrink-0">
-            <div className="w-8 h-1 bg-white/20 rounded-full" />
+            <div className="w-8 h-1 bg-card0 rounded-full" />
           </div>
           <CalendarDayPanel
             date={selectedDate}
@@ -632,7 +632,7 @@ function EventCard({ event }: { event: CalendarEvent }) {
   )
   if (to) {
     return (
-      <Link to={to} className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-white/4 transition-colors group ${c.border}`}>
+      <Link to={to} className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-card transition-colors group ${c.border}`}>
         {inner}
       </Link>
     )

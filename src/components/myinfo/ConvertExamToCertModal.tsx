@@ -31,7 +31,7 @@ export function ConvertExamToCertModal({ exam, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label={`${exam.name} 결과 입력`} className="relative z-10 w-full max-w-sm bg-surface border border-white/8 rounded-t-xl sm:rounded-xl px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto">
+      <div role="dialog" aria-modal="true" aria-label={`${exam.name} 결과 입력`} className="relative z-10 w-full max-w-sm bg-surface border border-line rounded-t-xl sm:rounded-xl px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto">
         <h3 className="text-text-primary text-sm font-semibold mb-3">{exam.name} 결과 입력</h3>
         <p className="text-text-quaternary text-[11px] mb-4">
           <span className="text-violet font-medium">{successLabel}</span>으로 자동 이관됩니다.
@@ -46,7 +46,7 @@ export function ConvertExamToCertModal({ exam, onClose }: Props) {
               onChange={(e) => setScoreGrade(e.target.value)}
               placeholder="예: 850점 / IH / 6급"
               autoFocus
-              className="w-full bg-surface-2 border border-white/8 rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
+              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
             />
           </div>
         )}
@@ -54,7 +54,7 @@ export function ConvertExamToCertModal({ exam, onClose }: Props) {
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 py-2 rounded-lg border border-white/8 text-text-tertiary text-xs hover:bg-white/5 transition-colors"
+            className="flex-1 py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card transition-colors"
           >취소</button>
           <button
             onClick={handleSubmit}

@@ -60,7 +60,7 @@ export function SectionWrapper({ id, editMode, onRemove, children }: SectionWrap
       )}
 
       {/* 섹션 카드 */}
-      <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+      <div className="bg-card border border-line[0.07] rounded-xl p-4">
         {children}
       </div>
     </div>
