@@ -36,7 +36,7 @@ function step(applicationId: string, orderIndex: number, name: string, opts: Par
 export const DEMO_APPLICATIONS: Application[] = [
   {
     id: 'demo-a1', userId: DEMO_USER, companyName: '카카오', jobTitle: '백엔드 개발자', jobCategory: 'IT개발',
-    status: 'IN_PROGRESS', deadline: d(-20), jobUrl: 'https://careers.kakao.com', memo: '면접관 2명 · 기술 면접 위주 · 시스템 설계 준비',
+    status: 'IN_PROGRESS', jobUrl: 'https://careers.kakao.com', memo: '면접관 2명 · 기술 면접 위주 · 시스템 설계 준비',
     currentStepIndex: 2, needsDetail: false, isStarred: true, createdAt: d(-30) + 'T00:00:00Z', updatedAt: d(-2) + 'T00:00:00Z',
     steps: [
       step('demo-a1', 0, '서류 제출', { scheduledDate: dt(-20) }),
@@ -48,7 +48,7 @@ export const DEMO_APPLICATIONS: Application[] = [
   },
   {
     id: 'demo-a2', userId: DEMO_USER, companyName: '토스', jobTitle: '프로덕트 디자이너', jobCategory: '디자인',
-    status: 'IN_PROGRESS', deadline: d(2), jobUrl: 'https://toss.im/career', memo: '포트폴리오 PDF 10MB 이하 · 회사 디자인 시스템 리서치',
+    status: 'IN_PROGRESS', jobUrl: 'https://toss.im/career', memo: '포트폴리오 PDF 10MB 이하 · 회사 디자인 시스템 리서치',
     currentStepIndex: 0, needsDetail: false, isStarred: false, createdAt: d(-5) + 'T00:00:00Z', updatedAt: d(-1) + 'T00:00:00Z',
     steps: [
       step('demo-a2', 0, '서류 제출', { scheduledDate: dt(2) }),
@@ -60,7 +60,7 @@ export const DEMO_APPLICATIONS: Application[] = [
   },
   {
     id: 'demo-a3', userId: DEMO_USER, companyName: '삼성전자', jobTitle: 'SW 개발', jobCategory: 'IT개발',
-    status: 'IN_PROGRESS', deadline: d(-35), jobUrl: null, memo: 'GSAT 인적성 통과 · 면접 3:1',
+    status: 'IN_PROGRESS', jobUrl: null, memo: 'GSAT 인적성 통과 · 면접 3:1',
     currentStepIndex: 3, needsDetail: false, isStarred: false, createdAt: d(-45) + 'T00:00:00Z', updatedAt: d(-3) + 'T00:00:00Z',
     steps: [
       step('demo-a3', 0, '서류 제출', { scheduledDate: dt(-35) }),
@@ -72,7 +72,7 @@ export const DEMO_APPLICATIONS: Application[] = [
   },
   {
     id: 'demo-a4', userId: DEMO_USER, companyName: '네이버', jobTitle: '서비스 기획', jobCategory: '기획·PM',
-    status: 'PASSED', deadline: d(-60), jobUrl: 'https://recruit.navercorp.com', memo: '🎉 합격!',
+    status: 'PASSED', jobUrl: 'https://recruit.navercorp.com', memo: '🎉 합격!',
     currentStepIndex: 3, needsDetail: false, isStarred: true, createdAt: d(-70) + 'T00:00:00Z', updatedAt: d(-10) + 'T00:00:00Z',
     steps: [
       step('demo-a4', 0, '서류 제출', { scheduledDate: dt(-60) }),
@@ -83,7 +83,7 @@ export const DEMO_APPLICATIONS: Application[] = [
   },
   {
     id: 'demo-a5', userId: DEMO_USER, companyName: '쿠팡', jobTitle: '데이터 분석가', jobCategory: 'IT개발',
-    status: 'FAILED', deadline: d(-50), jobUrl: null, memo: '서류 탈락 — 다음엔 SQL 프로젝트 더 강조',
+    status: 'FAILED', jobUrl: null, memo: '서류 탈락 — 다음엔 SQL 프로젝트 더 강조',
     currentStepIndex: 0, needsDetail: false, isStarred: false, createdAt: d(-55) + 'T00:00:00Z', updatedAt: d(-30) + 'T00:00:00Z',
     steps: [
       step('demo-a5', 0, '서류 제출', { scheduledDate: dt(-50) }),
@@ -94,7 +94,7 @@ export const DEMO_APPLICATIONS: Application[] = [
   },
   {
     id: 'demo-a6', userId: DEMO_USER, companyName: '당근마켓', jobTitle: null, jobCategory: 'IT개발',
-    status: 'PLANNED', deadline: null, jobUrl: null, memo: null,
+    status: 'PLANNED', jobUrl: null, memo: null,
     currentStepIndex: 0, needsDetail: false, isStarred: false, createdAt: d(-1) + 'T00:00:00Z', updatedAt: d(-1) + 'T00:00:00Z',
     steps: [],
   },

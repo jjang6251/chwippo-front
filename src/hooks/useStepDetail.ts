@@ -24,7 +24,7 @@ export function useUpdateStep(appId: string) {
     mutationFn: ({ stepId, ...body }: { stepId: string } & UpdateStepBody) =>
       updateStep(appId, stepId, body),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['applications', appId] })
+      qc.invalidateQueries({ queryKey: ['applications'], refetchType: 'all' })
       qc.invalidateQueries({ queryKey: ['calendar'], refetchType: 'all' })
       qc.invalidateQueries({ queryKey: ['dashboard', 'dday'], refetchType: 'all' })
     },

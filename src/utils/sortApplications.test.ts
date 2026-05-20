@@ -2,24 +2,31 @@ import { describe, it, expect } from 'vitest'
 import { sortApplications } from './sortApplications'
 import type { Application } from '@/types/application'
 
-function makeApp(overrides: Partial<Application> & { id: string }): Application {
-  return {
+function makeApp(
+  overrides: Partial<Application> & { id: string; deadline?: string | null },
+): Application {
+  const { deadline, steps, ...rest } = overrides
+  const app: Application = {
     userId: 'u1',
     companyName: '테스트',
     jobTitle: null,
     jobCategory: null,
     status: 'IN_PROGRESS',
-    deadline: null,
     jobUrl: null,
     memo: null,
     currentStepIndex: 0,
     needsDetail: false,
     isStarred: false,
-    steps: [],
+    steps: steps ?? [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
-    ...overrides,
+    ...rest,
   }
+  // 옛 테스트 호환: deadline 주어졌고 steps 없으면 첫 step.scheduledDate로 변환
+  if (deadline !== undefined && (!steps || steps.length === 0)) {
+    app.steps = deadline ? [makeStep(deadline, 0)] : []
+  }
+  return app
 }
 
 function makeStep(scheduledDate: string | null, orderIndex = 0) {
@@ -66,24 +73,6 @@ describe('sortApplications', () => {
       expect(result[1].id).toBe('a1')
     })
 
-    it('scheduledDate 없을 때 deadline으로 fallback', () => {
-      const a = makeApp({
-        id: 'a1',
-        status: 'IN_PROGRESS',
-        deadline: '2026-06-20',
-        currentStepIndex: 0,
-        steps: [makeStep(null)],
-      })
-      const b = makeApp({
-        id: 'b1',
-        status: 'IN_PROGRESS',
-        deadline: '2026-06-10',
-        currentStepIndex: 0,
-        steps: [makeStep(null)],
-      })
-      const result = sortApplications([a, b])
-      expect(result[0].id).toBe('b1')
-    })
 
     it('scheduledDate도 deadline도 없으면 Infinity → 뒤로', () => {
       const a = makeApp({ id: 'a1', status: 'IN_PROGRESS', steps: [makeStep(null)] })

@@ -361,13 +361,8 @@ export function BoardDetail() {
               </>
             ) : (
               <>
-                <label className="block text-[10px] text-text-quaternary mb-1">서류 마감일</label>
-                <input
-                  type="date"
-                  defaultValue={app.deadline ?? ''}
-                  onChange={(e) => { if (e.target.value !== (app.deadline ?? '')) save('deadline')(e.target.value) }}
-                  className="w-full bg-surface-3 border border-white/8 rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-white/14 [color-scheme:dark]"
-                />
+                <label className="block text-[10px] text-text-quaternary mb-1">진행 일정</label>
+                <div className="text-xs text-text-quaternary px-2.5 py-2">스텝을 추가하면 일정을 설정할 수 있어요</div>
               </>
             )}
           </div>
