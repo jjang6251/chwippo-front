@@ -48,7 +48,7 @@ export function Landing() {
             <button
               type="button"
               onClick={handleKakaoLogin}
-              className="text-sm font-medium bg-brand hover:bg-accent text-text-primary px-4 py-2 rounded-lg transition-colors"
+              className="text-sm font-medium bg-brand hover:bg-accent active:bg-accent-hover text-text-primary px-4 py-2 rounded-lg transition-colors"
             >
               시작하기
             </button>
@@ -86,7 +86,7 @@ export function Landing() {
             </button>
             <Link
               to="/demo"
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-card hover:bg-card border border-line text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-card hover:bg-card active:bg-card-strong border border-line text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
             >
               로그인 없이 둘러보기 →
             </Link>
@@ -293,13 +293,13 @@ export function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={handleKakaoLogin}
-              className="w-full sm:w-auto bg-brand hover:bg-accent text-text-primary font-semibold text-sm px-8 py-3.5 rounded-xl transition-colors shadow-[0_0_24px_rgba(107,156,127,0.25)]"
+              className="w-full sm:w-auto bg-brand hover:bg-accent active:bg-accent-hover text-text-primary font-semibold text-sm px-8 py-3.5 rounded-xl transition-colors shadow-[0_0_24px_rgba(107,156,127,0.25)]"
             >
               지금 무료로 시작하기
             </button>
             <Link
               to="/inquiry"
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-card hover:bg-card border border-line text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-card hover:bg-card active:bg-card-strong border border-line text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
             >
               문의하기 →
             </Link>

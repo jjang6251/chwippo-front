@@ -62,7 +62,7 @@ export function CalendarMiniSection() {
             <button
               onClick={() => setCursor((c) => c.subtract(1, 'month'))}
               aria-label="이전 달"
-              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M6.5 1.5L3 5l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -74,7 +74,7 @@ export function CalendarMiniSection() {
             <button
               onClick={() => setCursor((c) => c.add(1, 'month'))}
               aria-label="다음 달"
-              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M3.5 1.5L7 5l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -118,7 +118,7 @@ export function CalendarMiniSection() {
                     relative aspect-square flex flex-col items-center justify-center rounded-md text-[11px] transition-colors
                     ${isSelected && !isToday ? 'bg-card-strong text-text-primary font-semibold' : ''}
                     ${isToday ? 'bg-brand text-text-primary font-semibold' : ''}
-                    ${!isSelected && !isToday ? 'hover:bg-card' : ''}
+                    ${!isSelected && !isToday ? 'hover:bg-card active:bg-card-strong' : ''}
                     ${!isToday && !isSelected && dow === 0 ? 'text-danger/80' : ''}
                     ${!isToday && !isSelected && dow === 6 ? 'text-brand/80' : ''}
                     ${!isToday && !isSelected && dow !== 0 && dow !== 6 ? 'text-text-secondary' : ''}

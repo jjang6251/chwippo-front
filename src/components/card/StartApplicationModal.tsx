@@ -61,10 +61,10 @@ export function StartApplicationModal({
           <TagSelector selected={tags} onChange={setTags} />
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">
             취소
           </button>
-          <button type="submit" disabled={isPending} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
+          <button type="submit" disabled={isPending} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40">
             {isPending ? '처리 중...' : '지원 시작'}
           </button>
         </div>

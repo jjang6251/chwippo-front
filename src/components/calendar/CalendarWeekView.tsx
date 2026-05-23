@@ -89,7 +89,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
             <button
               key={dateStr}
               onClick={() => onSelectDate(dateStr)}
-              className={`py-2 text-center transition-colors hover:bg-card border-r border-line last:border-r-0 ${isSelected ? 'bg-brand/8' : ''}`}
+              className={`py-2 text-center transition-colors hover:bg-card active:bg-card-strong border-r border-line last:border-r-0 ${isSelected ? 'bg-brand/8' : ''}`}
             >
               <div className={`text-[10px] font-medium ${isSun ? 'text-danger/70' : isSat ? 'text-info/70' : 'text-text-quaternary'}`}>
                 {KO_DAYS[day.day()]}
@@ -172,7 +172,7 @@ export function CalendarWeekView({ weekStart, events, selectedDate, today, isLoa
                     tabIndex={0}
                     onClick={() => onSelectDate(dateStr)}
                     onKeyDown={(e) => e.key === 'Enter' && onSelectDate(dateStr)}
-                    className={`min-w-0 overflow-hidden cursor-pointer border-r border-line last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-card ${
+                    className={`min-w-0 overflow-hidden cursor-pointer border-r border-line last:border-r-0 px-0.5 py-0.5 transition-colors hover:bg-card active:bg-card-strong ${
                       isTodayCell ? 'bg-danger/5' : isSelected ? 'bg-brand/5' : ''
                     }`}
                   >

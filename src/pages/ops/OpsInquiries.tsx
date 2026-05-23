@@ -197,7 +197,7 @@ export function OpsInquiries() {
                   <button
                     onClick={() => commentMutation.mutate()}
                     disabled={!comment.trim() || commentMutation.isPending}
-                    className="flex-1 py-2 bg-brand text-text-primary text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-accent transition-colors"
+                    className="flex-1 py-2 bg-brand text-text-primary text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-accent active:bg-accent-hover transition-colors"
                   >
                     {commentMutation.isPending ? '전송 중...' : '답변 전송'}
                   </button>
@@ -221,7 +221,7 @@ export function OpsInquiries() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowCloseConfirm(false)}
-                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 취소
               </button>

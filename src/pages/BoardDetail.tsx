@@ -112,7 +112,7 @@ function EditableField({
     onKeyDown: (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLElement).blur() },
     placeholder,
     className: `w-full bg-transparent focus:outline-none transition-all rounded-md px-2 py-1 -mx-2 -my-1
-      ${focused ? 'bg-surface-3 ring-1 ring-brand/30' : 'hover:bg-card'}
+      ${focused ? 'bg-surface-3 ring-1 ring-brand/30' : 'hover:bg-card active:bg-card-strong'}
       ${className}`,
   }
 
@@ -447,7 +447,7 @@ export function BoardDetail() {
               </div>
               <button
                 onClick={() => setShowResultModal(true)}
-                className="text-xs font-medium text-text-primary bg-brand hover:bg-accent px-3 py-2 rounded-lg transition-colors"
+                className="text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-3 py-2 rounded-lg transition-colors"
               >결과 입력</button>
             </div>
           )}
@@ -480,8 +480,8 @@ export function BoardDetail() {
       <Modal open={showTagEditor} onClose={() => setShowTagEditor(false)} title="직군 태그 편집">
         <TagSelector selected={editTags} onChange={setEditTags} />
         <div className="flex gap-2 mt-5">
-          <button onClick={() => setShowTagEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
-          <button onClick={handleSaveTags} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors">저장</button>
+          <button onClick={() => setShowTagEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
+          <button onClick={handleSaveTags} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors">저장</button>
         </div>
       </Modal>
 
@@ -514,8 +514,8 @@ export function BoardDetail() {
           + 스텝 추가
         </button>
         <div className="flex gap-2">
-          <button onClick={() => setShowStepEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
-          <button data-tour="save-steps-btn" onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40">
+          <button onClick={() => setShowStepEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
+          <button data-tour="save-steps-btn" onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40">
             {isSavingSteps ? '저장 중...' : '저장'}
           </button>
         </div>
@@ -552,7 +552,7 @@ export function BoardDetail() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowPassConfirm(false)}
-                className="flex-1 py-3 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors"
+                className="flex-1 py-3 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors"
               >
                 취소
               </button>

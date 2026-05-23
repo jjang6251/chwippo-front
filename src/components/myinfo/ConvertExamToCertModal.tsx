@@ -54,7 +54,7 @@ export function ConvertExamToCertModal({ exam, onClose }: Props) {
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card transition-colors"
+            className="flex-1 py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card active:bg-card-strong transition-colors"
           >취소</button>
           <button
             onClick={handleSubmit}

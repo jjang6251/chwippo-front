@@ -112,7 +112,7 @@ export function Board() {
                 setAddMenuOpen(!addMenuOpen)
               }
             }}
-            className="flex items-center gap-1.5 bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-3.5 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
+            className="flex items-center gap-1.5 bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-xs font-semibold px-3.5 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -124,7 +124,7 @@ export function Board() {
             <div className="absolute right-0 top-10 z-20 bg-surface border border-line rounded-xl shadow-2xl py-1.5 w-44 animate-fadeInUp">
               <button
                 onClick={() => { setAddModalStatus('PLANNED'); setAddMenuOpen(false) }}
-                className="w-full text-left px-4 py-2.5 text-xs text-text-secondary hover:bg-card transition-colors"
+                className="w-full text-left px-4 py-2.5 text-xs text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 <span className="block font-medium text-text-primary">지원 예정 추가</span>
                 <span className="text-text-quaternary">회사명만 입력</span>
@@ -132,7 +132,7 @@ export function Board() {
               <div className="my-1 border-t border-line" />
               <button
                 onClick={() => { setAddModalStatus('IN_PROGRESS'); setAddMenuOpen(false) }}
-                className="w-full text-left px-4 py-2.5 text-xs text-text-secondary hover:bg-card transition-colors"
+                className="w-full text-left px-4 py-2.5 text-xs text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 <span className="block font-medium text-text-primary">지원 중으로 추가</span>
                 <span className="text-text-quaternary">스텝 자동 생성</span>
@@ -283,7 +283,7 @@ function EmptyState({ filter, search, onAdd }: { filter: FilterTab; search: stri
       {filter === 'all' && (
         <button
           onClick={onAdd}
-          className="bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
+          className="bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-brand/20"
         >
           + 첫 회사 추가하기
         </button>

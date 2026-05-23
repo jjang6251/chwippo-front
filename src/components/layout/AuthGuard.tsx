@@ -46,7 +46,7 @@ export function AuthGuard() {
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-brand hover:bg-accent text-text-primary text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+            className="bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
           >
             다시 시도
           </button>

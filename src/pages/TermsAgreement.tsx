@@ -68,7 +68,7 @@ export function TermsAgreement() {
             onClick={handleAllToggle}
             role="checkbox"
             aria-checked={allAgreed}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-card transition-colors text-left"
+            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors text-left"
           >
             <CheckCircle checked={allAgreed} />
             <span className={`text-sm font-semibold ${allAgreed ? 'text-text-primary' : 'text-text-secondary'}`}>
@@ -177,7 +177,7 @@ export function TermsAgreement() {
           disabled={!allAgreed || submitting}
           className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all
             ${allAgreed && !submitting
-              ? 'bg-brand hover:bg-accent text-text-primary shadow-[0_0_20px_rgba(107,156,127,0.3)]'
+              ? 'bg-brand hover:bg-accent active:bg-accent-hover text-text-primary shadow-[0_0_20px_rgba(107,156,127,0.3)]'
               : 'bg-card text-text-quaternary cursor-not-allowed'
             }
           `}
@@ -197,7 +197,7 @@ export function TermsAgreement() {
               clearAuth()
               navigate('/', { replace: true })
             }}
-            className="text-text-tertiary text-xs px-3 py-1.5 rounded-lg border border-line hover:bg-card hover:text-text-secondary hover:border-line-strong transition-colors shrink-0"
+            className="text-text-tertiary text-xs px-3 py-1.5 rounded-lg border border-line hover:bg-card active:bg-card-strong hover:text-text-secondary hover:border-line-strong transition-colors shrink-0"
           >
             동의하지 않고 나가기
           </button>

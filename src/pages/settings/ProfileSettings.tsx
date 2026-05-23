@@ -80,13 +80,13 @@ export function ProfileSettings() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleLogout}
-                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent active:bg-accent-hover transition-colors"
               >
                 로그아웃
               </button>
@@ -107,7 +107,7 @@ export function ProfileSettings() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 취소
               </button>

@@ -186,7 +186,7 @@ export function CoverLetterCard({ cl, applicationId, onUpdate, onRequestRemove }
         <button
           onClick={() => setEditing(false)}
           disabled={!question.trim()}
-          className="text-[11px] font-medium text-text-primary bg-brand hover:bg-accent px-3 py-1.5 rounded-md transition-colors disabled:opacity-40"
+          className="text-[11px] font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-3 py-1.5 rounded-md transition-colors disabled:opacity-40"
         >
           완료
         </button>

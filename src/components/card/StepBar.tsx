@@ -143,7 +143,7 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                 ${isDone ? 'text-text-quaternary' : ''}
                 ${!isDone && !isCurrent ? 'text-text-faint' : ''}
                 ${onStepNameClick
-                  ? 'cursor-pointer hover:bg-card-strong hover:text-text-primary'
+                  ? 'cursor-pointer hover:bg-card-strong active:bg-surface-3 hover:text-text-primary'
                   : 'cursor-default'
                 }
               `}

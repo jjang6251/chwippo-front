@@ -155,7 +155,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               aria-label="더보기 메뉴"
               aria-haspopup="true"
               aria-expanded={menuOpen}
-              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <circle cx="8" cy="3" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="8" cy="13" r="1.5" />
@@ -165,7 +165,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               <div className="absolute right-0 top-8 z-20 bg-surface border border-line rounded-xl shadow-2xl py-1.5 w-36 animate-fadeInUp">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/board/${application.id}`); setMenuOpen(false) }}
-                  className="w-full text-left px-3.5 py-2 text-xs text-text-secondary hover:bg-card transition-colors"
+                  className="w-full text-left px-3.5 py-2 text-xs text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
                 >상세 보기</button>
                 {application.status === 'IN_PROGRESS' && (
                   <button
@@ -267,7 +267,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               <span className="text-text-secondary font-medium">{application.companyName}</span> 카드가 불합격으로 전환됩니다.
             </p>
             <div className="flex gap-2">
-              <button onClick={() => setShowFailConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
+              <button onClick={() => setShowFailConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
               <button
                 onClick={() => {
                   updateApp(
@@ -306,7 +306,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               <span className="text-text-secondary font-medium">{application.companyName}</span> 카드와 모든 정보가 삭제됩니다.
             </p>
             <div className="flex gap-2">
-              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
               <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-danger/80 hover:bg-danger rounded-lg transition-colors disabled:opacity-50">
                 {isDeleting ? '삭제 중...' : '삭제'}
               </button>
@@ -334,7 +334,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               <span className="text-text-secondary font-medium">{[...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)[pendingStepIndex]?.name}</span> 완료 시 이 카드가 최종 합격으로 전환됩니다.
             </p>
             <div className="flex gap-2">
-              <button onClick={() => setShowPassConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
+              <button onClick={() => setShowPassConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
               <button
                 onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }, { onSuccess: () => celebrate(application.companyName) }); setShowPassConfirm(false) }}
                 className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"

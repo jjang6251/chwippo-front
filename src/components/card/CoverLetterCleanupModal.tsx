@@ -44,7 +44,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: Cover
         <div className="text-center py-6">
           <div className="text-2xl mb-2">✨</div>
           <p className="text-text-secondary text-sm">정리할 내용이 없어요. 깔끔합니다!</p>
-          <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">
+          <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">
             닫기
           </button>
         </div>
@@ -83,13 +83,13 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: Cover
           )}
 
           <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">
+            <button onClick={onClose} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">
               취소
             </button>
             {!onlyOverLimit && (
               <button
                 onClick={() => { onApply(cleaned); onClose() }}
-                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors"
               >
                 정리된 내용으로 바꾸기
               </button>

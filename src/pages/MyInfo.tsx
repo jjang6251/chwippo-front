@@ -129,8 +129,8 @@ function Modal({ title, onClose, onSave, children, saving }: { title: string; on
         <h3 className="text-sm font-semibold text-text-primary px-6 pt-6 pb-3 shrink-0">{title}</h3>
         <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-3">{children}</div>
         <div className="flex gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-line shrink-0">
-          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 text-xs text-text-secondary border border-line rounded-lg hover:bg-card transition-colors disabled:opacity-50">취소</button>
-          <button onClick={onSave} disabled={saving} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent text-text-primary rounded-lg transition-colors disabled:opacity-50">{saving ? '저장 중...' : '저장'}</button>
+          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 text-xs text-text-secondary border border-line rounded-lg hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50">취소</button>
+          <button onClick={onSave} disabled={saving} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent active:bg-accent-hover text-text-primary rounded-lg transition-colors disabled:opacity-50">{saving ? '저장 중...' : '저장'}</button>
         </div>
       </div>
     </div>
@@ -146,7 +146,7 @@ function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: str
           <p className="text-xs text-text-quaternary">{label}을(를) 삭제하면 복구할 수 없어요.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 text-xs border border-line text-text-secondary rounded-lg hover:bg-card transition-colors">취소</button>
+          <button onClick={onClose} className="flex-1 py-2.5 text-xs border border-line text-text-secondary rounded-lg hover:bg-card active:bg-card-strong transition-colors">취소</button>
           <button onClick={onConfirm} className="flex-1 py-2.5 text-xs font-semibold bg-danger/90 hover:bg-danger text-text-primary rounded-lg transition-colors">삭제</button>
         </div>
       </div>
@@ -201,7 +201,7 @@ function ExpandableItem({ title, subtitle, badge, onEdit, onDelete, children }: 
         <div className="px-4 pb-4 border-t border-line">
           <div className="pt-4 space-y-3">{children}</div>
           <div className="flex gap-2 mt-4 pt-3 border-t border-line">
-            <button onClick={onEdit} className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-card-strong border border-line transition-colors">
+            <button onClick={onEdit} className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-card-strong active:bg-surface-3 border border-line transition-colors">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
               편집
             </button>
@@ -346,7 +346,7 @@ export function MyInfo() {
                 className={`flex-none flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all duration-150 border
                   ${isActive
                     ? 'bg-brand/15 text-brand border-brand/30'
-                    : 'bg-card text-text-quaternary border-line hover:text-text-secondary hover:bg-card'
+                    : 'bg-card text-text-quaternary border-line hover:text-text-secondary hover:bg-card active:bg-card-strong'
                   }`}
               >
                 <span>{s.icon}</span>
@@ -387,7 +387,7 @@ export function MyInfo() {
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150
                     ${isActive
                       ? 'bg-card-strong text-text-primary border-l-2 border-brand pl-[10px]'
-                      : 'text-text-quaternary hover:text-text-secondary hover:bg-card border-l-2 border-transparent pl-[10px]'
+                      : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong border-l-2 border-transparent pl-[10px]'
                     }`}
                 >
                   <span className={`w-6 h-6 rounded-md flex items-center justify-center text-sm flex-none transition-colors ${isActive ? ac.icon : 'bg-card opacity-70'}`}>{s.icon}</span>
@@ -721,7 +721,7 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
                 <div className="flex-1" />
                 <button
                   onClick={() => setModal(item)}
-                  className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-card-strong border border-line transition-colors"
+                  className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-card-strong active:bg-surface-3 border border-line transition-colors"
                 >
                   <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
                   편집
@@ -953,7 +953,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-[11px] text-text-quaternary hover:text-text-secondary bg-card hover:bg-card border border-line border-dashed rounded-full px-2.5 py-1 transition-colors"
+        className="inline-flex items-center gap-1 text-[11px] text-text-quaternary hover:text-text-secondary bg-card hover:bg-card active:bg-card-strong border border-line border-dashed rounded-full px-2.5 py-1 transition-colors"
       >
         <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 1.5v6M1.5 4.5h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
         추가
@@ -965,7 +965,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
-        className="text-[11px] bg-card hover:bg-card-strong text-text-secondary px-2 py-1 rounded-md focus:outline-none focus:bg-card-strong transition-colors"
+        className="text-[11px] bg-card hover:bg-card-strong active:bg-surface-3 text-text-secondary px-2 py-1 rounded-md focus:outline-none focus:bg-card-strong transition-colors"
       >
         {MINOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
       </select>
@@ -996,7 +996,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
       <button
         onClick={submit}
         aria-label="추가"
-        className="w-7 h-7 flex items-center justify-center rounded-full text-brand hover:bg-brand/15 transition-colors ml-auto"
+        className="w-7 h-7 flex items-center justify-center rounded-full text-brand hover:bg-brand/15 active:bg-brand/25 transition-colors ml-auto"
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
@@ -1453,7 +1453,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               {existingFiles.map((f) => (
                 <div
                   key={`${f.source}-${f.id}`}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card hover:border-line-strong hover:bg-card transition-all group"
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card hover:border-line-strong hover:bg-card active:bg-card-strong transition-all group"
                 >
                   <a
                     href={f.file_url}
@@ -1500,7 +1500,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card hover:border-line-strong hover:bg-card transition-all group"
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card hover:border-line-strong hover:bg-card active:bg-card-strong transition-all group"
               >
                 <a
                   href={doc.file_url}
@@ -1583,14 +1583,14 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                 <button
                   onClick={() => { setShowUpload(false); setTitle(''); setCategory(''); setCustomCategory(''); setSlot(EMPTY_SLOT) }}
                   disabled={saving}
-                  className="flex-1 py-2 text-xs text-text-secondary border border-line rounded-lg hover:bg-card transition-colors disabled:opacity-50"
+                  className="flex-1 py-2 text-xs text-text-secondary border border-line rounded-lg hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={!title.trim() || slot.kind === 'empty' || saving}
-                  className="flex-1 py-2 text-xs font-semibold bg-brand hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed text-text-primary rounded-lg transition-colors"
+                  className="flex-1 py-2 text-xs font-semibold bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary rounded-lg transition-colors"
                 >
                   {saving ? '저장 중...' : '저장'}
                 </button>
