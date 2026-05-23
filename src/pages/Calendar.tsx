@@ -261,14 +261,14 @@ export function Calendar() {
                 <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setPickerYear((y) => y - 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4" /></svg>
                   </button>
                   <span className="text-text-primary text-sm font-semibold">{pickerYear}년</span>
                   <button
                     onClick={() => setPickerYear((y) => y + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4" /></svg>
                   </button>
@@ -284,7 +284,7 @@ export function Calendar() {
                         className={`py-1.5 rounded-lg text-xs font-medium transition-colors
                           ${isSelected ? 'bg-brand text-text-primary' : ''}
                           ${!isSelected && isCurrentMonth ? 'text-brand border border-brand/30' : ''}
-                          ${!isSelected && !isCurrentMonth ? 'text-text-secondary hover:bg-card' : ''}
+                          ${!isSelected && !isCurrentMonth ? 'text-text-secondary hover:bg-card active:bg-card-strong' : ''}
                         `}
                       >
                         {i + 1}월
@@ -339,14 +339,14 @@ export function Calendar() {
             <button
               onClick={view === 'month' ? prevMonth : prevWeek}
               aria-label={view === 'month' ? '이전 달' : '이전 주'}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors"
             >
               <ChevronLeft />
             </button>
             <button
               onClick={view === 'month' ? nextMonth : nextWeek}
               aria-label={view === 'month' ? '다음 달' : '다음 주'}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card hover:text-text-primary transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors"
             >
               <ChevronRight />
             </button>
@@ -428,7 +428,7 @@ export function Calendar() {
                         className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-b border-r border-line transition-colors text-left w-full
                           ${isLastRow ? 'border-b-0' : ''}
                           ${(i + 1) % 7 === 0 ? 'border-r-0' : ''}
-                          ${isSelected ? 'bg-brand/8' : 'hover:bg-card'}
+                          ${isSelected ? 'bg-brand/8' : 'hover:bg-card active:bg-card-strong'}
                           ${isPast ? 'opacity-50' : ''}
                         `}
                       >
@@ -527,7 +527,7 @@ export function Calendar() {
               {selectedDateEvents.length === 0 ? (
                 <button
                   onClick={() => setBottomSheetOpen(true)}
-                  className="w-full text-text-quaternary text-sm py-5 text-center bg-surface-2 border border-line rounded-xl hover:bg-card transition-colors"
+                  className="w-full text-text-quaternary text-sm py-5 text-center bg-surface-2 border border-line rounded-xl hover:bg-card active:bg-card-strong transition-colors"
                 >
                   이 날 일정이 없어요 · 탭해서 메모 추가
                 </button>
@@ -632,7 +632,7 @@ function EventCard({ event }: { event: CalendarEvent }) {
   )
   if (to) {
     return (
-      <Link to={to} className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-card transition-colors group ${c.border}`}>
+      <Link to={to} className={`flex items-center gap-3 bg-surface-2 border rounded-xl px-4 py-3 hover:bg-card active:bg-card-strong transition-colors group ${c.border}`}>
         {inner}
       </Link>
     )

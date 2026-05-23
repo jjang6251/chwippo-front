@@ -24,7 +24,7 @@ export function AnnouncementBanner({ title, body, onExpand, onDismiss }: Props) 
         type="button"
         onClick={onDismiss}
         aria-label="공지 닫기"
-        className="flex-none w-8 h-8 flex items-center justify-center rounded-lg text-text-primary/60 hover:text-text-primary hover:bg-card-strong transition-colors text-lg leading-none mt-px"
+        className="flex-none w-8 h-8 flex items-center justify-center rounded-lg text-text-primary/60 hover:text-text-primary hover:bg-card-strong active:bg-surface-3 transition-colors text-lg leading-none mt-px"
       >
         ×
       </button>

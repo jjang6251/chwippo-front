@@ -41,7 +41,7 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
           <h3 className="text-text-primary text-sm font-semibold">섹션 관리</h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-card transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-card active:bg-card-strong transition-colors"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -65,8 +65,8 @@ export function AddSectionSheet({ activeSectionIds, onToggle, onClose }: AddSect
                     ${disabled
                       ? 'border-line opacity-50 cursor-not-allowed'
                       : isActive
-                        ? 'border-brand/40 bg-brand/8 hover:bg-brand/12 cursor-pointer'
-                        : 'border-line hover:bg-card cursor-pointer'
+                        ? 'border-brand/40 bg-brand/8 hover:bg-brand/12 active:bg-brand/20 cursor-pointer'
+                        : 'border-line hover:bg-card active:bg-card-strong cursor-pointer'
                     }`}
                 >
                   <span className="text-xl flex-none">{s.icon}</span>

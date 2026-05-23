@@ -70,7 +70,7 @@ export function CoverLetterQuickSection() {
                   onClick={() => setOpenKey(isOpen ? null : f.key)}
                   disabled={!hasContent}
                   className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors
-                    ${hasContent ? 'hover:bg-card cursor-pointer' : 'cursor-default opacity-50'}
+                    ${hasContent ? 'hover:bg-card active:bg-card-strong cursor-pointer' : 'cursor-default opacity-50'}
                   `}
                 >
                   <span className={`text-xs font-medium ${hasContent ? 'text-text-secondary' : 'text-text-quaternary'}`}>

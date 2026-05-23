@@ -102,7 +102,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="닫기"
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card hover:text-text-primary transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M3 3l10 10M13 3L3 13" />

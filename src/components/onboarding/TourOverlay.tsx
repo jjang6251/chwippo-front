@@ -187,13 +187,13 @@ export function TourOverlay() {
           <div className="flex gap-2.5">
             <button
               onClick={() => setShowStop(false)}
-              className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
+              className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
             >
               계속하기
             </button>
             <button
               onClick={complete}
-              className="flex-1 py-2.5 rounded-lg bg-card-strong text-sm font-medium text-text-secondary hover:bg-card-strong transition-colors"
+              className="flex-1 py-2.5 rounded-lg bg-card-strong text-sm font-medium text-text-secondary hover:bg-card-strong active:bg-surface-3 transition-colors"
             >
               투어 중단
             </button>
@@ -405,7 +405,7 @@ function TourTooltip({ rect, placement, title, desc, step, total, canGoBack, isC
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
             aria-label="투어 닫기"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -436,7 +436,7 @@ function TourTooltip({ rect, placement, title, desc, step, total, canGoBack, isC
           ) : (
             <button
               onClick={onNext}
-              className="flex items-center gap-1.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-3 py-1.5 rounded-lg transition-colors"
             >
               {step === total - 1 ? '마무리' : '다음'} →
             </button>
@@ -553,7 +553,7 @@ function WelcomeModal({ onNext, onClose }: { onNext: () => void; onClose: () => 
           <span className="text-[10px] font-semibold text-text-quaternary tracking-[0.14em] uppercase">치뽀</span>
           <button
             onClick={onClose}
-            className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
+            className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
             aria-label="닫기"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -584,7 +584,7 @@ function WelcomeModal({ onNext, onClose }: { onNext: () => void; onClose: () => 
         <div className="px-6 pb-8 md:pb-6 mt-2">
           <button
             onClick={onNext}
-            className="w-full py-3 rounded-xl bg-brand hover:bg-accent text-text-primary text-sm font-semibold transition-colors"
+            className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-sm font-semibold transition-colors"
           >
             직접 둘러보기 →
           </button>
@@ -623,7 +623,7 @@ function WrapUpModal({
         >
         <div className="relative flex items-center justify-center px-6 pt-6">
           <span className="text-[10px] font-semibold text-text-quaternary tracking-[0.14em] uppercase">치뽀</span>
-          <button onClick={onClose} className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors" aria-label="닫기">
+          <button onClick={onClose} className="absolute right-5 w-9 h-9 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors" aria-label="닫기">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
@@ -654,7 +654,7 @@ function WrapUpModal({
         <div className="px-6 pb-8 md:pb-6 mt-2 flex flex-col gap-2.5">
           <button
             onClick={onMyinfo}
-            className="w-full py-3 rounded-xl bg-brand hover:bg-accent text-text-primary text-sm font-semibold transition-colors"
+            className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-sm font-semibold transition-colors"
           >
             내 정보 채우러 가기
           </button>

@@ -141,7 +141,7 @@ export function FileUpload({ slot, scope: _scope, onChange, hint, disabled }: Fi
               <div className="flex gap-2">
                 <button
                   onClick={() => setConfirmingExistingRemove(false)}
-                  className="flex-1 py-2 text-xs text-text-secondary border border-line rounded-lg hover:bg-card transition-colors"
+                  className="flex-1 py-2 text-xs text-text-secondary border border-line rounded-lg hover:bg-card active:bg-card-strong transition-colors"
                 >
                   취소
                 </button>

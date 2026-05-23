@@ -88,7 +88,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
             <button
               onClick={() => navigate(`/board/${appId}/steps/${step.id}`)}
               title="전체 화면으로 열기"
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card hover:text-text-primary transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 2h4v4M14 2l-5 5M6 14H2v-4M2 14l5-5" />
@@ -96,7 +96,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
             </button>
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card hover:text-text-primary transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-quaternary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M3 3l10 10M13 3L3 13" />
@@ -139,7 +139,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
           {(step.notes || step.pinnedContent) && (
             <button
               onClick={() => navigate(`/board/${appId}/steps/${step.id}`)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-brand/8 border border-brand/20 hover:bg-brand/12 transition-colors text-left"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-brand/8 border border-brand/20 hover:bg-brand/12 active:bg-brand/20 transition-colors text-left"
             >
               <span className="text-brand text-xs">📝</span>
               <span className="text-brand text-xs flex-1">메모 있음 · 전체에서 편집</span>

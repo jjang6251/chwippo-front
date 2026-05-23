@@ -158,13 +158,13 @@ export function CoverLetterImportModal({
                     <button
                       onClick={() => apply('append')}
                       disabled={!currentAnswer.trim()}
-                      className="flex-1 py-1.5 text-[11px] font-medium text-text-secondary bg-card hover:bg-card-strong rounded-md transition-colors disabled:opacity-30 disabled:hover:bg-card"
+                      className="flex-1 py-1.5 text-[11px] font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-md transition-colors disabled:opacity-30 disabled:hover:bg-card active:bg-card-strong active:bg-card-strong"
                     >
                       답변 끝에 추가
                     </button>
                     <button
                       onClick={() => apply('overwrite')}
-                      className="flex-1 py-1.5 text-[11px] font-medium text-text-primary bg-brand hover:bg-accent rounded-md transition-colors"
+                      className="flex-1 py-1.5 text-[11px] font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-md transition-colors"
                     >
                       덮어쓰기
                     </button>

@@ -195,7 +195,7 @@ export function StepPage() {
           onClick={() => prevStep && navigate(`/board/${appId}/steps/${prevStep.id}`)}
           disabled={!prevStep}
           aria-label={prevStep ? `이전 단계: ${prevStep.name}` : '처음 단계'}
-          className="flex-1 flex items-center gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card transition-colors disabled:cursor-default"
+          className="flex-1 flex items-center gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card active:bg-card-strong transition-colors disabled:cursor-default"
         >
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
             <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -207,7 +207,7 @@ export function StepPage() {
           onClick={() => nextStep && navigate(`/board/${appId}/steps/${nextStep.id}`)}
           disabled={!nextStep}
           aria-label={nextStep ? `다음 단계: ${nextStep.name}` : '마지막 단계'}
-          className="flex-1 flex items-center justify-end gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card transition-colors disabled:cursor-default"
+          className="flex-1 flex items-center justify-end gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card active:bg-card-strong transition-colors disabled:cursor-default"
         >
           <span className="text-xs text-text-quaternary truncate">{nextStep ? nextStep.name : '마지막 단계'}</span>
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
@@ -242,7 +242,7 @@ export function StepPage() {
           ) : (
             <button
               onClick={() => { setEditingField('date'); setTimeout(() => dateInputRef.current?.focus(), 0) }}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card active:bg-card-strong transition-colors text-left"
             >
               <span className="text-sm shrink-0">📅</span>
               <span className="text-xs text-text-quaternary w-10 shrink-0">날짜</span>
@@ -286,7 +286,7 @@ export function StepPage() {
           ) : (
             <button
               onClick={() => { setEditingField('location'); setTimeout(() => locationInputRef.current?.focus(), 0) }}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card active:bg-card-strong transition-colors text-left"
             >
               <span className="text-sm shrink-0">📍</span>
               <span className="text-xs text-text-quaternary w-10 shrink-0">장소</span>
@@ -326,7 +326,7 @@ export function StepPage() {
 
         <div className="space-y-1 mb-6">
           {checklist.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 group py-1 px-1 rounded-lg hover:bg-card transition-colors">
+            <div key={item.id} className="flex items-center gap-3 group py-1 px-1 rounded-lg hover:bg-card active:bg-card-strong transition-colors">
               <button
                 onClick={() => updateItem({ itemId: item.id, isDone: !item.isDone })}
                 className={`relative w-[17px] h-[17px] rounded border shrink-0 flex items-center justify-center transition-colors after:content-[''] after:absolute after:inset-[-8px] ${
@@ -408,7 +408,7 @@ export function StepPage() {
           <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-4 pt-8 bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-auto">
             <button
               onClick={handleCompleteStep}
-              className="w-full bg-brand hover:bg-accent text-text-primary font-semibold text-sm py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-brand hover:bg-accent active:bg-accent-hover text-text-primary font-semibold text-sm py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               {isLastStep ? '🎉 최종 합격 처리하기' : '이 단계 완료하기'}
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -428,7 +428,7 @@ export function StepPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowPassedModal(false)}
-            className="flex-1 py-2.5 rounded-lg border border-line text-text-secondary text-sm hover:bg-card transition-colors"
+            className="flex-1 py-2.5 rounded-lg border border-line text-text-secondary text-sm hover:bg-card active:bg-card-strong transition-colors"
           >
             취소
           </button>

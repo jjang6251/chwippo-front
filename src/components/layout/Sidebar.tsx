@@ -56,7 +56,7 @@ export function Sidebar() {
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive(path)
                   ? 'bg-brand/10 text-brand'
-                  : 'text-text-secondary hover:bg-card hover:text-text-primary'
+                  : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
               }`}
             >
               <Icon size={16} />
@@ -72,7 +72,7 @@ export function Sidebar() {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   location.pathname.startsWith('/ops')
                     ? 'bg-warning/10 text-warning'
-                    : 'text-text-secondary hover:bg-card hover:text-text-primary'
+                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
                 }`}
               >
                 <AdminIcon size={16} />
@@ -84,7 +84,7 @@ export function Sidebar() {
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       location.pathname === '/ops/inquiries'
                         ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
                     }`}
                   >
                     문의 관리
@@ -94,7 +94,7 @@ export function Sidebar() {
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       location.pathname === '/ops/announcements'
                         ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
                     }`}
                   >
                     공지 관리
@@ -116,7 +116,7 @@ export function Sidebar() {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isSettingsActive
                     ? 'bg-brand/10 text-brand'
-                    : 'text-text-secondary hover:bg-card hover:text-text-primary'
+                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
                 }`}
               >
                 <SettingsIcon size={16} />
@@ -129,7 +129,7 @@ export function Sidebar() {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   location.pathname === '/settings/help'
                     ? 'bg-brand/10 text-brand'
-                    : 'text-text-secondary hover:bg-card hover:text-text-primary'
+                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
                 }`}
               >
                 <HelpIcon size={16} />
@@ -139,7 +139,7 @@ export function Sidebar() {
               {/* 로그아웃 */}
               <button
                 onClick={() => setShowLogoutModal(true)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-card hover:text-text-primary transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors text-left"
               >
                 <LogoutIcon size={16} />
                 로그아웃
@@ -153,7 +153,7 @@ export function Sidebar() {
           {isDemo ? (
             <button
               onClick={showLogin}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold bg-brand text-text-primary hover:bg-accent transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold bg-brand text-text-primary hover:bg-accent active:bg-accent-hover transition-colors"
             >
               가입하고 시작하기 →
             </button>
@@ -182,13 +182,13 @@ export function Sidebar() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleLogout}
-                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent active:bg-accent-hover transition-colors"
               >
                 로그아웃
               </button>

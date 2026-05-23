@@ -71,7 +71,7 @@ export function CelebrationOverlay() {
         <button
           autoFocus
           onClick={dismiss}
-          className="text-xs font-medium text-text-primary bg-brand hover:bg-accent px-5 py-2.5 rounded-lg transition-colors"
+          className="text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-5 py-2.5 rounded-lg transition-colors"
         >
           고마워요
         </button>
