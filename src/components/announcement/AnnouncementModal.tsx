@@ -45,7 +45,7 @@ export function AnnouncementModal({ title, body, onDismiss }: Props) {
             type="button"
             onClick={onDismiss}
             autoFocus
-            className="w-full py-2.5 rounded-xl bg-brand text-text-primary text-sm font-semibold hover:bg-accent transition-colors"
+            className="w-full py-2.5 rounded-xl bg-brand text-text-primary text-sm font-semibold hover:bg-accent active:bg-accent-hover transition-colors"
           >
             확인했어요
           </button>

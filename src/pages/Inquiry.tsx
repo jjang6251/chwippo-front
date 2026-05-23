@@ -41,7 +41,7 @@ export function Inquiry() {
         </p>
         <button
           onClick={() => { setDone(false); setCategory(''); setTitle(''); setContent('') }}
-          className="mt-4 px-4 py-2 bg-brand/10 text-brand border border-brand/20 rounded-lg text-sm font-medium hover:bg-brand/20 transition-colors"
+          className="mt-4 px-4 py-2 bg-brand/10 text-brand border border-brand/20 rounded-lg text-sm font-medium hover:bg-brand/20 active:bg-brand/30 transition-colors"
         >
           새 문의 작성
         </button>
@@ -109,7 +109,7 @@ export function Inquiry() {
         <button
           onClick={() => mutation.mutate()}
           disabled={!valid || mutation.isPending}
-          className="w-full py-3 bg-brand text-text-primary font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent transition-colors"
+          className="w-full py-3 bg-brand text-text-primary font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent active:bg-accent-hover transition-colors"
         >
           {mutation.isPending ? '제출 중...' : '문의 제출'}
         </button>

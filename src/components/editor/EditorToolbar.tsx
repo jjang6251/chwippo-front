@@ -65,7 +65,7 @@ export function EditorToolbar({ editor }: Props) {
           className={`min-w-[28px] h-7 px-1.5 rounded text-xs font-medium transition-colors ${
             t.active()
               ? 'bg-brand/20 text-brand'
-              : 'text-text-quaternary hover:bg-card hover:text-text-secondary'
+              : 'text-text-quaternary hover:bg-card active:bg-card-strong hover:text-text-secondary'
           }`}
         >
           {t.label}

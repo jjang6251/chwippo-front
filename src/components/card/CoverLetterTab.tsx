@@ -60,7 +60,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
           <button
             onClick={() => handleAdd()}
             disabled={creating}
-            className="px-4 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
+            className="px-4 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40"
           >
             + 첫 문항 추가하기
           </button>
@@ -112,7 +112,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
           이 문항과 작성한 답변이 삭제됩니다. 되돌릴 수 없어요.
         </p>
         <div className="flex gap-2">
-          <button onClick={() => setPendingDelete(null)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors">취소</button>
+          <button onClick={() => setPendingDelete(null)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
           <button onClick={confirmDelete} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-danger/80 hover:bg-danger rounded-lg transition-colors">삭제</button>
         </div>
       </Modal>

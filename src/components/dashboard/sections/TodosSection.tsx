@@ -172,7 +172,7 @@ interface NoteItemProps {
 
 function NoteItem({ note, timeLabel, onToggle, onDelete, onCarryOver, carryOverButton, dimmed }: NoteItemProps) {
   return (
-    <div className={`group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-card transition-colors ${dimmed ? 'opacity-60' : ''}`}>
+    <div className={`group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-card active:bg-card-strong transition-colors ${dimmed ? 'opacity-60' : ''}`}>
       <button
         aria-label={note.isDone ? '완료 취소' : '완료 표시'}
         onClick={onToggle}

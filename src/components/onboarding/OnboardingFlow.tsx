@@ -112,7 +112,7 @@ export function OnboardingFlow() {
             </span>
             <button
               onClick={handleClose}
-              className="absolute right-5 w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors"
+              className="absolute right-5 w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               aria-label="닫기"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -181,7 +181,7 @@ export function OnboardingFlow() {
             {step === 1 && (
               <button
                 onClick={() => setStep(2)}
-                className="w-full py-3 rounded-xl bg-brand hover:bg-accent text-text-primary text-sm font-semibold transition-colors"
+                className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-sm font-semibold transition-colors"
               >
                 시작하기
               </button>
@@ -190,7 +190,7 @@ export function OnboardingFlow() {
               <>
                 <button
                   onClick={() => setAddCardOpen(true)}
-                  className="w-full py-3 rounded-xl bg-brand hover:bg-accent text-text-primary text-sm font-semibold transition-colors"
+                  className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-sm font-semibold transition-colors"
                 >
                   지금 추가하기
                 </button>
@@ -206,7 +206,7 @@ export function OnboardingFlow() {
               <>
                 <button
                   onClick={handleMyinfo}
-                  className="w-full py-3 rounded-xl bg-brand hover:bg-accent text-text-primary text-sm font-semibold transition-colors"
+                  className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-sm font-semibold transition-colors"
                 >
                   내 정보 채우러 가기
                 </button>

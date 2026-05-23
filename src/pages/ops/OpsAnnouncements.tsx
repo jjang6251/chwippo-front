@@ -62,7 +62,7 @@ export function OpsAnnouncements() {
         <button
           type="button"
           onClick={openCreate}
-          className="px-3 py-1.5 bg-brand text-text-primary text-xs font-medium rounded-lg hover:bg-accent transition-colors"
+          className="px-3 py-1.5 bg-brand text-text-primary text-xs font-medium rounded-lg hover:bg-accent active:bg-accent-hover transition-colors"
         >
           + 새 공지
         </button>
@@ -116,7 +116,7 @@ export function OpsAnnouncements() {
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 취소
               </button>
@@ -197,7 +197,7 @@ function AnnouncementRow({
             className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
               item.active
                 ? 'text-success hover:bg-success/10'
-                : 'text-text-quaternary hover:bg-card'
+                : 'text-text-quaternary hover:bg-card active:bg-card-strong'
             }`}
           >
             {item.active ? '●' : '○'}
@@ -205,7 +205,7 @@ function AnnouncementRow({
           <button
             type="button"
             onClick={onEdit}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-secondary hover:bg-card transition-colors text-xs"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors text-xs"
           >
             ✎
           </button>
@@ -286,7 +286,7 @@ function AnnouncementFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-primary hover:bg-card transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-primary hover:bg-card active:bg-card-strong transition-colors"
           >
             ×
           </button>
@@ -392,7 +392,7 @@ function AnnouncementFormModal({
             type="button"
             onClick={() => mutation.mutate()}
             disabled={!isValid || mutation.isPending}
-            className="w-full py-2.5 bg-brand text-text-primary text-sm font-medium rounded-lg hover:bg-accent transition-colors disabled:opacity-40"
+            className="w-full py-2.5 bg-brand text-text-primary text-sm font-medium rounded-lg hover:bg-accent active:bg-accent-hover transition-colors disabled:opacity-40"
           >
             {mutation.isPending ? '저장 중...' : initial ? '수정 저장' : '등록'}
           </button>

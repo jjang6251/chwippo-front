@@ -21,13 +21,13 @@ export function DemoSignupModal() {
       </p>
       <button
         onClick={goLogin}
-        className="block w-full text-center py-3 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors mb-2"
+        className="block w-full text-center py-3 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors mb-2"
       >
         카카오로 시작하기
       </button>
       <button
         onClick={hide}
-        className="block w-full text-center py-3 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors"
+        className="block w-full text-center py-3 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors"
       >
         더 둘러보기
       </button>

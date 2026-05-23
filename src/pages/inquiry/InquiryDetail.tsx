@@ -96,7 +96,7 @@ export function InquiryDetail() {
             <button
               onClick={() => mutation.mutate()}
               disabled={!comment.trim() || mutation.isPending}
-              className="px-4 py-2 bg-brand text-text-primary text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-accent transition-colors"
+              className="px-4 py-2 bg-brand text-text-primary text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-accent active:bg-accent-hover transition-colors"
             >
               {mutation.isPending ? '전송 중...' : '전송'}
             </button>

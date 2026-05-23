@@ -41,7 +41,7 @@ export function Settings() {
           <Link
             key={path}
             to={path}
-            className="flex items-center gap-4 px-5 py-4 hover:bg-card transition-colors"
+            className="flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
           >
             <span className="text-xl w-7 text-center">{icon}</span>
             <div className="flex-1 min-w-0">
@@ -85,7 +85,7 @@ export function Settings() {
       <div className="bg-surface-2 border border-line rounded-xl mb-4">
         <button
           onClick={startTour}
-          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card transition-colors"
+          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
         >
           <span className="text-xl w-7 text-center">🚀</span>
           <div className="flex-1 min-w-0">
@@ -99,7 +99,7 @@ export function Settings() {
       <div className="bg-surface-2 border border-line rounded-xl">
         <button
           onClick={() => setShowLogoutModal(true)}
-          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card transition-colors"
+          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
         >
           <span className="text-xl w-7 text-center">🚪</span>
           <span className="text-sm font-medium text-text-secondary">로그아웃</span>
@@ -124,13 +124,13 @@ export function Settings() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm font-medium text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleLogout}
-                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent active:bg-accent-hover transition-colors"
               >
                 로그아웃
               </button>

@@ -288,7 +288,7 @@ function UserRow({ user, onSelect }: { user: AdminUser; onSelect: () => void }) 
       aria-label={`${user.nickname} 상세 보기`}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
       className={`border-b border-line[0.06] last:border-0 transition-colors cursor-pointer group focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand/40
-        ${isSuspended ? 'bg-danger/[0.04]' : 'hover:bg-card'}
+        ${isSuspended ? 'bg-danger/[0.04]' : 'hover:bg-card active:bg-card-strong'}
       `}
       onClick={onSelect}
     >
@@ -741,7 +741,7 @@ function UserDetailModal({
             <div className="flex gap-2">
               <button
                 onClick={() => setConfirm(null)}
-                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-line text-sm text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
               >
                 취소
               </button>
@@ -1161,7 +1161,7 @@ function ActionButton({
   variant?: 'default' | 'warning' | 'danger' | 'safe'
 }) {
   const variantClass = {
-    default: 'border-line text-text-secondary hover:border-line-strong hover:text-text-primary hover:bg-card',
+    default: 'border-line text-text-secondary hover:border-line-strong hover:text-text-primary hover:bg-card active:bg-card-strong',
     warning: 'border-warning/20 text-warning/80 hover:border-warning/35 hover:text-warning hover:bg-warning/5',
     danger: 'border-danger/20 text-danger/80 hover:border-danger/35 hover:text-danger hover:bg-danger/5',
     safe: 'border-success/20 text-success/80 hover:border-success/35 hover:text-success hover:bg-success/5',

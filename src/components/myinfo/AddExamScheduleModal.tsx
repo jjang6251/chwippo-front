@@ -77,7 +77,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
       <div role="dialog" aria-modal="true" aria-label={isEdit ? '시험 일정 수정' : '시험 일정 추가'} className="relative z-10 w-full max-w-md bg-surface border border-line rounded-t-xl sm:rounded-xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h3 className="text-text-primary text-sm font-semibold">{isEdit ? '시험 일정 수정' : '시험 일정 추가'}</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-card transition-colors" aria-label="닫기">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-card active:bg-card-strong transition-colors" aria-label="닫기">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
@@ -91,11 +91,11 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
             <div className="flex gap-2">
               <button
                 onClick={() => setExamType('language')}
-                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${examType === 'language' ? 'border-violet/40 bg-violet/10 text-violet' : 'border-line text-text-quaternary hover:bg-card'}`}
+                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${examType === 'language' ? 'border-violet/40 bg-violet/10 text-violet' : 'border-line text-text-quaternary hover:bg-card active:bg-card-strong'}`}
               >어학</button>
               <button
                 onClick={() => setExamType('cert')}
-                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${examType === 'cert' ? 'border-violet/40 bg-violet/10 text-violet' : 'border-line text-text-quaternary hover:bg-card'}`}
+                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${examType === 'cert' ? 'border-violet/40 bg-violet/10 text-violet' : 'border-line text-text-quaternary hover:bg-card active:bg-card-strong'}`}
               >자격증</button>
             </div>
           </div>
@@ -178,7 +178,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
         <div className="flex gap-2 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-line shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card transition-colors"
+            className="flex-1 py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card active:bg-card-strong transition-colors"
           >취소</button>
           <button
             onClick={handleSubmit}

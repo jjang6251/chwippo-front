@@ -88,7 +88,7 @@ export function Help() {
         </div>
         <Link
           to="/inquiry"
-          className="px-4 py-2 bg-brand/10 text-brand border border-brand/20 rounded-lg text-sm font-medium hover:bg-brand/20 transition-colors flex-shrink-0"
+          className="px-4 py-2 bg-brand/10 text-brand border border-brand/20 rounded-lg text-sm font-medium hover:bg-brand/20 active:bg-brand/30 transition-colors flex-shrink-0"
         >
           문의하기
         </Link>
