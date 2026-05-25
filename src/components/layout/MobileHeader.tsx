@@ -24,6 +24,7 @@ export function MobileHeader() {
   const { pathname } = useLocation()
   const isDemo = useDemoMode()
   const title = getTitle(pathname)
+  const isSettingsActive = pathname.startsWith('/settings')
 
   return (
     <header className="lg:hidden sticky top-0 z-40 bg-surface border-b border-line flex items-center px-4 h-12">
@@ -31,7 +32,29 @@ export function MobileHeader() {
         치뽀{isDemo && <span className="ml-1 text-[9px] font-medium text-text-quaternary align-middle">데모</span>}
       </Link>
       <span className="text-text-faint text-sm mr-3">|</span>
-      <span className="text-text-secondary text-sm font-medium">{title}</span>
+      <span className="text-text-secondary text-sm font-medium flex-1 truncate">{title}</span>
+      {!isDemo && (
+        <Link
+          to="/settings"
+          aria-label="설정"
+          className={`ml-2 shrink-0 w-9 h-9 inline-flex items-center justify-center rounded-md transition-colors ${
+            isSettingsActive
+              ? 'text-brand bg-brand/10'
+              : 'text-text-tertiary hover:text-text-primary hover:bg-card active:bg-card-strong'
+          }`}
+        >
+          <SettingsIcon size={18} />
+        </Link>
+      )}
     </header>
+  )
+}
+
+function SettingsIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="3" />
+      <path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M3.5 3.5l1.5 1.5M15 15l1.5 1.5M3.5 16.5L5 15M15 5l1.5-1.5" />
+    </svg>
   )
 }

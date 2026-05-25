@@ -30,6 +30,9 @@ import { OpsInquiries } from '@/pages/ops/OpsInquiries'
 import { OpsAnnouncements } from '@/pages/ops/OpsAnnouncements'
 import { OpsUsers } from '@/pages/ops/OpsUsers'
 import { TermsAgreement } from '@/pages/TermsAgreement'
+import { ActivityPage } from '@/pages/Activity/ActivityPage'
+import { NotePage } from '@/pages/Activity/NotePage'
+import { AiUsage } from '@/pages/Admin/AiUsage'
 
 export default function App() {
   return (
@@ -68,12 +71,18 @@ export default function App() {
             <Route path="/settings/alarm" element={<AlarmSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/help" element={<Help />} />
+            <Route path="/activity" element={<ActivityPage />} />
+            <Route
+              path="/activity/:activityId/logs/:logId/note"
+              element={<NotePage />}
+            />
           </Route>
           <Route element={<AdminGuard />}>
             <Route path="/ops" element={<OpsPage />} />
             <Route path="/ops/inquiries" element={<OpsInquiries />} />
             <Route path="/ops/announcements" element={<OpsAnnouncements />} />
             <Route path="/ops/users" element={<OpsUsers />} />
+            <Route path="/ops/ai-usage" element={<AiUsage />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />
