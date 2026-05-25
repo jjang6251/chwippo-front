@@ -150,7 +150,7 @@ export function ActivityCard({
                     e.stopPropagation()
                     setAddMenuOpen(false)
                     if (onAddLog) onAddLog(act.id)
-                    else toast.info('Phase B 에서 연결됩니다')
+                    else toast.show('Phase B 에서 연결됩니다')
                   }}
                 >
                   <span className="ic">✶</span>
@@ -186,7 +186,7 @@ export function ActivityCard({
                   type="button"
                   onClick={() => {
                     if (onAddLog) onAddLog(act.id)
-                    else toast.info('Phase B 에서 연결됩니다')
+                    else toast.show('Phase B 에서 연결됩니다')
                   }}
                 >
                   + 첫 기록 남기기
@@ -241,7 +241,7 @@ export function ActivityCard({
               className={`reflection${hasContent ? ' has-content' : ''}`}
               onClick={() => {
                 if (onReflect) onReflect(act.id)
-                else toast.info('Phase B 에서 연결됩니다')
+                else toast.show('Phase B 에서 연결됩니다')
               }}
             >
               <span className="text">
@@ -284,7 +284,7 @@ export function ActivityCard({
                   e.stopPropagation()
                   setMoreMenuOpen(false)
                   if (onEdit) onEdit(act.id)
-                  else toast.info('Phase B 에서 연결됩니다')
+                  else toast.show('Phase B 에서 연결됩니다')
                 }}
               >
                 <span className="ic">✎</span> 편집

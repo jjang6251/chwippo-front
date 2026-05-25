@@ -442,7 +442,7 @@ export function ActivityPage() {
             </h1>
             <a
               className="head-link"
-              onClick={() => toast.info('Phase D 에서 구현 예정')}
+              onClick={() => toast.show('Phase D 에서 구현 예정')}
             >
               📊 내 데이터 →
             </a>

@@ -253,7 +253,7 @@ export function LogDetailModal({
         toast.success('기록이 저장되었어요')
       } else {
         await create.mutateAsync(
-          dto as Parameters<typeof create.mutateAsync>[0],
+          dto as unknown as Parameters<typeof create.mutateAsync>[0],
         )
         toast.success('기록이 추가되었어요')
       }

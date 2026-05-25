@@ -61,7 +61,7 @@ export function AISummarySection({ log, currentTextLength }: Props) {
           if (r.status === 'ok' && !r.cached) {
             toast.success('✨ 요약 생성됨')
           } else if (r.status === 'cached' || (r.status === 'ok' && r.cached)) {
-            toast.info('캐시된 요약')
+            toast.show('캐시된 요약')
           } else if (r.status === 'blocked') {
             toast.error(r.reason ?? '요약 차단됨')
           }
