@@ -92,6 +92,7 @@ export function useCreateLog(activityId: string) {
 
 // activityId 매개변수는 호환을 위해 유지하지만 invalidateAllActivities 가 모든 키를 무효화하므로 직접 사용은 없음.
 export function useUpdateLog(_activityId: string) {
+  void _activityId
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ logId, dto }: { logId: string; dto: UpdateActivityLogDto }) =>
@@ -101,6 +102,7 @@ export function useUpdateLog(_activityId: string) {
 }
 
 export function useRemoveLog(_activityId: string) {
+  void _activityId
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (logId: string) => activityApi.removeLog(logId),
@@ -110,6 +112,7 @@ export function useRemoveLog(_activityId: string) {
 
 /** log 단일 archive (source_refs 보존, "기록 보관" 액션) */
 export function useArchiveLog(_activityId: string) {
+  void _activityId
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({
@@ -137,6 +140,7 @@ export function useRemoveActivity() {
 
 // AI 요약 — 결과를 직접 사용하는 쪽에서 호출
 export function useSummarizeLog(_activityId: string) {
+  void _activityId
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ logId, force = false }: { logId: string; force?: boolean }) =>
@@ -166,6 +170,7 @@ export function useCreateReflection(activityId: string) {
 }
 
 export function useUpdateReflection(_activityId: string) {
+  void _activityId
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({
@@ -180,6 +185,7 @@ export function useUpdateReflection(_activityId: string) {
 }
 
 export function useRemoveReflection(_activityId: string) {
+  void _activityId
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (refId: string) => activityApi.removeReflection(refId),

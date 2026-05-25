@@ -251,6 +251,7 @@ export function ActivityPage() {
       (recentMap[b.id] ?? '0').localeCompare(recentMap[a.id] ?? '0'),
     )
     const isRecent = (id: string) =>
+      // eslint-disable-next-line react-hooks/purity -- 5분 윈도우 비교, 매 useMemo 평가마다 의도된 실시간 판정
       id === recent.id && Date.now() - recent.at < RECENT_USE_WINDOW_MS
     const recentIdx = sorted.findIndex((a) => isRecent(a.id))
     if (recentIdx > 0) {

@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import {

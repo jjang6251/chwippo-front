@@ -542,6 +542,7 @@ function ToolbarTooltip({
   // visible=false 일 때 마지막 data 를 잠시 유지 (fade-out 중 컨텐츠 깜빡임 방지)
   const [stickyData, setStickyData] = useState<TtEntry | null>(data)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- prop sync: data 변경 시 마지막 데이터 stash (fade-out 깜빡임 방지). 의도된 derived state mirror
     if (data) setStickyData(data)
   }, [data])
 

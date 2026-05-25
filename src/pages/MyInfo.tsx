@@ -6,7 +6,6 @@ import {
   useLangCerts, useCreateLangCert, useUpdateLangCert, useDeleteLangCert,
   useCerts, useCreateCert, useUpdateCert, useDeleteCert,
   useAwards, useCreateAward, useUpdateAward, useDeleteAward,
-  useExperiences, useCreateExperience, useUpdateExperience, useDeleteExperience,
   useEducations, useCreateEducation, useUpdateEducation, useDeleteEducation,
   useCoverletter, useUpdateCoverletter, useCreateCustomItem, useUpdateCustomItem, useDeleteCustomItem,
   useDocuments, useCreateDocument, useDeleteDocument,
@@ -17,7 +16,7 @@ import { useActivities } from '@/hooks/useActivities'
 import '@/pages/Activity/activity-mock.css'
 import { useMyinfoProgress } from '@/hooks/useMyinfoProgress'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
-import type { UserProfile, LanguageCert, Cert, Award, Experience, Coverletter, CoverletterCustom, MyDocument, Education, EducationMinor } from '@/api/myinfo'
+import type { UserProfile, LanguageCert, Cert, Award, Coverletter, CoverletterCustom, MyDocument, Education, EducationMinor } from '@/api/myinfo'
 import type { ExamSchedule } from '@/types/exam-schedule'
 import { toast } from '@/stores/toastStore'
 

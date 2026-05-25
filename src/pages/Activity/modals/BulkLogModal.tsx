@@ -20,6 +20,7 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 모달 open 시 폼 초기화 + body scroll lock (외부 DOM 동기화)
       setContent('')
       setDateMode('today')
       setPending(false)

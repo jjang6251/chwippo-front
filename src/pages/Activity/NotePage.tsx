@@ -90,9 +90,11 @@ export function NotePage() {
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   // body·title 가 'saved' 로 전이될 때 lastSavedAt 갱신
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 저장 상태 변화 감지 후 timestamp 기록 (외부 시계 동기화)
     if (bodySave === 'saved') setLastSavedAt(Date.now())
   }, [bodySave])
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 동일 — title 저장도 같은 lastSavedAt 갱신
     if (titleSave === 'saved') setLastSavedAt(Date.now())
   }, [titleSave])
   // 상대 시간 표시 갱신용 tick (20초마다)
@@ -186,6 +188,7 @@ export function NotePage() {
     // 진입 모드 — note 비어있지 않으면 view, 비어있으면 edit (사용자가 바로 읽을지/쓸지)
     const hasNote = !!log.note && hasNoteContent(log.note as Record<string, unknown>)
     const nextMode: 'view' | 'edit' = hasNote ? 'view' : 'edit'
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- log.id 변경 시 진입 모드 재결정 (외부 라우트 prop sync)
     setMode(nextMode)
     editorRef.current?.setEditable(nextMode === 'edit')
     return () => {
@@ -484,6 +487,7 @@ function SaveIndicator({
   }
 
   if (lastSavedAt !== null) {
+    // eslint-disable-next-line react-hooks/purity -- 사용자 시간 표시(저장 후 N초 전). 매 렌더마다 실시간 평가 의도
     const isFresh = Date.now() - lastSavedAt < 3_000
     return (
       <span
@@ -494,6 +498,7 @@ function SaveIndicator({
             : 'np-save-status'
         }
       >
+        {/* eslint-disable-next-line react-hooks/purity -- 동일 — formatRelativeSince 도 시계 의존 */}
         ✓ 저장됨 · {formatRelativeSince(lastSavedAt, Date.now())}
       </span>
     )

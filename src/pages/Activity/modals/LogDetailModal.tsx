@@ -169,6 +169,7 @@ export function LogDetailModal({
   useEffect(() => {
     if (!open) return
     if (editing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- prop sync: editing 전환 시 form 다중 필드 일괄 초기화
       setContent(editing.content)
       setOccurredAt(editing.occurredAt)
       setCat(editing.cat)

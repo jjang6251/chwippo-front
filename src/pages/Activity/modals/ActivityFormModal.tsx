@@ -61,10 +61,11 @@ export function ActivityFormModal({
   const suggested = useMemo(() => suggestActivityType(name), [name])
   const typeCfg = TYPE_LABELS[type]
 
-  // 모달 open / editing 변경 시 form 초기화
+  // 모달 open / editing 변경 시 form 초기화 — 정당한 prop sync
   useEffect(() => {
     if (!open) return
     if (editing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- prop 변경(editing 전환) 시 form 다중 필드 일괄 초기화
       setName(editing.name)
       setType(editing.type ?? 'other')
       setOrg(editing.org ?? '')
@@ -95,6 +96,7 @@ export function ActivityFormModal({
   useEffect(() => {
     if (mode !== 'past') return
     const qs = PAST_QUESTIONS[type] ?? PAST_QUESTIONS.other
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- prop sync: type/mode 변경 시 답변 폼 재시드
     setPastAnswers(qs.map((q) => ({ q, a: '' })))
   }, [type, mode])
 

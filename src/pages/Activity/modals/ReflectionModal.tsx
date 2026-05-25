@@ -71,6 +71,7 @@ export function ReflectionModal({
         ? `${initialContent}\n\n${prefillPrompt}\n`
         : `${prefillPrompt}\n\n`
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- prop sync: 모달 open / activity 전환 시 form 다중 필드 초기화
     setContent(initialContent)
     setGrowth((existing?.growth ?? []).join(', '))
     setChallenge((existing?.challenges ?? []).join(', '))
@@ -108,6 +109,7 @@ export function ReflectionModal({
   function handlePromptClick(cl: string) {
     const pool = REFLECTION_PROMPTS[cl] ?? []
     if (pool.length === 0) return
+    // eslint-disable-next-line react-hooks/purity -- click 핸들러 안 — 사용자 액션 결과의 의도된 무작위 선택 (render 중 아님)
     const prompt = pool[Math.floor(Math.random() * pool.length)]
     setContent((c) => {
       const existing = c.trim()
