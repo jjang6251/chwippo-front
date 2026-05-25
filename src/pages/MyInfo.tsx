@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import dayjs from 'dayjs'
 import {
   useProfile, useUpdateProfile,
@@ -12,6 +12,9 @@ import {
   useDocuments, useCreateDocument, useDeleteDocument,
 } from '@/hooks/useMyinfo'
 import { useExamSchedules, useDeleteExamSchedule } from '@/hooks/useExamSchedules'
+import { useActivities } from '@/hooks/useActivities'
+// 경험 섹션의 type-badge (.intern·.club ...) 스타일이 활동 일지 진입 전에도 보이도록
+import '@/pages/Activity/activity-mock.css'
 import { useMyinfoProgress } from '@/hooks/useMyinfoProgress'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
 import type { UserProfile, LanguageCert, Cert, Award, Experience, Coverletter, CoverletterCustom, MyDocument, Education, EducationMinor } from '@/api/myinfo'
@@ -155,8 +158,8 @@ function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: str
 }
 
 // ── 섹션 카드 ─────────────────────────────────────────────
-function SectionCard({ id, sectionRef, saved, isActive, children }: {
-  id: string; sectionRef: (el: HTMLElement | null) => void; saved?: boolean; isActive?: boolean; children: React.ReactNode
+function SectionCard({ id, sectionRef, saved, isActive, headerRight, children }: {
+  id: string; sectionRef: (el: HTMLElement | null) => void; saved?: boolean; isActive?: boolean; headerRight?: React.ReactNode; children: React.ReactNode
 }) {
   const meta = SECTIONS.find(s => s.id === id)!
   const ac = ACCENT_STYLE[meta.accent as keyof typeof ACCENT_STYLE]
@@ -168,12 +171,15 @@ function SectionCard({ id, sectionRef, saved, isActive, children }: {
           <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base ${ac.icon}`}>{meta.icon}</span>
           <h2 className="text-sm font-semibold text-text-primary">{meta.label}</h2>
         </div>
-        {saved && (
-          <span className="text-[10px] font-medium text-success flex items-center gap-1">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            저장됨
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {headerRight}
+          {saved && (
+            <span className="text-[10px] font-medium text-success flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              저장됨
+            </span>
+          )}
+        </div>
       </div>
       <div className="px-6 py-5">{children}</div>
     </section>
@@ -1087,58 +1093,147 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
   )
 }
 
-// ── 경험 ──────────────────────────────────────────────────
+// ── 경험 (활동 일지로 이전됨 — mock #page-myinfo summary-card 1:1) ──
 function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: items = [], isLoading } = useExperiences()
-  const { mutate: create } = useCreateExperience()
-  const { mutate: update } = useUpdateExperience()
-  const { mutate: remove } = useDeleteExperience()
-  const [modal, setModal] = useState<null | 'add' | Experience>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Experience | null>(null)
-  const emptyForm = { activity_name: '', org: '', start_at: '', end_at: '', content: '' }
-  const [form, setForm] = useState(emptyForm)
-
-  const openAdd = () => { setForm(emptyForm); setModal('add') }
-  const openEdit = (item: Experience) => { setForm({ activity_name: item.activity_name, org: item.org ?? '', start_at: item.start_at ?? '', end_at: item.end_at ?? '', content: item.content ?? '' }); setModal(item) }
-  const handleSave = () => {
-    const cb = { onSuccess: () => setModal(null), onError: () => toast.error('저장에 실패했어요.') }
-    if (modal === 'add') create(form as Omit<Experience, 'id'>, cb)
-    else if (modal && typeof modal === 'object') update({ id: modal.id, dto: form as Partial<Experience> }, cb)
-  }
+  const { data: activities = [] } = useActivities(false)
+  const [showCompleted, setShowCompleted] = useState(false)
+  const today = new Date().toISOString().slice(0, 10)
+  const ongoing = activities.filter((a) => !a.archivedAt && (!a.endedAt || a.endedAt >= today))
+  const completed = activities.filter((a) => !a.archivedAt && a.endedAt && a.endedAt < today)
+  const allLogs = activities.flatMap((a) => a.logs ?? [])
+  // 이번주 KST 월요일
+  const monday = (() => {
+    const d = new Date()
+    const day = d.getDay()
+    const diff = day === 0 ? -6 : 1 - day
+    d.setDate(d.getDate() + diff)
+    return d.toISOString().slice(0, 10)
+  })()
+  const weekLogCount = (activityId: string) =>
+    allLogs.filter((l) => l.activityId === activityId && l.occurredAt >= monday).length
 
   return (
-    <SectionCard id="experiences" sectionRef={sectionRef} isActive={isActive}>
-      <div className="space-y-2">
-        {isLoading && [1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-xl bg-card animate-pulse" />
-        ))}
-        {!isLoading && items.length === 0 && (
-          <p className="text-text-quaternary text-xs text-center py-4">등록된 경험이 없어요. <br /><span className="text-text-quaternary/60">동아리, 인턴, 봉사활동 등 다양한 활동을 추가해보세요.</span></p>
+    <SectionCard
+      id="experiences"
+      sectionRef={sectionRef}
+      isActive={isActive}
+      headerRight={
+        <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-brand/10 text-brand">
+          진행 중 {ongoing.length}개
+        </span>
+      }
+    >
+      <div className="space-y-3">
+        {/* 부제 — mock 의 summary-card 부제 */}
+        <p className="text-[11px] text-text-tertiary leading-relaxed">
+          활동 일지에서 일별 기록·회고와 함께 관리되고 있어요.
+        </p>
+
+        {/* 진행 중 활동 mini list */}
+        <div className="space-y-1.5">
+          {ongoing.length === 0 ? (
+            <div className="text-center py-4 text-[11px] text-text-tertiary">
+              진행 중인 활동이 없어요. 활동 일지에서 시작해보세요.
+            </div>
+          ) : (
+            ongoing.map((a) => (
+              <Link
+                key={a.id}
+                to="/activity"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-line bg-card hover:bg-card-hover active:bg-card-strong transition-colors"
+              >
+                <span className={`type-badge ${a.type ?? 'other'} text-[9.5px] px-2 py-0.5 rounded shrink-0`}>
+                  {a.type ? (ACTIVITY_TYPE_KO[a.type] ?? a.type) : '기타'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-text-primary truncate">{a.name}</div>
+                  {(a.role || a.org) && (
+                    <div className="text-[10.5px] text-text-tertiary truncate">
+                      {a.role ?? ''}{a.role && a.org ? ' · ' : ''}{a.org ?? ''}
+                    </div>
+                  )}
+                </div>
+                <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand">
+                  {weekLogCount(a.id)} 이번주
+                </span>
+              </Link>
+            ))
+          )}
+        </div>
+
+        {/* 완료 활동 토글 */}
+        {completed.length > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowCompleted((v) => !v)}
+              className="w-full flex items-center justify-center gap-1 text-[11px] font-medium text-text-tertiary hover:text-text-secondary py-1.5"
+            >
+              완료 활동 {completed.length}개 보기 {showCompleted ? '▴' : '▾'}
+            </button>
+            {showCompleted && (
+              <div className="space-y-1.5">
+                {completed.map((a) => {
+                  const logCount = allLogs.filter((l) => l.activityId === a.id).length
+                  const period = (() => {
+                    if (!a.startedAt && !a.endedAt) return ''
+                    const start = a.startedAt?.slice(0, 7).replace('-', '.') ?? ''
+                    const end = a.endedAt?.slice(0, 7).replace('-', '.') ?? ''
+                    return start && end ? `${start} ~ ${end}` : (end || start)
+                  })()
+                  return (
+                    <Link
+                      key={a.id}
+                      to="/activity"
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-line bg-card hover:bg-card-hover active:bg-card-strong transition-colors"
+                    >
+                      <span className={`type-badge ${a.type ?? 'other'} text-[9.5px] px-2 py-0.5 rounded shrink-0`}>
+                        {a.type ? (ACTIVITY_TYPE_KO[a.type] ?? a.type) : '기타'}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-text-primary truncate">{a.name}</div>
+                        {(a.role || period) && (
+                          <div className="text-[10.5px] text-text-tertiary truncate">
+                            {a.role ?? ''}{a.role && period ? ' · ' : ''}{period}
+                          </div>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-text-quaternary/15 text-text-tertiary">
+                        {logCount}건
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
-        {items.map((item) => (
-          <ExpandableItem key={item.id} title={item.activity_name} subtitle={[item.org, item.start_at ? `${item.start_at.slice(0, 7)} ~` : ''].filter(Boolean).join(' · ')} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
-            <DetailRow label="활동명" value={item.activity_name} />
-            <DetailRow label="기관" value={item.org} />
-            <DetailRow label="기간" value={[item.start_at?.slice(0, 7), item.end_at?.slice(0, 7)].filter(Boolean).join(' ~ ')} />
-            {item.content && <p className="text-[11px] text-text-secondary leading-relaxed whitespace-pre-line">{item.content}</p>}
-          </ExpandableItem>
-        ))}
-        <AddButton onClick={openAdd} label="경험 추가" />
+
+        {/* 활동 일지로 이동 */}
+        <Link
+          to="/activity"
+          className="flex items-center justify-center gap-1 w-full bg-brand/10 hover:bg-brand/20 active:bg-brand/30 text-brand text-xs font-semibold py-2.5 rounded-lg transition-colors border border-brand/20"
+        >
+          → 활동 일지에서 자세히 보기
+        </Link>
       </div>
-      {modal && (
-        <Modal title={modal === 'add' ? '경험 추가' : '경험 편집'} onClose={() => setModal(null)} onSave={handleSave}>
-          <Field label="활동명" value={form.activity_name} onChange={(v) => setForm(f => ({ ...f, activity_name: v }))} placeholder="교내 개발 동아리" required />
-          <Field label="활동기관" value={form.org} onChange={(v) => setForm(f => ({ ...f, org: v }))} />
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="시작일" type="date" value={form.start_at} onChange={(v) => setForm(f => ({ ...f, start_at: v }))} />
-            <Field label="종료일" type="date" value={form.end_at} onChange={(v) => setForm(f => ({ ...f, end_at: v }))} />
-          </div>
-          <Field label="활동내용 (500자)" value={form.content} onChange={(v) => setForm(f => ({ ...f, content: v }))} maxLength={500} as="textarea" placeholder="어떤 역할을 했는지 적어주세요" />
-        </Modal>
-      )}
-      {deleteTarget && <DeleteModal label={deleteTarget.activity_name} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
     </SectionCard>
   )
+}
+
+const ACTIVITY_TYPE_KO: Record<string, string> = {
+  intern: '인턴',
+  club: '동아리',
+  study: '스터디',
+  project: '팀 프로젝트',
+  sideproject: '사이드 프로젝트',
+  contest: '공모전·해커톤',
+  research: '연구·학술',
+  parttime: '알바',
+  volunteer: '봉사',
+  overseas: '해외 경험',
+  bootcamp: '부트캠프·교육',
+  other: '기타',
 }
 
 // ── 스펙 목표 (자유 입력) ─────────────────────────────────
@@ -1404,7 +1499,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   const SOURCE_STYLE: Record<string, string> = {
     '학력':       'bg-success/12 text-success',
     '어학 자격증': 'bg-success/12 text-success',
-    '자격증':     'bg-brand/12 text-brand',
+    '자격증':     'bg-brand/10 text-brand',
     '수상 내역':   'bg-warning/12 text-warning',
   }
 

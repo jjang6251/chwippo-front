@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: '대시보드', path: '/dashboard', icon: GridIcon },
   { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
   { label: '캘린더', path: '/calendar', icon: CalendarIcon },
+  { label: '활동 일지', path: '/activity', icon: JournalIcon },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
@@ -25,7 +26,10 @@ export function Sidebar() {
 
   const isActive = (path: string) => {
     const target = link(path)
-    return path === '/board' ? location.pathname.startsWith(target) : location.pathname === target
+    if (path === '/board' || path === '/activity') {
+      return location.pathname.startsWith(target)
+    }
+    return location.pathname === target
   }
 
   const isSettingsActive = location.pathname.startsWith('/settings')
@@ -53,6 +57,7 @@ export function Sidebar() {
               key={path}
               to={link(path)}
               {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
+              {...(path === '/activity' ? { 'data-tour': 'activity-nav' } : {})}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive(path)
                   ? 'bg-brand/10 text-brand'
@@ -63,6 +68,21 @@ export function Sidebar() {
               {label}
             </Link>
           ))}
+
+          {/* 설정 — 메인 nav 안 (이전엔 spacer 아래) */}
+          {!isDemo && (
+            <Link
+              to="/settings"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isSettingsActive
+                  ? 'bg-brand/10 text-brand'
+                  : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
+              }`}
+            >
+              <SettingsIcon size={16} />
+              설정
+            </Link>
+          )}
 
           {/* Admin link */}
           {!isDemo && user?.role === 'admin' && (
@@ -109,19 +129,6 @@ export function Sidebar() {
           {!isDemo && (
             <>
               <div className="h-px bg-card my-2" />
-
-              {/* 설정 */}
-              <Link
-                to="/settings"
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isSettingsActive
-                    ? 'bg-brand/10 text-brand'
-                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-                }`}
-              >
-                <SettingsIcon size={16} />
-                설정
-              </Link>
 
               {/* 도움말 */}
               <Link
@@ -227,4 +234,7 @@ function AdminIcon({ size }: { size: number }) {
 }
 function CalendarIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="2.5" width="14" height="12" rx="1.5" /><line x1="1" y1="6.5" x2="15" y2="6.5" /><line x1="5" y1="1" x2="5" y2="4" /><line x1="11" y1="1" x2="11" y2="4" /><circle cx="8" cy="10.5" r="1" fill="currentColor" stroke="none" /></svg>
+}
+function JournalIcon({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2h7a2 2 0 012 2v10a1 1 0 01-1 1H4a2 2 0 01-2-2V4a2 2 0 012-2z" /><line x1="5" y1="6" x2="10" y2="6" /><line x1="5" y1="8.5" x2="10" y2="8.5" /><line x1="5" y1="11" x2="8" y2="11" /></svg>
 }
