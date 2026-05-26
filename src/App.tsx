@@ -32,6 +32,8 @@ import { OpsUsers } from '@/pages/ops/OpsUsers'
 import { TermsAgreement } from '@/pages/TermsAgreement'
 import { ActivityPage } from '@/pages/Activity/ActivityPage'
 import { NotePage } from '@/pages/Activity/NotePage'
+import { InsightsPage } from '@/pages/Activity/InsightsPage'
+import { Coverletters } from '@/pages/Coverletters'
 import { AiUsage } from '@/pages/Admin/AiUsage'
 
 export default function App() {
@@ -72,6 +74,8 @@ export default function App() {
             <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/help" element={<Help />} />
             <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/activity/insights" element={<InsightsPage />} />
+            <Route path="/coverletters" element={<Coverletters />} />
             <Route
               path="/activity/:activityId/logs/:logId/note"
               element={<NotePage />}

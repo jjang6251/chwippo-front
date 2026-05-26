@@ -10,6 +10,8 @@ const NAV_ITEMS = [
   { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
   { label: '캘린더', path: '/calendar', icon: CalendarIcon },
   { label: '활동 일지', path: '/activity', icon: JournalIcon },
+  // F6 PR 1 — 자소서 통합 페이지 (데스크탑 only. MobileNav 변경 X — 모바일은 카드 상세에서 진입)
+  { label: '자소서', path: '/coverletters', icon: CoverLetterIcon },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
@@ -237,4 +239,7 @@ function CalendarIcon({ size }: { size: number }) {
 }
 function JournalIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2h7a2 2 0 012 2v10a1 1 0 01-1 1H4a2 2 0 01-2-2V4a2 2 0 012-2z" /><line x1="5" y1="6" x2="10" y2="6" /><line x1="5" y1="8.5" x2="10" y2="8.5" /><line x1="5" y1="11" x2="8" y2="11" /></svg>
+}
+function CoverLetterIcon({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" /><polyline points="10 2 10 5 13 5" /><line x1="5" y1="9" x2="11" y2="9" /><line x1="5" y1="11.5" x2="9" y2="11.5" /></svg>
 }
