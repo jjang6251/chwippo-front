@@ -62,6 +62,35 @@ export const CL_LABEL: Record<string, string> = {
   own_strength: '💎 나만의 강점',
 }
 
+/**
+ * F6 PR 1 Phase 6 — Insights 페이지 시각화 색 매핑.
+ * DESIGN.md 의 "단일 브랜드 액센트" 원칙은 *인터랙티브 요소* 한정 (DESIGN §1).
+ * 데이터 시각화는 사용자 직관 보조 차원에서 예외 — 10 역량·6 카테고리 각각 다른 색.
+ *
+ * Tailwind 색 palette 사용 (rgb 정의된 inline 단순화 회피). 채도 낮춰서 (`/40` 정도) 화려함 X.
+ */
+export const COMP_COLOR: Record<string, string> = {
+  technical: 'rgb(59 130 246)', // blue
+  leadership: 'rgb(249 115 22)', // orange
+  communication: 'rgb(16 185 129)', // emerald
+  planning: 'rgb(94 106 210)', // brand indigo
+  analytical: 'rgb(168 85 247)', // purple
+  problem_solving: 'rgb(6 182 212)', // cyan
+  collaboration: 'rgb(236 72 153)', // pink
+  creativity: 'rgb(234 179 8)', // yellow
+  responsibility: 'rgb(220 38 38)', // red
+  adaptability: 'rgb(20 184 166)', // teal
+}
+
+export const CL_COLOR: Record<string, string> = {
+  personality: 'rgb(168 85 247)', // purple
+  background: 'rgb(16 185 129)', // emerald
+  job_competency: 'rgb(59 130 246)', // blue
+  own_strength: 'rgb(245 158 11)', // amber
+  collaboration: 'rgb(236 72 153)', // pink
+  challenge: 'rgb(220 38 38)', // red
+}
+
 export const MOOD_EM: Record<string, string> = {
   proud: '🌟',
   learning: '🌱',

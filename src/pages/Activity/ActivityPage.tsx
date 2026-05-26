@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { toast } from '@/stores/toastStore'
@@ -440,12 +440,9 @@ export function ActivityPage() {
             <h1>
               내 활동 <span className="accent">일지</span>
             </h1>
-            <a
-              className="head-link"
-              onClick={() => toast.show('Phase D 에서 구현 예정')}
-            >
+            <Link to="/activity/insights" className="head-link">
               📊 내 데이터 →
-            </a>
+            </Link>
           </div>
           <div className="sub">
             한 번에 다 쓰지 마세요. 일주일에 한 줄씩만 적어도 자소서·면접에 자동
