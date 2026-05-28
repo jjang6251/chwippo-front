@@ -93,8 +93,8 @@ export function AdminLayout() {
           </nav>
         </aside>
 
-        {/* 메인 영역 — 카드들이 명확히 떠보이도록 page bg 분명히 */}
-        <main className="flex-1 min-w-0">
+        {/* 메인 영역 — 카드들이 명확히 떠보이도록 page bg 분명히. max-w-[1100px] = 페이지 너비 표준 */}
+        <main className="flex-1 min-w-0 w-full max-w-[1100px] mx-auto">
           <Outlet />
         </main>
       </div>

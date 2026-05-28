@@ -134,7 +134,7 @@ export function Dashboard() {
   const activeSectionIds = sections.filter((s) => s.visible).map((s) => s.id)
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       {/* 헤더 */}
       <div className="mb-8">
         <p className="text-text-quaternary text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>

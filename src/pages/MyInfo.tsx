@@ -206,11 +206,11 @@ function ExpandableItem({ title, subtitle, badge, onEdit, onDelete, children }: 
         <div className="px-4 pb-4 border-t border-line">
           <div className="pt-4 space-y-3">{children}</div>
           <div className="flex gap-2 mt-4 pt-3 border-t border-line">
-            <button onClick={onEdit} className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-card-strong active:bg-surface-3 border border-line transition-colors">
+            <button onClick={onEdit} className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 min-h-[44px] lg:min-h-0 rounded-lg hover:bg-card-strong active:bg-surface-3 border border-line transition-colors">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
               편집
             </button>
-            <button onClick={onDelete} className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger/8 border border-line hover:border-danger/20 transition-colors">
+            <button onClick={onDelete} className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 min-h-[44px] lg:min-h-0 rounded-lg hover:bg-danger/8 border border-line hover:border-danger/20 transition-colors">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
               삭제
             </button>
@@ -322,7 +322,7 @@ export function MyInfo() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <div className="mb-6">
         <h1 className="text-text-primary text-xl font-bold">내 정보 창고</h1>
         <p className="text-text-tertiary text-xs mt-1.5">이력서·자소서 작성 시 한 번 쓰면 평생 재활용하는 데이터 창고예요</p>

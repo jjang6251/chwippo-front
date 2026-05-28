@@ -32,7 +32,7 @@ export function Inquiry() {
 
   if (done) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 flex flex-col items-center text-center gap-4">
+      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 flex flex-col items-center text-center gap-4">
         <div className="text-5xl">🙏</div>
         <h2 className="text-lg font-bold">문의가 접수됐어요</h2>
         <p className="text-sm text-text-tertiary leading-relaxed">
@@ -50,7 +50,7 @@ export function Inquiry() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <h1 className="text-xl font-bold mb-2">문의하기</h1>
       <p className="text-sm text-text-tertiary mb-8">
         버그, 기능 요청, 무엇이든 알려주세요.<br />

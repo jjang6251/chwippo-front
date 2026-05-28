@@ -8,7 +8,7 @@ const ALARMS = [
 
 export function AlarmSettings() {
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <h1 className="text-xl font-bold mb-1">알림 설정</h1>
       <p className="text-sm text-text-tertiary mb-8">카카오 친구톡 알림을 준비하고 있어요.</p>
 

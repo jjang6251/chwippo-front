@@ -32,7 +32,7 @@ export function Help() {
   const [open, setOpen] = useState<number | null>(null)
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <h1 className="text-xl font-bold mb-1">도움말</h1>
       <p className="text-sm text-text-tertiary mb-8">자주 묻는 질문</p>
 

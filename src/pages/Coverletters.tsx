@@ -30,7 +30,7 @@ export function Coverletters() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-3">
+      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 space-y-3">
         <Header />
         {[0, 1].map((i) => (
           <div
@@ -44,7 +44,7 @@ export function Coverletters() {
 
   if (active.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
         <Header />
         <div className="bg-surface-2 border border-dashed border-line rounded-xl p-8 text-center mt-4">
           <div className="text-2xl mb-2">📝</div>
@@ -66,7 +66,7 @@ export function Coverletters() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 space-y-4">
       <Header />
       <div className="space-y-3">
         {active.map((app) => (
