@@ -123,6 +123,26 @@ export function Sidebar() {
                   >
                     공지 관리
                   </Link>
+                  <Link
+                    to="/ops/ai-quotas"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      location.pathname === '/ops/ai-quotas'
+                        ? 'text-warning bg-warning/8'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
+                    }`}
+                  >
+                    AI 한도
+                  </Link>
+                  <Link
+                    to="/ops/ai-usage"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      location.pathname === '/ops/ai-usage'
+                        ? 'text-warning bg-warning/8'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
+                    }`}
+                  >
+                    AI 사용량
+                  </Link>
               </div>
             </>
           )}

@@ -37,6 +37,7 @@ import { Coverletters } from '@/pages/Coverletters'
 import { Interviews } from '@/pages/Interviews'
 import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
 import { AiUsage } from '@/pages/Admin/AiUsage'
+import { AiQuotas } from '@/pages/Admin/AiQuotas'
 
 export default function App() {
   return (
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="/ops/announcements" element={<OpsAnnouncements />} />
             <Route path="/ops/users" element={<OpsUsers />} />
             <Route path="/ops/ai-usage" element={<AiUsage />} />
+            <Route path="/ops/ai-quotas" element={<AiQuotas />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />

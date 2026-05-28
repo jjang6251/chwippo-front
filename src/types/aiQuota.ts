@@ -20,3 +20,25 @@ export interface MyAiQuotaRow {
   cooldownSeconds: number
   nextAvailableAt: string | null
 }
+
+/** F6 PR 2 Phase 5.2 — admin 통제 가능 tier */
+export type QuotaTier = 'free' | 'pro' | 'enterprise'
+
+/** admin/ai-feature-quotas 매트릭스 row */
+export interface FeatureQuotaConfig {
+  feature: LlmFeature
+  tier: QuotaTier
+  dayLimit: number
+  monthLimit: number
+  cooldownSeconds: number
+  enabled: boolean
+  updatedBy: string | null
+  updatedAt: string
+}
+
+export interface UpdateFeatureQuotaDto {
+  dayLimit?: number
+  monthLimit?: number
+  cooldownSeconds?: number
+  enabled?: boolean
+}
