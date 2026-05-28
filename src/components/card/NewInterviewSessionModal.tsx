@@ -1,0 +1,486 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Modal } from '@/components/common/Modal'
+import { useCoverletters } from '@/hooks/useApplicationCoverletters'
+import { useActivities, useActivityLogs } from '@/hooks/useActivities'
+import { useApplication } from '@/hooks/useApplications'
+import { useCreateInterviewPrepSession } from '@/hooks/useInterviewPrep'
+import { toast } from '@/stores/toastStore'
+import type { InterviewType } from '@/types/interviewPrep'
+import { INTERVIEW_TYPE_LABEL } from '@/types/interviewPrep'
+
+interface Props {
+  applicationId: string
+  onClose: () => void
+  onCreated: (sessionId: string) => void
+}
+
+const TYPE_OPTIONS: Array<{ value: InterviewType; label: string }> = (
+  Object.entries(INTERVIEW_TYPE_LABEL) as Array<[InterviewType, string]>
+).map(([value, label]) => ({ value, label }))
+
+const CUSTOM_ROUND = '__custom__'
+
+/**
+ * F6 PR 2 Phase 4 — 새 면접 세션 생성 모달.
+ *
+ * 섹션 구분 (필수·권장·선택 시각화):
+ * 1. 회사·직무 확인 (read-only, 상단 confirm 카드)
+ * 2. 면접 정보 (round 필수 · 면접 종류 선택)
+ * 3. AI 질문 품질 강화 (권장) — 모집 요강 · 강조 포인트
+ * 4. 참고 자료 (권장) — 자소서 multi-select + 활동 로그 트리 (전체 선택 가능)
+ */
+export function NewInterviewSessionModal({
+  applicationId,
+  onClose,
+  onCreated,
+}: Props) {
+  const [roundChoice, setRoundChoice] = useState('')
+  const [customRound, setCustomRound] = useState('')
+  const [interviewType, setInterviewType] = useState<InterviewType | ''>('')
+  const [jobDescription, setJobDescription] = useState('')
+  const [emphasisPoints, setEmphasisPoints] = useState('')
+  const [selectedClIds, setSelectedClIds] = useState<Set<string>>(new Set())
+  const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set())
+
+  const { data: app } = useApplication(applicationId)
+  const { data: coverletters } = useCoverletters(applicationId, true)
+  const { data: activities } = useActivities()
+  const { mutate: create, isPending } = useCreateInterviewPrepSession(
+    applicationId,
+  )
+
+  // 자소서 기본 전체 선택 — coverletters 로드 직후 1회만 초기화 (사용자 변경은 보존)
+  const initializedRef = useRef(false)
+  const allClIds = useMemo(
+    () => (coverletters ?? []).map((c) => c.id),
+    [coverletters],
+  )
+  useEffect(() => {
+    if (!initializedRef.current && allClIds.length > 0) {
+      setSelectedClIds(new Set(allClIds))
+      initializedRef.current = true
+    }
+  }, [allClIds])
+
+  const toggleId = (set: Set<string>, id: string): Set<string> => {
+    const next = new Set(set)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  }
+
+  const round =
+    roundChoice === CUSTOM_ROUND ? customRound.trim() : roundChoice.trim()
+
+  const handleSubmit = () => {
+    if (!round) {
+      toast.error('면접 차수를 선택하거나 입력해 주세요.')
+      return
+    }
+    create(
+      {
+        applicationId,
+        round,
+        interviewType: interviewType || undefined,
+        coverletterIds: Array.from(selectedClIds),
+        extraLogIds: Array.from(selectedLogIds),
+        jobDescription: jobDescription.trim() || undefined,
+        emphasisPoints: emphasisPoints.trim() || undefined,
+      },
+      {
+        onSuccess: (session) => onCreated(session.id),
+        onError: () => toast.error('세션 생성에 실패했습니다.'),
+      },
+    )
+  }
+
+  const clList = coverletters ?? []
+  const actList = activities ?? []
+  const steps = app?.steps ?? []
+
+  return (
+    <Modal open onClose={onClose} title="새 면접 세션" width="max-w-2xl">
+      <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+        {/* 1. 회사·직무 confirm */}
+        <section>
+          <div className="border border-line bg-surface rounded-lg p-3">
+            <p className="text-text-faint text-[10px] mb-1.5">
+              이 세션은 아래 카드 기준으로 만들어집니다
+            </p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-text-primary text-base font-semibold">
+                {app?.companyName ?? '…'}
+              </span>
+              <span className="text-text-tertiary text-xs">
+                {app?.jobCategory ?? '직무 미지정'}
+              </span>
+            </div>
+            {!app?.jobCategory && (
+              <p className="text-warning text-[10px] mt-1.5">
+                💡 직무가 없으면 일반론적 답변이 나옵니다. 카드 상세에서 직무를
+                먼저 입력하면 좋아요.
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* 2. 면접 정보 */}
+        <section>
+          <h3 className="text-text-secondary text-xs font-semibold mb-2">
+            면접 정보
+          </h3>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-text-tertiary mb-1">
+                면접 차수 <span className="text-danger">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={roundChoice}
+                  onChange={(e) => setRoundChoice(e.target.value)}
+                  className="w-full appearance-none bg-surface border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-primary focus:border-brand/45 outline-none"
+                >
+                  <option value="" disabled>
+                    전형 단계를 선택하세요
+                  </option>
+                  {steps.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_ROUND}>직접 입력…</option>
+                </select>
+                <svg
+                  className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-quaternary"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                >
+                  <path
+                    d="M3 4.5L6 7.5L9 4.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              {roundChoice === CUSTOM_ROUND && (
+                <input
+                  type="text"
+                  value={customRound}
+                  onChange={(e) => setCustomRound(e.target.value)}
+                  maxLength={40}
+                  placeholder="예: 모의 면접 / 코딩테스트 회고"
+                  autoFocus
+                  className="mt-2 w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none"
+                />
+              )}
+              {steps.length === 0 && roundChoice !== CUSTOM_ROUND && (
+                <p className="text-text-faint text-[10px] mt-1.5">
+                  전형 단계가 없어요. 카드 상세에서 단계를 먼저 추가하거나
+                  '직접 입력' 을 사용하세요.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs text-text-tertiary mb-1.5">
+                면접 종류
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {TYPE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() =>
+                      setInterviewType(
+                        interviewType === opt.value ? '' : opt.value,
+                      )
+                    }
+                    className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                      interviewType === opt.value
+                        ? 'bg-brand/15 border-brand/45 text-brand'
+                        : 'bg-surface border-line text-text-tertiary hover:text-text-secondary'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-text-faint text-[10px] mt-1.5">
+                PT·토론·코딩테스트는 별도 기능으로 준비 중이에요.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. 참고 자료 — 사용자가 가장 자주 손대는 영역이라 위로 */}
+        <section>
+          <div className="flex items-baseline justify-between mb-2">
+            <h3 className="text-text-secondary text-sm font-semibold">
+              📂 참고 자료
+            </h3>
+            <span className="text-text-faint text-xs">자소서 기본 전체 선택</span>
+          </div>
+
+          {/* coverletters */}
+          <div className="mb-3">
+            <label className="block text-xs text-text-tertiary mb-1.5">
+              관련 자소서 문항{' '}
+              <span className="text-text-faint">
+                ({selectedClIds.size}개 선택)
+              </span>
+            </label>
+            {clList.length === 0 ? (
+              <p className="text-text-faint text-sm">자소서 문항이 없어요.</p>
+            ) : (
+              <div className="max-h-32 overflow-y-auto space-y-1 border border-line rounded-lg p-2 bg-surface">
+                {clList.map((cl) => (
+                  <label
+                    key={cl.id}
+                    className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary cursor-pointer py-1"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedClIds.has(cl.id)}
+                      onChange={() =>
+                        setSelectedClIds((s) => toggleId(s, cl.id))
+                      }
+                      className="accent-brand"
+                    />
+                    <span className="truncate">
+                      {cl.category && (
+                        <span className="text-text-faint mr-1">
+                          [{cl.category}]
+                        </span>
+                      )}
+                      {cl.question}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* extra logs */}
+          <div>
+            <label className="block text-xs text-text-tertiary mb-1.5">
+              추가 활동 로그{' '}
+              <span className="text-text-faint">
+                ({selectedLogIds.size}개 선택 · 활동 헤더 체크 = 전체 선택)
+              </span>
+            </label>
+            {actList.length === 0 ? (
+              <p className="text-text-faint text-xs">활동이 없어요.</p>
+            ) : (
+              <div className="max-h-44 overflow-y-auto space-y-1 border border-line rounded-lg p-2 bg-surface">
+                {actList.map((act) => (
+                  <ActivityLogPicker
+                    key={act.id}
+                    activityId={act.id}
+                    activityName={act.name}
+                    selectedLogIds={selectedLogIds}
+                    onChangeSelected={setSelectedLogIds}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 4. AI 질문 품질 강화 — 권장 */}
+        <section>
+          <div className="flex items-baseline justify-between mb-2">
+            <h3 className="text-text-secondary text-sm font-semibold">
+              🎯 AI 질문 품질 강화
+            </h3>
+            <span className="text-text-faint text-xs">권장</span>
+          </div>
+          <div className="bg-brand/5 border border-brand/15 rounded-lg p-3 mb-3">
+            <p className="text-text-secondary text-xs leading-relaxed">
+              아래 정보가 있으면 회사 특화 · 본인 의도 기반 질문이 만들어져요.
+              없어도 진행 가능하지만 일반론 질문에 그칠 수 있어요.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-text-tertiary mb-1.5">
+                모집 요강 / 우대사항
+              </label>
+              <textarea
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                maxLength={8000}
+                rows={4}
+                placeholder="공고에서 복사·붙여넣기 — 요구역량 / 우대사항 / 직무 요건 등&#10;예) C++ 3년 이상, Linux 환경 개발 경험, MSA 경험 우대…"
+                className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none resize-none leading-relaxed"
+              />
+              <p className="text-text-faint text-[11px] mt-1 text-right">
+                {jobDescription.length} / 8000
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs text-text-tertiary mb-1.5">
+                강조하고 싶은 강점·경험
+              </label>
+              <textarea
+                value={emphasisPoints}
+                onChange={(e) => setEmphasisPoints(e.target.value)}
+                maxLength={2000}
+                rows={3}
+                placeholder="면접관에게 꼭 어필하고 싶은 본인의 강점·경험&#10;예) 팀 갈등을 중재해서 프로젝트 성공시킨 경험을 부각하고 싶어요"
+                className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none resize-none leading-relaxed"
+              />
+              <p className="text-text-faint text-[11px] mt-1 text-right">
+                {emphasisPoints.length} / 2000
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-line">
+        <button
+          onClick={onClose}
+          disabled={isPending}
+          className="px-3 py-1.5 text-xs text-text-tertiary hover:text-text-primary"
+        >
+          취소
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={isPending || !round}
+          className="px-4 py-1.5 text-xs bg-brand hover:bg-brand-hover text-white rounded-md font-medium disabled:opacity-50"
+        >
+          {isPending ? '생성 중…' : '세션 만들기'}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+function ActivityLogPicker({
+  activityId,
+  activityName,
+  selectedLogIds,
+  onChangeSelected,
+}: {
+  activityId: string
+  activityName: string
+  selectedLogIds: Set<string>
+  onChangeSelected: (next: Set<string>) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [forceFetch, setForceFetch] = useState(false)
+  const { data: logs } = useActivityLogs(
+    expanded || forceFetch ? activityId : undefined,
+  )
+  const checkboxRef = useRef<HTMLInputElement>(null)
+
+  const allLogs = logs ?? []
+  const selectedInThis = allLogs.filter((l) => selectedLogIds.has(l.id))
+  const selectAll =
+    allLogs.length > 0 && selectedInThis.length === allLogs.length
+  const partial = selectedInThis.length > 0 && !selectAll
+
+  useEffect(() => {
+    if (checkboxRef.current) checkboxRef.current.indeterminate = partial
+  }, [partial])
+
+  const handleHeaderToggle = () => {
+    if (!logs) {
+      setForceFetch(true)
+      return
+    }
+    const next = new Set(selectedLogIds)
+    if (selectAll) {
+      allLogs.forEach((l) => next.delete(l.id))
+    } else {
+      allLogs.forEach((l) => next.add(l.id))
+    }
+    onChangeSelected(next)
+  }
+
+  useEffect(() => {
+    if (forceFetch && logs && logs.length > 0) {
+      const next = new Set(selectedLogIds)
+      logs.forEach((l) => next.add(l.id))
+      onChangeSelected(next)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForceFetch(false)
+      setExpanded(true)
+    } else if (forceFetch && logs && logs.length === 0) {
+      setForceFetch(false)
+      setExpanded(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceFetch, logs])
+
+  const toggleLog = (logId: string) => {
+    const next = new Set(selectedLogIds)
+    if (next.has(logId)) next.delete(logId)
+    else next.add(logId)
+    onChangeSelected(next)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 py-1">
+        <input
+          ref={checkboxRef}
+          type="checkbox"
+          checked={selectAll}
+          onChange={handleHeaderToggle}
+          className="accent-brand"
+          aria-label={`${activityName} 전체 선택`}
+        />
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 flex items-center justify-between text-xs text-text-secondary hover:text-text-primary text-left min-w-0"
+        >
+          <span className="truncate">
+            <span className="text-text-faint mr-1">{expanded ? '▾' : '▸'}</span>
+            {activityName}
+          </span>
+          {selectedInThis.length > 0 && (
+            <span className="text-brand text-[10px] shrink-0 ml-2">
+              {selectedInThis.length}
+              {allLogs.length > 0 && `/${allLogs.length}`}
+            </span>
+          )}
+        </button>
+      </div>
+      {expanded && (
+        <div className="pl-6 space-y-1 mt-1">
+          {allLogs.length === 0 ? (
+            <p className="text-text-faint text-[10px]">기록 없음</p>
+          ) : (
+            allLogs.map((log) => (
+              <label
+                key={log.id}
+                className="flex items-start gap-2 text-[11px] text-text-tertiary hover:text-text-secondary cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedLogIds.has(log.id)}
+                  onChange={() => toggleLog(log.id)}
+                  className="accent-brand mt-0.5"
+                />
+                <span className="line-clamp-2">
+                  <span className="text-text-faint mr-1">
+                    [{log.occurredAt}]
+                  </span>
+                  {log.content}
+                </span>
+              </label>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

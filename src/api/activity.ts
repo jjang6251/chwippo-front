@@ -81,6 +81,18 @@ export const activityApi = {
       )
       .then(unwrap),
 
+  /** 5.6.8 — 노트별 요약 잔여 횟수 (mount 시 항상 표시용. LLM 호출 0) */
+  summarizeStatus: (logId: string) =>
+    apiClient
+      .get<{
+        data: {
+          perNoteUsed: number
+          perNoteLimit: number
+          remainingPerNote: number
+        }
+      }>(`/activity-logs/${logId}/summarize-status`)
+      .then(unwrap),
+
   // reflections
   listReflections: (activityId: string) =>
     apiClient

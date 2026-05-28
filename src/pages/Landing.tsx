@@ -313,9 +313,16 @@ export function Landing() {
       <footer className="border-t border-line py-8">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-text-quaternary text-xs">
           <span className="font-semibold text-text-tertiary">치뽀</span>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 flex-wrap justify-center">
             <Link to="/terms" className="hover:text-text-tertiary transition-colors">이용약관</Link>
             <Link to="/privacy" className="hover:text-text-tertiary transition-colors">개인정보처리방침</Link>
+            <a
+              href="mailto:support@chwippo.com?subject=회사 정보 삭제 요청&body=삭제 요청 회사명:%0A요청 사유:%0A요청자 정보 (회사 측 담당자):"
+              className="hover:text-text-tertiary transition-colors"
+              title="회사 측 정보 삭제 요청 (24시간 SLA)"
+            >
+              회사 정보 삭제 요청
+            </a>
           </div>
           <span>© 2025 치뽀. All rights reserved.</span>
         </div>

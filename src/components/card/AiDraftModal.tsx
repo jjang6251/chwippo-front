@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { Modal } from '@/components/common/Modal'
 import { useActivities, useActivityLogs, useReflections } from '@/hooks/useActivities'
 import {
@@ -6,6 +7,7 @@ import {
   useGenerateAiDraft,
 } from '@/hooks/useCoverletterSourceRefs'
 import { useCreateCoverletterSourceRef } from '@/hooks/useCoverletterSourceRefs'
+import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { toast } from '@/stores/toastStore'
 import type { Activity } from '@/types/activity'
 import type { AiDraftResult } from '@/types/coverletterSourceRef'
@@ -43,6 +45,7 @@ export function AiDraftModal({
   const { data: existingRefs = [] } = useCoverletterSourceRefs(clId, open)
   const { mutate: createRef } = useCreateCoverletterSourceRef(clId)
   const { mutate: generate, isPending: generating } = useGenerateAiDraft(clId)
+  const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('coverletter_draft_v2')
 
   // 사용자가 사이드 패널에서 새로 선택한 ref id 들 (생성 시 selectedSourceRefIds 로 전달)
   // 이미 추가된 ref 는 existingRefs 가 보유
@@ -190,9 +193,9 @@ export function AiDraftModal({
       {/* 하단 액션 */}
       {!result && (
         <div className="flex items-center gap-2 mt-4 pt-3 border-t border-line">
-          <span className="text-[10px] text-text-quaternary flex-1">
-            무료 한도 1일 3회 · 월 20회
-          </span>
+          <div className="flex-1">
+            <AiQuotaChip feature="coverletter_draft_v2" />
+          </div>
           <button
             onClick={handleClose}
             className="px-3 py-2 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors"
@@ -201,8 +204,9 @@ export function AiDraftModal({
           </button>
           <button
             onClick={handleGenerate}
-            disabled={generating || totalSelected === 0}
+            disabled={generating || totalSelected === 0 || quotaBlocked}
             className="px-4 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent disabled:opacity-40 rounded-lg transition-colors"
+            title={quotaReason ?? undefined}
           >
             {generating ? '생성 중…' : '✨ 답변 생성'}
           </button>

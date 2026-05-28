@@ -34,7 +34,12 @@ import { ActivityPage } from '@/pages/Activity/ActivityPage'
 import { NotePage } from '@/pages/Activity/NotePage'
 import { InsightsPage } from '@/pages/Activity/InsightsPage'
 import { Coverletters } from '@/pages/Coverletters'
+import { Interviews } from '@/pages/Interviews'
+import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
 import { AiUsage } from '@/pages/Admin/AiUsage'
+import { AiQuotas } from '@/pages/Admin/AiQuotas'
+import { Monitoring } from '@/pages/Admin/Monitoring'
+import { AdminLayout } from '@/components/layout/AdminLayout'
 
 export default function App() {
   return (
@@ -76,17 +81,28 @@ export default function App() {
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/activity/insights" element={<InsightsPage />} />
             <Route path="/coverletters" element={<Coverletters />} />
+            <Route path="/interviews" element={<Interviews />} />
+            <Route
+              path="/interviews/:sessionId"
+              element={<InterviewSessionPage />}
+            />
             <Route
               path="/activity/:activityId/logs/:logId/note"
               element={<NotePage />}
             />
           </Route>
           <Route element={<AdminGuard />}>
-            <Route path="/ops" element={<OpsPage />} />
-            <Route path="/ops/inquiries" element={<OpsInquiries />} />
-            <Route path="/ops/announcements" element={<OpsAnnouncements />} />
-            <Route path="/ops/users" element={<OpsUsers />} />
-            <Route path="/ops/ai-usage" element={<AiUsage />} />
+            <Route element={<AdminLayout />}>
+              <Route path="/ops" element={<OpsPage />} />
+              <Route path="/ops/inquiries" element={<OpsInquiries />} />
+              <Route path="/ops/announcements" element={<OpsAnnouncements />} />
+              <Route path="/ops/users" element={<OpsUsers />} />
+              <Route path="/ops/ai-usage" element={<AiUsage />} />
+              <Route path="/ops/ai-quotas" element={<AiQuotas />} />
+              <Route path="/ops/monitoring" element={<Monitoring />} />
+              {/* 5.6.3 alias — alert-thresholds 구 라우트 호환성 */}
+              <Route path="/ops/alert-thresholds" element={<Monitoring />} />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />

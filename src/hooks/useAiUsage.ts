@@ -25,3 +25,35 @@ export function useAiUsageUserDetail(
     enabled: !!userId,
   })
 }
+
+// ── F6 PR 2 Phase 5.3 — v2 메트릭 ──
+export function useAiUsageByModel(q: AiUsageQuery = {}) {
+  return useQuery({
+    queryKey: ['ai-usage', 'v2', 'by-model', q],
+    queryFn: () => aiUsageApi.byModel(q),
+  })
+}
+export function useAiUsageByHour(q: AiUsageQuery = {}) {
+  return useQuery({
+    queryKey: ['ai-usage', 'v2', 'by-hour', q],
+    queryFn: () => aiUsageApi.byHour(q),
+  })
+}
+export function useAiUsageHallucination(q: AiUsageQuery = {}) {
+  return useQuery({
+    queryKey: ['ai-usage', 'v2', 'hallucination', q],
+    queryFn: () => aiUsageApi.hallucination(q),
+  })
+}
+export function useAiUsageCacheHit() {
+  return useQuery({
+    queryKey: ['ai-usage', 'v2', 'cache-hit'],
+    queryFn: () => aiUsageApi.cacheHit(),
+  })
+}
+export function useAiUsageMonthEstimate() {
+  return useQuery({
+    queryKey: ['ai-usage', 'v2', 'month-estimate'],
+    queryFn: () => aiUsageApi.monthEstimate(),
+  })
+}

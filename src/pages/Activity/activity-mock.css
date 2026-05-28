@@ -2378,6 +2378,13 @@
       background: rgb(var(--accent) / 0.6);
       cursor: wait;
     }
+    /* 5.6.8 — 총 잔여 표시 */
+    .np-ai-summary-totals {
+      margin-top: 8px;
+      font-size: 11px;
+      color: rgb(var(--text-quaternary));
+      text-align: center;
+    }
     .np-ai-summary-btn .spinner-mini {
       width: 11px; height: 11px;
       border: 1.5px solid rgba(255,255,255,0.3);
