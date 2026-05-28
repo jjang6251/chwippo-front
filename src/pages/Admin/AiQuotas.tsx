@@ -68,7 +68,7 @@ export function AiQuotas() {
   )
 
   return (
-    <div className="max-w-[1100px] mx-auto px-9 py-9 pb-24 md:pb-9">
+    <div>
       <header className="mb-6 pb-4 border-b border-line flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-text-primary text-2xl font-bold">AI 한도 관리</h1>

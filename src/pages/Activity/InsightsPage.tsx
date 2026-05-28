@@ -28,7 +28,7 @@ export function InsightsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 space-y-4">
         <Header />
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
@@ -44,7 +44,7 @@ export function InsightsPage() {
 
   if (error || !data) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
         <Header />
         <div className="bg-danger/8 border border-danger/20 rounded-lg p-4 text-center">
           <p className="text-danger text-sm">데이터를 불러오지 못했어요.</p>
@@ -54,7 +54,7 @@ export function InsightsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-5">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 space-y-5">
       <Header cached={data.cached} />
 
       <Tabs tab={tab} onChange={setTab} />

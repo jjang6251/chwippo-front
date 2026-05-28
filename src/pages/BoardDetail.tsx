@@ -259,7 +259,7 @@ export function BoardDetail() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       {/* 뒤로가기 */}
       <button
         onClick={() => goBack(navigate, '/board')}
@@ -579,7 +579,7 @@ export function BoardDetail() {
 
 function DetailSkeleton() {
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 animate-pulse">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 animate-pulse">
       <div className="h-3 bg-card rounded w-24 mb-6" />
       <div className="border border-line bg-surface-2 rounded-xl p-6 mb-4">
         <div className="flex gap-4 mb-5">

@@ -37,7 +37,7 @@ export function InquiryDetail() {
 
   if (isLoading || !data) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-8 flex flex-col gap-4">
+      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 flex flex-col gap-4">
         <div className="h-8 w-20 bg-card rounded-lg animate-pulse" />
         <div className="h-32 bg-card rounded-xl animate-pulse" />
         <div className="h-20 bg-card rounded-xl animate-pulse" />
@@ -49,7 +49,7 @@ export function InquiryDetail() {
   const isClosed = data.status === 'CLOSED'
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => goBack(navigate, '/inquiry')} className="h-8 flex items-center text-text-tertiary hover:text-text-primary text-sm transition-colors">← 뒤로</button>

@@ -89,7 +89,7 @@ export function Board() {
   const failedCount = countByStatus('FAILED')
 
   return (
-    <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 ${panelStep ? 'lg:pr-96' : ''}`}>
+    <div className={`w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 ${panelStep ? 'lg:pr-96' : ''}`}>
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>

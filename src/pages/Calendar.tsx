@@ -234,7 +234,7 @@ export function Calendar() {
       : `${weekStart.year()}년 ${weekStart.month() + 1}월 ${weekStart.date()}일–${weekEnd.month() + 1}월 ${weekEnd.date()}일`
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
 
       {/* Header — 모바일: 2행 (연/월+컨트롤) / sm+: 1행 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
