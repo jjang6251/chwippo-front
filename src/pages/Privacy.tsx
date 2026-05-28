@@ -95,9 +95,64 @@ export function Privacy() {
           <p className="mt-3 text-text-quaternary text-xs">
             * 모든 수탁 업체는 SOC2/ISO27001 등 국제 정보보안 표준을 준수합니다.
           </p>
-          <p className="mt-2 text-text-quaternary text-xs">
-            * 향후 AI 기능 도입 시 입력 텍스트 처리를 위해 AI 서비스 제공업체가 추가될 수 있으며,
-            해당 시점에 방침을 업데이트하고 사전 공지합니다.
+          <div className="mt-3 p-3 bg-surface-2 border border-line rounded-md">
+            <p className="font-medium mb-2">AI 기능 처리 위탁 (PIPA 26조)</p>
+            <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
+              <li>
+                <strong>OpenAI, L.L.C.</strong> (미국) — 노트 요약·자소서 추천·면접 질문 생성
+                (`gpt-4o-mini`). 사용자 입력 텍스트 처리 후 즉시 폐기, 학습 데이터 미사용
+              </li>
+              <li>
+                <strong>Anthropic, PBC</strong> (미국) — 자소서 초안·면접 답변·회사 조사
+                (`claude-haiku-4-5`). 동일 정책. 회사 조사용 web_search 도구 사용 시
+                지정된 화이트리스트 도메인만 검색
+              </li>
+            </ul>
+            <p className="mt-2 text-text-quaternary text-xs">
+              사용자는 가입 시 별도 동의 (`ai_consent_at`) 가 필요하며, 동의 없이는 AI 기능을
+              사용할 수 없습니다.
+            </p>
+          </div>
+        </DocSection>
+
+        <DocSection title="5-1. 회사 정보 수집·캐싱 (AI 면접 준비 기능)">
+          <p className="mb-3">
+            치뽀의 "면접 준비" 기능은 사용자가 지원한 회사 정보를 AI 가 공개 자료에서
+            조사·요약해 제공합니다. 다음 정책을 따릅니다.
+          </p>
+          <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
+            <li>
+              <strong>수집 대상</strong>: 회사명·직무 (사용자가 입력한 지원 카드 데이터)
+            </li>
+            <li>
+              <strong>출처 화이트리스트</strong>: 회사 공시 (DART), 주요 언론사 (조선·중앙·동아·한경·매경·서울경제),
+              포털 뉴스 (네이버·다음), 위키피디아 — 그 외 사이트 정보는 사용하지 않음.
+              특히 잡플래닛·블라인드·Glassdoor 등 면접 후기·연봉 사이트는 명시적으로 차단
+            </li>
+            <li>
+              <strong>저장 형식</strong>: AI 가 생성한 요약 (derivative work) 만 저장. 원문 직접 복제 X.
+              출처 URL 만 함께 기록 (사용자가 원본 확인 가능)
+            </li>
+            <li>
+              <strong>보관 기간</strong>: 90일 (TTL). 만료 시 자동 갱신 또는 폐기
+            </li>
+            <li>
+              <strong>개인정보 비포함</strong>: 임원 이름·연락처 등 개인 식별 정보 절대 수집·저장 안 함
+            </li>
+            <li>
+              <strong>opt-out (회사 측 삭제 요청)</strong>: 회사 측에서 정보 삭제·차단 요청 시
+              24시간 이내 처리 후 영구 차단합니다. 요청 채널:{' '}
+              <a
+                href="mailto:support@chwippo.com?subject=회사 정보 삭제 요청"
+                className="text-brand hover:underline"
+              >
+                support@chwippo.com
+              </a>
+            </li>
+          </ul>
+          <p className="mt-3 text-text-quaternary text-xs">
+            ⚠️ AI 가 생성한 정보는 참고용이며 정확성을 보장하지 않습니다.
+            면접 전 회사 공식 자료로 반드시 확인하시기 바랍니다.
           </p>
         </DocSection>
 

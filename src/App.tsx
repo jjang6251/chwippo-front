@@ -34,6 +34,8 @@ import { ActivityPage } from '@/pages/Activity/ActivityPage'
 import { NotePage } from '@/pages/Activity/NotePage'
 import { InsightsPage } from '@/pages/Activity/InsightsPage'
 import { Coverletters } from '@/pages/Coverletters'
+import { Interviews } from '@/pages/Interviews'
+import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
 import { AiUsage } from '@/pages/Admin/AiUsage'
 
 export default function App() {
@@ -76,6 +78,11 @@ export default function App() {
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/activity/insights" element={<InsightsPage />} />
             <Route path="/coverletters" element={<Coverletters />} />
+            <Route path="/interviews" element={<Interviews />} />
+            <Route
+              path="/interviews/:sessionId"
+              element={<InterviewSessionPage />}
+            />
             <Route
               path="/activity/:activityId/logs/:logId/note"
               element={<NotePage />}

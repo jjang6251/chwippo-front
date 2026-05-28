@@ -19,6 +19,7 @@ import { useUpdateStep } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
 import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { CoverLetterTab } from '@/components/card/CoverLetterTab'
+import { InterviewPrepTab } from '@/components/card/InterviewPrepTab'
 import { DdayBadge } from '@/components/card/DdayBadge'
 import { StarToggle } from '@/components/card/StarToggle'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -138,7 +139,9 @@ export function BoardDetail() {
   const [editSteps, setEditSteps] = useState<SortableStepItem[]>([])
   const [editTags, setEditTags] = useState<string[]>([])
   const [openStepId, setOpenStepId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'steps' | 'coverletter'>('steps')
+  const [activeTab, setActiveTab] = useState<
+    'steps' | 'coverletter' | 'interview'
+  >('steps')
 
   const tourActive = useTourStore((s) => s.active)
   const tourStep = useTourStore((s) => s.step)
@@ -386,11 +389,12 @@ export function BoardDetail() {
         </div>
       </div>
 
-      {/* 탭: 전형 단계 / 자소서 */}
+      {/* 탭: 전형 단계 / 자소서 / 면접 준비 */}
       <div className="flex gap-1 p-1 bg-surface-2 border border-line rounded-lg mb-4">
         {([
           { v: 'steps' as const, label: '전형 단계' },
           { v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' },
+          { v: 'interview' as const, label: '면접 준비' },
         ]).map((t) => (
           <button
             key={t.v}
@@ -467,6 +471,9 @@ export function BoardDetail() {
       )}
 
       {activeTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
+      {activeTab === 'interview' && (
+        <InterviewPrepTab applicationId={app.id} active />
+      )}
 
       {/* 결과 모달 */}
       <SetResultModal
