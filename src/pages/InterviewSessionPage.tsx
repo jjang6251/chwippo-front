@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CompanyResearchCard } from '@/components/card/CompanyResearchCard'
 import { EditInterviewSessionModal } from '@/components/card/EditInterviewSessionModal'
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
@@ -7,13 +7,14 @@ import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { useApplication } from '@/hooks/useApplications'
 import {
+  useDeleteInterviewSession,
   useGenerateInterviewSession,
   useInterviewPrepQuestions,
   useInterviewPrepRefs,
   useInterviewPrepSession,
   useUpdateInterviewPrepSession,
 } from '@/hooks/useInterviewPrep'
-import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
+import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
 import { toast } from '@/stores/toastStore'
 import {
   INTERVIEW_TYPE_LABEL,
@@ -28,6 +29,7 @@ import {
  */
 export function InterviewSessionPage() {
   const { sessionId = '' } = useParams<{ sessionId: string }>()
+  const navigate = useNavigate()
   const { data: session, isLoading: sessionLoading } = useInterviewPrepSession(
     sessionId,
   )
@@ -37,16 +39,41 @@ export function InterviewSessionPage() {
     useInterviewPrepQuestions(sessionId)
   const { data: refs } = useInterviewPrepRefs(sessionId)
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('interview_prep_session')
+  const quota = useMyAiQuota('interview_prep_session')
   const { mutate: generate, isPending: generating } =
     useGenerateInterviewSession(sessionId)
   const { mutate: updateSession, isPending: updatingSession } =
     useUpdateInterviewPrepSession(sessionId, applicationId)
+  const { mutate: deleteSession } = useDeleteInterviewSession(applicationId)
   const [editing, setEditing] = useState(false)
   const [metaCollapsed, setMetaCollapsed] = useState(
     typeof window !== 'undefined' && window.innerWidth <= 920,
   )
 
-  const handleGenerate = () => {
+  const handleDelete = () => {
+    const ok = window.confirm(
+      `🗑️ 면접 세션 "${session?.round ?? ''}" 을 정말 삭제하시겠어요?\n\n생성된 질문과 메모가 모두 삭제됩니다 (회사 조사 캐시는 보존).\n복구할 수 없습니다.`,
+    )
+    if (!ok) return
+    deleteSession(sessionId, {
+      onSuccess: () => {
+        toast.show('세션을 삭제했어요.')
+        navigate(applicationId ? `/board/${applicationId}` : '/interviews')
+      },
+      onError: () => toast.error('삭제에 실패했어요.'),
+    })
+  }
+
+  const handleGenerate = (isRegenerate = false) => {
+    if (isRegenerate) {
+      const remaining = quota
+        ? `오늘 ${quota.dayLimit - quota.dayUsed}/${quota.dayLimit}회 · 이번 달 ${quota.monthLimit - quota.monthUsed}/${quota.monthLimit}회`
+        : ''
+      const ok = window.confirm(
+        `기존 질문과 메모가 모두 삭제되고 새로 생성됩니다.\nAI 호출 1회가 차감됩니다.${remaining ? `\n잔여: ${remaining}` : ''}\n\n진행하시겠어요?`,
+      )
+      if (!ok) return
+    }
     generate(undefined, {
       onSuccess: (result) => {
         if (result.status === 'ok') {
@@ -107,6 +134,13 @@ export function InterviewSessionPage() {
               className="ml-auto text-xs text-text-tertiary hover:text-brand border border-line hover:border-brand/40 bg-surface-2 px-3 py-1.5 rounded-md transition-colors"
             >
               ✎ 세션 편집
+            </button>
+            <button
+              onClick={handleDelete}
+              className="text-xs text-text-tertiary hover:text-danger border border-line hover:border-danger/40 bg-surface-2 px-3 py-1.5 rounded-md transition-colors"
+              title="세션 삭제 (질문·메모 모두 삭제, 회사 조사 캐시는 보존)"
+            >
+              🗑️ 삭제
             </button>
             <button
               onClick={() => setMetaCollapsed(!metaCollapsed)}
@@ -313,7 +347,7 @@ export function InterviewSessionPage() {
                   AI 가 예상 질문 + 모범 답안을 만들어줘요.
                 </p>
                 <button
-                  onClick={handleGenerate}
+                  onClick={() => handleGenerate(false)}
                   disabled={generating || quotaBlocked}
                   className="bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50"
                   title={quotaReason ?? undefined}
@@ -334,10 +368,10 @@ export function InterviewSessionPage() {
                     <AiQuotaChip feature="interview_prep_session" />
                   </div>
                   <button
-                    onClick={handleGenerate}
+                    onClick={() => handleGenerate(true)}
                     disabled={generating || quotaBlocked}
                     className="text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
-                    title={quotaReason ?? '기존 질문 모두 지우고 다시 생성'}
+                    title={quotaReason ?? '기존 질문 모두 삭제 + AI 1회 차감'}
                   >
                     {generating ? '재생성 중…' : '↻ 다시 생성'}
                   </button>

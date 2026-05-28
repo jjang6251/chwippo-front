@@ -119,6 +119,8 @@ export function useTriggerCompanyResearch(sessionId: string) {
       if (result.status === 'ok' || result.status === 'opt_out') {
         qc.setQueryData(researchKey(sessionId), result)
       }
+      // 5.6.x — quota 차감 즉시 반영 (chip 갱신)
+      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
     },
   })
 }
@@ -138,6 +140,21 @@ export function useUpdateUserResearchNotes(sessionId: string) {
   })
 }
 
+/** 면접 세션 삭제 — questions CASCADE. 5.6.6 */
+export function useDeleteInterviewSession(
+  applicationId: string | undefined,
+) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (sessionId: string) => interviewPrepApi.remove(sessionId),
+    onSuccess: () => {
+      if (applicationId) {
+        qc.invalidateQueries({ queryKey: sessionListKey(applicationId) })
+      }
+    },
+  })
+}
+
 /** AI 일괄 생성 — 성공 시 questions 트리 invalidate (기존 트리 전체 교체) */
 export function useGenerateInterviewSession(sessionId: string) {
   const qc = useQueryClient()
@@ -147,6 +164,7 @@ export function useGenerateInterviewSession(sessionId: string) {
       if (result.status === 'ok') {
         qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
       }
+      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
     },
   })
 }
@@ -172,6 +190,7 @@ export function useCreateInterviewFollowup(sessionId: string) {
       if (result.status === 'ok') {
         qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
       }
+      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
     },
   })
 }

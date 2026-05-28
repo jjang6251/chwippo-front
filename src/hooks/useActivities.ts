@@ -145,7 +145,24 @@ export function useSummarizeLog(_activityId: string) {
   return useMutation({
     mutationFn: ({ logId, force = false }: { logId: string; force?: boolean }) =>
       activityApi.summarizeLog(logId, force),
-    onSuccess: () => invalidateAllActivities(qc),
+    onSuccess: (_, vars) => {
+      invalidateAllActivities(qc)
+      // 5.6.x — quota 차감 즉시 반영 (AiQuotaChip)
+      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      // 5.6.8 — 노트별 잔여 갱신 (요약 본문 아래 N/M)
+      qc.invalidateQueries({ queryKey: ['note-summary-status', vars.logId] })
+    },
+  })
+}
+
+/** 5.6.8 — 노트별 요약 잔여 (mount 시 항상 표시용) */
+export function useNoteSummaryStatus(logId: string | undefined) {
+  return useQuery({
+    queryKey: ['note-summary-status', logId],
+    queryFn: () => activityApi.summarizeStatus(logId as string),
+    enabled: !!logId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 

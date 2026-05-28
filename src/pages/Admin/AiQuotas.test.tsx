@@ -37,6 +37,7 @@ const sampleRow: FeatureQuotaConfig = {
   dayLimit: 5,
   monthLimit: 100,
   cooldownSeconds: 30,
+  perResourceDayLimit: 5,
   enabled: true,
   updatedBy: null,
   updatedAt: '2026-05-28T00:00:00Z',
@@ -95,5 +96,118 @@ describe('AiQuotas page', () => {
     await waitForRow()
     expect(screen.getByText('Pro (F7)')).toBeDisabled()
     expect(screen.getByText('Enterprise (F7)')).toBeDisabled()
+  })
+
+  // ── 5.6.소급 — FEATURE_LABEL 12종 + fallback ──
+  it('5.6.소급 — 12 feature 모두 한국어 라벨 표시 (legacy/deprecated 포함)', async () => {
+    apiMock.mockResolvedValue([
+      { ...sampleRow, feature: 'note_summary' },
+      { ...sampleRow, feature: 'coverletter' },
+      { ...sampleRow, feature: 'interview' },
+      { ...sampleRow, feature: 'interview_followup' },
+      { ...sampleRow, feature: 'score' },
+      { ...sampleRow, feature: 'analysis' },
+      { ...sampleRow, feature: 'auto_tag' },
+      { ...sampleRow, feature: 'coverletter_draft_v2' },
+      { ...sampleRow, feature: 'coverletter_feedback' },
+      { ...sampleRow, feature: 'coverletter_recommend' },
+      { ...sampleRow, feature: 'interview_prep_session' },
+      { ...sampleRow, feature: 'interview_prep_followup' },
+      { ...sampleRow, feature: 'company_research' },
+    ] as never)
+    render(<AiQuotas />, { wrapper })
+    await waitForRow()
+    expect(screen.getByText('노트 요약')).toBeInTheDocument()
+    expect(screen.getByText('자소서 (legacy)')).toBeInTheDocument()
+    expect(screen.getByText('면접 (legacy)')).toBeInTheDocument()
+    expect(screen.getByText('점수 (deprecated)')).toBeInTheDocument()
+    expect(screen.getByText('분석 (deprecated)')).toBeInTheDocument()
+    expect(screen.getByText('자동 태그 (deprecated)')).toBeInTheDocument()
+    expect(screen.getByText('자소서 AI 답변')).toBeInTheDocument()
+    expect(screen.getByText('면접 질문 생성')).toBeInTheDocument()
+    expect(screen.getByText('회사 조사')).toBeInTheDocument()
+    // undefined 토스트 방지 fallback — 모든 행에 한국어 표시
+    expect(screen.queryByText('undefined')).toBeNull()
+  })
+
+  it('5.6.소급 — FEATURE_LABEL 없는 unknown feature → fallback (원본 key 그대로)', async () => {
+    apiMock.mockResolvedValue([
+      { ...sampleRow, feature: 'experimental_unknown' as never },
+    ])
+    render(<AiQuotas />, { wrapper })
+    await waitForRow()
+    expect(screen.getAllByText('experimental_unknown')).toHaveLength(2)
+    expect(screen.queryByText('undefined')).toBeNull()
+  })
+
+  // ── 5.6.8 — 노트별 한도 input (note_summary 만 활성) ──
+  it('5.6.8 — note_summary 행의 노트별 한도 input 활성 + 값 표시', async () => {
+    apiMock.mockResolvedValue([
+      { ...sampleRow, feature: 'note_summary', perResourceDayLimit: 5 },
+    ])
+    render(<AiQuotas />, { wrapper })
+    await waitForRow()
+    const inputs = screen.getAllByRole('spinbutton')
+    expect(inputs[3]).not.toBeDisabled()
+    expect((inputs[3] as HTMLInputElement).value).toBe('5')
+  })
+
+  it('5.6.8 — 다른 feature 행의 노트별 한도 input → disabled + placeholder "—"', async () => {
+    apiMock.mockResolvedValue([
+      {
+        ...sampleRow,
+        feature: 'coverletter_draft_v2',
+        perResourceDayLimit: null,
+      },
+    ])
+    render(<AiQuotas />, { wrapper })
+    await waitForRow()
+    const inputs = screen.getAllByRole('spinbutton')
+    expect(inputs[3]).toBeDisabled()
+    expect((inputs[3] as HTMLInputElement).placeholder).toBe('—')
+  })
+
+  it('5.6.8 — 노트별 한도 변경 → dirty → 저장 버튼 활성', async () => {
+    apiMock.mockResolvedValue([
+      { ...sampleRow, feature: 'note_summary', perResourceDayLimit: 5 },
+    ])
+    render(<AiQuotas />, { wrapper })
+    await waitForRow()
+    const perResourceInput = screen.getAllByRole('spinbutton')[3]
+    expect(screen.getByText('저장')).toBeDisabled()
+    fireEvent.change(perResourceInput, { target: { value: '3' } })
+    expect(screen.getByText('저장')).not.toBeDisabled()
+  })
+
+  // ── 5.6.9 — 전체 사용량 reset 버튼 ──
+  it('13-a) "전체 사용량 reset" 버튼 렌더', async () => {
+    apiMock.mockResolvedValue([sampleRow])
+    render(<AiQuotas />, { wrapper })
+    await waitForRow()
+    expect(screen.getByText(/전체 사용량 reset/)).toBeInTheDocument()
+  })
+
+  it('13-b) reset 버튼 클릭 → window.confirm 호출 (전체 사용자 경고 포함)', async () => {
+    apiMock.mockResolvedValue([sampleRow])
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<AiQuotas />, { wrapper })
+    await waitForRow()
+    fireEvent.click(screen.getByText(/전체 사용량 reset/))
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(confirmSpy.mock.calls[0][0]).toContain('전체 사용자')
+    confirmSpy.mockRestore()
+  })
+
+  it('13-c) confirm 거부 → mutation 호출 X', async () => {
+    apiMock.mockResolvedValue([sampleRow])
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
+    render(<AiQuotas />, { wrapper })
+    await waitForRow()
+    fireEvent.click(screen.getByText(/전체 사용량 reset/))
+    // resetApi 가 호출되지 않았어야 함 (api mock 은 useQuotaReset 내부)
+    // useQuotaReset hook 이 vi.mock 안 되어 있으므로 실제 호출. 단 confirm 거부로 mutate 안 됨
+    // 검증: 잠시 후 토스트 메시지 없음
+    await new Promise((r) => setTimeout(r, 30))
+    expect(screen.queryByText(/reset 했어요/)).toBeNull()
   })
 })

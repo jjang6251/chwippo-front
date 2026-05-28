@@ -54,7 +54,7 @@ export function OpsAnnouncements() {
   function closeForm() { setFormOpen(false); setEditing(null) }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <div>
       <div className="flex items-center gap-3 mb-6">
         <Link to="/ops" className="text-text-tertiary hover:text-text-primary text-sm">← 관리자</Link>
         <h1 className="text-xl font-bold">공지 관리</h1>

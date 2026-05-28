@@ -18,6 +18,8 @@ export interface AlertHistoryRow {
     | 'vs_yesterday'
     | 'abuser_ban'
     | 'test'
+    | 'provider_down'
+    | 'provider_up'
   triggeredValue: number
   thresholdValue: number
   message: string

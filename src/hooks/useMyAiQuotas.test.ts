@@ -119,3 +119,59 @@ describe('useAiQuotaBlocked', () => {
     expect(result.current).toEqual({ blocked: false, reason: null })
   })
 })
+
+// ── 5.6.소급 — useMyAiQuotas refetch 정책 (staleTime=0 + refetchOnMount + invalidate) ──
+describe('useMyAiQuotas refetch 정책', () => {
+  beforeEach(() => apiMock.mockReset())
+
+  it('1) 초기 mount → API 호출 1회', async () => {
+    apiMock.mockResolvedValue([])
+    const { useMyAiQuotas } = await import('./useMyAiQuotas')
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    function Wrap({ children }: { children: ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: qc }, children)
+    }
+    renderHook(() => useMyAiQuotas(), { wrapper: Wrap })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(apiMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('2) staleTime=0 + invalidate → 즉시 refetch', async () => {
+    apiMock.mockResolvedValue([])
+    const { useMyAiQuotas } = await import('./useMyAiQuotas')
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    function Wrap({ children }: { children: ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: qc }, children)
+    }
+    renderHook(() => useMyAiQuotas(), { wrapper: Wrap })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    // invalidate 후 active observer 면 refetch
+    await qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(apiMock).toHaveBeenCalledTimes(2)
+  })
+
+  // useNoteSummaryStatus 와 같은 파일에 두기엔 mock 충돌 — 별도 파일 (useActivities.test.ts) 에서 다룸
+  it('3) 5곳 동시 mount (같은 queryKey) → dedup 으로 API 1번', async () => {
+    apiMock.mockResolvedValue([])
+    const { useMyAiQuotas } = await import('./useMyAiQuotas')
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    function Wrap({ children }: { children: ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: qc }, children)
+    }
+    // 5곳 부착 시뮬레이션 — 같은 hook 5번 mount
+    renderHook(
+      () => {
+        useMyAiQuotas()
+        useMyAiQuotas()
+        useMyAiQuotas()
+        useMyAiQuotas()
+        useMyAiQuotas()
+      },
+      { wrapper: Wrap },
+    )
+    await new Promise((r) => setTimeout(r, 0))
+    expect(apiMock).toHaveBeenCalledTimes(1) // React Query 자동 dedup
+  })
+})

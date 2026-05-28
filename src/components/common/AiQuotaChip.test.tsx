@@ -29,7 +29,22 @@ describe('AiQuotaChip', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('정상 (잔여 5/5) → "잔여 5/5회" 표시', () => {
+  it('5.6.2 — 무제한 (1000/10000) + 한가 → chip 숨김 (의식적 제한 없을 때)', () => {
+    mocked.mockReturnValue({
+      feature: 'note_summary',
+      enabled: true,
+      dayUsed: 0,
+      dayLimit: 1000,
+      monthUsed: 0,
+      monthLimit: 10000,
+      cooldownSeconds: 30,
+      nextAvailableAt: null,
+    })
+    const { container } = render(<AiQuotaChip feature="note_summary" />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('5.6.2 — admin 좁은 한도 (dayLimit=5) + 한가 (dayUsed=0) → 아직 숨김', () => {
     mocked.mockReturnValue({
       feature: 'note_summary',
       enabled: true,
@@ -40,8 +55,23 @@ describe('AiQuotaChip', () => {
       cooldownSeconds: 30,
       nextAvailableAt: null,
     })
+    const { container } = render(<AiQuotaChip feature="note_summary" />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('5.6.2 — admin 좁은 한도 (dayLimit=5) + 20%+ 사용 → 표시', () => {
+    mocked.mockReturnValue({
+      feature: 'note_summary',
+      enabled: true,
+      dayUsed: 2,
+      dayLimit: 5,
+      monthUsed: 2,
+      monthLimit: 100,
+      cooldownSeconds: 30,
+      nextAvailableAt: null,
+    })
     render(<AiQuotaChip feature="note_summary" />)
-    expect(screen.getByText('잔여 5/5회')).toBeInTheDocument()
+    expect(screen.getByText('잔여 3/5회')).toBeInTheDocument()
   })
 
   it('enabled=false → "🚧 일시 중단" badge (kill switch)', () => {

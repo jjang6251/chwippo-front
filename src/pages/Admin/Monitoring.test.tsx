@@ -10,7 +10,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React, { type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AlertThresholds } from './AlertThresholds'
+import { Monitoring } from './Monitoring'
 import { alertThresholdsApi } from '@/api/alertThresholds'
 
 vi.mock('@/api/alertThresholds', () => ({
@@ -18,6 +18,17 @@ vi.mock('@/api/alertThresholds', () => ({
     get: vi.fn(),
     update: vi.fn(),
     test: vi.fn(),
+  },
+}))
+
+vi.mock('@/api/systemStatus', () => ({
+  systemStatusApi: {
+    get: vi.fn().mockResolvedValue({
+      backend: 'up',
+      db: 'ok',
+      openai: 'configured',
+      anthropic: 'configured',
+    }),
   },
 }))
 
@@ -39,7 +50,7 @@ async function waitForRow() {
   })
 }
 
-describe('AlertThresholds page', () => {
+describe('Monitoring page', () => {
   beforeEach(() => {
     getMock.mockReset()
     testMock.mockReset()
@@ -58,7 +69,7 @@ describe('AlertThresholds page', () => {
       },
       history: [],
     })
-    render(<AlertThresholds />, { wrapper })
+    render(<Monitoring />, { wrapper })
     await waitForRow()
     expect(screen.getByText('임계치 설정')).toBeInTheDocument()
   })
@@ -76,7 +87,7 @@ describe('AlertThresholds page', () => {
       },
       history: [],
     })
-    render(<AlertThresholds />, { wrapper })
+    render(<Monitoring />, { wrapper })
     await waitForRow()
     expect(screen.getByText('최근 24h 알람 없음')).toBeInTheDocument()
   })
@@ -95,7 +106,7 @@ describe('AlertThresholds page', () => {
       history: [],
     })
     testMock.mockResolvedValue({ status: 'sent' })
-    render(<AlertThresholds />, { wrapper })
+    render(<Monitoring />, { wrapper })
     await waitForRow()
     fireEvent.click(screen.getByText('🧪 테스트 알람 보내기'))
     await waitFor(() => expect(testMock).toHaveBeenCalled())

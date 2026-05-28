@@ -4,6 +4,7 @@ import {
   useSendTestAlert,
   useUpdateAlertThresholds,
 } from '@/hooks/useAlertThresholds'
+import { SystemStatusPanel } from '@/components/admin/SystemStatusPanel'
 import { toast } from '@/stores/toastStore'
 import { formatKstDateTime } from '@/utils/datetime'
 
@@ -22,12 +23,14 @@ const TYPE_LABEL: Record<string, string> = {
   test: '테스트',
 }
 
+const SENTRY_URL = import.meta.env.VITE_SENTRY_PROJECT_URL ?? ''
+
 /**
- * F6 PR 2 Phase 5.4 — Discord 임계치 알람 admin UI.
- * 임계치 4종 (daily_cost / hourly_error_rate / vs_yesterday / enabled) +
- * 최근 24h 알람 history + 테스트 알람 발송.
+ * F6 PR 2 Phase 5.6.3 — admin 모니터링 통합 (이전: AlertThresholds).
+ * 섹션: 시스템 상태 + 임계치 알람 + 최근 알람 history (abuser_ban 통합) + Sentry link.
+ * 페이지 너비는 AdminLayout 이 처리.
  */
-export function AlertThresholds() {
+export function Monitoring() {
   const { data, isLoading } = useAlertThresholds()
   const { mutate: update, isPending: updating } = useUpdateAlertThresholds()
   const { mutate: sendTest, isPending: testing } = useSendTestAlert()
@@ -77,14 +80,17 @@ export function AlertThresholds() {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto px-9 py-9 pb-24 md:pb-9">
-      <header className="mb-6">
-        <h1 className="text-text-primary text-xl font-bold">임계치 알람</h1>
-        <p className="text-text-tertiary text-xs mt-1">
-          비용·에러 급증을 Discord 로 자동 알림 (10분 주기, 1시간 dedup).
-          enabled=false 면 cron 전체 skip (kill switch).
+    <div>
+      <header className="mb-6 pb-4 border-b border-line">
+        <h1 className="text-text-primary text-2xl font-bold">알람·임계치</h1>
+        <p className="text-text-tertiary text-xs mt-1.5">
+          시스템 상태 + 비용·에러 임계치 + 발송 history. Discord 통합 (10분 cron, 1시간 dedup).
         </p>
       </header>
+
+      <SystemStatusPanel recentAlerts={data?.history ?? []} />
+
+      <SentryLinkCard />
 
       {isLoading || !data ? (
         <p className="text-text-tertiary text-sm">로딩 중...</p>
@@ -164,7 +170,7 @@ export function AlertThresholds() {
               <button
                 onClick={save}
                 disabled={!dirty || updating}
-                className="px-4 py-2 bg-brand hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-medium rounded-md"
+                className="px-4 py-2 bg-brand hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-md"
               >
                 {updating ? '저장 중...' : '저장'}
               </button>
@@ -260,5 +266,37 @@ function ThresholdField({
       </div>
       <div className="shrink-0 flex items-center">{children}</div>
     </div>
+  )
+}
+
+// 5.6.11 — SystemStatusPanel 은 components/admin/SystemStatusPanel.tsx 로 분리
+
+/** 5.6.3 — Sentry 외부 link 카드 (자체 에러 log 구현 X) */
+function SentryLinkCard() {
+  return (
+    <section className="bg-surface-2 border border-line rounded-xl p-5 mb-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-text-primary text-sm font-semibold">에러 추적 (Sentry)</h2>
+          <p className="text-text-tertiary text-xs mt-1">
+            서버·프론트 에러는 Sentry 가 추적합니다. 자세한 분석은 외부 dashboard.
+          </p>
+        </div>
+        {SENTRY_URL ? (
+          <a
+            href={SENTRY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 px-3 py-1.5 bg-brand hover:bg-accent text-white text-xs font-medium rounded-md"
+          >
+            Sentry 열기 ↗
+          </a>
+        ) : (
+          <span className="shrink-0 text-text-quaternary text-[11px]">
+            VITE_SENTRY_PROJECT_URL 미설정
+          </span>
+        )}
+      </div>
+    </section>
   )
 }

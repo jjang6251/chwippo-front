@@ -79,7 +79,7 @@ export function OpsInquiries() {
   const sorted = [...open, ...closed]
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <div>
       <div className="flex items-center gap-3 mb-6">
         <Link to="/ops" className="text-text-tertiary hover:text-text-primary text-sm">← 관리자</Link>
         <h1 className="text-xl font-bold">문의 관리</h1>

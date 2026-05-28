@@ -47,6 +47,8 @@ export function useGenerateAiDraft(clId: string) {
       // AI 추천 ref 가 자동 저장되므로 source-refs 캐시 무효화 (출처 칩 즉시 갱신)
       qc.invalidateQueries({ queryKey: key(clId) })
       // application coverletter answer 도 변경됨 (answer 저장) — caller 가 적절히 invalidate
+      // 5.6.x — quota 차감 즉시 반영 (AiQuotaChip)
+      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
     },
   })
 }

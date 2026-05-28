@@ -1,7 +1,14 @@
-/** 백엔드 LlmFeature enum 과 sync — admin 통제 가능한 모든 LLM feature */
+/** 백엔드 LlmFeature enum 과 sync — admin 통제 가능한 모든 LLM feature.
+ * 5.6.1 — seed 12 feature 전체 (legacy/deprecated 포함). FEATURE_LABEL 매트릭스도 1:1.
+ */
 export type LlmFeature =
   | 'note_summary'
-  | 'coverletter'
+  | 'coverletter' // legacy
+  | 'interview' // legacy
+  | 'interview_followup' // legacy
+  | 'score' // deprecated
+  | 'analysis' // deprecated
+  | 'auto_tag' // deprecated
   | 'coverletter_draft_v2'
   | 'coverletter_feedback'
   | 'coverletter_recommend'
@@ -32,6 +39,8 @@ export interface FeatureQuotaConfig {
   monthLimit: number
   cooldownSeconds: number
   enabled: boolean
+  /** 5.6.8 — 리소스별 24h 한도 (note_summary 만 사용). NULL = 미사용 */
+  perResourceDayLimit: number | null
   updatedBy: string | null
   updatedAt: string
 }
@@ -41,4 +50,5 @@ export interface UpdateFeatureQuotaDto {
   monthLimit?: number
   cooldownSeconds?: number
   enabled?: boolean
+  perResourceDayLimit?: number
 }

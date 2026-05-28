@@ -136,7 +136,7 @@ export function OpsUsers() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10">
+    <div>
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-7">
         <Link
@@ -211,7 +211,7 @@ export function OpsUsers() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-line">
+          <div className="overflow-x-auto bg-surface-2 rounded-xl border border-line shadow-sm">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line bg-card">

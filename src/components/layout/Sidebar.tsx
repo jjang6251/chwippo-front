@@ -88,73 +88,19 @@ export function Sidebar() {
             </Link>
           )}
 
-          {/* Admin link */}
+          {/* Admin link — 5.6.3 단순화. 진입점 하나만 (sub items 는 AdminLayout 좌측 nav 가 담당) */}
           {!isDemo && user?.role === 'admin' && (
-            <>
-              <Link
-                to="/ops"
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname.startsWith('/ops')
-                    ? 'bg-warning/10 text-warning'
-                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-                }`}
-              >
-                <AdminIcon size={16} />
-                관리자
-              </Link>
-              <div className="ml-7 flex flex-col gap-0.5">
-                  <Link
-                    to="/ops/inquiries"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      location.pathname === '/ops/inquiries'
-                        ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
-                    }`}
-                  >
-                    문의 관리
-                  </Link>
-                  <Link
-                    to="/ops/announcements"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      location.pathname === '/ops/announcements'
-                        ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
-                    }`}
-                  >
-                    공지 관리
-                  </Link>
-                  <Link
-                    to="/ops/ai-quotas"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      location.pathname === '/ops/ai-quotas'
-                        ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
-                    }`}
-                  >
-                    AI 한도
-                  </Link>
-                  <Link
-                    to="/ops/ai-usage"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      location.pathname === '/ops/ai-usage'
-                        ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
-                    }`}
-                  >
-                    AI 사용량
-                  </Link>
-                  <Link
-                    to="/ops/alert-thresholds"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      location.pathname === '/ops/alert-thresholds'
-                        ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
-                    }`}
-                  >
-                    임계치 알람
-                  </Link>
-              </div>
-            </>
+            <Link
+              to="/ops"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                location.pathname.startsWith('/ops')
+                  ? 'bg-warning/10 text-warning'
+                  : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
+              }`}
+            >
+              <AdminIcon size={16} />
+              관리자
+            </Link>
           )}
 
           {/* Spacer pushes bottom items down */}

@@ -1,8 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
-import { useInterviewPrepSessions } from '@/hooks/useInterviewPrep'
+import {
+  useDeleteInterviewSession,
+  useInterviewPrepSessions,
+} from '@/hooks/useInterviewPrep'
 import { NewInterviewSessionModal } from '@/components/card/NewInterviewSessionModal'
+import { toast } from '@/stores/toastStore'
 import {
   INTERVIEW_TYPE_LABEL,
   INTERVIEW_TYPE_STYLE,
@@ -122,6 +126,24 @@ function ApplicationInterviewGroup({
   const { data: sessions = [], isLoading } = useInterviewPrepSessions(
     applicationId,
   )
+  const { mutate: deleteSession } = useDeleteInterviewSession(applicationId)
+
+  const handleDelete = (
+    e: React.MouseEvent,
+    sessionId: string,
+    round: string,
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const ok = window.confirm(
+      `🗑️ "${round}" 세션을 정말 삭제하시겠어요?\n\n생성된 질문과 메모가 모두 삭제됩니다 (회사 조사 캐시는 보존).\n복구할 수 없습니다.`,
+    )
+    if (!ok) return
+    deleteSession(sessionId, {
+      onSuccess: () => toast.show('세션을 삭제했어요.'),
+      onError: () => toast.error('삭제에 실패했어요.'),
+    })
+  }
 
   if (isLoading) {
     return (
@@ -165,10 +187,10 @@ function ApplicationInterviewGroup({
       ) : (
         <ul className="space-y-2">
           {sessions.map((s) => (
-            <li key={s.id}>
+            <li key={s.id} className="relative group">
               <Link
                 to={`/interviews/${s.id}`}
-                className="block border border-line bg-surface-2 hover:bg-surface-3 hover:border-line-strong rounded-xl px-4 py-3.5 transition-colors"
+                className="block border border-line bg-surface-2 hover:bg-surface-3 hover:border-line-strong rounded-xl px-4 py-3.5 pr-12 transition-colors"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
@@ -198,6 +220,14 @@ function ApplicationInterviewGroup({
                   </p>
                 )}
               </Link>
+              <button
+                onClick={(e) => handleDelete(e, s.id, s.round)}
+                className="absolute top-2 right-2 text-text-quaternary hover:text-danger px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                title="세션 삭제"
+                aria-label={`${s.round} 세션 삭제`}
+              >
+                🗑️
+              </button>
             </li>
           ))}
         </ul>

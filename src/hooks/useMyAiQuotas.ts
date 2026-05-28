@@ -5,16 +5,21 @@ import type { LlmFeature, MyAiQuotaRow } from '@/types/aiQuota'
 const QUERY_KEY = ['me', 'ai-quotas'] as const
 
 /**
- * F6 PR 2 Phase 5.1 — 본인 AI feature 한도·사용량.
+ * F6 PR 2 Phase 5.1 + 5.6.x — 본인 AI feature 한도·사용량.
  *
- * 5곳 (자소서·면접·꼬리·회사조사·노트요약) 에서 공유. React Query 가 자동 dedup,
- * 5분 staleTime 으로 화면 전환 시 재호출 안 함.
+ * 5곳 (자소서·면접·꼬리·회사조사·노트요약) 에서 공유. React Query 가 같은 queryKey 자동 dedup
+ * (동시 mount 시 1 request).
+ *
+ * **staleTime=0 + refetchOnMount + refetchOnWindowFocus** — admin 가 한도 변경 시 다른
+ * 페이지에서 즉시 반영 + 페이지 전환 후에도 최신 사용량 표시 (이전 캐시로 "리셋" 보이는 버그 fix).
  */
 export function useMyAiQuotas() {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: aiQuotaApi.getMyQuotas,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   })
 }
 

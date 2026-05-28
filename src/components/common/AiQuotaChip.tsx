@@ -13,14 +13,21 @@ interface ChipState {
 }
 
 /**
- * F6 PR 2 Phase 5.1 — AI 호출 버튼 옆 chip.
+ * F6 PR 2 Phase 5.1 + 5.6.2 — AI 호출 버튼 옆 chip.
  *
- * 우선순위: enabled=false (kill switch) → cooldown → day soldout → month soldout → 잔여 표시.
+ * **표시 조건 (5.6.2 변경)** — admin 이 의식적으로 제한 걸 때만 표시:
+ *   - enabled=false (kill switch — 항상)
+ *   - cooldown 활성 (nextAvailableAt 미래)
+ *   - dayLimit ≤ 100 AND dayUsed ≥ 20% (한도 임박)
+ *   - day/month 한도 소진
+ *   - 그 외 (1000/10000 같은 무제한 + 한가) → 숨김
+ *
  * silent fail — API 실패·로딩 중엔 chip 숨김 (부모 버튼은 정상 동작).
  */
 export function AiQuotaChip({ feature, size = 'sm' }: Props) {
   const quota = useMyAiQuota(feature)
   if (!quota) return null
+  if (!shouldShow(quota)) return null
 
   const state = computeState(quota)
 
@@ -40,6 +47,25 @@ export function AiQuotaChip({ feature, size = 'sm' }: Props) {
       {state.label}
     </span>
   )
+}
+
+/** 5.6.2 — admin 이 의식적 제한 건 경우만 chip 표시. 기본 무제한 (1000/10000) 은 hide */
+function shouldShow(quota: {
+  enabled: boolean
+  dayUsed: number
+  dayLimit: number
+  monthUsed: number
+  monthLimit: number
+  nextAvailableAt: string | null
+}): boolean {
+  if (!quota.enabled) return true
+  if (quota.nextAvailableAt && new Date(quota.nextAvailableAt) > new Date()) return true
+  if (quota.dayUsed >= quota.dayLimit) return true
+  if (quota.monthUsed >= quota.monthLimit) return true
+  // 한도 ≤ 100 이고 20% 이상 사용 — admin 가 의식적으로 좁은 한도 설정
+  const dayThreshold = Math.max(1, Math.ceil(quota.dayLimit * 0.2))
+  if (quota.dayLimit <= 100 && quota.dayUsed >= dayThreshold) return true
+  return false
 }
 
 function computeState(quota: {

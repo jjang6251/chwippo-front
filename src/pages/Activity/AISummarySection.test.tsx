@@ -24,6 +24,36 @@ vi.mock('@/hooks/useActivities', () => ({
         return mockState.result
       },
     }),
+  // 5.6.8 — 노트별 status fetch (mount 시 잔여 표시)
+  useNoteSummaryStatus: () => ({
+    data: { perNoteUsed: 0, perNoteLimit: 5, remainingPerNote: 5 },
+  }),
+}))
+
+// 5.6.8 — useMyAiQuotas mock (cooldown source = nextAvailableAt)
+const quotaState = vi.hoisted(() => ({
+  nextAvailableAt: null as string | null,
+  dayUsed: 0,
+  dayLimit: 100,
+  monthUsed: 0,
+  monthLimit: 1000,
+}))
+function setNoteQuota(p: Partial<typeof quotaState>) {
+  Object.assign(quotaState, p)
+}
+
+vi.mock('@/hooks/useMyAiQuotas', () => ({
+  useAiQuotaBlocked: () => ({ blocked: false, reason: null }),
+  useMyAiQuota: () => ({
+    feature: 'note_summary',
+    enabled: true,
+    dayUsed: quotaState.dayUsed,
+    dayLimit: quotaState.dayLimit,
+    monthUsed: quotaState.monthUsed,
+    monthLimit: quotaState.monthLimit,
+    cooldownSeconds: 30,
+    nextAvailableAt: quotaState.nextAvailableAt,
+  }),
 }))
 
 vi.mock('@/stores/toastStore', () => ({
@@ -256,10 +286,110 @@ describe('AISummarySection — quota chip', () => {
     })
   })
 
-  it('remainingPerNote=undefined → quota chip 미표시', () => {
+  it('5.6.8 — 노트당 잔여 항상 표시 (status fetch 가 mount 시 보장)', () => {
+    // useNoteSummaryStatus mock 이 default 5/5 반환 → 호출 안 했어도 "0/5" 표시
     renderWithClient(
       <AISummarySection log={makeLog()} currentTextLength={100} />,
     )
-    expect(screen.queryByText(/오늘 노트당/)).not.toBeInTheDocument()
+    expect(screen.getByText(/오늘 노트당 0\/5/)).toBeInTheDocument()
+  })
+})
+
+// ── 5.6.8 — Cooldown source 변경 (백엔드 nextAvailableAt 기준) ──
+describe('AISummarySection — cooldown source (nextAvailableAt)', () => {
+  beforeEach(() => {
+    setMockResult({
+      status: 'ok',
+      summary: '요약',
+      cached: false,
+      perNoteLimit: 5,
+      remainingPerNote: 4,
+    } as SummarizeNoteResult)
+    setNoteQuota({ nextAvailableAt: null })
+  })
+
+  it('1) nextAvailableAt=null → 버튼 활성 (cooldown 0)', () => {
+    renderWithClient(
+      <AISummarySection log={makeLog()} currentTextLength={100} />,
+    )
+    expect(screen.getByText('✨ 지금 요약')).not.toBeDisabled()
+  })
+
+  it('2) nextAvailableAt 미래 25초 → 버튼 disabled + "⏳ N초 후" 라벨', async () => {
+    setNoteQuota({
+      nextAvailableAt: new Date(Date.now() + 25_000).toISOString(),
+    })
+    renderWithClient(
+      <AISummarySection log={makeLog()} currentTextLength={100} />,
+    )
+    await waitFor(() => {
+      const btn = screen.getByRole('button')
+      expect(btn).toBeDisabled()
+      expect(btn.textContent).toMatch(/⏳/)
+    })
+  })
+
+  it('3) nextAvailableAt 과거 → cooldown 0 (만료, 버튼 활성)', () => {
+    setNoteQuota({
+      nextAvailableAt: new Date(Date.now() - 5000).toISOString(),
+    })
+    renderWithClient(
+      <AISummarySection log={makeLog()} currentTextLength={100} />,
+    )
+    expect(screen.getByText('✨ 지금 요약')).not.toBeDisabled()
+  })
+})
+
+// ── 5.6.8 — blocked 시 요약 본문 보존 + 안내 분리 ──
+describe('AISummarySection — blocked 시 본문 보존', () => {
+  beforeEach(() => {
+    setNoteQuota({ nextAvailableAt: null })
+  })
+
+  it('4) log.noteSummary 있음 + 새 호출 blocked → 본문 유지 + 하단에 안내', async () => {
+    setMockResult({
+      status: 'blocked',
+      summary: null,
+      cached: false,
+      reason: '오늘 한도 초과',
+      perNoteLimit: 5,
+      remainingPerNote: 0,
+    } as SummarizeNoteResult)
+    renderWithClient(
+      <AISummarySection
+        log={makeLog({ noteSummary: '이전 요약 본문' })}
+        currentTextLength={100}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button'))
+    // 본문 그대로 유지
+    expect(screen.getByText('이전 요약 본문')).toBeInTheDocument()
+    // 본문 아래 안내 (mutation onSuccess 후 비동기)
+    await waitFor(() =>
+      expect(screen.getByText(/오늘 한도 초과/)).toBeInTheDocument(),
+    )
+  })
+
+  it('5) log.noteSummary 없음 + blocked → 안내만 (본문 자리에 메시지)', async () => {
+    setMockResult({
+      status: 'blocked',
+      summary: null,
+      cached: false,
+      reason: '노트당 한도 소진',
+      perNoteLimit: 5,
+      remainingPerNote: 0,
+    } as SummarizeNoteResult)
+    renderWithClient(
+      <AISummarySection
+        log={makeLog({ noteSummary: null })}
+        currentTextLength={100}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button'))
+    await waitFor(() =>
+      expect(screen.getByText(/노트당 한도 소진/)).toBeInTheDocument(),
+    )
+    // 본문 없음
+    expect(screen.queryByText(/이전/)).toBeNull()
   })
 })

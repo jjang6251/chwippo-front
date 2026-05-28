@@ -151,4 +151,6 @@ export interface SummarizeNoteResult {
   cached: boolean
   reason?: string
   remainingPerNote?: number
+  /** 5.6.8 — admin 통제 per-note 한도 (백엔드 응답). UI 가 "N/M" 의 M 동적 표시 */
+  perNoteLimit?: number
 }
