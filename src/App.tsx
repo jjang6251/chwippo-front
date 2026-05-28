@@ -38,6 +38,7 @@ import { Interviews } from '@/pages/Interviews'
 import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
 import { AiUsage } from '@/pages/Admin/AiUsage'
 import { AiQuotas } from '@/pages/Admin/AiQuotas'
+import { AlertThresholds } from '@/pages/Admin/AlertThresholds'
 
 export default function App() {
   return (
@@ -96,6 +97,7 @@ export default function App() {
             <Route path="/ops/users" element={<OpsUsers />} />
             <Route path="/ops/ai-usage" element={<AiUsage />} />
             <Route path="/ops/ai-quotas" element={<AiQuotas />} />
+            <Route path="/ops/alert-thresholds" element={<AlertThresholds />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />

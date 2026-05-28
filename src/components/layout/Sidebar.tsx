@@ -143,6 +143,16 @@ export function Sidebar() {
                   >
                     AI 사용량
                   </Link>
+                  <Link
+                    to="/ops/alert-thresholds"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      location.pathname === '/ops/alert-thresholds'
+                        ? 'text-warning bg-warning/8'
+                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
+                    }`}
+                  >
+                    임계치 알람
+                  </Link>
               </div>
             </>
           )}
