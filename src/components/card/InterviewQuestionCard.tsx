@@ -4,6 +4,7 @@ import {
   useCreateInterviewFollowup,
   useUpdateInterviewQuestion,
 } from '@/hooks/useInterviewPrep'
+import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { toast } from '@/stores/toastStore'
 import type { InterviewPrepQuestion } from '@/types/interviewPrep'
 
@@ -35,6 +36,8 @@ export function InterviewQuestionCard({ question, sessionId }: Props) {
   const { mutate: updateMemo } = useUpdateInterviewQuestion()
   const { mutate: createFollowup, isPending: creatingFollowup } =
     useCreateInterviewFollowup(sessionId)
+  const { blocked: followupBlocked, reason: followupReason } =
+    useAiQuotaBlocked('interview_prep_followup')
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -159,8 +162,9 @@ export function InterviewQuestionCard({ question, sessionId }: Props) {
           {question.depth < 2 && (
             <button
               onClick={handleAddFollowup}
-              disabled={creatingFollowup}
+              disabled={creatingFollowup || followupBlocked}
               className="text-text-tertiary hover:text-brand text-xs font-medium disabled:opacity-50 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
+              title={followupReason ?? undefined}
             >
               {creatingFollowup ? '✨ 생성 중…' : '+ 꼬리질문 추가'}
             </button>

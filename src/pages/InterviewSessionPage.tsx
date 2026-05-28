@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { CompanyResearchCard } from '@/components/card/CompanyResearchCard'
 import { EditInterviewSessionModal } from '@/components/card/EditInterviewSessionModal'
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
+import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { useApplication } from '@/hooks/useApplications'
 import {
@@ -12,6 +13,7 @@ import {
   useInterviewPrepSession,
   useUpdateInterviewPrepSession,
 } from '@/hooks/useInterviewPrep'
+import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { toast } from '@/stores/toastStore'
 import {
   INTERVIEW_TYPE_LABEL,
@@ -34,6 +36,7 @@ export function InterviewSessionPage() {
   const { data: questions = [], isLoading: questionsLoading } =
     useInterviewPrepQuestions(sessionId)
   const { data: refs } = useInterviewPrepRefs(sessionId)
+  const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('interview_prep_session')
   const { mutate: generate, isPending: generating } =
     useGenerateInterviewSession(sessionId)
   const { mutate: updateSession, isPending: updatingSession } =
@@ -311,23 +314,30 @@ export function InterviewSessionPage() {
                 </p>
                 <button
                   onClick={handleGenerate}
-                  disabled={generating}
+                  disabled={generating || quotaBlocked}
                   className="bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50"
+                  title={quotaReason ?? undefined}
                 >
                   {generating ? 'AI 가 질문 작성 중…' : '✨ AI 질문 생성'}
                 </button>
+                <div className="mt-3 flex justify-center">
+                  <AiQuotaChip feature="interview_prep_session" />
+                </div>
               </div>
             ) : (
               <>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-text-tertiary text-xs">
-                    메인 {totalMain}개 · 꼬리 {totalFollowup}개
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-text-tertiary text-xs">
+                      메인 {totalMain}개 · 꼬리 {totalFollowup}개
+                    </p>
+                    <AiQuotaChip feature="interview_prep_session" />
+                  </div>
                   <button
                     onClick={handleGenerate}
-                    disabled={generating}
-                    className="text-text-tertiary hover:text-text-primary text-xs"
-                    title="기존 질문 모두 지우고 다시 생성"
+                    disabled={generating || quotaBlocked}
+                    className="text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
+                    title={quotaReason ?? '기존 질문 모두 지우고 다시 생성'}
                   >
                     {generating ? '재생성 중…' : '↻ 다시 생성'}
                   </button>

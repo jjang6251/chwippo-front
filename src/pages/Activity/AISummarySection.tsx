@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { toast } from '@/stores/toastStore'
 import { useSummarizeLog } from '@/hooks/useActivities'
+import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import type { ActivityLog, SummarizeNoteResult } from '@/types/activity'
 
 const MIN_CHARS = 50
@@ -14,6 +16,7 @@ interface Props {
 
 export function AISummarySection({ log, currentTextLength }: Props) {
   const summarize = useSummarizeLog(log.activityId)
+  const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('note_summary')
   const [lastResult, setLastResult] = useState<SummarizeNoteResult | null>(null)
   // 30초 쿨다운 — 호출 성공/캐시 시 lastCallAt set, 매초 tick 으로 남은 시간 계산
   const lastCallAtRef = useRef<number>(0)
@@ -129,11 +132,15 @@ export function AISummarySection({ log, currentTextLength }: Props) {
       <button
         type="button"
         className={`np-ai-summary-btn${cooldownLeft > 0 ? ' cooldown' : ''}`}
-        disabled={tooShort || summarize.isPending || cooldownLeft > 0}
+        disabled={tooShort || summarize.isPending || cooldownLeft > 0 || quotaBlocked}
         onClick={() => handleClick(!!summary)}
+        title={quotaReason ?? undefined}
       >
         {btnLabel}
       </button>
+      <div className="np-ai-summary-quota">
+        <AiQuotaChip feature="note_summary" />
+      </div>
     </div>
   )
 }

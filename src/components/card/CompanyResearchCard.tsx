@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import {
   useCompanyResearch,
   useTriggerCompanyResearch,
   useUpdateUserResearchNotes,
 } from '@/hooks/useInterviewPrep'
+import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { toast } from '@/stores/toastStore'
 
 interface Props {
@@ -31,6 +33,8 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
   const { data: research, isLoading } = useCompanyResearch(sessionId)
   const { mutate: trigger, isPending: triggering } =
     useTriggerCompanyResearch(sessionId)
+  const { blocked: quotaBlocked, reason: quotaReason } =
+    useAiQuotaBlocked('company_research')
   const [cardExpanded, setCardExpanded] = useState(true) // 카드 전체 toggle (default 펼침)
   const [showMore, setShowMore] = useState(false) // "더 보기" — 나머지 5 항목
   const [showSources, setShowSources] = useState(false) // 출처 토글 (default 접힘)
@@ -99,11 +103,15 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                 </p>
                 <button
                   onClick={handleTrigger}
-                  disabled={triggering}
+                  disabled={triggering || quotaBlocked}
                   className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold px-3 py-2 rounded-md transition-colors disabled:opacity-50"
+                  title={quotaReason ?? undefined}
                 >
                   {triggering ? '🔍 조사 중…' : '🔍 회사 조사 시작'}
                 </button>
+                <div className="flex justify-end">
+                  <AiQuotaChip feature="company_research" />
+                </div>
               </div>
             ) : research.status === 'opt_out' ? (
               <div className="bg-warning/5 border border-warning/20 rounded-md p-2.5">
@@ -119,8 +127,9 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                 </p>
                 <button
                   onClick={handleTrigger}
-                  disabled={triggering}
-                  className="mt-2 text-text-tertiary hover:text-brand text-[11px]"
+                  disabled={triggering || quotaBlocked}
+                  className="mt-2 text-text-tertiary hover:text-brand text-[11px] disabled:opacity-50"
+                  title={quotaReason ?? undefined}
                 >
                   {triggering ? '재시도 중…' : '다시 시도'}
                 </button>
