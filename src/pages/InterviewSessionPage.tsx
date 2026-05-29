@@ -107,16 +107,14 @@ export function InterviewSessionPage() {
       <>
         {/* 헤더 — breadcrumb + 차수 */}
         <header className="mb-5 space-y-2">
-          <div className="text-[11px] text-text-quaternary font-mono">
-            <Link to="/interviews" className="hover:text-text-tertiary">
-              /interviews
+          <div className="text-xs text-text-tertiary">
+            <Link to="/interviews" className="hover:text-text-primary transition-colors">
+              ← 면접 목록
             </Link>
-            {' / '}
-            <span className="text-text-tertiary">
-              {app?.companyName ?? '...'}
-            </span>
-            {' / '}
-            <span className="text-text-tertiary">{session.round}</span>
+            <span className="text-text-quaternary mx-2">·</span>
+            <span>{app?.companyName ?? '...'}</span>
+            <span className="text-text-quaternary mx-2">·</span>
+            <span>{session.round}</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-text-primary text-2xl font-bold">

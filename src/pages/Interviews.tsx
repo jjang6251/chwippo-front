@@ -97,9 +97,6 @@ export function Interviews() {
 function Header() {
   return (
     <header className="space-y-2">
-      <div className="text-[11px] text-text-quaternary font-mono uppercase tracking-wider">
-        /interviews
-      </div>
       <h1 className="text-text-primary text-[26px] font-bold leading-tight">
         면접 준비 <span className="text-brand italic">모아보기</span>
       </h1>

@@ -81,9 +81,6 @@ function Header({ cached }: { cached?: boolean } = {}) {
     <header className="space-y-2">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-[10px] text-text-quaternary font-mono mb-1">
-            /activity/insights
-          </div>
           <h1 className="text-text-primary text-2xl font-bold leading-tight">
             내 <span className="text-brand">데이터</span>
           </h1>
