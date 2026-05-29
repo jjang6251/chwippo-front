@@ -86,9 +86,6 @@ export function Coverletters() {
 function Header() {
   return (
     <header className="space-y-1.5">
-      <div className="text-[10px] text-text-quaternary font-mono">
-        /coverletters
-      </div>
       <h1 className="text-text-primary text-2xl font-bold leading-tight">
         자소서 <span className="text-brand">모아보기</span>
       </h1>
