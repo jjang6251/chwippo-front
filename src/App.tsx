@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastContainer } from '@/components/common/ToastContainer'
 import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
+import { AiConsentRequiredModal } from '@/components/common/AiConsentRequiredModal'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AdminGuard } from '@/components/layout/AdminGuard'
 import { AppShell } from '@/components/layout/AppShell'
@@ -34,6 +35,7 @@ import { ActivityPage } from '@/pages/Activity/ActivityPage'
 import { NotePage } from '@/pages/Activity/NotePage'
 import { InsightsPage } from '@/pages/Activity/InsightsPage'
 import { Coverletters } from '@/pages/Coverletters'
+import { CoverletterDocPage } from '@/pages/Coverletter/CoverletterDocPage'
 import { Interviews } from '@/pages/Interviews'
 import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
 import { AiUsage } from '@/pages/Admin/AiUsage'
@@ -81,6 +83,10 @@ export default function App() {
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/activity/insights" element={<InsightsPage />} />
             <Route path="/coverletters" element={<Coverletters />} />
+            <Route
+              path="/board/:applicationId/coverletter"
+              element={<CoverletterDocPage />}
+            />
             <Route path="/interviews" element={<Interviews />} />
             <Route
               path="/interviews/:sessionId"
@@ -109,6 +115,7 @@ export default function App() {
       </Routes>
       <ToastContainer />
       <CelebrationOverlay />
+      <AiConsentRequiredModal />
     </BrowserRouter>
   )
 }

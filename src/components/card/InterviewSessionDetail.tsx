@@ -3,6 +3,7 @@ import {
   useInterviewPrepQuestions,
 } from '@/hooks/useInterviewPrep'
 import { toast } from '@/stores/toastStore'
+import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { InterviewQuestionCard } from './InterviewQuestionCard'
 
 /**
@@ -17,8 +18,10 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
   const { data: questions, isLoading } = useInterviewPrepQuestions(sessionId)
   const { mutate: generate, isPending: generating } =
     useGenerateInterviewSession(sessionId)
+  const ensureAiConsent = useRequireAiConsent()
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!(await ensureAiConsent())) return
     generate(undefined, {
       onSuccess: (result) => {
         if (result.status === 'ok') {
@@ -62,7 +65,7 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
           disabled={generating}
           className="bg-brand hover:bg-brand-hover text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors disabled:opacity-50"
         >
-          {generating ? 'AI 가 질문 작성 중…' : '✨ AI 질문 생성'}
+          {generating ? '✨ 질문 생성중... (10-20초 소요)' : '✨ AI 질문 생성'}
         </button>
       </div>
     )
@@ -81,7 +84,7 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
           className="text-text-tertiary hover:text-text-primary text-xs"
           title="기존 질문을 모두 지우고 다시 생성"
         >
-          {generating ? '재생성 중…' : '↻ 다시 생성'}
+          {generating ? '✨ 재생성중... (10-20초)' : '↻ 다시 생성'}
         </button>
       </div>
       {tree.map((q) => (

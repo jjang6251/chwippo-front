@@ -7,6 +7,7 @@ import {
   useUpdateUserResearchNotes,
 } from '@/hooks/useInterviewPrep'
 import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
+import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { toast } from '@/stores/toastStore'
 
 interface Props {
@@ -35,12 +36,14 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
     useTriggerCompanyResearch(sessionId)
   const { blocked: quotaBlocked, reason: quotaReason } =
     useAiQuotaBlocked('company_research')
+  const ensureAiConsent = useRequireAiConsent()
   const [cardExpanded, setCardExpanded] = useState(true) // 카드 전체 toggle (default 펼침)
   const [showMore, setShowMore] = useState(false) // "더 보기" — 나머지 5 항목
   const [showSources, setShowSources] = useState(false) // 출처 토글 (default 접힘)
   const [editingNotes, setEditingNotes] = useState(false)
 
-  const handleTrigger = () => {
+  const handleTrigger = async () => {
+    if (!(await ensureAiConsent())) return
     trigger(undefined, {
       onSuccess: (result) => {
         if (result.status === 'ok') {
@@ -107,7 +110,7 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                   className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold px-3 py-2 rounded-md transition-colors disabled:opacity-50"
                   title={quotaReason ?? undefined}
                 >
-                  {triggering ? '🔍 조사 중…' : '🔍 회사 조사 시작'}
+                  {triggering ? '🔍 조사중... (5-10초 소요)' : '🔍 회사 조사 시작'}
                 </button>
                 <div className="flex justify-end">
                   <AiQuotaChip feature="company_research" />
@@ -131,7 +134,7 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                   className="mt-2 text-text-tertiary hover:text-brand text-[11px] disabled:opacity-50"
                   title={quotaReason ?? undefined}
                 >
-                  {triggering ? '재시도 중…' : '다시 시도'}
+                  {triggering ? '🔍 재시도중... (5-10초)' : '다시 시도'}
                 </button>
               </div>
             ) : research.research ? (

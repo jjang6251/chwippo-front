@@ -67,8 +67,9 @@ export function Coverletters() {
 
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 space-y-4">
-      <Header />
-      <div className="space-y-3">
+      <Header total={active.length} />
+      {/* 회사 카드 그리드 (잡코리아·자소설닷컴 식 모아보기) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {active.map((app) => (
           <ApplicationGroup
             key={app.id}
@@ -83,14 +84,22 @@ export function Coverletters() {
   )
 }
 
-function Header() {
+function Header({ total }: { total?: number }) {
   return (
     <header className="space-y-1.5">
-      <h1 className="text-text-primary text-2xl font-bold leading-tight">
-        자소서 <span className="text-brand">모아보기</span>
-      </h1>
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-text-primary text-2xl font-bold leading-tight">
+          자소서 <span className="text-brand">모아보기</span>
+        </h1>
+        {total !== undefined && (
+          <span className="text-text-quaternary text-xs font-mono">
+            {total}개 회사
+          </span>
+        )}
+      </div>
       <p className="text-text-tertiary text-xs leading-relaxed">
-        지원한 회사들의 자소서 문항·답변을 한곳에서 확인. 편집은 회사 카드에서.
+        지원한 회사 별 자소서 문항·답변·진행률. 카드 클릭 → 회사 자소서
+        풀페이지.
       </p>
     </header>
   )
@@ -131,7 +140,7 @@ function ApplicationGroup({
           </p>
         </div>
         <Link
-          to={`/board/${applicationId}?tab=coverletter`}
+          to={`/board/${applicationId}/coverletter`}
           className="text-[11px] text-text-tertiary hover:text-brand border border-line hover:border-brand/40 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
         >
           + 추가
@@ -140,69 +149,79 @@ function ApplicationGroup({
     )
   }
 
+  // 진행률 계산 (잡코리아·자소설닷컴 표준 — 작성 완료 문항 N/M)
+  const completedCount = items.filter((c) => (c.answer ?? '').trim().length > 0).length
+  const totalCount = items.length
+  const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+
   return (
-    <div className="border border-line bg-surface-2 rounded-xl overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-line bg-surface-3/40">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-text-primary text-sm font-semibold truncate">
-            {companyName}
-          </h3>
-          {(jobTitle || jobCategory) && (
-            <p className="text-text-quaternary text-[10px] mt-0.5 truncate">
-              {[jobCategory, jobTitle].filter(Boolean).join(' · ')}
-            </p>
-          )}
+    <Link
+      to={`/board/${applicationId}/coverletter`}
+      className="block border border-line bg-surface-2 rounded-xl overflow-hidden hover:border-brand/40 transition-colors"
+    >
+      {/* 회사 헤더 + 진행률 progress bar */}
+      <div className="px-4 py-3 border-b border-line bg-surface-3/40">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-text-primary text-sm font-semibold truncate">
+              {companyName}
+            </h3>
+            {(jobTitle || jobCategory) && (
+              <p className="text-text-quaternary text-[10px] mt-0.5 truncate">
+                {[jobCategory, jobTitle].filter(Boolean).join(' · ')}
+              </p>
+            )}
+          </div>
+          <span
+            className={`shrink-0 text-[11px] font-mono font-semibold ${
+              progress === 100
+                ? 'text-success'
+                : progress > 0
+                  ? 'text-brand'
+                  : 'text-text-quaternary'
+            }`}
+          >
+            {completedCount}/{totalCount}
+          </span>
         </div>
-        <Link
-          to={`/board/${applicationId}?tab=coverletter`}
-          className="text-[11px] text-text-tertiary hover:text-brand border border-line hover:border-brand/40 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
-        >
-          편집 →
-        </Link>
+        {/* progress bar (잡코리아 식 — 작성 완료 비율) */}
+        <div className="h-1 bg-surface rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all ${
+              progress === 100 ? 'bg-success' : 'bg-brand'
+            }`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
-      <ul className="divide-y divide-line">
-        {items.map((cl) => {
+
+      {/* 분류 chip 요약 (max 4개) */}
+      <div className="px-4 py-3 flex flex-wrap gap-1.5">
+        {items.slice(0, 4).map((cl) => {
           const cat = coverletterCategory(cl.category)
           const catStyle = COVERLETTER_CATEGORY_STYLE[cat]
           const hasAnswer = (cl.answer ?? '').trim().length > 0
           return (
-            <li key={cl.id}>
-              <Link
-                to={`/board/${applicationId}?tab=coverletter`}
-                className="block px-4 py-3 hover:bg-surface-3/40 transition-colors"
-              >
-                <div className="flex items-start gap-2 mb-1.5">
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${catStyle}`}
-                  >
-                    {COVERLETTER_CATEGORY_EMOJI[cat]} {cat}
-                  </span>
-                  {cl.charLimit && (
-                    <span className="text-[10px] text-text-quaternary font-mono">
-                      · {cl.charLimit}자
-                    </span>
-                  )}
-                  {!hasAnswer && (
-                    <span className="text-[10px] text-warning bg-warning/8 border border-warning/20 px-1.5 rounded-full">
-                      미작성
-                    </span>
-                  )}
-                </div>
-                <p className="text-text-secondary text-xs font-medium leading-snug line-clamp-2">
-                  {cl.question || (
-                    <span className="text-text-quaternary">(문항 미입력)</span>
-                  )}
-                </p>
-                {hasAnswer && (
-                  <p className="text-text-tertiary text-[11px] leading-relaxed line-clamp-2 mt-1.5">
-                    {cl.answer}
-                  </p>
-                )}
-              </Link>
-            </li>
+            <span
+              key={cl.id}
+              className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${catStyle} ${
+                hasAnswer ? '' : 'opacity-50'
+              }`}
+              title={hasAnswer ? '작성됨' : '미작성'}
+            >
+              {COVERLETTER_CATEGORY_EMOJI[cat]} {cat}
+              {!hasAnswer && (
+                <span className="text-text-quaternary text-[8px]">·미작성</span>
+              )}
+            </span>
           )
         })}
-      </ul>
-    </div>
+        {items.length > 4 && (
+          <span className="text-[10px] text-text-quaternary px-1.5 py-0.5">
+            +{items.length - 4}
+          </span>
+        )}
+      </div>
+    </Link>
   )
 }

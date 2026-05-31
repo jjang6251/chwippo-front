@@ -7,6 +7,7 @@ export default {
       fontFamily: {
         sans: ["'Noto Sans KR'", 'Inter Variable', 'system-ui', 'sans-serif'],
         mono: ["'DM Mono'", "'Berkeley Mono'", 'ui-monospace', 'monospace'],
+        serif: ["'Nanum Myeongjo'", 'ui-serif', 'serif'],
       },
       colors: {
         // 색은 RGB triplet 변수 + tailwind opacity modifier 지원 (bg-warning/10 등)

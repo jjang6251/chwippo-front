@@ -44,6 +44,8 @@ beforeEach(() => {
       role: 'user',
       onboardedAt: null,
       termsAgreedAt: null,
+      aiConsentAt: null,
+      aiConsentVersion: null,
     },
   })
 })

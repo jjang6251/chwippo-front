@@ -15,6 +15,7 @@ import {
   useUpdateInterviewPrepSession,
 } from '@/hooks/useInterviewPrep'
 import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
+import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { toast } from '@/stores/toastStore'
 import {
   INTERVIEW_TYPE_LABEL,
@@ -42,6 +43,7 @@ export function InterviewSessionPage() {
   const quota = useMyAiQuota('interview_prep_session')
   const { mutate: generate, isPending: generating } =
     useGenerateInterviewSession(sessionId)
+  const ensureAiConsent = useRequireAiConsent()
   const { mutate: updateSession, isPending: updatingSession } =
     useUpdateInterviewPrepSession(sessionId, applicationId)
   const { mutate: deleteSession } = useDeleteInterviewSession(applicationId)
@@ -64,7 +66,7 @@ export function InterviewSessionPage() {
     })
   }
 
-  const handleGenerate = (isRegenerate = false) => {
+  const handleGenerate = async (isRegenerate = false) => {
     if (isRegenerate) {
       const remaining = quota
         ? `오늘 ${quota.dayLimit - quota.dayUsed}/${quota.dayLimit}회 · 이번 달 ${quota.monthLimit - quota.monthUsed}/${quota.monthLimit}회`
@@ -74,6 +76,7 @@ export function InterviewSessionPage() {
       )
       if (!ok) return
     }
+    if (!(await ensureAiConsent())) return
     generate(undefined, {
       onSuccess: (result) => {
         if (result.status === 'ok') {
@@ -350,7 +353,7 @@ export function InterviewSessionPage() {
                   className="bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50"
                   title={quotaReason ?? undefined}
                 >
-                  {generating ? 'AI 가 질문 작성 중…' : '✨ AI 질문 생성'}
+                  {generating ? '✨ 질문 생성중... (10-20초 소요)' : '✨ AI 질문 생성'}
                 </button>
                 <div className="mt-3 flex justify-center">
                   <AiQuotaChip feature="interview_prep_session" />
@@ -371,7 +374,7 @@ export function InterviewSessionPage() {
                     className="text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
                     title={quotaReason ?? '기존 질문 모두 삭제 + AI 1회 차감'}
                   >
-                    {generating ? '재생성 중…' : '↻ 다시 생성'}
+                    {generating ? '✨ 재생성중... (10-20초)' : '↻ 다시 생성'}
                   </button>
                 </div>
                 <div className="space-y-3">

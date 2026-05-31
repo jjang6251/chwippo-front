@@ -7,6 +7,8 @@ interface User {
   role: 'user' | 'admin'
   onboardedAt: string | null
   termsAgreedAt: string | null
+  aiConsentAt: string | null
+  aiConsentVersion: string | null
 }
 
 interface AuthState {
