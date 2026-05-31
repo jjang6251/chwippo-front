@@ -5,6 +5,7 @@ import {
   useSummarizeLog,
 } from '@/hooks/useActivities'
 import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
+import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import type { ActivityLog, SummarizeNoteResult } from '@/types/activity'
 
 const MIN_CHARS = 50
@@ -17,6 +18,7 @@ interface Props {
 
 export function AISummarySection({ log, currentTextLength }: Props) {
   const summarize = useSummarizeLog(log.activityId)
+  const ensureAiConsent = useRequireAiConsent()
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('note_summary')
   const noteQuota = useMyAiQuota('note_summary')
   // 5.6.8 — 노트별 잔여 (mount 시 항상). lastResult 우선 (방금 호출 신선), 없으면 status fetch
@@ -69,6 +71,7 @@ export function AISummarySection({ log, currentTextLength }: Props) {
 
   async function handleClick(force = false) {
     if (tooShort || cooldownLeft > 0) return
+    if (!(await ensureAiConsent())) return
     summarize.mutate(
       { logId: log.id, force },
       {
@@ -94,7 +97,7 @@ export function AISummarySection({ log, currentTextLength }: Props) {
 
   // 버튼 라벨
   let btnLabel: string
-  if (summarize.isPending) btnLabel = '✨ 생성 중...'
+  if (summarize.isPending) btnLabel = '✨ 요약중... (3-5초)'
   else if (cooldownLeft > 0) btnLabel = `⏳ ${cooldownLeft}초 후 다시 시도`
   else if (tooShort) btnLabel = '✨ 노트 더 작성하기'
   else if (isStale) btnLabel = '✨ 다시 요약 (변경됨)'

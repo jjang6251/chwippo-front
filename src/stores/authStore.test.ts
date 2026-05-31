@@ -8,6 +8,8 @@ const mockUser = {
   role: 'user' as const,
   onboardedAt: null,
   termsAgreedAt: null,
+  aiConsentAt: null,
+  aiConsentVersion: null,
 }
 
 describe('authStore', () => {

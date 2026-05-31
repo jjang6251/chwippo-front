@@ -64,6 +64,13 @@ vi.mock('@/stores/toastStore', () => ({
   },
 }))
 
+// Phase 2.5 — AISummarySection.handleClick 이 useRequireAiConsent 호출.
+// 테스트 환경엔 authStore user 없음 → consent 모달 띄우려다 ensure=false → mutate 미호출.
+// mock 으로 항상 통과 (테스트 의도는 cooldown/blocked 흐름, consent 는 별도 spec)
+vi.mock('@/hooks/useRequireAiConsent', () => ({
+  useRequireAiConsent: () => async () => true,
+}))
+
 // ── fixtures ────────────────────────────────────────────────────────────
 const makeLog = (overrides: Partial<ActivityLog> = {}): ActivityLog => ({
   id: 'log-1',

@@ -6,6 +6,7 @@
 // - 2026-05-14: 초안
 
 import { Link, useNavigate } from 'react-router-dom'
+import { AiConsentToggle } from '@/components/common/AiConsentToggle'
 
 export function Privacy() {
   const navigate = useNavigate()
@@ -95,7 +96,7 @@ export function Privacy() {
           <p className="mt-3 text-text-quaternary text-xs">
             * 모든 수탁 업체는 SOC2/ISO27001 등 국제 정보보안 표준을 준수합니다.
           </p>
-          <div className="mt-3 p-3 bg-surface-2 border border-line rounded-md">
+          <div id="ai-consent" className="mt-3 p-3 bg-surface-2 border border-line rounded-md">
             <p className="font-medium mb-2">AI 기능 처리 위탁 (PIPA 26조)</p>
             <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
               <li>
@@ -112,6 +113,9 @@ export function Privacy() {
               사용자는 가입 시 별도 동의 (`ai_consent_at`) 가 필요하며, 동의 없이는 AI 기능을
               사용할 수 없습니다.
             </p>
+            <div className="mt-3 pt-3 border-t border-line">
+              <AiConsentToggle />
+            </div>
           </div>
         </DocSection>
 

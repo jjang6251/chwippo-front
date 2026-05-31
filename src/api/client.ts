@@ -24,6 +24,8 @@ interface RefreshUser {
   role: 'user' | 'admin'
   onboardedAt: string | null
   termsAgreedAt: string | null
+  aiConsentAt: string | null
+  aiConsentVersion: string | null
 }
 
 interface RefreshResponse {
