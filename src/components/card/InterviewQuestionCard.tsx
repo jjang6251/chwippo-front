@@ -7,6 +7,7 @@ import {
 import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { toast } from '@/stores/toastStore'
 import type { InterviewPrepQuestion } from '@/types/interviewPrep'
+import { CATEGORY_LABEL } from '@/types/interviewPrep'
 
 interface Props {
   question: InterviewPrepQuestion
@@ -109,6 +110,14 @@ export function InterviewQuestionCard({ question, sessionId }: Props) {
         >
           {depthLabel[question.depth]}
         </span>
+        {question.category && (
+          <span
+            className="text-[10px] font-semibold shrink-0 mt-1 px-1.5 py-0.5 rounded bg-brand/10 text-brand border border-brand/20"
+            title={`카테고리: ${question.category}`}
+          >
+            {CATEGORY_LABEL[question.category] ?? question.category}
+          </span>
+        )}
         <span className="text-text-primary text-[15px] font-medium leading-snug flex-1">
           {question.questionText}
         </span>

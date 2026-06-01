@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CompanyResearchCard } from '@/components/card/CompanyResearchCard'
 import { EditInterviewSessionModal } from '@/components/card/EditInterviewSessionModal'
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
+import { Spinner } from '@/components/common/Spinner'
 import { useApplication } from '@/hooks/useApplications'
 import {
   useDeleteInterviewSession,
@@ -18,9 +19,11 @@ import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { toast } from '@/stores/toastStore'
 import {
+  CATEGORY_LABEL,
   INTERVIEW_TYPE_LABEL,
   INTERVIEW_TYPE_STYLE,
 } from '@/types/interviewPrep'
+import type { InterviewPrepQuestion } from '@/types/interviewPrep'
 
 /**
  * F6 PR 2 Phase 4 — 면접 세션 풀스크린 페이지.
@@ -41,7 +44,7 @@ export function InterviewSessionPage() {
   const { data: refs } = useInterviewPrepRefs(sessionId)
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('interview_prep_session')
   const quota = useMyAiQuota('interview_prep_session')
-  const { mutate: generate, isPending: generating } =
+  const { mutateAsync: generateSession, isPending: generating } =
     useGenerateInterviewSession(sessionId)
   const ensureAiConsent = useRequireAiConsent()
   const { mutate: updateSession, isPending: updatingSession } =
@@ -77,18 +80,20 @@ export function InterviewSessionPage() {
       if (!ok) return
     }
     if (!(await ensureAiConsent())) return
-    generate(undefined, {
-      onSuccess: (result) => {
-        if (result.status === 'ok') {
-          toast.show(
-            `${result.meta?.mainCount ?? 0}개 메인 + 꼬리 ${result.meta?.followupCount ?? 0}개 생성`,
-          )
-        } else {
-          toast.error(result.reason ?? '생성에 실패했어요.')
-        }
-      },
-      onError: () => toast.error('AI 호출 중 오류가 발생했어요.'),
-    })
+    try {
+      const result = await generateSession()
+      if (result.status === 'ok') {
+        toast.show(
+          `${result.meta?.mainCount ?? 0}개 메인 + 꼬리 ${result.meta?.followupCount ?? 0}개 생성`,
+        )
+      } else {
+        toast.error(result.reason ?? '생성에 실패했어요.')
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'AI 호출 중 오류가 발생했어요.'
+      toast.error(message)
+    }
   }
 
   if (sessionLoading || !session) {
@@ -336,6 +341,23 @@ export function InterviewSessionPage() {
                   />
                 ))}
               </div>
+            ) : generating && questions.length === 0 ? (
+              <div className="border border-dashed border-brand/40 bg-brand/5 rounded-xl px-6 py-12 text-center">
+                <Spinner size={40} className="mx-auto text-brand mb-4" />
+                <p className="text-text-secondary text-sm mb-2 font-medium">
+                  🤖 AI 면접관이 질문을 만들고 있어요
+                </p>
+                <p className="text-text-quaternary text-xs leading-relaxed">
+                  자소서·활동·회사 조사를 꼼꼼히 읽고 있어요. 1~2분쯤 걸려요.
+                  <br />
+                  잠시만 기다려 주세요
+                  <span className="inline-flex ml-0.5">
+                    <span className="animate-pulse [animation-delay:0ms]">.</span>
+                    <span className="animate-pulse [animation-delay:200ms]">.</span>
+                    <span className="animate-pulse [animation-delay:400ms]">.</span>
+                  </span>
+                </p>
+              </div>
             ) : questions.length === 0 ? (
               <div className="border border-dashed border-line bg-surface-2/30 rounded-xl px-6 py-12 text-center">
                 <div className="text-2xl mb-2">✨</div>
@@ -353,7 +375,7 @@ export function InterviewSessionPage() {
                   className="bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50"
                   title={quotaReason ?? undefined}
                 >
-                  {generating ? '✨ 질문 생성중... (10-20초 소요)' : '✨ AI 질문 생성'}
+                  ✨ AI 질문 생성 (메인 20개)
                 </button>
                 <div className="mt-3 flex justify-center">
                   <AiQuotaChip feature="interview_prep_session" />
@@ -371,21 +393,23 @@ export function InterviewSessionPage() {
                   <button
                     onClick={() => handleGenerate(true)}
                     disabled={generating || quotaBlocked}
-                    className="text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
                     title={quotaReason ?? '기존 질문 모두 삭제 + AI 1회 차감'}
                   >
-                    {generating ? '✨ 재생성중... (10-20초)' : '↻ 다시 생성'}
+                    {generating ? (
+                      <>
+                        <Spinner size={12} />
+                        <span>다시 만들고 있어요...</span>
+                      </>
+                    ) : (
+                      <span>↻ 다시 생성</span>
+                    )}
                   </button>
                 </div>
-                <div className="space-y-3">
-                  {questions.map((q) => (
-                    <InterviewQuestionCard
-                      key={q.id}
-                      question={q}
-                      sessionId={sessionId}
-                    />
-                  ))}
-                </div>
+                <CategoryFilterAndList
+                  questions={questions}
+                  sessionId={sessionId}
+                />
               </>
             )}
           </main>
@@ -459,6 +483,91 @@ function CollapsibleMetaCard({
         </h3>
       </button>
       {open && <div className="px-3.5 pb-3.5">{children}</div>}
+    </div>
+  )
+}
+
+/**
+ * F1 v2 Phase 5b — 카테고리 chip filter + 그룹/평면 보기 toggle.
+ * main 20개 + 카테고리 18종 → 사용자가 카테고리 누르면 해당만, '전체' = 모두.
+ */
+function CategoryFilterAndList({
+  questions,
+  sessionId,
+}: {
+  questions: InterviewPrepQuestion[]
+  sessionId: string
+}) {
+  const [selectedCat, setSelectedCat] = useState<string | null>(null)
+
+  // 카테고리별 카운트 (UI chip badge)
+  const catCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const q of questions) {
+      const c = q.category ?? '(미분류)'
+      map.set(c, (map.get(c) ?? 0) + 1)
+    }
+    return map
+  }, [questions])
+
+  const filtered = useMemo(() => {
+    if (!selectedCat) return questions
+    if (selectedCat === '(미분류)') return questions.filter((q) => !q.category)
+    return questions.filter((q) => q.category === selectedCat)
+  }, [questions, selectedCat])
+
+  const totalCats = catCounts.size
+
+  return (
+    <div className="space-y-3">
+      {totalCats > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSelectedCat(null)}
+            className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+              selectedCat === null
+                ? 'bg-brand text-text-primary border-brand'
+                : 'bg-card hover:bg-card-strong border-line text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            전체 ({questions.length})
+          </button>
+          {Array.from(catCounts.entries()).map(([cat, count]) => {
+            const isActive = selectedCat === cat
+            const label = CATEGORY_LABEL[cat] ?? cat
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCat(isActive ? null : cat)}
+                className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                  isActive
+                    ? 'bg-brand text-text-primary border-brand'
+                    : 'bg-card hover:bg-card-strong border-line text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {label} ({count})
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {filtered.length === 0 ? (
+        <p className="text-text-quaternary text-xs text-center py-4">
+          이 카테고리에 질문이 없어요.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((q) => (
+            <InterviewQuestionCard
+              key={q.id}
+              question={q}
+              sessionId={sessionId}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

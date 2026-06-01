@@ -51,6 +51,8 @@ export interface InterviewPrepQuestion {
   parentQuestionId: string | null
   depth: 0 | 1 | 2
   orderIndex: number
+  /** F1 v2 — 카테고리 (INTERVIEW_CATEGORIES 18종 중 1). 옛 세션은 null */
+  category: string | null
   questionText: string
   suggestedAnswer: string | null
   sourceLogIds: string[]
@@ -124,6 +126,34 @@ export interface GenerateFollowupResult {
   meta?: {
     callLogId: string
   }
+}
+
+/**
+ * F1 v2 (2026-06-01) — INTERVIEW_CATEGORIES 18종 한국어 라벨.
+ * deep research verified base 7 + 직무 fork + 자소서기반/회사/역질문.
+ */
+export const CATEGORY_LABEL: Record<string, string> = {
+  // base 7
+  self_intro: '자기소개',
+  motivation: '지원동기',
+  personality: '인성·장단점',
+  failure: '실패 극복',
+  collaboration: '협업·갈등',
+  executive: '임원·가치관',
+  culture_fit: '컬처핏',
+  // 직무 fork
+  cs_tech: 'CS 기술',
+  business_reasoning: '비즈니스 추론',
+  data_metrics: '데이터·지표',
+  trend_ai: 'AI·트렌드',
+  customer_handling: '고객 대응',
+  performance: '실적·목표',
+  portfolio_decision: '포트폴리오 의사결정',
+  design_process: '디자인 프로세스',
+  // 공통 추가
+  coverletter_based: '자소서 기반',
+  company_industry: '회사·산업',
+  reverse_question: '역질문',
 }
 
 export const INTERVIEW_TYPE_LABEL: Record<InterviewType, string> = {

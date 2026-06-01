@@ -4,6 +4,7 @@ import {
 } from '@/hooks/useInterviewPrep'
 import { toast } from '@/stores/toastStore'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
+import { Spinner } from '@/components/common/Spinner'
 import { InterviewQuestionCard } from './InterviewQuestionCard'
 
 /**
@@ -11,29 +12,31 @@ import { InterviewQuestionCard } from './InterviewQuestionCard'
  *
  * **흐름**:
  * - 질문 트리 fetch (recursive CTE → client tree)
- * - 빈 트리: "AI 질문 생성" CTA (Hybrid main 5~8 + 꼬리)
+ * - 빈 트리: "AI 질문 생성" CTA (2-stage main 20)
  * - 트리 있음: depth 0 main 카드 list, 각각 children 펼침
  */
 export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
   const { data: questions, isLoading } = useInterviewPrepQuestions(sessionId)
-  const { mutate: generate, isPending: generating } =
+  const { mutateAsync: generateSession, isPending: generating } =
     useGenerateInterviewSession(sessionId)
   const ensureAiConsent = useRequireAiConsent()
 
   const handleGenerate = async () => {
     if (!(await ensureAiConsent())) return
-    generate(undefined, {
-      onSuccess: (result) => {
-        if (result.status === 'ok') {
-          toast.show(
-            `${result.meta?.mainCount ?? 0}개 메인 질문 + 꼬리 ${result.meta?.followupCount ?? 0}개를 생성했어요.`,
-          )
-        } else {
-          toast.error(result.reason ?? '생성에 실패했어요.')
-        }
-      },
-      onError: () => toast.error('AI 호출 중 오류가 발생했어요.'),
-    })
+    try {
+      const result = await generateSession()
+      if (result.status === 'ok') {
+        toast.show(
+          `${result.meta?.mainCount ?? 0}개 메인 질문 + 꼬리 ${result.meta?.followupCount ?? 0}개를 생성했어요.`,
+        )
+      } else {
+        toast.error(result.reason ?? '생성에 실패했어요.')
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'AI 호출 중 오류가 발생했어요.'
+      toast.error(message)
+    }
   }
 
   if (isLoading) {
@@ -51,6 +54,27 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
 
   const tree = questions ?? []
 
+  if (tree.length === 0 && generating) {
+    return (
+      <div className="border border-dashed border-brand/40 bg-brand/5 rounded-lg px-4 py-10 text-center">
+        <Spinner size={32} className="mx-auto text-brand mb-3" />
+        <p className="text-text-secondary text-xs mb-1 font-medium">
+          🤖 AI 면접관이 질문을 만들고 있어요
+        </p>
+        <p className="text-text-quaternary text-[11px] leading-relaxed">
+          자소서·활동을 꼼꼼히 읽고 있어요. 1~2분쯤 걸려요.
+          <br />
+          잠시만 기다려 주세요
+          <span className="inline-flex ml-0.5">
+            <span className="animate-pulse [animation-delay:0ms]">.</span>
+            <span className="animate-pulse [animation-delay:200ms]">.</span>
+            <span className="animate-pulse [animation-delay:400ms]">.</span>
+          </span>
+        </p>
+      </div>
+    )
+  }
+
   if (tree.length === 0) {
     return (
       <div className="border border-dashed border-line bg-surface-2/30 rounded-lg px-4 py-8 text-center">
@@ -65,7 +89,7 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
           disabled={generating}
           className="bg-brand hover:bg-brand-hover text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors disabled:opacity-50"
         >
-          {generating ? '✨ 질문 생성중... (10-20초 소요)' : '✨ AI 질문 생성'}
+          ✨ AI 질문 생성 (메인 20개)
         </button>
       </div>
     )
@@ -81,10 +105,17 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
         <button
           onClick={handleGenerate}
           disabled={generating}
-          className="text-text-tertiary hover:text-text-primary text-xs"
+          className="inline-flex items-center gap-1.5 text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
           title="기존 질문을 모두 지우고 다시 생성"
         >
-          {generating ? '✨ 재생성중... (10-20초)' : '↻ 다시 생성'}
+          {generating ? (
+            <>
+              <Spinner size={12} />
+              <span>다시 만들고 있어요...</span>
+            </>
+          ) : (
+            <span>↻ 다시 생성</span>
+          )}
         </button>
       </div>
       {tree.map((q) => (
