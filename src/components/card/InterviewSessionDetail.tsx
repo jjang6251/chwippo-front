@@ -87,7 +87,7 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
         <button
           onClick={handleGenerate}
           disabled={generating}
-          className="bg-brand hover:bg-brand-hover text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors disabled:opacity-50"
+          className="bg-brand hover:bg-brand-hover text-text-primary text-xs font-semibold px-4 py-2 rounded-md transition-colors disabled:opacity-50"
         >
           ✨ AI 질문 생성 (메인 20개)
         </button>

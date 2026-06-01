@@ -372,7 +372,7 @@ export function InterviewSessionPage() {
                 <button
                   onClick={() => handleGenerate(false)}
                   disabled={generating || quotaBlocked}
-                  className="bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50"
+                  className="bg-brand hover:bg-brand-hover text-text-primary text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50"
                   title={quotaReason ?? undefined}
                 >
                   ✨ AI 질문 생성 (메인 20개)

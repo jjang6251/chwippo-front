@@ -67,7 +67,7 @@ export function Interviews() {
           </p>
           <Link
             to="/board"
-            className="inline-block px-5 py-2.5 text-sm font-medium text-white bg-brand hover:bg-accent rounded-lg transition-colors"
+            className="inline-block px-5 py-2.5 text-sm font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
           >
             보드로 이동 →
           </Link>
