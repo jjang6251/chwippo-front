@@ -9,7 +9,7 @@ const mockUser = {
   onboardedAt: null,
   termsAgreedAt: null,
   aiConsentAt: null,
-  aiConsentVersion: null,
+  aiConsentVersion: null, onboardedCoinAt: null,
 }
 
 describe('authStore', () => {

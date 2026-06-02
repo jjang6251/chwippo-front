@@ -149,6 +149,7 @@ export function useSummarizeLog(_activityId: string) {
       invalidateAllActivities(qc)
       // 5.6.x — quota 차감 즉시 반영 (AiQuotaChip)
       qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
       // 5.6.8 — 노트별 잔여 갱신 (요약 본문 아래 N/M)
       qc.invalidateQueries({ queryKey: ['note-summary-status', vars.logId] })
     },
