@@ -121,6 +121,7 @@ export function useTriggerCompanyResearch(sessionId: string) {
       }
       // 5.6.x — quota 차감 즉시 반영 (chip 갱신)
       qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
     },
   })
 }
@@ -165,6 +166,7 @@ export function useGenerateInterviewSession(sessionId: string) {
         qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
       }
       qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
     },
   })
 }
@@ -191,6 +193,7 @@ export function useCreateInterviewFollowup(sessionId: string) {
         qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
       }
       qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
     },
   })
 }

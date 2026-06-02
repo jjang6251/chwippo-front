@@ -26,6 +26,8 @@ interface RefreshUser {
   termsAgreedAt: string | null
   aiConsentAt: string | null
   aiConsentVersion: string | null
+  /** PR_B1b — 코인 시스템 onboarding modal 표시 여부 */
+  onboardedCoinAt: string | null
 }
 
 interface RefreshResponse {

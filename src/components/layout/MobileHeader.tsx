@@ -1,5 +1,6 @@
 import { useLocation, Link } from 'react-router-dom'
 import { useDemoMode } from '@/contexts/demoMode'
+import { CoinChip } from '@/components/common/CoinChip'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
@@ -34,17 +35,22 @@ export function MobileHeader() {
       <span className="text-text-faint text-sm mr-3">|</span>
       <span className="text-text-secondary text-sm font-medium flex-1 truncate">{title}</span>
       {!isDemo && (
-        <Link
-          to="/settings"
-          aria-label="설정"
-          className={`ml-2 shrink-0 w-9 h-9 inline-flex items-center justify-center rounded-md transition-colors ${
-            isSettingsActive
-              ? 'text-brand bg-brand/10'
-              : 'text-text-tertiary hover:text-text-primary hover:bg-card active:bg-card-strong'
-          }`}
-        >
-          <SettingsIcon size={18} />
-        </Link>
+        <>
+          <div className="mr-2 shrink-0">
+            <CoinChip />
+          </div>
+          <Link
+            to="/settings"
+            aria-label="설정"
+            className={`shrink-0 w-9 h-9 inline-flex items-center justify-center rounded-md transition-colors ${
+              isSettingsActive
+                ? 'text-brand bg-brand/10'
+                : 'text-text-tertiary hover:text-text-primary hover:bg-card active:bg-card-strong'
+            }`}
+          >
+            <SettingsIcon size={18} />
+          </Link>
+        </>
       )}
     </header>
   )

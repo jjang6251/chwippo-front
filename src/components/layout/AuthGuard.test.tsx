@@ -51,7 +51,7 @@ const sampleUser = {
   onboardedAt: '2026-01-01T00:00:00.000Z',
   termsAgreedAt: '2026-01-01T00:00:00.000Z',
   aiConsentAt: null,
-  aiConsentVersion: null,
+  aiConsentVersion: null, onboardedCoinAt: null,
 }
 
 beforeEach(() => {

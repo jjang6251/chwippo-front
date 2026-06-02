@@ -49,6 +49,7 @@ export function useGenerateAiDraft(clId: string) {
       // application coverletter answer 도 변경됨 (answer 저장) — caller 가 적절히 invalidate
       // 5.6.x — quota 차감 즉시 반영 (AiQuotaChip)
       qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
     },
   })
 }

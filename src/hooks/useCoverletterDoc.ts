@@ -121,6 +121,7 @@ export function useSendCoverletterChat(applicationId: string) {
       })
       qc.invalidateQueries({ queryKey: messagesKey(applicationId) })
       qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
     },
     onError: () => {
       // placeholder 제거 — caller 의 onError 가 토스트 표시
@@ -255,6 +256,7 @@ export function useSendCoverletterChatStream(applicationId: string) {
             replacePlaceholders(userToUse, assistantMessage)
             qc.invalidateQueries({ queryKey: messagesKey(applicationId) })
             qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
             onDoneCallback?.({
               assistantMessage,
               assistantStatus,
