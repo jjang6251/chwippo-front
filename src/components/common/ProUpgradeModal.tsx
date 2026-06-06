@@ -50,11 +50,11 @@ export function ProUpgradeModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="pro-upgrade-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-card border border-line rounded-xl p-6 shadow-xl"
+        className="w-full max-w-md bg-surface border border-line rounded-xl p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2

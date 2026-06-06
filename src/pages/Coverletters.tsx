@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { useApplications } from '@/hooks/useApplications'
+import { CoverletterGenerateSection } from '@/components/coverletter/CoverletterGenerateSection'
+import { useApplication, useApplications } from '@/hooks/useApplications'
 import {
   COVERLETTER_CATEGORY_EMOJI,
   COVERLETTER_CATEGORY_STYLE,
@@ -117,6 +118,8 @@ function ApplicationGroup({
   jobCategory: string | null
 }) {
   const { data: items = [], isLoading } = useCoverletters(applicationId, true)
+  // PR_B1c — application 의 coverletterGenerationStatus 별 UI 분기 (polling 자동)
+  const { data: application } = useApplication(applicationId)
 
   if (isLoading) {
     return (
@@ -127,24 +130,25 @@ function ApplicationGroup({
     )
   }
 
+  // PR_B1c — 자소서 row 있으면 이미 작성 진행 중 → 기존 진행률 카드 (legacy 보존).
+  //   row 0 일 때만 GenerateSection (4 상태 UI — idle/in_progress/completed/failed 자동)
   if (items.length === 0) {
-    // 자소서 문항 없는 회사는 작은 placeholder 만
+    if (!application) return null
     return (
-      <div className="border border-line bg-surface-2 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-        <div className="min-w-0">
+      <div className="border border-line bg-surface-2 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-line bg-surface-3/40">
           <h3 className="text-text-primary text-sm font-semibold truncate">
             {companyName}
           </h3>
-          <p className="text-text-quaternary text-[10px] mt-0.5">
-            자소서 문항 없음
-          </p>
+          {(jobTitle || jobCategory) && (
+            <p className="text-text-quaternary text-[10px] mt-0.5 truncate">
+              {[jobCategory, jobTitle].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </div>
-        <Link
-          to={`/board/${applicationId}/coverletter`}
-          className="text-[11px] text-text-tertiary hover:text-brand border border-line hover:border-brand/40 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
-        >
-          + 추가
-        </Link>
+        <div className="p-4">
+          <CoverletterGenerateSection application={application} />
+        </div>
       </div>
     )
   }

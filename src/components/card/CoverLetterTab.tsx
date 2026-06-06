@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
+import { CoverletterGenerateSection } from '@/components/coverletter/CoverletterGenerateSection'
+import { CoverletterOutdatedBanner } from '@/components/coverletter/CoverletterOutdatedBanner'
 import {
   useCoverletters,
   useCreateCoverletter,
 } from '@/hooks/useApplicationCoverletters'
+import { useApplication } from '@/hooks/useApplications'
 import { CoverLetterCard } from '@/components/card/CoverLetterCard'
 import { toast } from '@/stores/toastStore'
 
@@ -22,6 +25,8 @@ const COMMON_QUESTIONS = [
 export function CoverLetterTab({ applicationId, active }: { applicationId: string; active: boolean }) {
   const { data: items, isLoading } = useCoverletters(applicationId, active)
   const { mutate: create, isPending: creating } = useCreateCoverletter(applicationId)
+  // PR_B1c — application 의 generation status 별 UI 분기 (polling 자동)
+  const { data: application } = useApplication(applicationId)
 
   const handleAdd = (question = '', category?: string) =>
     create({ question, category }, { onError: () => toast.error('추가에 실패했습니다.') })
@@ -37,8 +42,20 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
   const list = items ?? []
   const fullscreenHref = `/board/${applicationId}/coverletter`
 
+  // PR_B1c — 자소서 row 없을 때만 GenerateSection (status 별 4 UI). row 있으면 legacy UI 유지
+  if (list.length === 0) {
+    if (!application) return null
+    return (
+      <div className="space-y-3">
+        <CoverletterGenerateSection application={application} />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
+      {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
+      {application && <CoverletterOutdatedBanner application={application} />}
       {list.length === 0 ? (
         <div className="border border-dashed border-line bg-surface-2/40 rounded-xl px-6 py-10 text-center">
           <div className="text-2xl mb-2">📝</div>

@@ -47,7 +47,6 @@ export function CoinChip() {
       >
         <span aria-hidden>🪙</span>
         <span className="tabular-nums">{formatBalance(data.balance)}</span>
-        <span className="text-text-quaternary">/ {data.monthlyCoinLimit}</span>
       </button>
       {open && (
         <ProUpgradeModal
