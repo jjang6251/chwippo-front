@@ -46,9 +46,9 @@ export function CoinOnboardingModal() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="coin-onboarding-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
     >
-      <div className="w-full max-w-md bg-card border border-line rounded-xl p-6 shadow-xl">
+      <div className="w-full max-w-md bg-surface border border-line rounded-xl p-6 shadow-2xl">
         <h2
           id="coin-onboarding-title"
           className="text-text-primary text-lg font-bold mb-1 flex items-center gap-2"

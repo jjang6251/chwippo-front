@@ -1,5 +1,11 @@
 import { apiClient } from './client'
-import type { Application, CreateApplicationDto, UpdateApplicationDto, UpdateStepsDto } from '@/types/application'
+import type {
+  Application,
+  CreateApplicationDto,
+  GenerateCoverletterResult,
+  UpdateApplicationDto,
+  UpdateStepsDto,
+} from '@/types/application'
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
@@ -21,4 +27,16 @@ export const applicationsApi = {
     apiClient.put<{ data: Application }>(`/applications/${id}/steps`, dto).then(unwrap),
 
   remove: (id: string) => apiClient.delete(`/applications/${id}`),
+
+  /**
+   * PR_B1c — 자소서 생성 (회사조사 trigger + 50 코인 차감).
+   * status 'completed' / 'already_in_progress' / 'already_completed' / 'coin_insufficient'
+   * LLM 실패 시 500 throw → axios catch
+   */
+  generateCoverletter: (id: string) =>
+    apiClient
+      .post<{ data: GenerateCoverletterResult }>(
+        `/applications/${id}/generate-coverletter`,
+      )
+      .then(unwrap),
 }

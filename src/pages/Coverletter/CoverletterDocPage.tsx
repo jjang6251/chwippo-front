@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPanel'
+import { CoverletterGenerateSection } from '@/components/coverletter/CoverletterGenerateSection'
+import { CoverletterOutdatedBanner } from '@/components/coverletter/CoverletterOutdatedBanner'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { useApplication } from '@/hooks/useApplications'
@@ -123,19 +125,15 @@ export function CoverletterDocPage() {
     [],
   )
 
-  // cache miss → 자동 fetch (1회만). ref 로 중복 방지 (set-state-in-effect 회피)
-  useEffect(() => {
-    if (
-      !researchLoading &&
-      research === null &&
-      !autoFetchedRef.current &&
-      !fetchingResearch &&
-      applicationId
-    ) {
-      autoFetchedRef.current = true
-      fetchResearch()
-    }
-  }, [research, researchLoading, fetchingResearch, applicationId, fetchResearch])
+  // PR_B1c CTO 검토 M3 — silent 50 코인 차감 차단:
+  //   기존엔 cache null 시 자동 fetchResearch() → 사용자 동의 없이 50 코인 차감.
+  //   특히 legacy backfill (자소서 row 있어 status='completed' 됐지만 cache 없는 application)
+  //   진입 시 매번 차감. 동의 modal 우회 = 정책 위반.
+  //   → 자동 fetch 제거. cache 없으면 OutdatedBanner 가 명시 "다시 조사" 동의 modal 제공.
+  void autoFetchedRef // 변수 보존 (cleanup 안 함 — 다른 곳 영향 없음)
+  void fetchResearch
+  void fetchingResearch
+  void researchLoading
 
   if (appLoading || clsLoading) {
     return (
@@ -156,6 +154,30 @@ export function CoverletterDocPage() {
         >
           ← 돌아가기
         </button>
+      </div>
+    )
+  }
+
+  // PR_B1c Phase F — 회사조사 안 됐으면 GenerateSection inline 표시 (자소서 chat 차단 안내)
+  if (app.coverletterGenerationStatus !== 'completed') {
+    return (
+      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 space-y-4">
+        <header className="mb-2 space-y-2">
+          <div className="text-xs text-text-tertiary">
+            <Link
+              to={`/board/${applicationId}`}
+              className="hover:text-text-primary transition-colors"
+            >
+              {app.companyName}
+            </Link>
+            <span className="mx-1.5">›</span>
+            <span>자소서</span>
+          </div>
+          <h1 className="text-text-primary text-xl font-bold">
+            {app.companyName} 자소서
+          </h1>
+        </header>
+        <CoverletterGenerateSection application={app} />
       </div>
     )
   }
@@ -183,6 +205,9 @@ export function CoverletterDocPage() {
           </p>
         )}
       </header>
+
+      {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
+      <CoverletterOutdatedBanner application={app} />
 
       {/* Phase B — 회사 조사 banner */}
       <CompanyResearchBanner
