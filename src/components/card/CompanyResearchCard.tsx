@@ -9,6 +9,7 @@ import {
 import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { toast } from '@/stores/toastStore'
+import type { InterviewKeyword, ResearchSource } from '@/types/interviewPrep'
 
 interface Props {
   sessionId: string
@@ -139,6 +140,11 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
               </div>
             ) : research.research ? (
               <>
+                {/* PR 보강 #1 — Hero header (companyProfile 메타칩 항상 표시) */}
+                <ResearchHeroHeader
+                  profile={research.research.companyProfile}
+                />
+
                 {/* ⚠️ AI 경고 alert */}
                 <div className="bg-danger/5 border border-danger/20 rounded-md p-2.5 mb-3">
                   <p className="text-danger text-[11px] leading-relaxed">
@@ -149,18 +155,32 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                 </div>
 
                 {/* 핵심 3 — default 펼침 */}
-                <ResearchSection
-                  label="사업 영역"
-                  value={research.research.businessSummary}
-                />
-                <ResearchSection
-                  label="인재상·핵심가치"
-                  value={research.research.coreValues}
-                />
-                <ResearchSection
-                  label="최근 동향·신사업"
-                  value={research.research.recentTrends}
-                />
+                {(() => {
+                  const inferred = new Set(research.research.inferredFields ?? [])
+                  const srcs = research.research.sources ?? research.sources
+                  return (
+                    <>
+                      <ResearchSection
+                        label="사업 영역"
+                        value={research.research.businessSummary}
+                        sources={srcs}
+                        isInferred={inferred.has('businessSummary')}
+                      />
+                      <ResearchSection
+                        label="인재상·핵심가치"
+                        value={research.research.coreValues}
+                        sources={srcs}
+                        isInferred={inferred.has('coreValues')}
+                      />
+                      <ResearchSection
+                        label="최근 동향·신사업"
+                        value={research.research.recentTrends}
+                        sources={srcs}
+                        isInferred={inferred.has('recentTrends')}
+                      />
+                    </>
+                  )
+                })()}
 
                 {/* "더 보기" — 나머지 5 항목 */}
                 <button
@@ -173,25 +193,53 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
 
                 {showMore && (
                   <div className="border-t border-brand/20 pt-2.5 mt-1">
-                    <ResearchSection
-                      label="비전·미션"
-                      value={research.research.visionMission}
-                    />
-                    <ResearchSection
-                      label="재무·매출"
-                      value={research.research.financials}
-                    />
-                    <ResearchSection
-                      label="경쟁사·시장"
-                      value={research.research.competitors}
-                    />
-                    <ResearchSection
-                      label="직무 정보"
-                      value={research.research.jobInsights}
-                    />
-                    <ResearchKeywords
-                      keywords={research.research.interviewKeywords ?? []}
-                    />
+                    {(() => {
+                      const inferred = new Set(
+                        research.research?.inferredFields ?? [],
+                      )
+                      const srcs =
+                        research.research?.sources ?? research.sources
+                      return (
+                        <>
+                          <ResearchSection
+                            label="비전·미션"
+                            value={research.research!.visionMission}
+                            sources={srcs}
+                            isInferred={inferred.has('visionMission')}
+                          />
+                          <ResearchSection
+                            label="재무·매출"
+                            value={research.research!.financials}
+                            sources={srcs}
+                            isInferred={inferred.has('financials')}
+                          />
+                          <ResearchSection
+                            label="경쟁사·시장"
+                            value={research.research!.competitors}
+                            sources={srcs}
+                            isInferred={inferred.has('competitors')}
+                          />
+                          <ResearchSection
+                            label="직무 정보"
+                            value={research.research!.jobInsights}
+                            sources={srcs}
+                            isInferred={inferred.has('jobInsights')}
+                          />
+                          {/* PR 보강 신규 3 항목 */}
+                          <ResearchTalentProfile
+                            values={research.research!.talentProfile ?? []}
+                          />
+                          <ResearchProductsAndTech
+                            data={research.research!.productsAndTech}
+                          />
+                          <ResearchKeywords
+                            keywords={
+                              research.research!.interviewKeywords ?? []
+                            }
+                          />
+                        </>
+                      )
+                    })()}
                   </div>
                 )}
 
@@ -213,9 +261,11 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                     </button>
                     {showSources && (
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {research.sources.map((url) => (
-                          <SourceChip key={url} url={url} />
-                        ))}
+                        {research.sources.map((s, i) => {
+                          // PR 보강 — ResearchSource (객체) / string 양쪽 호환
+                          const url = typeof s === 'string' ? s : s.url
+                          return <SourceChip key={`${url}-${i}`} url={url} />
+                        })}
                       </div>
                     )}
                   </div>
@@ -263,27 +313,209 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
   )
 }
 
-function ResearchSection({
-  label,
-  value,
+/**
+ * PR 보강 #1 Hero header — companyProfile (설립·본사·산업·규모) 카드 최상단 메타칩.
+ * 사용자 한눈에 회사 정보 스캔.
+ */
+function ResearchHeroHeader({
+  profile,
 }: {
-  label: string
-  value?: string
+  profile?: { founded?: string; hq?: string; industry?: string; size?: string }
 }) {
-  if (!value?.trim()) return null
+  if (!profile) return null
+  const fields: { label: string; value?: string }[] = [
+    { label: '🏢', value: profile.industry },
+    { label: '📍', value: profile.hq },
+    { label: '📅', value: profile.founded },
+    { label: '👥', value: profile.size },
+  ].filter((f) => f.value?.trim())
+  if (fields.length === 0) return null
   return (
-    <div className="mb-2.5 last:mb-2">
-      <p className="text-text-tertiary text-[11px] font-semibold mb-0.5">
-        {label}
-      </p>
-      <p className="text-text-secondary text-xs leading-relaxed whitespace-pre-wrap">
-        {value}
-      </p>
+    <div className="bg-surface-2 border border-line rounded-md px-3 py-2 mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
+      {fields.map((f) => (
+        <div
+          key={f.label}
+          className="flex items-center gap-1 text-[11px] text-text-secondary"
+        >
+          <span aria-hidden>{f.label}</span>
+          <span className="font-medium">{f.value}</span>
+        </div>
+      ))}
     </div>
   )
 }
 
-function ResearchKeywords({ keywords }: { keywords: string[] }) {
+/**
+ * PR 보강 #2 footnote `[N]` → `<sup>` 변환 + hover title.
+ * sources[] 의 id 매칭 시 title hover 로 출처 미리보기.
+ */
+function renderFootnotedText(
+  text: string,
+  sources: ResearchSource[] | string[] | undefined,
+): React.ReactNode {
+  if (!text) return null
+  const sourceMap = new Map<number, ResearchSource>()
+  if (Array.isArray(sources)) {
+    sources.forEach((s) => {
+      if (typeof s !== 'string' && s.id !== undefined) sourceMap.set(s.id, s)
+    })
+  }
+  const parts = text.split(/(\[\d+\])/g)
+  return parts.map((part, i) => {
+    const match = part.match(/^\[(\d+)\]$/)
+    if (!match) return <span key={i}>{part}</span>
+    const id = Number(match[1])
+    const src = sourceMap.get(id)
+    if (!src) return <span key={i}>{part}</span>
+    const tooltipText = `${src.title} (${src.domain}${src.publishedAt ? ` · ${src.publishedAt}` : ''})`
+    return (
+      <sup key={i} className="text-brand font-semibold text-[10px]">
+        <a
+          href={src.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={tooltipText}
+          aria-label={`출처 ${id} — ${tooltipText} (새 탭에서 열기)`}
+          className="hover:underline"
+        >
+          [{id}]
+        </a>
+      </sup>
+    )
+  })
+}
+
+/**
+ * PR 보강 #4 — 빈 항목 "확인하지 못했어요" 안내.
+ * PR 보강 #3 — inferredFields 의 "추정" 배지.
+ * PR 보강 #2 — footnote `[N]` hover preview.
+ */
+function ResearchSection({
+  label,
+  value,
+  sources,
+  isInferred,
+}: {
+  label: string
+  value?: string
+  sources?: ResearchSource[] | string[]
+  isInferred?: boolean
+}) {
+  const isEmpty = !value?.trim()
+  return (
+    <div className="mb-2.5 last:mb-2">
+      <p className="text-text-tertiary text-[11px] font-semibold mb-0.5 flex items-center gap-1.5">
+        {label}
+        {isInferred && (
+          <span
+            className="bg-warning/10 text-warning border border-warning/30 text-[9px] font-medium px-1.5 py-0.5 rounded-full"
+            title="AI 추정 — 정확성이 약할 수 있어요"
+            aria-label="AI 추정 정보 — 정확성이 약할 수 있어요"
+            role="note"
+          >
+            추정
+          </span>
+        )}
+      </p>
+      {isEmpty ? (
+        <p className="text-text-quaternary text-xs italic">
+          확인하지 못했어요
+        </p>
+      ) : (
+        <p className="text-text-secondary text-xs leading-relaxed whitespace-pre-wrap">
+          {renderFootnotedText(value!, sources)}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** PR 보강 — 인재상 키워드 (회사 채용 페이지 원문) */
+function ResearchTalentProfile({ values }: { values: string[] }) {
+  if (values.length === 0) return null
+  return (
+    <div className="mb-2.5">
+      <p className="text-text-tertiary text-[11px] font-semibold mb-1">
+        인재상 키워드
+      </p>
+      <div className="flex flex-wrap gap-1">
+        {values.map((v) => (
+          <span
+            key={v}
+            className="text-[10px] font-medium bg-success/10 text-success border border-success/30 px-2 py-0.5 rounded-full"
+          >
+            {v}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** PR 보강 — 제품·기술 스택 */
+function ResearchProductsAndTech({
+  data,
+}: {
+  data?: { products?: string[]; techStack?: string[] }
+}) {
+  if (!data) return null
+  const hasProducts = data.products && data.products.length > 0
+  const hasTech = data.techStack && data.techStack.length > 0
+  if (!hasProducts && !hasTech) return null
+  return (
+    <div className="mb-2.5">
+      <p className="text-text-tertiary text-[11px] font-semibold mb-1">
+        제품·기술 스택
+      </p>
+      {hasProducts && (
+        <div className="flex flex-wrap gap-1 mb-1">
+          {data.products!.map((p) => (
+            <span
+              key={p}
+              className="text-[10px] font-medium bg-violet/10 text-violet border border-violet/30 px-2 py-0.5 rounded-full"
+            >
+              {p}
+            </span>
+          ))}
+        </div>
+      )}
+      {hasTech && (
+        <div className="flex flex-wrap gap-1">
+          {data.techStack!.map((t) => (
+            <span
+              key={t}
+              className="text-[10px] font-medium bg-info/10 text-info border border-info/30 px-2 py-0.5 rounded-full"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * PR 보강 — interviewKeywords 카테고리별 색상 매핑.
+ * - tech: 기술·아키텍처 (파랑)
+ * - talent: 인재상·문화 (초록)
+ * - business: 사업·전략 (보라)
+ * - role: 직무 특화 (주황)
+ * - issue: 회사 이슈 (빨강)
+ */
+const KEYWORD_CATEGORY_STYLE: Record<string, string> = {
+  tech: 'bg-info/10 text-info border-info/30',
+  talent: 'bg-success/10 text-success border-success/30',
+  business: 'bg-violet/10 text-violet border-violet/30',
+  role: 'bg-warning/10 text-warning border-warning/30',
+  issue: 'bg-danger/10 text-danger border-danger/30',
+}
+
+function ResearchKeywords({
+  keywords,
+}: {
+  keywords: (InterviewKeyword | string)[]
+}) {
   if (keywords.length === 0) return null
   return (
     <div className="mb-2.5">
@@ -291,14 +523,23 @@ function ResearchKeywords({ keywords }: { keywords: string[] }) {
         예상 면접 키워드
       </p>
       <div className="flex flex-wrap gap-1">
-        {keywords.map((kw) => (
-          <span
-            key={kw}
-            className="text-[10px] font-medium bg-info/10 text-info border border-info/20 px-2 py-0.5 rounded-full"
-          >
-            {kw}
-          </span>
-        ))}
+        {keywords.map((kw, i) => {
+          // PR 보강 — InterviewKeyword (객체) 와 기존 string 양쪽 호환
+          const isObj = typeof kw === 'object' && kw !== null
+          const keyword = isObj ? kw.keyword : kw
+          const category = isObj ? kw.category : null
+          const style = category
+            ? KEYWORD_CATEGORY_STYLE[category]
+            : 'bg-info/10 text-info border-info/30'
+          return (
+            <span
+              key={`${keyword}-${i}`}
+              className={`text-[10px] font-medium ${style} border px-2 py-0.5 rounded-full`}
+            >
+              {keyword}
+            </span>
+          )
+        })}
       </div>
     </div>
   )

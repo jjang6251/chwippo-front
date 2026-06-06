@@ -24,7 +24,9 @@ export interface InterviewPrepSession {
   updatedAt: string
 }
 
-/** Phase 4 단계 B — 회사 조사 8 항목 */
+/**
+ * 회사 조사 11 항목 (PR 보강 Phase 1 — Phase 4 8 항목 + 신규 3).
+ */
 export interface CompanyResearchData {
   businessSummary?: string
   coreValues?: string
@@ -33,13 +35,56 @@ export interface CompanyResearchData {
   financials?: string
   competitors?: string
   jobInsights?: string
-  interviewKeywords?: string[]
+  // PR 보강 — InterviewKeyword 객체 (카테고리별 색상) — 기존 cache 호환 위해 string union
+  interviewKeywords?: (InterviewKeyword | string)[]
+  // PR 보강 — 신규 3 항목
+  companyProfile?: CompanyProfile
+  talentProfile?: string[]
+  productsAndTech?: ProductsAndTech
+  // PR 보강 — 응답 JSON 안 inline 저장
+  sources?: ResearchSource[]
+  inferredFields?: string[]
+}
+
+/** PR 보강 — 회사 기본 정보 (hero card) */
+export interface CompanyProfile {
+  founded?: string
+  hq?: string
+  industry?: string
+  size?: string
+}
+
+/** PR 보강 — 제품·기술 스택 */
+export interface ProductsAndTech {
+  products?: string[]
+  techStack?: string[]
+}
+
+/**
+ * PR 보강 — interviewKeywords 카테고리별 색상 매핑.
+ * tech = 파랑 / talent = 초록 / business = 보라 / role = 주황 / issue = 빨강
+ */
+export interface InterviewKeyword {
+  keyword: string
+  category: 'tech' | 'talent' | 'business' | 'role' | 'issue'
+}
+
+/** PR 보강 — 출처 객체 (Perplexity 식 inline footnote) */
+export interface ResearchSource {
+  id: number
+  title: string
+  url: string
+  domain: string
+  publishedAt?: string
 }
 
 export interface CompanyResearchResult {
   status: 'ok' | 'blocked' | 'opt_out'
   research?: CompanyResearchData
-  sources?: string[]
+  /** PR 보강 — 객체 배열로 확장 (기존 string[] 호환) */
+  sources?: ResearchSource[] | string[]
+  /** PR 보강 — confirmed/inferred 분리 */
+  inferredFields?: string[]
   isCached?: boolean
   cachedAt?: string
   reason?: string

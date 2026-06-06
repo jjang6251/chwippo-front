@@ -435,7 +435,9 @@ function CompanyResearchBanner({
           {data.interviewKeywords && data.interviewKeywords.length > 0 && (
             <ChipSection
               title="면접·자소서 키워드"
-              chips={data.interviewKeywords}
+              chips={data.interviewKeywords.map((k) =>
+                typeof k === 'string' ? k : k.keyword,
+              )}
             />
           )}
           {research.cachedAt && (
