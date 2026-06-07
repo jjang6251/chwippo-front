@@ -56,23 +56,8 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
     <div className="space-y-3">
       {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
       {application && <CoverletterOutdatedBanner application={application} />}
-      {list.length === 0 ? (
-        <div className="border border-dashed border-line bg-surface-2/40 rounded-xl px-6 py-10 text-center">
-          <div className="text-2xl mb-2">📝</div>
-          <p className="text-text-secondary text-sm font-medium mb-1">자소서 문항을 모아보세요</p>
-          <p className="text-text-quaternary text-xs leading-relaxed mb-5">
-            이 회사 자소서 문항과 답변을 한곳에 정리하고,<br />
-            AI 와 자유롭게 대화하며 작성해보세요.
-          </p>
-          <Link
-            to={fullscreenHref}
-            className="inline-block px-4 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors"
-          >
-            📝 자소서 작성 시작 →
-          </Link>
-        </div>
-      ) : (
-        <>
+      {/* PR UI — list.length===0 dead branch 제거 (line 47 에서 early return) */}
+      <>
           {/* 풀페이지 진입 강조 */}
           <div className="flex items-center justify-between gap-2 bg-brand/5 border border-brand/20 rounded-xl px-4 py-3">
             <div className="min-w-0">
@@ -101,7 +86,6 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
             ))}
           </div>
         </>
-      )}
 
       {/* 빠른 추가 — 인라인 (풀페이지 안 가도 빠른 추가 가능, but 편집은 풀페이지에서) */}
       {list.length > 0 && (
