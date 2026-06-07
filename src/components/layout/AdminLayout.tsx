@@ -58,7 +58,7 @@ export function AdminLayout() {
                 to={item.to}
                 className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   isActive(location.pathname, item.to)
-                    ? 'bg-warning/15 text-warning border border-warning/30'
+                    ? 'bg-brand/15 text-brand border border-brand/30'
                     : 'bg-surface-2 text-text-secondary border border-line hover:bg-card'
                 }`}
               >
@@ -68,6 +68,15 @@ export function AdminLayout() {
           </nav>
           {/* desktop — sticky 좌측 nav (배경 + border 로 구분 강화) */}
           <nav className="hidden lg:flex flex-col gap-5 sticky top-6 bg-surface-2 border border-line rounded-xl p-4 shadow-sm">
+            {/* PR_B2 Phase 1 — Q8 "치뽀 서비스로" link (상단 logo 영역) */}
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-1.5 text-text-tertiary text-xs hover:text-text-primary transition-colors pb-3 border-b border-line"
+              aria-label="치뽀 서비스로 돌아가기"
+            >
+              <span aria-hidden="true">←</span>
+              <span>치뽀 서비스로</span>
+            </Link>
             {NAV.map((g) => (
               <div key={g.group}>
                 <p className="text-text-quaternary text-[10px] font-bold uppercase tracking-wider px-2 mb-1.5">
@@ -80,7 +89,7 @@ export function AdminLayout() {
                       to={item.to}
                       className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                         isActive(location.pathname, item.to)
-                          ? 'bg-warning/15 text-warning border-l-2 border-warning'
+                          ? 'bg-brand/15 text-brand border-l-2 border-brand'
                           : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary border-l-2 border-transparent'
                       }`}
                     >

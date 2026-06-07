@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import {
@@ -97,6 +97,7 @@ export function OpsUsers() {
   const [suspendedFilter, setSuspendedFilter] = useState('')
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const LIMIT = 20
 
@@ -229,7 +230,7 @@ export function OpsUsers() {
                   <UserRow
                     key={user.id}
                     user={user}
-                    onSelect={() => setSelectedId(user.id)}
+                    onSelect={() => navigate(`/ops/users/${user.id}`)}
                   />
                 ))}
               </tbody>

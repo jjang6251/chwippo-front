@@ -42,35 +42,35 @@ describe('AdminLayout', () => {
   it('2) /ops → "대시보드" 만 active (다른 항목 X — 정확 매칭)', () => {
     renderAt('/ops')
     const dashLinks = screen.getAllByText('대시보드')
-    // active = bg-warning/15 클래스
-    expect(dashLinks[0].closest('a')?.className).toContain('warning')
+    // active = bg-brand/15 클래스
+    expect(dashLinks[0].closest('a')?.className).toContain('brand')
     // 다른 항목 inactive
     const usersLinks = screen.getAllByText('회원 관리')
-    expect(usersLinks[0].closest('a')?.className).not.toContain('warning')
+    expect(usersLinks[0].closest('a')?.className).not.toContain('brand')
   })
 
   it('3) /ops/users → "회원 관리" active + "대시보드" inactive (prefix 매칭이 /ops 에 잘못 매치 안 함)', () => {
     renderAt('/ops/users')
     expect(
       screen.getAllByText('회원 관리')[0].closest('a')?.className,
-    ).toContain('warning')
+    ).toContain('brand')
     expect(
       screen.getAllByText('대시보드')[0].closest('a')?.className,
-    ).not.toContain('warning')
+    ).not.toContain('brand')
   })
 
   it('4) /ops/users/abc-123 (sub path) → "회원 관리" 여전히 active (prefix 매칭)', () => {
     renderAt('/ops/users/abc-123')
     expect(
       screen.getAllByText('회원 관리')[0].closest('a')?.className,
-    ).toContain('warning')
+    ).toContain('brand')
   })
 
   it('5) /ops/monitoring → "알람·임계치" active', () => {
     renderAt('/ops/monitoring')
     expect(
       screen.getAllByText('알람·임계치')[0].closest('a')?.className,
-    ).toContain('warning')
+    ).toContain('brand')
   })
 
   it('6) Outlet 가 child 페이지 렌더', () => {

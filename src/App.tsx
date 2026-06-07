@@ -30,6 +30,7 @@ import { OpsPage } from '@/pages/ops/OpsPage'
 import { OpsInquiries } from '@/pages/ops/OpsInquiries'
 import { OpsAnnouncements } from '@/pages/ops/OpsAnnouncements'
 import { OpsUsers } from '@/pages/ops/OpsUsers'
+import { UserDetailPage } from '@/pages/ops/UserDetailPage'
 import { TermsAgreement } from '@/pages/TermsAgreement'
 import { ActivityPage } from '@/pages/Activity/ActivityPage'
 import { NotePage } from '@/pages/Activity/NotePage'
@@ -103,6 +104,7 @@ export default function App() {
               <Route path="/ops/inquiries" element={<OpsInquiries />} />
               <Route path="/ops/announcements" element={<OpsAnnouncements />} />
               <Route path="/ops/users" element={<OpsUsers />} />
+              <Route path="/ops/users/:id" element={<UserDetailPage />} />
               <Route path="/ops/ai-usage" element={<AiUsage />} />
               <Route path="/ops/ai-quotas" element={<AiQuotas />} />
               <Route path="/ops/monitoring" element={<Monitoring />} />
