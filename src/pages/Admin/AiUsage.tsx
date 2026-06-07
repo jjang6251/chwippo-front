@@ -18,6 +18,8 @@ import {
   useAiUsageOverview,
   useAiUsageUserDetail,
 } from '@/hooks/useAiUsage'
+import { useAiUsageMetricsPeriod } from '@/hooks/useAiUsageMetrics'
+import { AI_USAGE_PERIODS, type AiUsagePeriod } from '@/api/aiUsageMetrics'
 import { formatKstDateTime } from '@/utils/datetime'
 
 type DatePreset = '1d' | '7d' | '30d'
@@ -111,6 +113,9 @@ export function AiUsage() {
           ))}
         </div>
       </header>
+
+      {/* PR_B2 Phase 2b — 신규 metrics 카드 (period 5 + 전기 대비 delta) */}
+      <AiUsageMetricsSection />
 
       <div className="mb-4">
         <label className="block text-[11px] text-text-tertiary mb-1.5">
@@ -655,6 +660,117 @@ function StatCard({
       <p className="text-text-primary text-lg font-bold">{value}</p>
       {sub && (
         <p className="text-text-quaternary text-[10px] mt-0.5">{sub}</p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * PR_B2 Phase 2b — 신규 metrics 카드 영역.
+ *
+ * period 5 (일/주/월/분기/년) + 4 stat (총 cost / 총 calls / cache hit rate / error rate)
+ * + 전기 대비 delta 표시.
+ */
+export function AiUsageMetricsSection() {
+  const [period, setPeriod] = useState<AiUsagePeriod>('day')
+  const { data, isLoading } = useAiUsageMetricsPeriod(period)
+
+  return (
+    <section
+      className="mb-6 pb-6 border-b border-line"
+      aria-label="AI 사용량 metrics"
+    >
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="text-text-primary text-sm font-semibold">
+          📊 사용량 metrics (period · 전기 대비)
+        </h2>
+        <div className="flex items-center gap-1 bg-card p-1 rounded-lg border border-line">
+          {AI_USAGE_PERIODS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => setPeriod(p.key)}
+              className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                period === p.key
+                  ? 'bg-brand text-text-primary'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <MetricCard
+          label="총 cost"
+          value={isLoading ? '...' : `$${(data?.totalCostUsd ?? 0).toFixed(4)}`}
+          deltaPct={data?.delta.costDeltaPct}
+        />
+        <MetricCard
+          label="총 calls"
+          value={isLoading ? '...' : `${data?.totalCalls ?? 0}`}
+          deltaPct={data?.delta.callsDeltaPct}
+        />
+        <MetricCard
+          label="Cache hit rate"
+          value={
+            isLoading ? '...' : `${((data?.cacheHitRate ?? 0) * 100).toFixed(1)}%`
+          }
+        />
+        <MetricCard
+          label="Error rate"
+          value={isLoading ? '...' : `${((data?.errorRate ?? 0) * 100).toFixed(1)}%`}
+          tone={
+            (data?.errorRate ?? 0) > 0.05 ? 'danger' : undefined
+          }
+        />
+      </div>
+    </section>
+  )
+}
+
+function MetricCard({
+  label,
+  value,
+  deltaPct,
+  tone,
+}: {
+  label: string
+  value: string
+  deltaPct?: number
+  tone?: 'danger'
+}) {
+  const isPositive = deltaPct !== undefined && deltaPct > 0
+  const isNegative = deltaPct !== undefined && deltaPct < 0
+  const deltaText =
+    deltaPct !== undefined
+      ? `${isPositive ? '+' : ''}${deltaPct.toFixed(1)}%`
+      : null
+
+  return (
+    <div
+      className={`bg-surface-2 border rounded-xl p-4 ${tone === 'danger' ? 'border-danger/40' : 'border-line'}`}
+    >
+      <p className="text-text-quaternary text-[10px] uppercase tracking-wider mb-1">
+        {label}
+      </p>
+      <p
+        className={`text-2xl font-bold ${tone === 'danger' ? 'text-danger' : 'text-text-primary'}`}
+      >
+        {value}
+      </p>
+      {deltaText !== null && (
+        <p
+          className={`text-[10px] mt-1 ${
+            isPositive
+              ? 'text-success'
+              : isNegative
+                ? 'text-danger'
+                : 'text-text-quaternary'
+          }`}
+        >
+          전기 대비 {deltaText}
+        </p>
       )}
     </div>
   )

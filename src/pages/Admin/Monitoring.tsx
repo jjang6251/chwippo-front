@@ -39,6 +39,13 @@ export function Monitoring() {
   const [hourly, setHourly] = useState(0)
   const [vsYest, setVsYest] = useState(0)
   const [enabled, setEnabled] = useState(true)
+  // PR_B2 Phase 2b — 신규 6 임계치 (Phase 1 admin grant 2 + Phase 2 신규 4)
+  const [adminGrantHour, setAdminGrantHour] = useState(10000)
+  const [adminGrantSingle, setAdminGrantSingle] = useState(10000)
+  const [inquirySla, setInquirySla] = useState(24)
+  const [abuserDaily, setAbuserDaily] = useState(100)
+  const [signupSpike, setSignupSpike] = useState(200)
+  const [costOutlier, setCostOutlier] = useState(2.0)
 
   useEffect(() => {
     if (data?.thresholds) {
@@ -47,6 +54,12 @@ export function Monitoring() {
       setHourly(data.thresholds.hourlyErrorRateThreshold * 100)
       setVsYest(data.thresholds.vsYesterdayIncreaseThreshold)
       setEnabled(data.thresholds.enabled)
+      setAdminGrantHour(data.thresholds.adminGrantPerHourAlert)
+      setAdminGrantSingle(data.thresholds.adminGrantSingleAlert)
+      setInquirySla(data.thresholds.inquirySlaHours)
+      setAbuserDaily(data.thresholds.abuserSuspectDailyCalls)
+      setSignupSpike(data.thresholds.freeUserSignupSpikePct)
+      setCostOutlier(data.thresholds.costOutlierStddev)
     }
   }, [data?.thresholds])
 
@@ -55,7 +68,13 @@ export function Monitoring() {
     (daily !== data.thresholds.dailyCostThresholdUsd ||
       Math.abs(hourly / 100 - data.thresholds.hourlyErrorRateThreshold) > 0.001 ||
       vsYest !== data.thresholds.vsYesterdayIncreaseThreshold ||
-      enabled !== data.thresholds.enabled)
+      enabled !== data.thresholds.enabled ||
+      adminGrantHour !== data.thresholds.adminGrantPerHourAlert ||
+      adminGrantSingle !== data.thresholds.adminGrantSingleAlert ||
+      inquirySla !== data.thresholds.inquirySlaHours ||
+      abuserDaily !== data.thresholds.abuserSuspectDailyCalls ||
+      signupSpike !== data.thresholds.freeUserSignupSpikePct ||
+      Math.abs(costOutlier - data.thresholds.costOutlierStddev) > 0.01)
 
   const save = () => {
     update(
@@ -64,6 +83,12 @@ export function Monitoring() {
         hourlyErrorRateThreshold: hourly / 100,
         vsYesterdayIncreaseThreshold: vsYest,
         enabled,
+        adminGrantPerHourAlert: adminGrantHour,
+        adminGrantSingleAlert: adminGrantSingle,
+        inquirySlaHours: inquirySla,
+        abuserSuspectDailyCalls: abuserDaily,
+        freeUserSignupSpikePct: signupSpike,
+        costOutlierStddev: costOutlier,
       },
       {
         onSuccess: () => toast.show('임계치를 변경했어요.'),
@@ -163,6 +188,97 @@ export function Monitoring() {
                 >
                   {enabled ? '✓ 활성' : '🚧 비활성'}
                 </button>
+              </ThresholdField>
+
+              {/* PR_B2 Phase 2b — Phase 1 admin grant 2 + Phase 2 신규 4 임계치 */}
+              <ThresholdField
+                label="admin 시간당 grant 합계 (코인)"
+                hint="admin 1명이 1시간 동안 지급한 코인 합계가 이 값 초과 시 Discord 알림 (S1)"
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={1000000}
+                  step={1000}
+                  value={adminGrantHour}
+                  onChange={(e) => setAdminGrantHour(Number(e.target.value))}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              <ThresholdField
+                label="admin 1회 grant 임계치 (코인)"
+                hint="단일 grant 의 amount 가 이 값 초과 시 Discord 알림"
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={1000000}
+                  step={1000}
+                  value={adminGrantSingle}
+                  onChange={(e) => setAdminGrantSingle(Number(e.target.value))}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              <ThresholdField
+                label="문의 SLA 시간"
+                hint="문의 처리 SLA 기본값 (Phase 4 sla_deadline_at 의 기본). 초과 시 알림"
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={720}
+                  step={1}
+                  value={inquirySla}
+                  onChange={(e) => setInquirySla(Number(e.target.value))}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              <ThresholdField
+                label="abuser 의심 일 호출"
+                hint="사용자 1명의 일 호출이 이 값 초과 시 abuser 의심 알림"
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={10000}
+                  step={10}
+                  value={abuserDaily}
+                  onChange={(e) => setAbuserDaily(Number(e.target.value))}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              <ThresholdField
+                label="Free 가입 폭증 (%)"
+                hint="전일 대비 Free 신규 가입 증가율 이 값 초과 시 알림 (abuse 폭증 감지)"
+              >
+                <input
+                  type="number"
+                  min={0}
+                  max={10000}
+                  step={10}
+                  value={signupSpike}
+                  onChange={(e) => setSignupSpike(Number(e.target.value))}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              <ThresholdField
+                label="cost outlier σ"
+                hint="feature 별 cost 평균 ±N σ 초과 시 outlier 알림 (보통 2.0)"
+              >
+                <input
+                  type="number"
+                  min={0.1}
+                  max={10}
+                  step={0.1}
+                  value={costOutlier}
+                  onChange={(e) => setCostOutlier(Number(e.target.value))}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
               </ThresholdField>
             </div>
 

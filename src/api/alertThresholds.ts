@@ -6,6 +6,14 @@ export interface AlertThresholds {
   hourlyErrorRateThreshold: number
   vsYesterdayIncreaseThreshold: number
   enabled: boolean
+  // PR_B2 Phase 1 — admin grant alert (S1)
+  adminGrantPerHourAlert: number
+  adminGrantSingleAlert: number
+  // PR_B2 Phase 2 — 신규 4 임계치 (Q5)
+  inquirySlaHours: number
+  abuserSuspectDailyCalls: number
+  freeUserSignupSpikePct: number
+  costOutlierStddev: number
   updatedBy: string | null
   updatedAt: string
 }
@@ -41,6 +49,14 @@ export interface UpdateAlertThresholdsDto {
   hourlyErrorRateThreshold?: number
   vsYesterdayIncreaseThreshold?: number
   enabled?: boolean
+  // PR_B2 Phase 1
+  adminGrantPerHourAlert?: number
+  adminGrantSingleAlert?: number
+  // PR_B2 Phase 2
+  inquirySlaHours?: number
+  abuserSuspectDailyCalls?: number
+  freeUserSignupSpikePct?: number
+  costOutlierStddev?: number
 }
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
