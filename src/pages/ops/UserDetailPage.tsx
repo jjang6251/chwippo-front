@@ -411,31 +411,9 @@ export function UserDetailPage() {
   )
 }
 
-// PR_B2 Phase 1 — Audit log 의 action 별 한국어 라벨 + icon + 색상
-const ACTION_META: Record<
-  string,
-  {
-    label: string
-    icon: string
-    tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral'
-  }
-> = {
-  grant_coin: { label: '코인 지급', icon: '🪙', tone: 'info' },
-  revoke_coin: { label: '코인 환수', icon: '⚖️', tone: 'warning' },
-  suspend: { label: '정지', icon: '⛔', tone: 'danger' },
-  unsuspend: { label: '정지 해제', icon: '✅', tone: 'success' },
-  update_suspend_reason: { label: '정지 사유 변경', icon: '✏️', tone: 'warning' },
-  auto_unsuspend: { label: '자동 해제 (만료)', icon: '⏱️', tone: 'success' },
-  grant_admin: { label: '관리자 권한 부여', icon: '🛡️', tone: 'info' },
-  revoke_admin: { label: '관리자 권한 박탈', icon: '🛡️', tone: 'warning' },
-  rename: { label: '닉네임 강제 변경', icon: '✏️', tone: 'neutral' },
-  delete: { label: '삭제', icon: '🗑️', tone: 'danger' },
-  warn: { label: '경고', icon: '⚠️', tone: 'warning' },
-  export: { label: '데이터 export', icon: '📤', tone: 'neutral' },
-  update_tier: { label: 'Tier 변경', icon: '⬆️', tone: 'info' },
-  reset_ai_quota: { label: 'AI 한도 리셋', icon: '🔄', tone: 'neutral' },
-  auto_ban_ai: { label: 'AI 자동 ban', icon: '🚫', tone: 'danger' },
-}
+// PR_B2 Phase 2b — admin 전역 utils 통일 (memory: admin 페이지 한국어 라벨 강제)
+import { AUDIT_ACTION_KR } from '@/utils/featureLabel'
+const ACTION_META = AUDIT_ACTION_KR
 
 const TONE_STYLE: Record<string, string> = {
   success: 'bg-success/10 text-success border-success/20',

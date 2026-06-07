@@ -58,7 +58,9 @@ export interface AiUsageByModel {
 export const aiUsageMetricsApi = {
   metrics: (period: AiUsagePeriod): Promise<AiUsageMetrics> =>
     apiClient
-      .get<{ data: AiUsageMetrics }>('/admin/ai-usage', { params: { period } })
+      .get<{ data: AiUsageMetrics }>('/admin/ai-usage/metrics', {
+        params: { period },
+      })
       .then((r) => r.data.data),
 
   topUsers: (period: AiUsagePeriod, limit = 20): Promise<AiUsageTopUser[]> =>

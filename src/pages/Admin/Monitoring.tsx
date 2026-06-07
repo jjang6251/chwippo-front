@@ -197,6 +197,7 @@ export function Monitoring() {
               >
                 <input
                   type="number"
+                  aria-label="admin 시간당 grant 합계 (코인)"
                   min={1}
                   max={1000000}
                   step={1000}
@@ -212,6 +213,7 @@ export function Monitoring() {
               >
                 <input
                   type="number"
+                  aria-label="admin 1회 grant 임계치 (코인)"
                   min={1}
                   max={1000000}
                   step={1000}
@@ -227,6 +229,7 @@ export function Monitoring() {
               >
                 <input
                   type="number"
+                  aria-label="문의 SLA 시간"
                   min={1}
                   max={720}
                   step={1}
@@ -242,6 +245,7 @@ export function Monitoring() {
               >
                 <input
                   type="number"
+                  aria-label="abuser 의심 일 호출"
                   min={1}
                   max={10000}
                   step={10}
@@ -257,6 +261,7 @@ export function Monitoring() {
               >
                 <input
                   type="number"
+                  aria-label="Free 가입 폭증 (%)"
                   min={0}
                   max={10000}
                   step={10}
@@ -272,6 +277,7 @@ export function Monitoring() {
               >
                 <input
                   type="number"
+                  aria-label="cost outlier σ"
                   min={0.1}
                   max={10}
                   step={0.1}
