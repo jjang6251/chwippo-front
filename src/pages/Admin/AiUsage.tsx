@@ -20,6 +20,7 @@ import {
 } from '@/hooks/useAiUsage'
 import { useAiUsageMetricsPeriod } from '@/hooks/useAiUsageMetrics'
 import { AI_USAGE_PERIODS, type AiUsagePeriod } from '@/api/aiUsageMetrics'
+import { featureLabel, modelLabel } from '@/utils/featureLabel'
 import { formatKstDateTime } from '@/utils/datetime'
 
 type DatePreset = '1d' | '7d' | '30d'
@@ -104,7 +105,7 @@ export function AiUsage() {
               onClick={() => setPreset(p.key)}
               className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                 preset === p.key
-                  ? 'bg-brand text-white'
+                  ? 'bg-brand text-text-primary'
                   : 'text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -276,7 +277,12 @@ export function AiUsage() {
               <tbody className="text-text-primary">
                 {overview?.byFeature.map((row) => (
                   <tr key={row.feature} className="border-t border-line">
-                    <td className="py-2">{row.feature}</td>
+                    <td className="py-2">
+                      <span>{featureLabel(row.feature)}</span>
+                      <span className="text-text-quaternary text-[10px] ml-1.5 font-mono">
+                        {row.feature}
+                      </span>
+                    </td>
                     <td className="py-2 text-right">
                       {row.calls.toLocaleString()}
                     </td>
@@ -359,7 +365,12 @@ export function AiUsage() {
                     className="border-t border-line"
                   >
                     <td className="py-2">{r.provider}</td>
-                    <td className="py-2 font-mono text-[10px]">{r.model}</td>
+                    <td className="py-2 text-[11px]">
+                      <span>{modelLabel(r.model)}</span>
+                      <span className="text-text-quaternary text-[9px] ml-1.5 font-mono">
+                        {r.model}
+                      </span>
+                    </td>
                     <td className="py-2 text-right">
                       {r.calls.toLocaleString()}
                     </td>
@@ -436,8 +447,11 @@ export function AiUsage() {
               {hallucination.map((h) => (
                 <li key={h.feature} className="text-xs">
                   <div className="flex justify-between mb-1">
-                    <span className="text-text-primary font-mono text-[11px]">
-                      {h.feature}
+                    <span className="text-text-primary text-[11px]">
+                      {featureLabel(h.feature)}
+                      <span className="text-text-quaternary text-[9px] ml-1 font-mono">
+                        {h.feature}
+                      </span>
                     </span>
                     <span
                       className={`text-[10px] ${h.ratio > 0.01 ? 'text-warning' : 'text-text-quaternary'}`}
@@ -605,8 +619,8 @@ export function AiUsage() {
                     className="border-t border-line text-text-primary"
                   >
                     <td className="px-3 py-2">{formatKstDateTime(l.createdAt)}</td>
-                    <td className="px-3 py-2">{l.feature}</td>
-                    <td className="px-3 py-2">{l.model}</td>
+                    <td className="px-3 py-2">{featureLabel(l.feature)}</td>
+                    <td className="px-3 py-2">{modelLabel(l.model)}</td>
                     <td className="px-3 py-2">
                       <span
                         className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
@@ -673,7 +687,8 @@ function StatCard({
  */
 export function AiUsageMetricsSection() {
   const [period, setPeriod] = useState<AiUsagePeriod>('day')
-  const { data, isLoading } = useAiUsageMetricsPeriod(period)
+  const { data, isLoading, isFetching } = useAiUsageMetricsPeriod(period)
+  const isEmpty = !isLoading && data?.totalCalls === 0
 
   return (
     <section
@@ -681,35 +696,53 @@ export function AiUsageMetricsSection() {
       aria-label="AI 사용량 metrics"
     >
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-text-primary text-sm font-semibold">
+        <h2 className="text-text-primary text-sm font-semibold flex items-center gap-1.5">
           📊 사용량 metrics (period · 전기 대비)
+          {isFetching && !isLoading && (
+            <span className="text-text-quaternary text-[10px]">갱신 중...</span>
+          )}
         </h2>
         <div className="flex items-center gap-1 bg-card p-1 rounded-lg border border-line">
           {AI_USAGE_PERIODS.map((p) => (
             <button
               key={p.key}
               onClick={() => setPeriod(p.key)}
-              className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
                 period === p.key
-                  ? 'bg-brand text-text-primary'
-                  : 'text-text-secondary hover:text-text-primary'
+                  ? 'bg-brand text-text-primary shadow-sm'
+                  : 'text-text-tertiary hover:text-text-primary hover:bg-card-strong'
               }`}
+              aria-pressed={period === p.key}
             >
               {p.label}
             </button>
           ))}
         </div>
       </div>
+      {isEmpty && (
+        <div className="bg-card-strong border border-line rounded-lg px-4 py-3 mb-3 flex items-center gap-2">
+          <span aria-hidden="true">ℹ️</span>
+          <p className="text-text-tertiary text-xs">
+            해당 기간 ({AI_USAGE_PERIODS.find((p) => p.key === period)?.label}) 의
+            AI 호출 데이터가 없어요. period 를 더 큰 단위로 바꿔보세요.
+          </p>
+        </div>
+      )}
+      {data && !isEmpty && data.from && data.to && (
+        <p className="text-text-quaternary text-[10px] mb-2 font-mono">
+          기간 {data.from.slice(0, 10)} ~ {data.to.slice(0, 10)} (KST)
+        </p>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetricCard
           label="총 cost"
           value={isLoading ? '...' : `$${(data?.totalCostUsd ?? 0).toFixed(4)}`}
-          deltaPct={data?.delta.costDeltaPct}
+          deltaPct={data?.delta?.costDeltaPct}
         />
         <MetricCard
           label="총 calls"
           value={isLoading ? '...' : `${data?.totalCalls ?? 0}`}
-          deltaPct={data?.delta.callsDeltaPct}
+          deltaPct={data?.delta?.callsDeltaPct}
         />
         <MetricCard
           label="Cache hit rate"

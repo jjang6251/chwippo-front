@@ -11,27 +11,10 @@ import type {
   QuotaTier,
 } from '@/types/aiQuota'
 import { formatKstDateTime } from '@/utils/datetime'
+import { featureLabel } from '@/utils/featureLabel'
 
-// 5.6.1 — 12 feature 전체 매핑. legacy/deprecated 명시 표기. seed 와 1:1.
-const FEATURE_LABEL: Record<string, string> = {
-  note_summary: '노트 요약',
-  coverletter: '자소서 (legacy)',
-  interview: '면접 (legacy)',
-  interview_followup: '면접 꼬리 (legacy)',
-  score: '점수 (deprecated)',
-  analysis: '분석 (deprecated)',
-  auto_tag: '자동 태그 (deprecated)',
-  coverletter_draft_v2: '자소서 AI 답변',
-  coverletter_feedback: '자소서 피드백',
-  coverletter_recommend: '자소서 추천',
-  interview_prep_session: '면접 질문 생성',
-  interview_prep_followup: '면접 꼬리질문',
-  company_research: '회사 조사',
-}
-
-function labelFor(feature: string): string {
-  return FEATURE_LABEL[feature] ?? feature
-}
+// PR_B2 Phase 2b — feature 한국어 라벨 통일 (admin 전역 utils 사용)
+const labelFor = (feature: string): string => featureLabel(feature)
 
 const TIER_LABEL: Record<QuotaTier, string> = {
   free: '무료',
@@ -97,7 +80,7 @@ export function AiQuotas() {
               disabled={t !== 'free'}
               className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 tier === t
-                  ? 'bg-brand text-white'
+                  ? 'bg-brand text-text-primary'
                   : 'bg-card text-text-secondary hover:bg-card-strong disabled:opacity-40 disabled:cursor-not-allowed'
               }`}
               title={
