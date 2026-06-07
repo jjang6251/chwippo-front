@@ -90,12 +90,12 @@ describe('AiQuotas page', () => {
     confirmSpy.mockRestore()
   })
 
-  it('pro/enterprise tier 탭 disabled (F7 후속)', async () => {
+  it('lite/standard tier 탭 disabled (PR_B2 Phase 3 까지 free 만 활성)', async () => {
     apiMock.mockResolvedValue([sampleRow])
     render(<AiQuotas />, { wrapper })
     await waitForRow()
-    expect(screen.getByText('Pro (F7)')).toBeDisabled()
-    expect(screen.getByText('Enterprise (F7)')).toBeDisabled()
+    expect(screen.getByText('Lite')).toBeDisabled()
+    expect(screen.getByText('Standard')).toBeDisabled()
   })
 
   // ── 5.6.소급 — FEATURE_LABEL 12종 + fallback ──

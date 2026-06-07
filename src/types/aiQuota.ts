@@ -29,8 +29,8 @@ export interface MyAiQuotaRow {
   nextAvailableAt: string | null
 }
 
-/** F6 PR 2 Phase 5.2 — admin 통제 가능 tier */
-export type QuotaTier = 'free' | 'pro' | 'enterprise'
+/** admin 통제 가능 tier. PR_B2 Phase 0 — CoinTier 통일 ('pro'→'lite', 'enterprise'→'standard') */
+export type QuotaTier = 'free' | 'lite' | 'standard'
 
 /** admin/ai-feature-quotas 매트릭스 row */
 export interface FeatureQuotaConfig {
