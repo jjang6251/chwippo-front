@@ -35,8 +35,8 @@ function labelFor(feature: string): string {
 
 const TIER_LABEL: Record<QuotaTier, string> = {
   free: '무료',
-  pro: 'Pro (F7)',
-  enterprise: 'Enterprise (F7)',
+  lite: 'Lite',
+  standard: 'Standard',
 }
 
 /**
@@ -88,22 +88,31 @@ export function AiQuotas() {
         </button>
       </header>
 
-      <div className="flex gap-2 mb-4">
-        {(['free', 'pro', 'enterprise'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTier(t)}
-            disabled={t !== 'free'}
-            className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              tier === t
-                ? 'bg-brand text-white'
-                : 'bg-card text-text-secondary hover:bg-card-strong disabled:opacity-40 disabled:cursor-not-allowed'
-            }`}
-            title={t !== 'free' ? 'F7 결제 인프라 도입 후 활성화' : undefined}
-          >
-            {TIER_LABEL[t]}
-          </button>
-        ))}
+      <div className="space-y-2 mb-4">
+        <div className="flex gap-2">
+          {(['free', 'lite', 'standard'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTier(t)}
+              disabled={t !== 'free'}
+              className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                tier === t
+                  ? 'bg-brand text-white'
+                  : 'bg-card text-text-secondary hover:bg-card-strong disabled:opacity-40 disabled:cursor-not-allowed'
+              }`}
+              title={
+                t !== 'free'
+                  ? 'PR_B2 Phase 3 admin 매트릭스 도입 시 활성'
+                  : undefined
+              }
+            >
+              {TIER_LABEL[t]}
+            </button>
+          ))}
+        </div>
+        <p className="text-text-quaternary text-[10px]">
+          Lite·Standard 탭은 PR_B2 Phase 3 (admin 매트릭스 수정 UI) 도입 시 활성화돼요.
+        </p>
       </div>
 
       {isLoading ? (
