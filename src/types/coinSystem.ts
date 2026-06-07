@@ -15,6 +15,17 @@ export interface CoinBalance {
   monthlyCoinLimit: number
   /** 회사 조사 일 cap (tier 별 — Free 2 / Lite 5 / Standard 10) */
   companyResearchDailyCap: number
+  /** PR_B2 Phase 1 — Q13 정지 상태 (NULL 이면 정상) */
+  suspendedAt?: string | null
+  suspendReason?: string | null
+  suspendExpiresAt?: string | null
+  /** PR_B2 Phase 1 — Q24 사용자 통지 */
+  pendingNotification?: {
+    type: 'coin_grant' | 'coin_revoke' | 'matrix_change' | 'tier_downgrade' | 'tier_upgrade'
+    title: string
+    body: string
+    createdAt: string
+  } | null
 }
 
 export const TIER_LABEL: Record<CoinTier, string> = {
