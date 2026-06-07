@@ -184,15 +184,17 @@ export function CoverletterDocPage() {
 
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
-      {/* breadcrumb */}
+      {/* breadcrumb — PR UI: 진입 경로 보존 (모아보기 / 보드 카드 어디서 왔든 그 자리로) */}
       <header className="mb-5 space-y-2">
         <div className="text-xs text-text-tertiary">
-          <Link
-            to={`/board/${applicationId}`}
-            className="hover:text-text-primary transition-colors"
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="hover:text-text-primary transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            aria-label="이전 페이지로 돌아가기"
           >
             ← {app.companyName}
-          </Link>
+          </button>
           <span className="text-text-quaternary mx-2">·</span>
           <span>자소서</span>
         </div>
@@ -209,7 +211,10 @@ export function CoverletterDocPage() {
       {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
       <CoverletterOutdatedBanner application={app} />
 
-      {/* Phase B — 회사 조사 banner */}
+      {/* Phase B — 회사 조사 banner.
+        * PR UI: default collapse (outdated 우선 표시 — 사용자 인지 부하 ↓).
+        *   사용자가 클릭하면 펼침 가능 (강제 collapse 가 아닌 default 만).
+        */}
       <CompanyResearchBanner
         research={research}
         loading={researchLoading || fetchingResearch}

@@ -67,12 +67,12 @@ export function CoverletterOutdatedBanner({ application }: Props) {
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-text-secondary text-sm font-medium mb-0.5">
-          회사 정보가 수정됐어요
+          더 풍부한 회사 정보로 업데이트할 수 있어요
         </p>
         <p className="text-text-quaternary text-xs leading-relaxed">
-          현재 회사조사 결과는 이전 회사명·직무 기준이에요 (변경:{' '}
+          현재 회사조사 결과가 오래됐거나 정보가 부족할 수 있어요 (
           {formatRelative(application.coverletterResearchOutdatedAt)}). 최신
-          정보가 필요하면 다시 조사해보세요.
+          11 항목 정보로 다시 조사해보세요.
         </p>
       </div>
       <button
