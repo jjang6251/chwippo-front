@@ -43,7 +43,11 @@ export function CoinChip() {
         onClick={() => setOpen(true)}
         className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-medium transition-colors ${colorClasses}`}
         aria-label={`코인 잔여 ${formatBalance(data.balance)} / ${data.monthlyCoinLimit} (${TIER_LABEL[data.tier]})`}
-        title={`${TIER_LABEL[data.tier]} 플랜 — 갱신 ${new Date(data.nextResetAt).toLocaleDateString('ko-KR')}`}
+        title={
+          data.planExpiresAt && data.tier !== 'free'
+            ? `${TIER_LABEL[data.tier]} 플랜 — 갱신 ${new Date(data.nextResetAt).toLocaleDateString('ko-KR')}\n⏱ ${new Date(data.planExpiresAt).toLocaleDateString('ko-KR')} Plan 만료 → Free 강등`
+            : `${TIER_LABEL[data.tier]} 플랜 — 갱신 ${new Date(data.nextResetAt).toLocaleDateString('ko-KR')}`
+        }
       >
         <span aria-hidden>🪙</span>
         <span className="tabular-nums">{formatBalance(data.balance)}</span>
@@ -54,6 +58,7 @@ export function CoinChip() {
           tier={data.tier}
           monthlyCoinLimit={data.monthlyCoinLimit}
           nextResetAt={data.nextResetAt}
+          planExpiresAt={data.planExpiresAt}
           onClose={() => setOpen(false)}
         />
       )}

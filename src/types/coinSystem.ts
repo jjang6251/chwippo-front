@@ -15,6 +15,10 @@ export interface CoinBalance {
   monthlyCoinLimit: number
   /** 회사 조사 일 cap (tier 별 — Free 2 / Lite 5 / Standard 10) */
   companyResearchDailyCap: number
+  /** PR_B2 Phase 3 — 유료 plan 시작 시각 (Free 면 null) */
+  planStartedAt?: string | null
+  /** PR_B2 Phase 3 — 유료 plan 만료 예정 (Free 면 null, lite/standard 면 yyyy-MM-dd) */
+  planExpiresAt?: string | null
   /** PR_B2 Phase 1 — Q13 정지 상태 (NULL 이면 정상) */
   suspendedAt?: string | null
   suspendReason?: string | null
