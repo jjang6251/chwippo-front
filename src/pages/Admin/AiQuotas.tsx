@@ -12,6 +12,8 @@ import type {
 } from '@/types/aiQuota'
 import { formatKstDateTime } from '@/utils/datetime'
 import { featureLabel } from '@/utils/featureLabel'
+import { TierConfigMatrix } from '@/components/admin/TierConfigMatrix'
+import { FeatureCoinMetaMatrix } from '@/components/admin/FeatureCoinMetaMatrix'
 
 // PR_B2 Phase 2b — feature 한국어 라벨 통일 (admin 전역 utils 사용)
 const labelFor = (feature: string): string => featureLabel(feature)
@@ -154,6 +156,16 @@ export function AiQuotas() {
           </div>
         </AdminCard>
       )}
+
+      {/* PR_B2 Phase 3 — Tier Config 매트릭스 */}
+      <div className="mt-6">
+        <TierConfigMatrix />
+      </div>
+
+      {/* PR_B2 Phase 3 — Feature Coin Meta 매트릭스 */}
+      <div className="mt-4">
+        <FeatureCoinMetaMatrix />
+      </div>
     </div>
   )
 }

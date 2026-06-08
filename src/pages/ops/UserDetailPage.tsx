@@ -5,6 +5,7 @@ import { apiClient } from '@/api/client'
 import { GrantCoinModal } from '@/components/admin/GrantCoinModal'
 import { RevokeCoinModal } from '@/components/admin/RevokeCoinModal'
 import { SuspendUserModal } from '@/components/admin/SuspendUserModal'
+import { ForcePlanChangeModal } from '@/components/admin/ForcePlanChangeModal'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 /**
@@ -67,6 +68,7 @@ export function UserDetailPage() {
   const [showGrant, setShowGrant] = useState(false)
   const [showRevoke, setShowRevoke] = useState(false)
   const [showSuspend, setShowSuspend] = useState(false)
+  const [showPlanChange, setShowPlanChange] = useState(false)
   const [auditFilter, setAuditFilter] = useState<
     'all' | 'coin' | 'suspend' | 'tier' | 'other'
   >('all')
@@ -128,6 +130,21 @@ export function UserDetailPage() {
           <span className="bg-card-strong border border-line text-text-tertiary text-[10px] font-mono px-2 py-0.5 rounded-full">
             {basic.tier}
           </span>
+          {/* PR_B2 Phase 3 — plan 만료 예정 표시 (lite/standard + plan_expires_at 있을 때) */}
+          {coinBalance?.planExpiresAt && basic.tier !== 'free' && (
+            <span className="bg-warning/10 border border-warning/30 text-warning text-[10px] font-mono px-2 py-0.5 rounded-full">
+              ⏱ {new Date(coinBalance.planExpiresAt).toLocaleDateString('ko-KR')}{' '}
+              만료 (D-
+              {Math.max(
+                0,
+                Math.ceil(
+                  (new Date(coinBalance.planExpiresAt).getTime() - renderedNow) /
+                    86400000,
+                ),
+              )}
+              )
+            </span>
+          )}
         </div>
         <p className="text-text-quaternary text-xs">
           {basic.email ?? '(이메일 없음)'} · 가입{' '}
@@ -204,6 +221,16 @@ export function UserDetailPage() {
             ⛔ 정지
           </button>
         )}
+        {/* PR_B2 Phase 3 — Plan 강제 변경 */}
+        <button
+          type="button"
+          onClick={() => setShowPlanChange(true)}
+          disabled={basic.role === 'admin'}
+          className="bg-info/15 hover:bg-info/25 border border-info/30 text-info text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-40"
+          title={basic.role === 'admin' ? 'admin 계정 X' : ''}
+        >
+          ⬆️ Plan 변경
+        </button>
       </div>
 
       {/* 정지 정보 (정지 시만) */}
@@ -405,6 +432,14 @@ export function UserDetailPage() {
           userId={basic.id}
           nickname={basic.nickname}
           onClose={() => setShowSuspend(false)}
+        />
+      )}
+      {showPlanChange && (
+        <ForcePlanChangeModal
+          userId={basic.id}
+          nickname={basic.nickname}
+          currentTier={basic.tier}
+          onClose={() => setShowPlanChange(false)}
         />
       )}
     </div>

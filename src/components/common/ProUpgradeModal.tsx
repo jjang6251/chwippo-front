@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { CoinTier } from '@/types/coinSystem'
 import { TIER_LABEL, TIER_PRICE_KRW } from '@/types/coinSystem'
 
@@ -7,6 +8,8 @@ interface Props {
   tier: CoinTier
   monthlyCoinLimit: number
   nextResetAt: string
+  /** PR_B2 Phase 3 — 유료 plan 만료 예정 (lite/standard) */
+  planExpiresAt?: string | null
   onClose: () => void
 }
 
@@ -25,6 +28,7 @@ export function ProUpgradeModal({
   tier,
   monthlyCoinLimit,
   nextResetAt,
+  planExpiresAt,
   onClose,
 }: Props) {
   // ESC key → close
@@ -36,6 +40,8 @@ export function ProUpgradeModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const [renderedNow] = useState(() => Date.now())
+
   const resetDateStr = new Date(nextResetAt).toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
@@ -45,7 +51,10 @@ export function ProUpgradeModal({
   const formatBalance = (n: number) =>
     n === Math.floor(n) ? n.toString() : n.toFixed(1)
 
-  return (
+  // PR_B2 Phase 3 — backdrop-blur 부모로 인한 containing block 문제 fix.
+  // 헤더(sticky + backdrop-blur)가 fixed positioning 의 reference 가 되어 모달이 화면 중앙이 아닌 헤더 옆에 표시되던 버그.
+  // createPortal 로 body 에 직접 렌더 → fixed 가 viewport 기준으로 정상 작동.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -85,6 +94,32 @@ export function ProUpgradeModal({
             <span className="text-text-tertiary text-xs">다음 갱신</span>
             <span className="text-text-secondary text-xs">{resetDateStr}</span>
           </div>
+          {/* PR_B2 Phase 3 — Plan 만료 예정 (lite/standard 만) */}
+          {planExpiresAt && tier !== 'free' && (
+            <div className="mt-2 pt-2 border-t border-line flex items-center justify-between">
+              <span className="text-warning text-xs">⏱ Plan 만료</span>
+              <span className="text-warning text-xs font-semibold">
+                {new Date(planExpiresAt).toLocaleDateString('ko-KR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}{' '}
+                (D-
+                {Math.max(
+                  0,
+                  Math.ceil(
+                    (new Date(planExpiresAt).getTime() - renderedNow) / 86400000,
+                  ),
+                )}
+                )
+              </span>
+            </div>
+          )}
+          {planExpiresAt && tier !== 'free' && (
+            <p className="text-text-quaternary text-[10px] mt-1">
+              만료 시 자동으로 Free 플랜으로 전환돼요
+            </p>
+          )}
         </div>
 
         {/* 결제 안내 */}
@@ -136,6 +171,7 @@ export function ProUpgradeModal({
           닫기
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
