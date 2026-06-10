@@ -41,6 +41,8 @@ import { Interviews } from '@/pages/Interviews'
 import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
 import { AiUsage } from '@/pages/Admin/AiUsage'
 import { AiQuotas } from '@/pages/Admin/AiQuotas'
+import { AuditLogs } from '@/pages/Admin/AuditLogs'
+import { CompanyResearchMetrics } from '@/pages/Admin/CompanyResearchMetrics'
 import { Monitoring } from '@/pages/Admin/Monitoring'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 
@@ -110,6 +112,12 @@ export default function App() {
               <Route path="/ops/monitoring" element={<Monitoring />} />
               {/* 5.6.3 alias — alert-thresholds 구 라우트 호환성 */}
               <Route path="/ops/alert-thresholds" element={<Monitoring />} />
+              {/* PR_B2 Phase 4 */}
+              <Route path="/ops/audit-logs" element={<AuditLogs />} />
+              <Route
+                path="/ops/company-research-metrics"
+                element={<CompanyResearchMetrics />}
+              />
             </Route>
           </Route>
         </Route>

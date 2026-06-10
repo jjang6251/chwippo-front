@@ -11,21 +11,39 @@
  */
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { describe, expect, it, vi } from 'vitest'
 import { AdminLayout } from './AdminLayout'
 
+// PR_B2 Phase 4 — AdminNotificationBell 의 useQuery 호출 회피
+vi.mock('@/api/adminInquiries', () => ({
+  adminInquiriesApi: {
+    getBadges: vi.fn().mockResolvedValue({
+      inquiriesOpen: 0,
+      inquiriesUnassigned: 0,
+      slaOverdue: 0,
+      adminUnread: 0,
+    }),
+  },
+}))
+
 function renderAt(path: string) {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route element={<AdminLayout />}>
-          <Route path="/ops" element={<div>대시보드페이지</div>} />
-          <Route path="/ops/users" element={<div>회원관리페이지</div>} />
-          <Route path="/ops/users/:id" element={<div>회원상세페이지</div>} />
-          <Route path="/ops/monitoring" element={<div>모니터링페이지</div>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<AdminLayout />}>
+            <Route path="/ops" element={<div>대시보드페이지</div>} />
+            <Route path="/ops/users" element={<div>회원관리페이지</div>} />
+            <Route path="/ops/users/:id" element={<div>회원상세페이지</div>} />
+            <Route path="/ops/monitoring" element={<div>모니터링페이지</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
