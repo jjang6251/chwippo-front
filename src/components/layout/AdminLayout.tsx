@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { AdminNotificationBell } from '@/components/admin/AdminNotificationBell'
 
 /**
  * F6 PR 2 Phase 5.6.3 — admin 페이지 통합 레이아웃 (Linear 패턴).
@@ -34,11 +35,15 @@ const NAV: NavGroup[] = [
     items: [
       { to: '/ops/ai-quotas', label: 'AI 한도' },
       { to: '/ops/ai-usage', label: 'AI 사용량' },
+      { to: '/ops/company-research-metrics', label: '회사조사 metrics' },
     ],
   },
   {
     group: '모니터링',
-    items: [{ to: '/ops/monitoring', label: '알람·임계치' }],
+    items: [
+      { to: '/ops/monitoring', label: '알람·임계치' },
+      { to: '/ops/audit-logs', label: 'Audit 로그' },
+    ],
   },
 ]
 
@@ -104,6 +109,10 @@ export function AdminLayout() {
 
         {/* 메인 영역 — 카드들이 명확히 떠보이도록 page bg 분명히. max-w-[1100px] = 페이지 너비 표준 */}
         <main className="flex-1 min-w-0 w-full max-w-[1100px] mx-auto">
+          {/* PR_B2 Phase 4 — 상단 종 알림 (sticky) */}
+          <div className="hidden lg:flex sticky top-0 z-30 justify-end py-2 -mt-2">
+            <AdminNotificationBell />
+          </div>
           <Outlet />
         </main>
       </div>
