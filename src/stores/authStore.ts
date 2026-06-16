@@ -7,6 +7,10 @@ interface User {
   role: 'user' | 'admin'
   onboardedAt: string | null
   termsAgreedAt: string | null
+  aiConsentAt: string | null
+  aiConsentVersion: string | null
+  /** PR_B1b — 코인 시스템 onboarding modal 표시 여부. NULL → 첫 로그인 modal 노출 */
+  onboardedCoinAt: string | null
 }
 
 interface AuthState {

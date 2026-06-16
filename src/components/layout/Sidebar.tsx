@@ -9,6 +9,11 @@ const NAV_ITEMS = [
   { label: '대시보드', path: '/dashboard', icon: GridIcon },
   { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
   { label: '캘린더', path: '/calendar', icon: CalendarIcon },
+  { label: '활동 일지', path: '/activity', icon: JournalIcon },
+  // F6 PR 1 — 자소서 통합 페이지 (데스크탑 only. MobileNav 변경 X — 모바일은 카드 상세에서 진입)
+  { label: '자소서', path: '/coverletters', icon: CoverLetterIcon },
+  // F6 PR 2 Phase 4 — 면접 준비 통합 페이지 (데스크탑 only. 동일 정책)
+  { label: '면접 준비', path: '/interviews', icon: InterviewIcon },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
@@ -25,7 +30,10 @@ export function Sidebar() {
 
   const isActive = (path: string) => {
     const target = link(path)
-    return path === '/board' ? location.pathname.startsWith(target) : location.pathname === target
+    if (path === '/board' || path === '/activity' || path === '/interviews') {
+      return location.pathname.startsWith(target)
+    }
+    return location.pathname === target
   }
 
   const isSettingsActive = location.pathname.startsWith('/settings')
@@ -53,6 +61,7 @@ export function Sidebar() {
               key={path}
               to={link(path)}
               {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
+              {...(path === '/activity' ? { 'data-tour': 'activity-nav' } : {})}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive(path)
                   ? 'bg-brand/10 text-brand'
@@ -64,43 +73,34 @@ export function Sidebar() {
             </Link>
           ))}
 
-          {/* Admin link */}
+          {/* 설정 — 메인 nav 안 (이전엔 spacer 아래) */}
+          {!isDemo && (
+            <Link
+              to="/settings"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isSettingsActive
+                  ? 'bg-brand/10 text-brand'
+                  : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
+              }`}
+            >
+              <SettingsIcon size={16} />
+              설정
+            </Link>
+          )}
+
+          {/* Admin link — 5.6.3 단순화. 진입점 하나만 (sub items 는 AdminLayout 좌측 nav 가 담당) */}
           {!isDemo && user?.role === 'admin' && (
-            <>
-              <Link
-                to="/ops"
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname.startsWith('/ops')
-                    ? 'bg-warning/10 text-warning'
-                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-                }`}
-              >
-                <AdminIcon size={16} />
-                관리자
-              </Link>
-              <div className="ml-7 flex flex-col gap-0.5">
-                  <Link
-                    to="/ops/inquiries"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      location.pathname === '/ops/inquiries'
-                        ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
-                    }`}
-                  >
-                    문의 관리
-                  </Link>
-                  <Link
-                    to="/ops/announcements"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      location.pathname === '/ops/announcements'
-                        ? 'text-warning bg-warning/8'
-                        : 'text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong'
-                    }`}
-                  >
-                    공지 관리
-                  </Link>
-              </div>
-            </>
+            <Link
+              to="/ops"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                location.pathname.startsWith('/ops')
+                  ? 'bg-warning/10 text-warning'
+                  : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
+              }`}
+            >
+              <AdminIcon size={16} />
+              관리자
+            </Link>
           )}
 
           {/* Spacer pushes bottom items down */}
@@ -109,19 +109,6 @@ export function Sidebar() {
           {!isDemo && (
             <>
               <div className="h-px bg-card my-2" />
-
-              {/* 설정 */}
-              <Link
-                to="/settings"
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isSettingsActive
-                    ? 'bg-brand/10 text-brand'
-                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-                }`}
-              >
-                <SettingsIcon size={16} />
-                설정
-              </Link>
 
               {/* 도움말 */}
               <Link
@@ -227,4 +214,21 @@ function AdminIcon({ size }: { size: number }) {
 }
 function CalendarIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="2.5" width="14" height="12" rx="1.5" /><line x1="1" y1="6.5" x2="15" y2="6.5" /><line x1="5" y1="1" x2="5" y2="4" /><line x1="11" y1="1" x2="11" y2="4" /><circle cx="8" cy="10.5" r="1" fill="currentColor" stroke="none" /></svg>
+}
+function JournalIcon({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2h7a2 2 0 012 2v10a1 1 0 01-1 1H4a2 2 0 01-2-2V4a2 2 0 012-2z" /><line x1="5" y1="6" x2="10" y2="6" /><line x1="5" y1="8.5" x2="10" y2="8.5" /><line x1="5" y1="11" x2="8" y2="11" /></svg>
+}
+function CoverLetterIcon({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" /><polyline points="10 2 10 5 13 5" /><line x1="5" y1="9" x2="11" y2="9" /><line x1="5" y1="11.5" x2="9" y2="11.5" /></svg>
+}
+
+function InterviewIcon({ size }: { size: number }) {
+  // 말풍선 + 작은 마이크: 면접 대화 메타포
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H6l-3 2.5V12a2 2 0 01-1-2V4z" />
+      <line x1="5.5" y1="6" x2="10.5" y2="6" />
+      <line x1="5.5" y1="8.5" x2="9" y2="8.5" />
+    </svg>
+  )
 }

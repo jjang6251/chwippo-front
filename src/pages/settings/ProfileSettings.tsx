@@ -30,7 +30,7 @@ export function ProfileSettings() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <h1 className="text-xl font-bold mb-6">프로필 설정</h1>
 
       {/* 계정 정보 */}

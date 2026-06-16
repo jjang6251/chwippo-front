@@ -6,8 +6,8 @@ const TABS = [
   { label: '대시보드', path: '/dashboard', icon: GridIcon },
   { label: '보드', path: '/board', icon: BoardIcon },
   { label: '캘린더', path: '/calendar', icon: CalendarIcon },
+  { label: '활동 일지', path: '/activity', icon: JournalIcon },
   { label: '내정보', path: '/myinfo', icon: StorageIcon },
-  { label: '설정', path: '/settings', icon: SettingsIcon },
 ] as const
 
 export function MobileNav() {
@@ -16,7 +16,7 @@ export function MobileNav() {
   const user = useAuthStore((s) => s.user)
   const link = (p: string) => (isDemo ? '/demo' + p : p)
 
-  const baseTabs = isDemo ? TABS.filter((t) => t.path !== '/settings') : TABS
+  const baseTabs = TABS
   const tabs = (!isDemo && user?.role === 'admin')
     ? [...baseTabs, { label: '관리자', path: '/ops', icon: AdminIcon }]
     : baseTabs
@@ -24,10 +24,8 @@ export function MobileNav() {
   const isActive = (path: string) => {
     if (path === '/ops') return location.pathname.startsWith('/ops')
     const target = link(path)
-    if (path === '/settings') {
-      return location.pathname.startsWith('/settings') || location.pathname === '/inquiry'
-    }
     if (path === '/board') return location.pathname.startsWith(target)
+    if (path === '/activity') return location.pathname.startsWith(target)
     return location.pathname === target
   }
 
@@ -87,11 +85,13 @@ function StorageIcon({ size }: { size: number }) {
   )
 }
 
-function SettingsIcon({ size }: { size: number }) {
+function JournalIcon({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="10" cy="10" r="2.5" />
-      <path d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.1 4.1l1.1 1.1M14.8 14.8l1.1 1.1M4.1 15.9l1.1-1.1M14.8 5.2l1.1-1.1" />
+      <path d="M5 3h9a2 2 0 012 2v12a1 1 0 01-1 1H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+      <line x1="6.5" y1="7" x2="12.5" y2="7" />
+      <line x1="6.5" y1="10" x2="12.5" y2="10" />
+      <line x1="6.5" y1="13" x2="10" y2="13" />
     </svg>
   )
 }

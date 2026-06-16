@@ -39,7 +39,7 @@ export function InquiryNew() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/inquiry')} className="flex items-center min-h-8 text-text-tertiary hover:text-text-primary text-sm transition-colors">← 문의 내역</button>
         <h1 className="text-xl font-bold">새 문의</h1>

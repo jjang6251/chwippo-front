@@ -8,6 +8,17 @@ export const agreeTerms = () =>
 export const markOnboarded = () =>
   apiClient.post('/users/me/onboard').then(() => undefined)
 
+// AI 사용 동의 (PIPA 26조). 서버의 CURRENT_AI_CONSENT_VERSION 과 동일해야 저장됨.
+export const CURRENT_AI_CONSENT_VERSION = 'v1'
+
+export const agreeAiConsent = (version: string = CURRENT_AI_CONSENT_VERSION) =>
+  apiClient
+    .post('/users/me/ai-consent', { version })
+    .then(() => undefined)
+
+export const withdrawAiConsent = () =>
+  apiClient.delete('/users/me/ai-consent').then(() => undefined)
+
 export const updateNickname = (nickname: string) =>
   apiClient.patch('/users/me/nickname', { nickname }).then(unwrap<{ nickname: string }>)
 

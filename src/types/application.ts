@@ -11,6 +11,13 @@ export interface ApplicationStep {
   pinnedContent: string | null
 }
 
+/** PR_B1c — 자소서 생성 (회사조사 trigger) 상태 */
+export type CoverletterGenerationStatus =
+  | 'idle'
+  | 'in_progress'
+  | 'completed'
+  | 'failed'
+
 export interface Application {
   id: string
   userId: string
@@ -24,8 +31,23 @@ export interface Application {
   needsDetail: boolean
   isStarred: boolean
   steps: ApplicationStep[]
+  /** PR_B1c — 자소서 생성 상태 (회사조사 trigger atomic) */
+  coverletterGenerationStatus?: CoverletterGenerationStatus
+  coverletterGenerationStartedAt?: string | null
+  /** PR_B1c Phase A — 회사명/직무 변경 시 NOW() 저장 (outdated banner 노출) */
+  coverletterResearchOutdatedAt?: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** PR_B1c — POST /applications/:id/generate-coverletter 응답 */
+export interface GenerateCoverletterResult {
+  status:
+    | 'completed'
+    | 'already_in_progress'
+    | 'already_completed'
+    | 'coin_insufficient'
+  reason?: string
 }
 
 export interface CreateApplicationDto {

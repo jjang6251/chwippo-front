@@ -39,7 +39,8 @@ export function LoginCallback() {
     const userTermsAgreedAt = params.user_terms_agreed_at ?? null
     const userOnboardedAt = params.user_onboarded_at ?? null
     if (userId && userNickname && userRole) {
-      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole, termsAgreedAt: userTermsAgreedAt, onboardedAt: userOnboardedAt })
+      // aiConsentAt/Version + onboardedCoinAt 은 kakao callback URL 에 포함 안 됨 — 첫 /me 또는 /auth/refresh 응답에서 채워짐
+      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole, termsAgreedAt: userTermsAgreedAt, onboardedAt: userOnboardedAt, aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null })
     }
 
     if (needsTerms) {

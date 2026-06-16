@@ -94,6 +94,36 @@ export function Terms() {
           </p>
         </DocSection>
 
+        <DocSection title="제7조의2 (AI 기능 이용 안내)">
+          <p className="mb-3">
+            치뽀의 노트 요약·자소서 추천·면접 질문 생성·회사 조사 등 AI 기능은
+            OpenAI·Anthropic 의 LLM 을 사용합니다.
+          </p>
+          <ul className="space-y-1.5 list-disc list-inside">
+            <li>
+              AI 기능 사용은 회원의 별도 동의를 전제로 합니다 (가입 시 또는 첫 사용 시 동의).
+            </li>
+            <li>
+              <strong>AI 가 생성한 답변·정보는 참고용이며 정확성·완전성을 보장하지 않습니다.</strong>{' '}
+              회사 정보·면접 질문·자소서 답변 등은 면접·제출 전 사용자가 반드시 검증해야 합니다.
+            </li>
+            <li>
+              회사 조사 기능은 공식 화이트리스트 출처 (공시·언론사·위키) 만 사용하며, AI 가 생성한
+              요약 형태로만 90일간 캐싱합니다. 회사 측 정보 삭제 요청은{' '}
+              <a
+                href="mailto:support@chwippo.com?subject=회사 정보 삭제 요청"
+                className="text-brand hover:underline"
+              >
+                support@chwippo.com
+              </a>{' '}
+              으로 신청 시 24시간 이내 처리합니다.
+            </li>
+            <li>
+              운영자는 AI 응답의 오류로 인한 사용자의 면접 결과·취업 결과에 대해 책임지지 않습니다.
+            </li>
+          </ul>
+        </DocSection>
+
         <DocSection title="제8조 (서비스 변경·중단)">
           <p className="mb-3">
             운영자는 서비스 내용을 변경하거나 중단할 수 있습니다.

@@ -5,6 +5,9 @@ import { getAdminInquiries, getAdminInquiryDetail, addAdminComment, closeInquiry
 import { type InquiryComment } from '@/api/inquiries'
 import { toast } from '@/stores/toastStore'
 import dayjs from 'dayjs'
+import { PriorityBadge } from '@/components/admin/PriorityBadge'
+import { SlaCountdown } from '@/components/admin/SlaCountdown'
+import { InquiryActions } from '@/components/admin/InquiryActions'
 
 function dPlusDays(createdAt: string) {
   return Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000)
@@ -79,7 +82,7 @@ export function OpsInquiries() {
   const sorted = [...open, ...closed]
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <div>
       <div className="flex items-center gap-3 mb-6">
         <Link to="/ops" className="text-text-tertiary hover:text-text-primary text-sm">← 관리자</Link>
         <h1 className="text-xl font-bold">문의 관리</h1>
@@ -175,6 +178,12 @@ export function OpsInquiries() {
                   ))}
                 </div>
               )}
+              {/* PR_B2 Phase 4 — 처리 정보 (assign / priority / SLA inline edit) */}
+              {detail.status !== 'CLOSED' && (
+                <div className="mt-4">
+                  <InquiryActions inquiry={detail} />
+                </div>
+              )}
             </div>
 
             {/* 입력 영역 */}
@@ -256,10 +265,12 @@ function AdminInquiryCard({ item, onSelect, selected }: { item: AdminInquiry; on
           {item.admin_unread}
         </span>
       )}
-      <div className="flex items-center gap-2 mb-1 pr-6">
+      <div className="flex items-center gap-2 mb-1 pr-6 flex-wrap">
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[item.status]}`}>
           {STATUS_LABEL[item.status]}
         </span>
+        {/* PR_B2 Phase 4 — priority badge */}
+        {item.priority && <PriorityBadge priority={item.priority} />}
         <span className="text-xs text-text-tertiary">{item.category}</span>
         <span className="text-xs text-text-tertiary ml-auto">{dayjs(item.created_at).format('MM.DD')}</span>
       </div>
@@ -269,6 +280,20 @@ function AdminInquiryCard({ item, onSelect, selected }: { item: AdminInquiry; on
         {item.user_short_id ? <span className="ml-1 text-text-quaternary font-mono">#{item.user_short_id}</span> : null}
         {item.user_email ? ` · ${item.user_email}` : ''}
       </p>
+      {/* PR_B2 Phase 4 — SLA countdown + assigned */}
+      {!isClosed && (item.slaDeadlineAt || item.assignedTo) && (
+        <div className="flex items-center gap-2 mt-1.5 text-[10px]">
+          {item.slaDeadlineAt && <SlaCountdown deadlineAt={item.slaDeadlineAt} />}
+          {item.assignedTo && (
+            <span className="text-text-quaternary font-mono">
+              👤 {item.assignedTo.slice(0, 8)}...
+            </span>
+          )}
+          {!item.assignedTo && (
+            <span className="text-warning text-[10px]">🆕 미배정</span>
+          )}
+        </div>
+      )}
     </button>
   )
 }

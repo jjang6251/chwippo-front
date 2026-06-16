@@ -31,6 +31,10 @@ export interface AdminInquiry {
   user_nickname: string | null
   user_email: string | null
   user_short_id: string | null
+  // PR_B2 Phase 4
+  assignedTo?: string | null
+  priority?: 'high' | 'medium' | 'low'
+  slaDeadlineAt?: string | null
 }
 
 export interface InquiriesResult {

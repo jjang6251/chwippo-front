@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastContainer } from '@/components/common/ToastContainer'
 import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
+import { AiConsentRequiredModal } from '@/components/common/AiConsentRequiredModal'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AdminGuard } from '@/components/layout/AdminGuard'
 import { AppShell } from '@/components/layout/AppShell'
@@ -29,7 +30,21 @@ import { OpsPage } from '@/pages/ops/OpsPage'
 import { OpsInquiries } from '@/pages/ops/OpsInquiries'
 import { OpsAnnouncements } from '@/pages/ops/OpsAnnouncements'
 import { OpsUsers } from '@/pages/ops/OpsUsers'
+import { UserDetailPage } from '@/pages/ops/UserDetailPage'
 import { TermsAgreement } from '@/pages/TermsAgreement'
+import { ActivityPage } from '@/pages/Activity/ActivityPage'
+import { NotePage } from '@/pages/Activity/NotePage'
+import { InsightsPage } from '@/pages/Activity/InsightsPage'
+import { Coverletters } from '@/pages/Coverletters'
+import { CoverletterDocPage } from '@/pages/Coverletter/CoverletterDocPage'
+import { Interviews } from '@/pages/Interviews'
+import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
+import { AiUsage } from '@/pages/Admin/AiUsage'
+import { AiQuotas } from '@/pages/Admin/AiQuotas'
+import { AuditLogs } from '@/pages/Admin/AuditLogs'
+import { CompanyResearchMetrics } from '@/pages/Admin/CompanyResearchMetrics'
+import { Monitoring } from '@/pages/Admin/Monitoring'
+import { AdminLayout } from '@/components/layout/AdminLayout'
 
 export default function App() {
   return (
@@ -68,18 +83,49 @@ export default function App() {
             <Route path="/settings/alarm" element={<AlarmSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/help" element={<Help />} />
+            <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/activity/insights" element={<InsightsPage />} />
+            <Route path="/coverletters" element={<Coverletters />} />
+            <Route
+              path="/board/:applicationId/coverletter"
+              element={<CoverletterDocPage />}
+            />
+            <Route path="/interviews" element={<Interviews />} />
+            <Route
+              path="/interviews/:sessionId"
+              element={<InterviewSessionPage />}
+            />
+            <Route
+              path="/activity/:activityId/logs/:logId/note"
+              element={<NotePage />}
+            />
           </Route>
           <Route element={<AdminGuard />}>
-            <Route path="/ops" element={<OpsPage />} />
-            <Route path="/ops/inquiries" element={<OpsInquiries />} />
-            <Route path="/ops/announcements" element={<OpsAnnouncements />} />
-            <Route path="/ops/users" element={<OpsUsers />} />
+            <Route element={<AdminLayout />}>
+              <Route path="/ops" element={<OpsPage />} />
+              <Route path="/ops/inquiries" element={<OpsInquiries />} />
+              <Route path="/ops/announcements" element={<OpsAnnouncements />} />
+              <Route path="/ops/users" element={<OpsUsers />} />
+              <Route path="/ops/users/:id" element={<UserDetailPage />} />
+              <Route path="/ops/ai-usage" element={<AiUsage />} />
+              <Route path="/ops/ai-quotas" element={<AiQuotas />} />
+              <Route path="/ops/monitoring" element={<Monitoring />} />
+              {/* 5.6.3 alias — alert-thresholds 구 라우트 호환성 */}
+              <Route path="/ops/alert-thresholds" element={<Monitoring />} />
+              {/* PR_B2 Phase 4 */}
+              <Route path="/ops/audit-logs" element={<AuditLogs />} />
+              <Route
+                path="/ops/company-research-metrics"
+                element={<CompanyResearchMetrics />}
+              />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
       <ToastContainer />
       <CelebrationOverlay />
+      <AiConsentRequiredModal />
     </BrowserRouter>
   )
 }

@@ -30,7 +30,7 @@ export function InquiryList() {
   const sorted = [...open, ...closed]
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold">문의 내역</h1>

@@ -140,7 +140,7 @@ export function StepPage() {
     dday === 1 ? 'bg-warning/5' : ''
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-28">
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[160px] lg:max-w-[1100px] lg:px-9 lg:py-9 lg:pb-28">
       {/* 뒤로가기 */}
       <div className="pt-6 pb-4">
         <button
