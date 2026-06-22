@@ -14,6 +14,9 @@ export interface AlertThresholds {
   abuserSuspectDailyCalls: number
   freeUserSignupSpikePct: number
   costOutlierStddev: number
+  // AI cost guard — per-user / per-feature daily USD cap
+  perUserDailyCostUsd: number
+  perFeatureDailyCostUsd: number
   updatedBy: string | null
   updatedAt: string
 }
@@ -57,6 +60,9 @@ export interface UpdateAlertThresholdsDto {
   abuserSuspectDailyCalls?: number
   freeUserSignupSpikePct?: number
   costOutlierStddev?: number
+  // AI cost guard
+  perUserDailyCostUsd?: number
+  perFeatureDailyCostUsd?: number
 }
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data

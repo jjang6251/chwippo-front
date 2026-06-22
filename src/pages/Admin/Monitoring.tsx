@@ -46,6 +46,9 @@ export function Monitoring() {
   const [abuserDaily, setAbuserDaily] = useState(100)
   const [signupSpike, setSignupSpike] = useState(200)
   const [costOutlier, setCostOutlier] = useState(2.0)
+  // AI cost guard — per-user / per-feature daily USD cap
+  const [perUserCost, setPerUserCost] = useState(0.5)
+  const [perFeatureCost, setPerFeatureCost] = useState(5)
 
   useEffect(() => {
     if (data?.thresholds) {
@@ -60,6 +63,8 @@ export function Monitoring() {
       setAbuserDaily(data.thresholds.abuserSuspectDailyCalls)
       setSignupSpike(data.thresholds.freeUserSignupSpikePct)
       setCostOutlier(data.thresholds.costOutlierStddev)
+      setPerUserCost(data.thresholds.perUserDailyCostUsd)
+      setPerFeatureCost(data.thresholds.perFeatureDailyCostUsd)
     }
   }, [data?.thresholds])
 
@@ -74,7 +79,9 @@ export function Monitoring() {
       inquirySla !== data.thresholds.inquirySlaHours ||
       abuserDaily !== data.thresholds.abuserSuspectDailyCalls ||
       signupSpike !== data.thresholds.freeUserSignupSpikePct ||
-      Math.abs(costOutlier - data.thresholds.costOutlierStddev) > 0.01)
+      Math.abs(costOutlier - data.thresholds.costOutlierStddev) > 0.01 ||
+      Math.abs(perUserCost - data.thresholds.perUserDailyCostUsd) > 0.001 ||
+      Math.abs(perFeatureCost - data.thresholds.perFeatureDailyCostUsd) > 0.001)
 
   const save = () => {
     update(
@@ -89,6 +96,8 @@ export function Monitoring() {
         abuserSuspectDailyCalls: abuserDaily,
         freeUserSignupSpikePct: signupSpike,
         costOutlierStddev: costOutlier,
+        perUserDailyCostUsd: perUserCost,
+        perFeatureDailyCostUsd: perFeatureCost,
       },
       {
         onSuccess: () => toast.show('임계치를 변경했어요.'),
@@ -283,6 +292,39 @@ export function Monitoring() {
                   step={0.1}
                   value={costOutlier}
                   onChange={(e) => setCostOutlier(Number(e.target.value))}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              {/* AI cost guard — per-user / per-feature daily USD cap */}
+              <ThresholdField
+                label="사용자 일 cost cap ($)"
+                hint="user 1명/day 의 모든 feature 합산 USD cap. 도달 시 LLM 호출 차단 (코인 외 hard guard)"
+              >
+                <input
+                  type="number"
+                  aria-label="사용자 일 cost cap"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={perUserCost}
+                  onChange={(e) => setPerUserCost(Number(e.target.value))}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              <ThresholdField
+                label="feature 일 cost cap ($)"
+                hint="user 1명/feature/day USD cap. 단일 feature 폭주 방지"
+              >
+                <input
+                  type="number"
+                  aria-label="feature 일 cost cap"
+                  min={0}
+                  max={1000}
+                  step={0.1}
+                  value={perFeatureCost}
+                  onChange={(e) => setPerFeatureCost(Number(e.target.value))}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>

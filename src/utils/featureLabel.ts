@@ -94,6 +94,8 @@ export const ALERT_TYPE_KR: Record<string, string> = {
   test: '테스트 알람',
   provider_down: 'AI provider 장애',
   provider_up: 'AI provider 복구',
+  cost_quota_user: '사용자 일 cost cap 도달',
+  cost_quota_feature: 'feature 일 cost cap 도달',
 }
 
 export function alertTypeLabel(type: string): string {
