@@ -3,6 +3,7 @@ import { ToastContainer } from '@/components/common/ToastContainer'
 import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
 import { AiConsentRequiredModal } from '@/components/common/AiConsentRequiredModal'
 import { AuthGuard } from '@/components/layout/AuthGuard'
+import { AiFeatureGuard } from '@/components/auth/AiFeatureGuard'
 import { AdminGuard } from '@/components/layout/AdminGuard'
 import { AppShell } from '@/components/layout/AppShell'
 import { DemoShell } from '@/components/demo/DemoShell'
@@ -85,16 +86,19 @@ export default function App() {
             <Route path="/settings/help" element={<Help />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/activity/insights" element={<InsightsPage />} />
-            <Route path="/coverletters" element={<Coverletters />} />
-            <Route
-              path="/board/:applicationId/coverletter"
-              element={<CoverletterDocPage />}
-            />
-            <Route path="/interviews" element={<Interviews />} />
-            <Route
-              path="/interviews/:sessionId"
-              element={<InterviewSessionPage />}
-            />
+            {/* AI 기능 라우트 — VITE_AI_FEATURES_ENABLED=false 시 dashboard redirect */}
+            <Route element={<AiFeatureGuard />}>
+              <Route path="/coverletters" element={<Coverletters />} />
+              <Route
+                path="/board/:applicationId/coverletter"
+                element={<CoverletterDocPage />}
+              />
+              <Route path="/interviews" element={<Interviews />} />
+              <Route
+                path="/interviews/:sessionId"
+                element={<InterviewSessionPage />}
+              />
+            </Route>
             <Route
               path="/activity/:activityId/logs/:logId/note"
               element={<NotePage />}

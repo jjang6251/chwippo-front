@@ -1,6 +1,7 @@
 import { useLocation, Link } from 'react-router-dom'
 import { useDemoMode } from '@/contexts/demoMode'
 import { CoinChip } from '@/components/common/CoinChip'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
@@ -24,6 +25,7 @@ function getTitle(pathname: string): string {
 export function MobileHeader() {
   const { pathname } = useLocation()
   const isDemo = useDemoMode()
+  const aiEnabled = useAiEnabled()
   const title = getTitle(pathname)
   const isSettingsActive = pathname.startsWith('/settings')
 
@@ -36,9 +38,11 @@ export function MobileHeader() {
       <span className="text-text-secondary text-sm font-medium flex-1 truncate">{title}</span>
       {!isDemo && (
         <>
-          <div className="mr-2 shrink-0">
-            <CoinChip />
-          </div>
+          {aiEnabled && (
+            <div className="mr-2 shrink-0">
+              <CoinChip />
+            </div>
+          )}
           <Link
             to="/settings"
             aria-label="설정"
