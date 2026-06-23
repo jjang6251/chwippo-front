@@ -6,6 +6,7 @@ import {
 } from '@/hooks/useActivities'
 import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 import type { ActivityLog, SummarizeNoteResult } from '@/types/activity'
 
 const MIN_CHARS = 50
@@ -17,6 +18,9 @@ interface Props {
 }
 
 export function AISummarySection({ log, currentTextLength }: Props) {
+  const aiEnabled = useAiEnabled()
+  if (!aiEnabled) return null
+
   const summarize = useSummarizeLog(log.activityId)
   const ensureAiConsent = useRequireAiConsent()
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('note_summary')
