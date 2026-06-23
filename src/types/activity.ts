@@ -68,6 +68,8 @@ export interface Activity {
   endedAt: string | null
   archivedAt: string | null
   legacyExperienceId: string | null
+  /** 활동 총괄 회고 (베타 피드백 2026-06-23) — 끝난 활동 wrap up. NULL=미작성. 5000자 cap */
+  summaryReflection: string | null
   logs?: ActivityLog[]
   reflections?: ActivityReflection[]
   createdAt: string
@@ -119,7 +121,10 @@ export interface CreateActivityDto {
   endedAt?: string
 }
 
-export type UpdateActivityDto = Partial<CreateActivityDto>
+export type UpdateActivityDto = Partial<CreateActivityDto> & {
+  /** 활동 총괄 회고 — null 또는 빈 string 으로 clear */
+  summaryReflection?: string | null
+}
 
 export interface CreateActivityLogDto {
   content: string
