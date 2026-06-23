@@ -16,6 +16,7 @@ import { ActivityCard } from './ActivityCard'
 import { ActivityFormModal } from './modals/ActivityFormModal'
 import { ActivityPickerModal } from './modals/ActivityPickerModal'
 import { BulkLogModal } from './modals/BulkLogModal'
+import { ActivitySummaryModal } from './modals/ActivitySummaryModal'
 import { ClPopover } from './modals/ClPopover'
 import { ConfirmModal } from './modals/ConfirmModal'
 import { LogDetailModal } from './modals/LogDetailModal'
@@ -72,6 +73,7 @@ export function ActivityPage() {
   >(null)
   // Bulk log modal
   const [bulkActivityId, setBulkActivityId] = useState<string | null>(null)
+  const [summaryActivityId, setSummaryActivityId] = useState<string | null>(null)
   // Cl popover
   const [clPopover, setClPopover] = useState<{
     logId: string
@@ -378,6 +380,10 @@ export function ActivityPage() {
 
   function handleBulkAdd(activityId: string) {
     setBulkActivityId(activityId)
+  }
+
+  function handleSummaryReflect(activityId: string) {
+    setSummaryActivityId(activityId)
   }
 
   function handleOpenClPopover(logId: string, anchor: HTMLElement) {
@@ -760,6 +766,7 @@ export function ActivityPage() {
                   onDelete={handleDeleteRequest}
                   onAddLog={handleAddLog}
                   onBulkAddLog={handleBulkAdd}
+                  onSummaryReflect={handleSummaryReflect}
                   onOpenLog={(logId) => handleOpenLog(logId, act.id)}
                   onDeleteLog={(logId) => handleDeleteLogRequest(logId, act.id)}
                   onOpenClPopover={handleOpenClPopover}
@@ -926,6 +933,16 @@ export function ActivityPage() {
             : null
         }
         onClose={() => setBulkActivityId(null)}
+      />
+
+      <ActivitySummaryModal
+        open={!!summaryActivityId}
+        activity={
+          summaryActivityId
+            ? activities.find((a) => a.id === summaryActivityId) ?? null
+            : null
+        }
+        onClose={() => setSummaryActivityId(null)}
       />
 
       <ClPopover
