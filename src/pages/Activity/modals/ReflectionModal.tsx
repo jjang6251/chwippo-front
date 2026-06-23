@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@/stores/toastStore'
 import {
   useCreateReflection,
@@ -61,6 +61,15 @@ export function ReflectionModal({
   const [challenge, setChallenge] = useState('')
   const [next, setNext] = useState('')
   const [activeChip, setActiveChip] = useState<string | null>(null)
+  // 베타 피드백 — 본인이 쓴 글이 한눈에 안 보임. textarea 자동 확장 (min 200 / max 500).
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const autoResize = () => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    const next = Math.min(500, Math.max(200, el.scrollHeight))
+    el.style.height = `${next}px`
+  }
 
   // 모달 open 시 초기화
   useEffect(() => {
@@ -77,6 +86,8 @@ export function ReflectionModal({
     setChallenge((existing?.challenges ?? []).join(', '))
     setNext((existing?.nextActions ?? []).join(', '))
     setActiveChip(null)
+    // 다음 frame 에서 textarea 의 scrollHeight 측정해서 height 조정
+    requestAnimationFrame(autoResize)
   }, [open, activity, existing, prefillPrompt])
 
   useEffect(() => {
@@ -116,6 +127,7 @@ export function ReflectionModal({
       return existing ? `${existing}\n\n${prompt}\n` : `${prompt}\n\n`
     })
     setActiveChip(cl)
+    requestAnimationFrame(autoResize)
   }
 
   async function handleSave() {
@@ -162,7 +174,7 @@ export function ReflectionModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal" style={{ maxWidth: 480 }}>
+      <div className="modal" style={{ maxWidth: 640 }}>
         <div className="head">
           <div
             className="ic-box"
@@ -242,17 +254,44 @@ export function ReflectionModal({
           </div>
 
           <div className="sect">
-            <div className="l">
-              한 문단 회고 <span className="req">필수</span>
+            <div
+              className="l"
+              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              <span>
+                한 문단 회고 <span className="req">필수</span>
+              </span>
+              <span
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: 11,
+                  color:
+                    content.trim().length >= 200
+                      ? 'rgb(var(--success))'
+                      : 'rgb(var(--text-quaternary))',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {content.trim().length} / 권장 200+자
+              </span>
             </div>
             <div className="hlp">
               자유롭게 써도 OK. 자소서·면접에서 풍부한 답변 소재로 자동 활용돼요.
             </div>
             <textarea
+              ref={textareaRef}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => {
+                setContent(e.target.value)
+                autoResize()
+              }}
               placeholder="이번주에 어떤 일이 있었고, 어떤 점이 가장 기억에 남았나요?"
-              style={{ minHeight: 120 }}
+              style={{
+                minHeight: 200,
+                maxHeight: 500,
+                resize: 'vertical',
+                lineHeight: 1.6,
+              }}
             />
           </div>
 

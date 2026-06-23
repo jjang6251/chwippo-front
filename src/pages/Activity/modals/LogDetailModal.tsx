@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@/stores/toastStore'
 import { useCreateLog, useUpdateLog } from '@/hooks/useActivities'
 import type {
@@ -165,6 +165,15 @@ export function LogDetailModal({
   const create = useCreateLog(activityId)
   const update = useUpdateLog(editing?.activityId ?? activityId)
 
+  // 베타 피드백 — textarea auto-resize (min 200 / max 500)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const autoResize = () => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(500, Math.max(200, el.scrollHeight))}px`
+  }
+
   // open/editing 변경 시 초기화
   useEffect(() => {
     if (!open) return
@@ -201,6 +210,7 @@ export function LogDetailModal({
       setQuantFields({ ...EMPTY_QUANT })
       setAdvancedOpen(false)
     }
+    requestAnimationFrame(autoResize)
   }, [open, editing])
 
   useEffect(() => {
@@ -270,7 +280,7 @@ export function LogDetailModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal">
+      <div className="modal" style={{ maxWidth: 640 }}>
         <div className="head">
           <div className="ic-box">✶</div>
           <div style={{ flex: 1 }}>
@@ -290,9 +300,19 @@ export function LogDetailModal({
               기록 내용 <span className="req">필수</span>
             </div>
             <textarea
+              ref={textareaRef}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => {
+                setContent(e.target.value)
+                autoResize()
+              }}
               placeholder="예: 인스타 캠페인 ROAS 1.8 달성"
+              style={{
+                minHeight: 200,
+                maxHeight: 500,
+                resize: 'vertical',
+                lineHeight: 1.6,
+              }}
               autoFocus
             />
           </div>
