@@ -19,6 +19,7 @@ interface Props {
   onOpenLog?: (logId: string) => void
   /** + 기록 (단일 줄) — Phase B */
   onAddLog?: (activityId: string) => void
+  onSummaryReflect?: (activityId: string) => void
   /** + 기록 (여러 줄) — Phase B.4 */
   onBulkAddLog?: (activityId: string) => void
   /** cl 추가 popover 열기 — Phase B.4 */
@@ -45,6 +46,7 @@ export function ActivityCard({
   onOpenLog,
   onAddLog,
   onBulkAddLog,
+  onSummaryReflect,
   onEdit,
   onArchive,
   onDelete,
@@ -122,6 +124,32 @@ export function ActivityCard({
         <span className="date">{formatPeriod(act) || '기간 미정'}</span>
       </div>
 
+      {/* 활동 총괄 회고 미리보기 (베타 피드백 2026-06-23) — 작성됐을 때만 표시. 클릭 시 모달 */}
+      {act.summaryReflection && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onSummaryReflect) onSummaryReflect(act.id)
+          }}
+          className="w-full text-left mt-2 mb-1 px-3 py-2 bg-card-strong border border-line rounded-md hover:bg-surface-2 transition-colors group"
+          aria-label={`${act.name} 의 활동 총괄 회고 보기 / 수정`}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-[10px]">📖</span>
+            <span className="text-text-quaternary text-[10px] font-medium">
+              활동 총괄 회고
+            </span>
+            <span className="text-text-quaternary text-[10px] ml-auto group-hover:text-text-secondary">
+              {act.summaryReflection.trim().length}자 · 수정 →
+            </span>
+          </div>
+          <p className="text-text-secondary text-xs leading-snug line-clamp-3 whitespace-pre-line">
+            {act.summaryReflection.trim()}
+          </p>
+        </button>
+      )}
+
       <div className="achievements">
         <div className="label">
           <span>
@@ -168,6 +196,20 @@ export function ActivityCard({
                   <span className="ic">📚</span>
                   <span>여러 줄</span>
                   <span className="sub">한 번에 정리</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setAddMenuOpen(false)
+                    if (onSummaryReflect) onSummaryReflect(act.id)
+                  }}
+                >
+                  <span className="ic">📖</span>
+                  <span>활동 총괄</span>
+                  <span className="sub">
+                    {act.summaryReflection ? '수정 (작성됨)' : '끝난 활동 wrap up'}
+                  </span>
                 </button>
               </div>
             </div>

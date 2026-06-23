@@ -27,6 +27,7 @@ const baseAct: Activity = {
   endedAt: null,
   archivedAt: null,
   legacyExperienceId: null,
+  summaryReflection: null,
   logs: [],
   reflections: [],
   createdAt: '2026-04-01T00:00:00Z',
