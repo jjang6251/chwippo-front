@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/stores/toastStore'
 import { todayLocal, toLocalDateString } from '@/utils/datetime'
@@ -17,6 +17,14 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
   const [dateMode, setDateMode] = useState<DateMode>('today')
   const [pending, setPending] = useState(false)
   const qc = useQueryClient()
+  // 베타 피드백 — textarea auto-resize (min 200 / max 500)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const autoResize = () => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(500, Math.max(200, el.scrollHeight))}px`
+  }
 
   useEffect(() => {
     if (open) {
@@ -25,6 +33,7 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
       setDateMode('today')
       setPending(false)
       document.body.style.overflow = 'hidden'
+      requestAnimationFrame(autoResize)
     } else {
       document.body.style.overflow = ''
     }
@@ -106,7 +115,7 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal" style={{ maxWidth: 540 }}>
+      <div className="modal" style={{ maxWidth: 640 }}>
         <div className="head">
           <div
             className="ic-box"
@@ -135,10 +144,19 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
               나중에 기록을 클릭해서 보정하세요.
             </div>
             <textarea
+              ref={textareaRef}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => {
+                setContent(e.target.value)
+                autoResize()
+              }}
               placeholder={`예:\n인턴 OT 참가, 사수 첫 미팅\n신규 캠페인 기획안 채택\nROAS 1.2 → 1.8 개선\n팀 워크샵 발표 담당`}
-              style={{ minHeight: 160 }}
+              style={{
+                minHeight: 200,
+                maxHeight: 500,
+                resize: 'vertical',
+                lineHeight: 1.6,
+              }}
               autoFocus
             />
           </div>
