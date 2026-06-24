@@ -11,9 +11,11 @@ import { CoinOnboardingModal } from '@/components/common/CoinOnboardingModal'
 import { SuspendedModal } from '@/components/auth/SuspendedModal'
 import { UserNotificationModal } from '@/components/notification/UserNotificationModal'
 import { useMyCoinBalance } from '@/hooks/useMyCoin'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 
 export function AppShell() {
   const isDemo = useDemoMode()
+  const aiEnabled = useAiEnabled()
   // PR_B2 Phase 1 — me 응답에서 suspendedAt + pending_notification 감지
   const { data: coinBalance } = useMyCoinBalance()
   return (
@@ -25,7 +27,7 @@ export function AppShell() {
           <AnnouncementContainer />
           <MobileHeader />
           {/* PR_B1b — 데스크탑 전용 sticky 헤더 (코인 chip 우상단) */}
-          {!isDemo && (
+          {!isDemo && aiEnabled && (
             <div className="hidden lg:flex sticky top-0 z-30 bg-bg/95 backdrop-blur-sm border-b border-line h-12 items-center justify-end px-9">
               <CoinChip />
             </div>
@@ -37,7 +39,7 @@ export function AppShell() {
       </div>
       <MobileNav />
       <TourOverlay />
-      {!isDemo && <CoinOnboardingModal />}
+      {!isDemo && aiEnabled && <CoinOnboardingModal />}
       {/* PR_B2 Phase 1 — Q13 SuspendedModal (dismiss 불가) — 모든 다른 modal 보다 우선 */}
       {!isDemo && coinBalance?.suspendedAt && (
         <SuspendedModal

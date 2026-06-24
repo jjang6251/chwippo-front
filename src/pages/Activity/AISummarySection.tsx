@@ -6,6 +6,7 @@ import {
 } from '@/hooks/useActivities'
 import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 import type { ActivityLog, SummarizeNoteResult } from '@/types/activity'
 
 const MIN_CHARS = 50
@@ -16,7 +17,14 @@ interface Props {
   currentTextLength: number
 }
 
-export function AISummarySection({ log, currentTextLength }: Props) {
+export function AISummarySection(props: Props) {
+  // AI 기능 일시 비활성화 시 hide (wrapper 패턴 — inner hooks 의 conditional 호출 회피)
+  const aiEnabled = useAiEnabled()
+  if (!aiEnabled) return null
+  return <AISummarySectionInner {...props} />
+}
+
+function AISummarySectionInner({ log, currentTextLength }: Props) {
   const summarize = useSummarizeLog(log.activityId)
   const ensureAiConsent = useRequireAiConsent()
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('note_summary')

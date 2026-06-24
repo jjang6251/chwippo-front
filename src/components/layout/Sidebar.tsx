@@ -4,16 +4,26 @@ import { useAuthStore } from '@/stores/authStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
 import { apiClient } from '@/api/client'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 
-const NAV_ITEMS = [
+interface NavItem {
+  label: string
+  path: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: any
+  /** AI 기능 — `VITE_AI_FEATURES_ENABLED=false` 일 때 hide */
+  ai?: boolean
+}
+
+const NAV_ITEMS: readonly NavItem[] = [
   { label: '대시보드', path: '/dashboard', icon: GridIcon },
   { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
   { label: '캘린더', path: '/calendar', icon: CalendarIcon },
   { label: '활동 일지', path: '/activity', icon: JournalIcon },
   // F6 PR 1 — 자소서 통합 페이지 (데스크탑 only. MobileNav 변경 X — 모바일은 카드 상세에서 진입)
-  { label: '자소서', path: '/coverletters', icon: CoverLetterIcon },
+  { label: '자소서', path: '/coverletters', icon: CoverLetterIcon, ai: true },
   // F6 PR 2 Phase 4 — 면접 준비 통합 페이지 (데스크탑 only. 동일 정책)
-  { label: '면접 준비', path: '/interviews', icon: InterviewIcon },
+  { label: '면접 준비', path: '/interviews', icon: InterviewIcon, ai: true },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
@@ -24,7 +34,9 @@ export function Sidebar() {
   const user = useAuthStore((s) => s.user)
   const isDemo = useDemoMode()
   const showLogin = useLoginModalStore((s) => s.show)
+  const aiEnabled = useAiEnabled()
   const link = (p: string) => (isDemo ? '/demo' + p : p)
+  const visibleNavItems = NAV_ITEMS.filter((item) => aiEnabled || !item.ai)
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
@@ -56,7 +68,7 @@ export function Sidebar() {
 
         {/* Main nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
-          {NAV_ITEMS.map(({ label, path, icon: Icon }) => (
+          {visibleNavItems.map(({ label, path, icon: Icon }) => (
             <Link
               key={path}
               to={link(path)}
