@@ -71,6 +71,11 @@ vi.mock('@/hooks/useRequireAiConsent', () => ({
   useRequireAiConsent: () => async () => true,
 }))
 
+// AI 기능 일시 비활성화 (베타 D-day 전) — 단 spec 의도는 기존 AI 흐름 검증이므로 true mock
+vi.mock('@/hooks/useAiEnabled', () => ({
+  useAiEnabled: () => true,
+}))
+
 // ── fixtures ────────────────────────────────────────────────────────────
 const makeLog = (overrides: Partial<ActivityLog> = {}): ActivityLog => ({
   id: 'log-1',

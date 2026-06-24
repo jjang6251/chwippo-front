@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
@@ -142,6 +143,7 @@ export function BoardDetail() {
   const [activeTab, setActiveTab] = useState<
     'steps' | 'coverletter' | 'interview'
   >('steps')
+  const aiEnabled = useAiEnabled()
 
   const tourActive = useTourStore((s) => s.active)
   const tourStep = useTourStore((s) => s.step)
@@ -389,13 +391,16 @@ export function BoardDetail() {
         </div>
       </div>
 
-      {/* 탭: 전형 단계 / 자소서 / 면접 준비 */}
+      {/* 탭: 전형 단계 / 자소서 / 면접 준비 (AI 비활성화 시 steps 만 표시) */}
       <div className="flex gap-1 p-1 bg-surface-2 border border-line rounded-lg mb-4">
-        {([
-          { v: 'steps' as const, label: '전형 단계' },
-          { v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' },
-          { v: 'interview' as const, label: '면접 준비' },
-        ]).map((t) => (
+        {(aiEnabled
+          ? [
+              { v: 'steps' as const, label: '전형 단계' },
+              { v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' },
+              { v: 'interview' as const, label: '면접 준비' },
+            ]
+          : [{ v: 'steps' as const, label: '전형 단계' }]
+        ).map((t) => (
           <button
             key={t.v}
             onClick={() => {
@@ -470,8 +475,8 @@ export function BoardDetail() {
         </>
       )}
 
-      {activeTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
-      {activeTab === 'interview' && (
+      {aiEnabled && activeTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
+      {aiEnabled && activeTab === 'interview' && (
         <InterviewPrepTab applicationId={app.id} active />
       )}
 
