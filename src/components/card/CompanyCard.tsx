@@ -8,7 +8,8 @@ import { StarToggle } from './StarToggle'
 import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
 import { celebrate } from '@/stores/celebrationStore'
-import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI, getAvatarColor } from '@/utils/tags'
+import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
+import { CompanyAvatar } from '@/components/board/CompanyAvatar'
 
 interface CompanyCardProps {
   application: Application
@@ -113,12 +114,21 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
       {/* 상단: 아바타 + 회사명 + 메뉴 */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className={`
-            flex-none w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold tracking-tight
-            ${isPassed ? 'bg-success/15 text-success' : isFailed ? 'bg-card text-text-quaternary' : getAvatarColor(application.companyName)}
-          `}>
-            {application.companyName.charAt(0)}
-          </div>
+          {isPassed || isFailed ? (
+            <div
+              className={`flex-none w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold tracking-tight ${
+                isPassed ? 'bg-success/15 text-success' : 'bg-card text-text-quaternary'
+              }`}
+            >
+              {application.companyName.charAt(0)}
+            </div>
+          ) : (
+            <CompanyAvatar
+              name={application.companyName}
+              domain={application.domain}
+              size="md"
+            />
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-text-primary text-sm font-semibold truncate">{application.companyName}</h3>

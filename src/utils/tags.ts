@@ -27,16 +27,18 @@ export const serializeTags = (tags: string[]): string =>
 
 // 회사명 해시 기반 아바타 컬러 (CompanyCard, DdayList 공유)
 const AVATAR_COLORS = [
-  'bg-blue-500/15 text-blue-400',
-  'bg-violet-500/15 text-violet-400',
-  'bg-emerald-500/15 text-emerald-400',
-  'bg-amber-500/15 text-amber-400',
-  'bg-rose-500/15 text-rose-400',
-  'bg-cyan-500/15 text-cyan-400',
-  'bg-orange-500/15 text-orange-400',
-  'bg-pink-500/15 text-pink-400',
-  'bg-indigo-500/15 text-indigo-400',
-  'bg-teal-500/15 text-teal-400',
+  // W2 — 다크/라이트 모두 식별 강한 패턴 (solid bg + white text).
+  // 이전 alpha 15% + tinted text = 라이트 모드에서 배경에 묻힘.
+  'bg-blue-600 text-white',
+  'bg-violet-600 text-white',
+  'bg-emerald-600 text-white',
+  'bg-amber-600 text-white',
+  'bg-rose-600 text-white',
+  'bg-cyan-700 text-white',
+  'bg-orange-600 text-white',
+  'bg-pink-600 text-white',
+  'bg-indigo-600 text-white',
+  'bg-teal-700 text-white',
 ]
 
 export function getAvatarColor(name: string): string {

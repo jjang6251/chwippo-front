@@ -30,6 +30,7 @@ import { toast } from '@/stores/toastStore'
 import { celebrate } from '@/stores/celebrationStore'
 import { useTourStore } from '@/stores/tourStore'
 import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
+import { CompanyInfoSection } from '@/components/board/CompanyInfoSection'
 
 // --- 드래그 가능한 스텝 아이템 ---
 interface SortableStepItem {
@@ -471,6 +472,11 @@ export function BoardDetail() {
               className="text-sm text-text-primary placeholder:text-text-quaternary"
               multiline
             />
+          </div>
+
+          {/* 회사 정보 (DART) — 상장사이거나 매핑된 회사만 자동 노출 */}
+          <div className="mt-4">
+            <CompanyInfoSection companyName={app.companyName} />
           </div>
         </>
       )}
