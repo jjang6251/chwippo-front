@@ -26,7 +26,7 @@ export function Modal({ open, onClose, title, children, width = 'max-w-sm' }: Mo
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-surface border border-line rounded-t-2xl sm:rounded-xl shadow-2xl w-full ${width} max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col animate-fadeInUp`}
+        className={`bg-surface border border-line rounded-t-2xl sm:rounded-xl shadow-2xl w-full ${width} max-h-[85dvh] sm:max-h-[calc(100vh-4rem)] flex flex-col animate-fadeInUp`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
