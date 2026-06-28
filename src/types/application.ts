@@ -30,6 +30,10 @@ export interface Application {
   currentStepIndex: number
   needsDetail: boolean
   isStarred: boolean
+  /** W1 — 가상 회사 샘플 카드 (signup 직군 답변 기반 자동 생성) 여부 */
+  isSample?: boolean
+  /** W2 — 회사 도메인 (favicon 로딩 용). backend 가 companies.json lookup 후 inject. 매칭 X 시 undefined */
+  domain?: string
   steps: ApplicationStep[]
   /** PR_B1c — 자소서 생성 상태 (회사조사 trigger atomic) */
   coverletterGenerationStatus?: CoverletterGenerationStatus

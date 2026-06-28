@@ -28,6 +28,12 @@ interface RefreshUser {
   aiConsentVersion: string | null
   /** PR_B1b — 코인 시스템 onboarding modal 표시 여부 */
   onboardedCoinAt: string | null
+  /** W1 — signup 1 질문 답변 (null=미답변, []=skip, [...]=직군 array) */
+  signupJobCategories: string[] | null
+  /** W1 — "기타" 직군 자유 입력 */
+  signupOtherText: string | null
+  /** W1 — 샘플 카드 전체 dismiss 시각 */
+  sampleCardsDismissedAt: string | null
 }
 
 interface RefreshResponse {

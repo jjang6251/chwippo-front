@@ -28,6 +28,10 @@ export const applicationsApi = {
 
   remove: (id: string) => apiClient.delete(`/applications/${id}`),
 
+  /** W1 — 개별 sample 카드 숨김 (soft delete). 진짜 카드는 400 */
+  dismissSample: (id: string) =>
+    apiClient.post(`/applications/${id}/sample-dismiss`).then(() => undefined),
+
   /**
    * PR_B1c — 자소서 생성 (회사조사 trigger + 50 코인 차감).
    * status 'completed' / 'already_in_progress' / 'already_completed' / 'coin_insufficient'

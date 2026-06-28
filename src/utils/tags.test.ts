@@ -93,8 +93,8 @@ describe('tags utils', () => {
   describe('getAvatarColor', () => {
     it('문자열 입력 → AVATAR_COLORS 중 하나 반환', () => {
       const result = getAvatarColor('카카오')
-      // bg-xxx-500/15 text-xxx-400 형식
-      expect(result).toMatch(/^bg-.+\/15 text-.+$/)
+      // W2 — bg-xxx-600/700 text-white 형식 (다크/라이트 모두 식별 강함)
+      expect(result).toMatch(/^bg-[a-z]+-(600|700) text-white$/)
     })
 
     it('같은 회사명 → 항상 같은 컬러 반환 (결정론적)', () => {

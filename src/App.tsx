@@ -11,6 +11,7 @@ import { DemoRouteGuard } from '@/components/demo/DemoRouteGuard'
 import { Landing } from '@/pages/Landing'
 import { Login } from '@/pages/Login'
 import { LoginCallback } from '@/pages/LoginCallback'
+import { SignupQuestion } from '@/pages/SignupQuestion'
 import { Dashboard } from '@/pages/Dashboard'
 import { Board } from '@/pages/Board'
 import { BoardDetail } from '@/pages/BoardDetail'
@@ -70,6 +71,8 @@ export default function App() {
         </Route>
         <Route element={<AuthGuard />}>
           <Route path="/terms-agreement" element={<TermsAgreement />} />
+          {/* W1 — signup 1 질문 (관심 직군). onboardedAt null 시 LoginCallback 가 redirect */}
+          <Route path="/signup/question" element={<SignupQuestion />} />
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/board" element={<Board />} />
