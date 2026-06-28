@@ -32,6 +32,56 @@ function RoleBadge({ role }: { role: string }) {
   )
 }
 
+/** W1 — admin OpsUsers 직군 셀. JSONB array → chip list + "기타: {입력값}" */
+function JobCategoryCell({
+  categories,
+  otherText,
+}: {
+  categories: string[] | null
+  otherText: string | null
+}) {
+  if (!categories) {
+    return <span className="text-text-quaternary text-xs">—</span>
+  }
+  if (categories.length === 0) {
+    return (
+      <span className="text-text-quaternary text-xs italic">건너뜀</span>
+    )
+  }
+  // 첫 2개만 표시 + 나머지 +N
+  const head = categories.slice(0, 2)
+  const remaining = categories.length - head.length
+  return (
+    <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
+      {head.map((c) => (
+        <span
+          key={c}
+          className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded text-brand bg-brand/[0.10] border border-brand/25 max-w-[120px] truncate"
+          title={c}
+        >
+          {c}
+        </span>
+      ))}
+      {remaining > 0 && (
+        <span
+          className="text-[10px] text-text-quaternary"
+          title={categories.slice(2).join(', ')}
+        >
+          +{remaining}
+        </span>
+      )}
+      {otherText && (
+        <span
+          className="text-[10px] text-text-tertiary italic max-w-[100px] truncate"
+          title={`기타: ${otherText}`}
+        >
+          ({otherText})
+        </span>
+      )}
+    </div>
+  )
+}
+
 function StatusBadge({ suspendedAt }: { suspendedAt: string | null }) {
   if (suspendedAt)
     return (
@@ -220,6 +270,7 @@ export function OpsUsers() {
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider hidden md:table-cell">이메일</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider">역할</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider">상태</th>
+                  <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider hidden xl:table-cell">관심 직군</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider hidden sm:table-cell">가입일</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider hidden lg:table-cell">최근접속</th>
                   <th className="px-4 py-3 w-12" />
@@ -306,6 +357,12 @@ function UserRow({ user, onSelect }: { user: AdminUser; onSelect: () => void }) 
       </td>
       <td className="px-4 py-3.5">
         <StatusBadge suspendedAt={user.suspendedAt} />
+      </td>
+      <td className="px-4 py-3.5 hidden xl:table-cell">
+        <JobCategoryCell
+          categories={user.signupJobCategories}
+          otherText={user.signupOtherText}
+        />
       </td>
       <td className="px-4 py-3.5 text-text-tertiary text-xs hidden sm:table-cell tabular-nums">
         {dayjs(user.createdAt).format('YYYY.MM.DD')}

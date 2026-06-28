@@ -46,6 +46,7 @@ beforeEach(() => {
       termsAgreedAt: null,
       aiConsentAt: null,
       aiConsentVersion: null, onboardedCoinAt: null,
+      signupJobCategories: null, signupOtherText: null, sampleCardsDismissedAt: null,
     },
   })
 })

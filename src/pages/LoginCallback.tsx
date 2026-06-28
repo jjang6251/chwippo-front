@@ -39,12 +39,30 @@ export function LoginCallback() {
     const userTermsAgreedAt = params.user_terms_agreed_at ?? null
     const userOnboardedAt = params.user_onboarded_at ?? null
     if (userId && userNickname && userRole) {
-      // aiConsentAt/Version + onboardedCoinAt 은 kakao callback URL 에 포함 안 됨 — 첫 /me 또는 /auth/refresh 응답에서 채워짐
-      setUser({ id: userId, nickname: userNickname, email: userEmail, role: userRole, termsAgreedAt: userTermsAgreedAt, onboardedAt: userOnboardedAt, aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null })
+      // aiConsentAt/Version + onboardedCoinAt + signup* + sampleCardsDismissedAt 은 kakao callback URL 에 포함 안 됨
+      // → 첫 /auth/refresh 응답에서 채워짐. 일단 null 로 init
+      setUser({
+        id: userId,
+        nickname: userNickname,
+        email: userEmail,
+        role: userRole,
+        termsAgreedAt: userTermsAgreedAt,
+        onboardedAt: userOnboardedAt,
+        aiConsentAt: null,
+        aiConsentVersion: null,
+        onboardedCoinAt: null,
+        signupJobCategories: null,
+        signupOtherText: null,
+        sampleCardsDismissedAt: null,
+      })
     }
 
+    // W1 — 신규 user (onboardedAt null) → /signup/question redirect.
+    // 약관 동의 미완 → 약관 우선. signup 답변 완료 (onboardedAt set) → /dashboard
     if (needsTerms) {
       navigate('/terms-agreement', { replace: true })
+    } else if (!userOnboardedAt) {
+      navigate('/signup/question', { replace: true })
     } else {
       navigate('/dashboard', { replace: true })
     }
