@@ -30,6 +30,8 @@ export interface Application {
   currentStepIndex: number
   needsDetail: boolean
   isStarred: boolean
+  /** W1 — 가상 회사 샘플 카드 (signup 직군 답변 기반 자동 생성) 여부 */
+  isSample?: boolean
   steps: ApplicationStep[]
   /** PR_B1c — 자소서 생성 상태 (회사조사 trigger atomic) */
   coverletterGenerationStatus?: CoverletterGenerationStatus

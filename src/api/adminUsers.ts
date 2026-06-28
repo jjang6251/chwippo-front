@@ -8,6 +8,10 @@ export interface AdminUser {
   createdAt: string
   lastActiveAt: string | null
   suspendedAt: string | null
+  /** W1 — signup 1 질문 답변. NULL=미답변 / []=skip / [...]=직군 array */
+  signupJobCategories: string[] | null
+  /** W1 — "기타" 자유 입력 직무명 */
+  signupOtherText: string | null
 }
 
 export interface AdminUserStorageStats {

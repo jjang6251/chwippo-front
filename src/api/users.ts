@@ -24,6 +24,18 @@ export const updateNickname = (nickname: string) =>
 
 export const deleteAccount = () => apiClient.delete('/users/me')
 
+// W1 — signup 1 질문 (관심 직군) 답변 + 가상 회사 샘플 자동 생성
+export interface SignupAnswerBody {
+  jobCategories: string[]
+  otherText?: string
+}
+export const postSignupAnswer = (body: SignupAnswerBody) =>
+  apiClient.post('/users/me/signup-answer', body).then(() => undefined)
+
+// W1 — 샘플 카드 전체 숨기기 (멱등)
+export const dismissAllSampleCards = () =>
+  apiClient.post('/users/me/sample-cards/dismiss').then(() => undefined)
+
 export interface DashboardSection {
   id: string
   visible: boolean

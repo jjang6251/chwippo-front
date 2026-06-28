@@ -95,7 +95,7 @@ describe('performRefresh', () => {
       email: null,
       role: 'user' as const,
       onboardedAt: null,
-      termsAgreedAt: null, aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null,
+      termsAgreedAt: null, aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null, signupJobCategories: null, signupOtherText: null, sampleCardsDismissedAt: null,
     }
     useAuthStore.setState({ user: existing })
     mockedAxiosPost.mockResolvedValueOnce({
@@ -195,7 +195,7 @@ describe('handleAuthFailure', () => {
         email: null,
         role: 'user',
         onboardedAt: null,
-        termsAgreedAt: null, aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null,
+        termsAgreedAt: null, aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null, signupJobCategories: null, signupOtherText: null, sampleCardsDismissedAt: null,
       },
     })
     handleAuthFailure(new Error('x'))
@@ -211,7 +211,7 @@ describe('handleAuthFailure', () => {
       email: null,
       role: 'user' as const,
       onboardedAt: null,
-      termsAgreedAt: null, aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null,
+      termsAgreedAt: null, aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null, signupJobCategories: null, signupOtherText: null, sampleCardsDismissedAt: null,
     }
     useAuthStore.setState({ accessToken: 'keep-me', user: existingUser })
     handleAuthFailure({ response: { status: 429 } })
