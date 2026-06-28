@@ -2,11 +2,16 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
 import { useTourStore } from '@/stores/tourStore'
+import { useAuthStore } from '@/stores/authStore'
 import { CompanyCard } from '@/components/card/CompanyCard'
 import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
+import { SampleCardBadge } from '@/components/board/SampleCardBadge'
+import { SampleCardGuideOverlay } from '@/components/board/SampleCardGuideOverlay'
+import { SampleCardDismissBar } from '@/components/board/SampleCardDismissBar'
+import { EmptyBoardState } from '@/components/board/EmptyBoardState'
 import type { ApplicationStatus } from '@/types/application'
 import { sortApplications } from '@/utils/sortApplications'
 
@@ -76,6 +81,14 @@ export function Board() {
   })
 
   const sorted = sortApplications(filtered)
+
+  // W1 — 진짜 카드와 샘플 카드 분리. 진짜 위·샘플 아래.
+  const realCards = sorted.filter((a) => !a.isSample)
+  const sampleCards = sorted.filter((a) => a.isSample)
+  const allSampleCount = applications.filter((a) => a.isSample).length
+  const user = useAuthStore((s) => s.user)
+  const showDismissBar =
+    !user?.sampleCardsDismissedAt && allSampleCount > 0 && filter !== 'PLANNED' && filter !== 'PASSED' && filter !== 'FAILED'
 
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
@@ -197,16 +210,24 @@ export function Board() {
         </div>
       </div>
 
+      {/* W1 — 샘플 dismiss 바 (sticky, 진짜+샘플 둘 다 있을 때만) */}
+      {showDismissBar && <SampleCardDismissBar count={allSampleCount} />}
+
       {/* 카드 목록 */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
       ) : sorted.length === 0 ? (
-        <EmptyState filter={filter} search={search} onAdd={() => setAddModalStatus('IN_PROGRESS')} />
+        // W1 — 진짜+샘플 0건 (sample dismiss 됨 or 신규 미생성). search 결과 빈 화면은 기존 EmptyState
+        search ? (
+          <EmptyState filter={filter} search={search} onAdd={() => setAddModalStatus('IN_PROGRESS')} />
+        ) : (
+          <EmptyBoardState onAddFirst={() => setAddModalStatus('IN_PROGRESS')} />
+        )
       ) : (
         <div className={`grid gap-3 ${panelStep ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
-          {sorted.map((app) => (
+          {realCards.map((app) => (
             <CompanyCard
               key={app.id}
               application={app}
@@ -214,6 +235,16 @@ export function Board() {
               onSetResult={setResultAppId}
               onCurrentStepClick={(appId, stepId) => setPanelStep({ appId, stepId })}
             />
+          ))}
+          {sampleCards.map((app, i) => (
+            <SampleCardWrap key={app.id} index={i}>
+              <CompanyCard
+                application={app}
+                onStartApplication={setStartAppId}
+                onSetResult={setResultAppId}
+                onCurrentStepClick={(appId, stepId) => setPanelStep({ appId, stepId })}
+              />
+            </SampleCardWrap>
           ))}
         </div>
       )}
@@ -251,6 +282,25 @@ export function Board() {
           onClose={() => setPanelStep(null)}
         />
       )}
+    </div>
+  )
+}
+
+/**
+ * W1 — 샘플 카드 wrap.
+ * group/sample-card relative + 우상단 "📌 샘플" 배지 + hover 시 GuideOverlay 노출.
+ * dashed warning ring 으로 진짜 카드와 시각 분리 (CompanyCard 본체는 그대로, ring 만 overlay).
+ */
+function SampleCardWrap({ index, children }: { index: number; children: React.ReactNode }) {
+  return (
+    <div className="group/sample-card relative">
+      {/* dashed warning ring — pointer-events-none 으로 클릭 차단 X */}
+      <div className="absolute inset-0 rounded-xl border border-dashed border-warning/40 pointer-events-none z-[1]" />
+      <div className="absolute top-3 right-3 z-10 pointer-events-none">
+        <SampleCardBadge />
+      </div>
+      {children}
+      <SampleCardGuideOverlay index={index} />
     </div>
   )
 }

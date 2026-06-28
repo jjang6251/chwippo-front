@@ -46,7 +46,12 @@ export function TermsAgreement() {
     }
     // AuthGuard가 termsAgreedAt=null 로 /terms-agreement 로 되돌리지 않도록 즉시 갱신
     if (user) setUser({ ...user, termsAgreedAt: new Date().toISOString() })
-    navigate('/dashboard', { replace: true })
+    // W1 — onboardedAt null (신규 user) → /signup/question. 기존 user → /dashboard
+    if (!user?.onboardedAt) {
+      navigate('/signup/question', { replace: true })
+    } else {
+      navigate('/dashboard', { replace: true })
+    }
   }
 
   return (

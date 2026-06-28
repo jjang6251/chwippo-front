@@ -11,6 +11,15 @@ interface User {
   aiConsentVersion: string | null
   /** PR_B1b — 코인 시스템 onboarding modal 표시 여부. NULL → 첫 로그인 modal 노출 */
   onboardedCoinAt: string | null
+  /**
+   * W1 — signup 1 질문 (관심 직군) 답변.
+   * NULL → /signup/question redirect / [] → 답변 완료 (건너뛰기) / [...] → 직군 array
+   */
+  signupJobCategories: string[] | null
+  /** W1 — "기타" 직군 자유 입력 (NULL or "") */
+  signupOtherText: string | null
+  /** W1 — 샘플 카드 전체 dismiss 시각 (NULL → 샘플 살아있음) */
+  sampleCardsDismissedAt: string | null
 }
 
 interface AuthState {
