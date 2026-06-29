@@ -26,6 +26,8 @@ import { TodayScheduleSection } from '@/components/dashboard/sections/TodaySched
 import { TopApplicationsSection } from '@/components/dashboard/sections/TopApplicationsSection'
 import { CalendarMiniSection } from '@/components/dashboard/sections/CalendarMiniSection'
 import { CoverLetterQuickSection } from '@/components/dashboard/sections/CoverLetterQuickSection'
+import { StreakSection } from '@/components/dashboard/StreakSection'
+import { StatusDoughnutSection } from '@/components/dashboard/StatusDoughnutSection'
 import { useDashboardStats, useDdayList } from '@/hooks/useDashboard'
 import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
 import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
@@ -117,6 +119,8 @@ export function Dashboard() {
       case 'top_applications':  return <TopApplicationsSection />
       case 'calendar_mini':     return <CalendarMiniSection />
       case 'cover_letter_quick':return <CoverLetterQuickSection />
+      case 'activity_streak':   return <StreakSection />
+      case 'status_doughnut':   return <StatusDoughnutSection />
       default:                  return null
     }
   }

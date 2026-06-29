@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { DashboardStreakResponse } from '@/types/dashboardStreak'
 
 export interface DashboardStats {
   total: number               // 지원한 회사 (IN_PROGRESS + PASSED + FAILED)
@@ -37,3 +38,10 @@ export const getDdayList = () =>
 
 export const getInterviewReview = () =>
   apiClient.get('/dashboard/interview-review').then(unwrap<InterviewReviewItem[]>)
+
+/**
+ * W3 — 통합 streak + 365 heatmap + status 분포.
+ * Backend 5분 in-memory 캐시. React Query staleTime 1h 추천.
+ */
+export const getDashboardStreak = () =>
+  apiClient.get('/dashboard/streak').then(unwrap<DashboardStreakResponse>)
