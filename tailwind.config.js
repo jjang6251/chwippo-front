@@ -15,6 +15,8 @@ export default {
         surface: 'rgb(var(--surface) / <alpha-value>)',
         'surface-2': 'rgb(var(--surface-2) / <alpha-value>)',
         'surface-3': 'rgb(var(--surface-3) / <alpha-value>)',
+        // 입력 전용 — 다크 = 컨테이너보다 밝게, 라이트 = 컨테이너보다 어둡게. 모든 input/textarea/select 표준 배경
+        input: 'rgb(var(--input-bg) / <alpha-value>)',
 
         brand: 'rgb(var(--brand) / <alpha-value>)',
         'brand-hover': 'rgb(var(--brand-hover) / <alpha-value>)',

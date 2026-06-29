@@ -167,7 +167,7 @@ export function Board() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="회사명, 직무명 검색"
-            className="w-full bg-surface-2 border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/15 transition-all"
+            className="w-full bg-input border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
         </div>
 

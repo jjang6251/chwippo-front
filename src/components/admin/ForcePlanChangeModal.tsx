@@ -204,7 +204,7 @@ export function ForcePlanChangeModal({
                   type="datetime-local"
                   value={expiresAtLocal}
                   onChange={(e) => setExpiresAtLocal(e.target.value)}
-                  className="w-full bg-card-strong border border-line text-text-primary text-xs px-3 py-2 rounded-md"
+                  className="w-full bg-input border border-line text-text-primary placeholder:text-text-tertiary text-xs px-3 py-2 rounded-md"
                 />
               </div>
             )}
@@ -231,7 +231,7 @@ export function ForcePlanChangeModal({
                 maxLength={500}
                 rows={2}
                 placeholder="예: 운영자 수동 결제 처리 (Lite 3개월)"
-                className="w-full bg-card-strong border border-line text-text-primary text-xs px-3 py-2 rounded-md resize-none"
+                className="w-full bg-input border border-line text-text-primary placeholder:text-text-tertiary text-xs px-3 py-2 rounded-md resize-none"
               />
             </div>
           </>

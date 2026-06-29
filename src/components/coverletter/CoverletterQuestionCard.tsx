@@ -212,7 +212,7 @@ export function CoverletterQuestionCard({
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
             }}
             placeholder="없음"
-            className="w-16 bg-surface-2 border border-line rounded-md px-2 py-1 font-mono text-[11px] text-text-secondary placeholder:text-text-quaternary focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors"
+            className="w-16 bg-surface-2 border border-line rounded-md px-2 py-1 font-mono text-[11px] text-text-secondary placeholder:text-text-tertiary focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors"
           />
           <span className="text-text-quaternary">자</span>
         </label>
@@ -242,7 +242,7 @@ export function CoverletterQuestionCard({
         rows={2}
         maxLength={500}
         placeholder="예: 우리 회사에 지원한 동기를 작성해 주세요."
-        className="w-full resize-none bg-surface-2 border border-line rounded-lg px-3 py-2 font-serif text-base text-text-primary leading-relaxed placeholder:text-text-quaternary placeholder:font-sans focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors mb-4"
+        className="w-full resize-none bg-surface-2 border border-line rounded-lg px-3 py-2 font-serif text-base text-text-primary leading-relaxed placeholder:text-text-tertiary placeholder:font-sans focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors mb-4"
       />
 
       {/* answer */}
@@ -255,7 +255,7 @@ export function CoverletterQuestionCard({
         }}
         placeholder="여기에 답변을 작성하세요. 또는 우측 AI 채팅으로 초안 생성. (자동 저장)"
         style={{ minHeight: 80, lineHeight: 1.65 }}
-        className="w-full bg-surface-3 border border-line rounded-[11px] px-3.5 py-3 text-[13px] text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+        className="w-full bg-input border border-line rounded-[11px] px-3.5 py-3 text-[13px] text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
       />
       <div className="flex items-center justify-between gap-2 mt-2 text-xs flex-wrap">
         <span className="text-text-quaternary">✎ 자동 저장돼요</span>

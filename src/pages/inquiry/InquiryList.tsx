@@ -50,7 +50,7 @@ export function InquiryList() {
           <select
             value={catFilter}
             onChange={(e) => setCatFilter(e.target.value)}
-            className="appearance-none bg-surface-2 border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary outline-none focus:border-brand/40 transition-colors cursor-pointer"
+            className="appearance-none bg-input border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-secondary cursor-pointer outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>

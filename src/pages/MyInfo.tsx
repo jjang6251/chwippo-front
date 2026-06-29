@@ -90,7 +90,7 @@ function Field({
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
   required?: boolean
 }) {
-  const cls = 'w-full bg-surface-3 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all'
+  const cls = 'w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all'
   // 자소서 소재 textarea — 베타 피드백 패턴 (auto-resize 200~500 + lineHeight 1.6)
   const { ref: textareaRef, autoResize } = useAutoResize(value, { min: 80, max: 500 })
   return (
@@ -152,7 +152,7 @@ function SelectField({ label, value, onChange, options, required }: {
     <div>
       <FieldLabel label={label} required={required} />
       <div className="relative">
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-card border border-line rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-input border border-line rounded-lg px-3 py-2 pr-8 text-xs text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all appearance-none">
           <option value="">선택</option>
           {options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -1021,7 +1021,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
         onKeyDown={handleEnter}
         autoFocus
         placeholder="전공명"
-        className="text-[11px] bg-card text-text-primary placeholder:text-text-quaternary outline-none w-24 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors"
+        className="text-[11px] bg-card text-text-primary placeholder:text-text-tertiary outline-none w-24 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors"
       />
       <span className="text-text-quaternary text-[10px]">·</span>
       <input
@@ -1029,7 +1029,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
         onChange={(e) => setGpa(e.target.value)}
         onKeyDown={handleEnter}
         placeholder="학점"
-        className="text-[11px] bg-card text-text-primary placeholder:text-text-quaternary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors font-mono tabular-nums"
+        className="text-[11px] bg-card text-text-primary placeholder:text-text-tertiary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors font-mono tabular-nums"
       />
       <span className="text-text-quaternary text-[10px]">/</span>
       <input
@@ -1037,7 +1037,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
         onChange={(e) => setGpaMax(e.target.value)}
         onKeyDown={handleEnter}
         placeholder="만점"
-        className="text-[11px] bg-card text-text-primary placeholder:text-text-quaternary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors font-mono tabular-nums"
+        className="text-[11px] bg-card text-text-primary placeholder:text-text-tertiary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors font-mono tabular-nums"
       />
       <button
         onClick={submit}
@@ -1335,7 +1335,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               onChange={(e) => setNewGoal(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) addGoal(); if (e.key === 'Escape') setAdding(false) }}
               placeholder="목표를 입력하세요 (예: TOEIC 900점 달성)"
-              className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
+              className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-tertiary"
             />
             <button onClick={() => setAdding(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
           </div>
@@ -1420,7 +1420,7 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
               onChange={(e) => setNewLabel(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAddCustom(); if (e.key === 'Escape') setAddingLabel(false) }}
               placeholder="항목명 입력 (예: 해외 경험)"
-              className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-quaternary"
+              className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-tertiary"
             />
             <button onClick={() => setAddingLabel(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
           </div>
@@ -1508,7 +1508,7 @@ function CoverletterTextField({
         maxLength={2000}
         placeholder={placeholder}
         style={{ minHeight: 80, lineHeight: 1.6 }}
-        className="w-full bg-surface-3 border border-line rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 resize-y transition-all"
+        className="w-full bg-input border border-line rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 resize-y transition-all"
       />
       <p className={`text-[10px] ${counterColor} text-right mt-1`}>{value.length} / 2000</p>
     </div>
@@ -1716,7 +1716,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="예: 2025 토익 성적표, 개인 포트폴리오"
-                  className="w-full bg-card border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
+                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
                 />
               </div>
               <div>
@@ -1725,7 +1725,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-card border border-line rounded-lg px-3 py-2 pr-8 text-xs text-text-primary focus:outline-none focus:border-brand/50 transition-all appearance-none"
+                    className="w-full bg-input border border-line rounded-lg px-3 py-2 pr-8 text-xs text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all appearance-none"
                   >
                     <option value="">선택 안함</option>
                     {DOC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -1739,7 +1739,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
                     placeholder="카테고리 직접 입력"
-                    className="mt-2 w-full bg-card border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-all"
+                    className="mt-2 w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
                   />
                 )}
               </div>

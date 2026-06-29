@@ -651,7 +651,7 @@ function EditUserNotesModal({
           placeholder="예: 회사 분위기는 자유로움 / 작년 면접관은 기술 깊이 위주로 물어봤음 / 채용 페이지 인터뷰에서 강조한 점 등"
           autoFocus
           style={{ minHeight: 80, lineHeight: 1.6 }}
-          className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/50 focus:ring-1 focus:ring-brand/20 outline-none resize-y transition-all"
+          className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/50 focus:ring-1 focus:ring-brand/20 outline-none resize-y transition-all"
         />
         <p
           className={`text-[11px] mt-1 text-right ${

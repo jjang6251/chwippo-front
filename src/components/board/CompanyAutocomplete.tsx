@@ -119,7 +119,7 @@ export function CompanyAutocomplete({
         aria-controls={listId}
         aria-autocomplete="list"
         aria-activedescendant={activeIdx >= 0 ? `${listId}-item-${activeIdx}` : undefined}
-        className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+        className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
       />
 
       {open && (

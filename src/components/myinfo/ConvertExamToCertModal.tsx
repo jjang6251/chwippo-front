@@ -46,7 +46,7 @@ export function ConvertExamToCertModal({ exam, onClose }: Props) {
               onChange={(e) => setScoreGrade(e.target.value)}
               placeholder="예: 850점 / IH / 6급"
               autoFocus
-              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
           </div>
         )}

@@ -118,7 +118,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
                 setScheduledDate(v)
                 saveScheduledDate(v)
               }}
-              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
           </section>
 
@@ -131,7 +131,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
               onChange={(e) => setLocation(e.target.value)}
               onBlur={handleLocationBlur}
               placeholder="예: 강남역 3번 출구 위워크 3층"
-              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
           </section>
 
@@ -196,7 +196,7 @@ export function StepDetailPanel({ appId, step, onClose }: Props) {
                     if (e.key === 'Escape') setInputText('')
                   }}
                   placeholder="항목 추가 후 Enter"
-                  className="flex-1 bg-transparent text-xs text-text-primary placeholder:text-text-quaternary outline-none"
+                  className="flex-1 bg-transparent text-xs text-text-primary placeholder:text-text-tertiary outline-none"
                 />
               </div>
             </div>

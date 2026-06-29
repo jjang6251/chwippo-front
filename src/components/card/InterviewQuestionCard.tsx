@@ -151,7 +151,7 @@ export function InterviewQuestionCard({ question, sessionId }: Props) {
               placeholder="이 질문에 본인이 어떻게 답할지 적어보세요…"
               rows={3}
               maxLength={5000}
-              className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-[13px] text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none resize-none leading-relaxed"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
             />
             <p className={`text-[10px] text-right mt-1 ${memo.length >= 5000 ? 'text-danger' : memo.length >= 4500 ? 'text-warning' : 'text-text-quaternary'}`}>
               {memo.length} / 5000

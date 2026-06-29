@@ -254,7 +254,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
                       }}
                       onBlur={() => handleAddNote(slot)}
                       placeholder="할 일 입력 후 Enter"
-                      className="flex-1 bg-transparent text-[11px] text-text-primary placeholder:text-text-quaternary outline-none"
+                      className="flex-1 bg-transparent text-[11px] text-text-primary placeholder:text-text-tertiary outline-none"
                     />
                   </div>
                 ) : (
@@ -307,7 +307,7 @@ function NullSlotInput({ date, createNote }: NullSlotInputProps) {
           }}
           onBlur={handleAdd}
           placeholder="할 일 입력 후 Enter"
-          className="flex-1 bg-transparent text-[11px] text-text-primary placeholder:text-text-quaternary outline-none"
+          className="flex-1 bg-transparent text-[11px] text-text-primary placeholder:text-text-tertiary outline-none"
         />
       </div>
     )

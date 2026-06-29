@@ -158,7 +158,7 @@ export function AddCardModal({
             onChange={(e) => setJobTitle(e.target.value)}
             maxLength={100}
             placeholder="예) 백엔드 개발자, iOS 개발자"
-            className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
         </div>
 
@@ -219,7 +219,7 @@ export function AddCardModal({
                     setTemplateTouched(true)
                     setTemplateId(e.target.value)
                   }}
-                  className="w-full appearance-none bg-surface-3 border border-line rounded-lg pl-3 pr-9 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
+                  className="w-full appearance-none bg-input border border-line rounded-lg pl-3 pr-9 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
                 >
                   {APPLICATION_TEMPLATES.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -257,7 +257,7 @@ export function AddCardModal({
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
           </div>
         )}
