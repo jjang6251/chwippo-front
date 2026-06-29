@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { activityApi } from '@/api/activity'
 import { toast } from '@/stores/toastStore'
 import {
   useCreateActivity,
@@ -177,7 +178,6 @@ export function ActivityFormModal({
     content: string,
     date: string,
   ): Promise<boolean> {
-    const { activityApi } = await import('@/api/activity')
     try {
       await activityApi.createLog(activityId, {
         content,

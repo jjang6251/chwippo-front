@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { activityApi } from '@/api/activity'
 import { toast } from '@/stores/toastStore'
 import { todayLocal, toLocalDateString } from '@/utils/datetime'
 import type { Activity } from '@/types/activity'
@@ -80,7 +81,6 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
 
     let created = 0
     try {
-      const { activityApi } = await import('@/api/activity')
       for (let i = 0; i < lines.length; i++) {
         try {
           await activityApi.createLog(activity!.id, {
