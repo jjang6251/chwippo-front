@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import { useAuthStore } from '@/stores/authStore'
 import type { CompanyResearchResult } from '@/types/interviewPrep'
 
 /**
@@ -127,7 +128,6 @@ export const coverletterDocApi = {
     },
   ): Promise<void> => {
     // Authorization 헤더 — apiClient 인스턴스의 store 에서 직접 가져옴
-    const { useAuthStore } = await import('@/stores/authStore')
     const token = useAuthStore.getState().accessToken
     const url = `${import.meta.env.VITE_API_URL}/applications/${applicationId}/coverletter/chat/stream`
     const res = await fetch(url, {
