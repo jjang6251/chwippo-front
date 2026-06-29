@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CoverLetterImportModal } from '@/components/card/CoverLetterImportModal'
+import { useAutoResize } from '@/hooks/useAutoResize'
 import { CoverLetterCleanupModal } from '@/components/card/CoverLetterCleanupModal'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { Modal } from '@/components/common/Modal'
@@ -47,6 +48,8 @@ export function CoverletterQuestionCard({
 }: Props) {
   const [question, setQuestion] = useState(cl.question)
   const [answer, setAnswer] = useState(cl.answer ?? '')
+  // 베타 피드백 — 자소서 답변이 길어지면 scroll 필요. auto-resize (min 200 / max 600 — 자소서 답변은 더 길게 허용)
+  const { ref: answerRef, autoResize: autoResizeAnswer } = useAutoResize(answer, { min: 80, max: 600 })
   const [limitInput, setLimitInput] = useState(
     cl.charLimit != null ? String(cl.charLimit) : '',
   )
@@ -237,16 +240,22 @@ export function CoverletterQuestionCard({
           if (v !== cl.question) onUpdate({ question: v })
         }}
         rows={2}
+        maxLength={500}
         placeholder="예: 우리 회사에 지원한 동기를 작성해 주세요."
         className="w-full resize-none bg-surface-2 border border-line rounded-lg px-3 py-2 font-serif text-base text-text-primary leading-relaxed placeholder:text-text-quaternary placeholder:font-sans focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors mb-4"
       />
 
       {/* answer */}
       <textarea
+        ref={answerRef}
         value={answer}
-        onChange={(e) => setAnswer(e.target.value)}
+        onChange={(e) => {
+          setAnswer(e.target.value)
+          autoResizeAnswer()
+        }}
         placeholder="여기에 답변을 작성하세요. 또는 우측 AI 채팅으로 초안 생성. (자동 저장)"
-        className="w-full min-h-[200px] bg-surface border border-line rounded-[11px] px-3.5 py-3 text-[13px] leading-[1.65] text-text-primary resize-y focus:outline-none focus:border-brand/50 transition-colors"
+        style={{ minHeight: 80, lineHeight: 1.65 }}
+        className="w-full bg-surface-3 border border-line rounded-[11px] px-3.5 py-3 text-[13px] text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
       />
       <div className="flex items-center justify-between gap-2 mt-2 text-xs flex-wrap">
         <span className="text-text-quaternary">✎ 자동 저장돼요</span>

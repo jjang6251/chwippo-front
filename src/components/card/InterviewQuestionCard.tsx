@@ -150,8 +150,12 @@ export function InterviewQuestionCard({ question, sessionId }: Props) {
               onChange={(e) => handleMemoChange(e.target.value)}
               placeholder="이 질문에 본인이 어떻게 답할지 적어보세요…"
               rows={3}
+              maxLength={5000}
               className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-[13px] text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none resize-none leading-relaxed"
             />
+            <p className={`text-[10px] text-right mt-1 ${memo.length >= 5000 ? 'text-danger' : memo.length >= 4500 ? 'text-warning' : 'text-text-quaternary'}`}>
+              {memo.length} / 5000
+            </p>
           </div>
 
           {/* 자식 질문 — 부모 카드 안 nested (GitHub PR review 패턴) */}

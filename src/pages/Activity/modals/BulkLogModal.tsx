@@ -140,8 +140,8 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
               ✶ 한 줄에 하나씩 적어주세요 <span className="req">필수</span>
             </div>
             <div className="hlp">
-              각 줄이 별도 기록으로 저장됩니다. 카테고리·정량 결과·날짜는
-              나중에 기록을 클릭해서 보정하세요.
+              각 줄이 별도 기록으로 저장됩니다. 한 줄당 최대 200자.
+              카테고리·정량 결과·날짜는 나중에 기록을 클릭해서 보정하세요.
             </div>
             <textarea
               ref={textareaRef}
@@ -150,6 +150,7 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
                 setContent(e.target.value)
                 autoResize()
               }}
+              maxLength={10000}
               placeholder={`예:\n인턴 OT 참가, 사수 첫 미팅\n신규 캠페인 기획안 채택\nROAS 1.2 → 1.8 개선\n팀 워크샵 발표 담당`}
               style={{
                 minHeight: 200,
@@ -159,6 +160,11 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
               }}
               autoFocus
             />
+            {content.split('\n').some((line) => line.length > 200) && (
+              <p className="text-[10px] text-warning mt-1">
+                ⚠️ 200자 넘는 줄은 저장 시 잘릴 수 있어요
+              </p>
+            )}
           </div>
           <div className="sect">
             <div className="l">
