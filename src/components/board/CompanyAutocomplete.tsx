@@ -109,6 +109,7 @@ export function CompanyAutocomplete({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={handleKey}
+        maxLength={100}
         placeholder={placeholder}
         autoFocus={autoFocus}
         disabled={disabled}

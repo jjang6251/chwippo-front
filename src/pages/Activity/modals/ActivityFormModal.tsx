@@ -221,6 +221,7 @@ export function ActivityFormModal({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={120}
               placeholder={NAME_PLACEHOLDERS[type]}
             />
             <div className="hlp name-hint">
@@ -308,6 +309,7 @@ export function ActivityFormModal({
                 type="text"
                 value={org}
                 onChange={(e) => setOrg(e.target.value)}
+                maxLength={120}
                 placeholder={typeCfg.orgPh}
               />
             </div>
@@ -322,6 +324,7 @@ export function ActivityFormModal({
                 type="text"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
+                maxLength={120}
                 placeholder={typeCfg.rolePh}
               />
             </div>
@@ -337,6 +340,7 @@ export function ActivityFormModal({
                 type="text"
                 value={resultUrl}
                 onChange={(e) => setResultUrl(e.target.value)}
+                maxLength={500}
                 placeholder="예: github.com/myproj · behance.net/yourwork · notion.so/포트폴리오"
               />
             </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useAutoResize } from '@/hooks/useAutoResize'
 import { useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
@@ -91,36 +92,74 @@ function SortableStepRow({
 
 // --- 인라인 편집 필드 ---
 function EditableField({
-  value, placeholder, onSave, className = '', multiline = false,
+  value, placeholder, onSave, className = '', multiline = false, maxLength,
 }: {
   value: string
   placeholder: string
   onSave: (v: string) => void
   className?: string
   multiline?: boolean
+  maxLength?: number
 }) {
   const [local, setLocal] = useState(value)
   const [focused, setFocused] = useState(false)
+  // multiline = 메모 등 긴 글. 베타 피드백 패턴 auto-resize (min 120 / max 400)
+  const { ref: textareaRef, autoResize } = useAutoResize(local, { min: 80, max: 500 })
 
   const handleBlur = () => {
     setFocused(false)
     if (local !== value) onSave(local)
   }
 
-  const props = {
-    value: local,
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setLocal(e.target.value),
-    onFocus: () => setFocused(true),
-    onBlur: handleBlur,
-    onKeyDown: (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLElement).blur() },
-    placeholder,
-    className: `w-full bg-transparent focus:outline-none transition-all rounded-md px-2 py-1 -mx-2 -my-1
-      ${focused ? 'bg-surface-3 ring-1 ring-brand/30' : 'hover:bg-card active:bg-card-strong'}
-      ${className}`,
-  }
+  const baseClassName = `w-full bg-transparent focus:outline-none transition-all rounded-md px-2 py-1 -mx-2 -my-1
+    ${focused ? 'bg-surface-3 ring-1 ring-brand/30' : 'hover:bg-card active:bg-card-strong'}
+    ${className}`
 
-  if (multiline) return <textarea {...props as React.TextareaHTMLAttributes<HTMLTextAreaElement>} rows={4} className={props.className + ' resize-none'} />
-  return <input {...props as React.InputHTMLAttributes<HTMLInputElement>} />
+  if (multiline) {
+    const counterColor = maxLength
+      ? local.length >= maxLength
+        ? 'text-danger'
+        : local.length >= maxLength * 0.9
+        ? 'text-warning'
+        : 'text-text-quaternary'
+      : ''
+    return (
+      <div>
+        <textarea
+          ref={textareaRef}
+          value={local}
+          onChange={(e) => {
+            setLocal(e.target.value)
+            autoResize()
+          }}
+          onFocus={() => setFocused(true)}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          style={{ minHeight: 80, lineHeight: 1.6 }}
+          className={baseClassName + ' resize-y'}
+        />
+        {maxLength && (
+          <p className={`text-[10px] text-right mt-1 ${counterColor}`}>
+            {local.length} / {maxLength}
+          </p>
+        )}
+      </div>
+    )
+  }
+  return (
+    <input
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onFocus={() => setFocused(true)}
+      onBlur={handleBlur}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLElement).blur()
+      }}
+      placeholder={placeholder}
+      className={baseClassName}
+    />
+  )
 }
 
 // --- 메인 페이지 ---
@@ -471,6 +510,7 @@ export function BoardDetail() {
               onSave={save('memo')}
               className="text-sm text-text-primary placeholder:text-text-quaternary"
               multiline
+              maxLength={2000}
             />
           </div>
 

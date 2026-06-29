@@ -153,8 +153,10 @@ export function AddCardModal({
             {!isPlanned && <span className="text-text-quaternary">(나중에 입력 가능)</span>}
           </label>
           <input
+            type="text"
             value={jobTitle}
             onChange={(e) => setJobTitle(e.target.value)}
+            maxLength={100}
             placeholder="예) 백엔드 개발자, iOS 개발자"
             className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAutoResize } from '@/hooks/useAutoResize'
 import { createInquiry } from '@/api/inquiries'
 import { toast } from '@/stores/toastStore'
 import { getInquiryTemplate, TEMPLATED_CATEGORIES } from '@/utils/inquiryTemplates'
@@ -13,6 +14,7 @@ export function InquiryNew() {
   const [category, setCategory] = useState('')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const { ref: contentRef, autoResize: autoResizeContent } = useAutoResize(content, { min: 80, max: 500 })
   const prevTemplateRef = useRef<string | null>(null)
 
   const mutation = useMutation({
@@ -89,14 +91,18 @@ export function InquiryNew() {
             </p>
           )}
           <textarea
+            ref={contentRef}
             id="inquiry-content"
             aria-describedby={hasTemplate ? 'inquiry-content-hint' : undefined}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={6}
+            onChange={(e) => {
+              setContent(e.target.value)
+              autoResizeContent()
+            }}
             maxLength={2000}
             placeholder="자세히 알려주실수록 더 빠르게 도움드릴 수 있어요."
-            className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
+            style={{ minHeight: 80, lineHeight: 1.6 }}
+            className="w-full bg-surface-3 border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all placeholder:text-text-quaternary resize-y"
           />
           <p className={`text-xs text-right mt-1 ${content.length >= 2000 ? 'text-danger' : content.length >= 1800 ? 'text-warning' : 'text-text-quaternary'}`}>{content.length} / 2000</p>
         </div>

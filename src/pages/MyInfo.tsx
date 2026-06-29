@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import { useAutoResize } from '@/hooks/useAutoResize'
 import { Link, useLocation } from 'react-router-dom'
 import dayjs from 'dayjs'
 import {
@@ -89,15 +90,55 @@ function Field({
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
   required?: boolean
 }) {
-  const cls = 'w-full bg-card border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 transition-all'
+  const cls = 'w-full bg-surface-3 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all'
+  // 자소서 소재 textarea — 베타 피드백 패턴 (auto-resize 200~500 + lineHeight 1.6)
+  const { ref: textareaRef, autoResize } = useAutoResize(value, { min: 80, max: 500 })
   return (
     <div className={span ? 'col-span-2' : ''}>
       <FieldLabel label={label} required={required} />
       <div className="flex items-start gap-1.5">
-        {as === 'textarea'
-          ? <textarea value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} placeholder={placeholder} maxLength={maxLength} rows={4} className={cls + ' resize-none'} />
-          : <input type={type} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} placeholder={placeholder} maxLength={maxLength} className={cls} />
-        }
+        {as === 'textarea' ? (
+          <div className="flex-1">
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(e) => {
+                onChange(e.target.value)
+                autoResize()
+              }}
+              onBlur={onBlur}
+              placeholder={placeholder}
+              maxLength={maxLength}
+              style={{ minHeight: 80, lineHeight: 1.6 }}
+              className={cls + ' resize-y'}
+            />
+            {maxLength && (
+              <p
+                className={`text-xs text-right mt-1 ${
+                  value.length >= maxLength
+                    ? 'text-danger'
+                    : value.length >= maxLength * 0.9
+                    ? 'text-warning'
+                    : value.length >= 200
+                    ? 'text-success'
+                    : 'text-text-quaternary'
+                }`}
+              >
+                {value.length} / {maxLength}
+              </p>
+            )}
+          </div>
+        ) : (
+          <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            className={cls}
+          />
+        )}
         {copyable && <CopyButton value={value} />}
       </div>
     </div>
@@ -1349,28 +1390,16 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   return (
     <SectionCard id="coverletter" sectionRef={sectionRef} saved={saved} isActive={isActive}>
       <div className="space-y-5">
-        {COVER_FIELDS.map(({ key, label, placeholder }) => {
-          const len = (clForm[key] ?? '').length
-          const counterColor = len >= 2000 ? 'text-danger' : len >= 1800 ? 'text-warning' : 'text-text-quaternary'
-          return (
-            <div key={key}>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-text-secondary">{label}</label>
-                <CopyButton value={clForm[key]} />
-              </div>
-              <textarea
-                value={clForm[key] ?? ''}
-                onChange={(e) => setClForm(f => ({ ...f, [key]: e.target.value }))}
-                onBlur={() => saveCover(key, clForm[key] ?? '')}
-                maxLength={2000}
-                rows={3}
-                placeholder={placeholder}
-                className="w-full bg-card border border-line rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
-              />
-              <p className={`text-[10px] ${counterColor} text-right mt-1`}>{len} / 2000</p>
-            </div>
-          )
-        })}
+        {COVER_FIELDS.map(({ key, label, placeholder }) => (
+          <CoverletterTextField
+            key={key}
+            label={label}
+            value={clForm[key] ?? ''}
+            placeholder={placeholder}
+            onChange={(v) => setClForm((f) => ({ ...f, [key]: v }))}
+            onBlur={() => saveCover(key, clForm[key] ?? '')}
+          />
+        ))}
 
         {/* 커스텀 항목들 */}
         {(data?.custom ?? []).map((item) => (
@@ -1410,26 +1439,76 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
 
 function CustomCoverItem({ item, onUpdate, onDelete }: { item: CoverletterCustom; onUpdate: (c: string) => void; onDelete: () => void }) {
   const [value, setValue] = useState(item.content ?? '')
-  const counterColor = value.length >= 2000 ? 'text-danger' : value.length >= 1800 ? 'text-warning' : 'text-text-quaternary'
+  return (
+    <CoverletterTextField
+      label={item.label}
+      value={value}
+      placeholder={`${item.label}을 작성해보세요`}
+      onChange={setValue}
+      onBlur={() => onUpdate(value)}
+      onDelete={onDelete}
+    />
+  )
+}
+
+/**
+ * 자소서 소재 textarea — 베타 피드백 패턴.
+ * auto-resize (min 200 / max 500) + lineHeight 1.6 + 글자수 카운터 색상 (success >= 200자).
+ */
+function CoverletterTextField({
+  label,
+  value,
+  placeholder,
+  onChange,
+  onBlur,
+  onDelete,
+}: {
+  label: string
+  value: string
+  placeholder?: string
+  onChange: (v: string) => void
+  onBlur: () => void
+  onDelete?: () => void
+}) {
+  const { ref, autoResize } = useAutoResize(value, { min: 80, max: 500 })
+  const counterColor =
+    value.length >= 2000
+      ? 'text-danger'
+      : value.length >= 1800
+      ? 'text-warning'
+      : value.length >= 200
+      ? 'text-success'
+      : 'text-text-quaternary'
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <label className="text-xs font-semibold text-text-secondary">{item.label}</label>
+        <label className="text-xs font-semibold text-text-secondary">{label}</label>
         <div className="flex items-center gap-1">
           <CopyButton value={value} />
-          <button onClick={onDelete} className="w-8 h-8 flex items-center justify-center text-text-quaternary hover:text-danger rounded-md hover:bg-danger/8 transition-colors">
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
-          </button>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="w-8 h-8 flex items-center justify-center text-text-quaternary hover:text-danger rounded-md hover:bg-danger/8 transition-colors"
+            >
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
       <textarea
+        ref={ref}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={() => onUpdate(value)}
+        onChange={(e) => {
+          onChange(e.target.value)
+          autoResize()
+        }}
+        onBlur={onBlur}
         maxLength={2000}
-        rows={3}
-        placeholder={`${item.label}을 작성해보세요`}
-        className="w-full bg-card border border-line rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/15 resize-none transition-all"
+        placeholder={placeholder}
+        style={{ minHeight: 80, lineHeight: 1.6 }}
+        className="w-full bg-surface-3 border border-line rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 resize-y transition-all"
       />
       <p className={`text-[10px] ${counterColor} text-right mt-1`}>{value.length} / 2000</p>
     </div>
