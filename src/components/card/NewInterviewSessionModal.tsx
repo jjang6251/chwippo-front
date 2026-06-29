@@ -139,7 +139,7 @@ export function NewInterviewSessionModal({
                 <select
                   value={roundChoice}
                   onChange={(e) => setRoundChoice(e.target.value)}
-                  className="w-full appearance-none bg-surface border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-primary focus:border-brand/45 outline-none"
+                  className="w-full appearance-none bg-input border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
                 >
                   <option value="" disabled>
                     전형 단계를 선택하세요
@@ -316,7 +316,7 @@ export function NewInterviewSessionModal({
                 maxLength={8000}
                 rows={4}
                 placeholder="공고에서 복사·붙여넣기 — 요구역량 / 우대사항 / 직무 요건 등&#10;예) C++ 3년 이상, Linux 환경 개발 경험, MSA 경험 우대…"
-                className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none resize-none leading-relaxed"
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
               />
               <p className="text-text-faint text-[11px] mt-1 text-right">
                 {jobDescription.length} / 8000
@@ -333,7 +333,7 @@ export function NewInterviewSessionModal({
                 maxLength={2000}
                 rows={3}
                 placeholder="면접관에게 꼭 어필하고 싶은 본인의 강점·경험&#10;예) 팀 갈등을 중재해서 프로젝트 성공시킨 경험을 부각하고 싶어요"
-                className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none resize-none leading-relaxed"
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
               />
               <p className="text-text-faint text-[11px] mt-1 text-right">
                 {emphasisPoints.length} / 2000

@@ -195,7 +195,7 @@ export function OpsInquiries() {
                   rows={3}
                   maxLength={2000}
                   placeholder="사용자에게 답변을 남겨주세요..."
-                  className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none mb-1"
+                  className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-tertiary resize-none mb-1"
                 />
                 <p className={`text-[10px] text-right mb-2 ${comment.length >= 2000 ? 'text-danger' : comment.length >= 1800 ? 'text-warning' : 'text-text-quaternary'}`}>
                   {comment.length} / 2000

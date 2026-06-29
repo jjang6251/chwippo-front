@@ -75,7 +75,7 @@ function SortableStepRow({
         <input
           value={item.name}
           onChange={(e) => onChange(item.id, e.target.value)}
-          className="flex-1 bg-surface-3 border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all"
+          className="flex-1 bg-input border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
         />
         <button
           onClick={() => onRemove(item.id)}
@@ -123,6 +123,7 @@ function EditableField({
         ? 'text-warning'
         : 'text-text-quaternary'
       : ''
+    // multiline = 메모 등 자유 입력. inline edit 패턴 X — 명확한 입력 박스 (bg-input + border)
     return (
       <div>
         <textarea
@@ -137,7 +138,7 @@ function EditableField({
           placeholder={placeholder}
           maxLength={maxLength}
           style={{ minHeight: 80, lineHeight: 1.6 }}
-          className={baseClassName + ' resize-y'}
+          className={`w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y ${className}`}
         />
         {maxLength && (
           <p className={`text-[10px] text-right mt-1 ${counterColor}`}>
@@ -401,7 +402,7 @@ export function BoardDetail() {
                       )
                     }
                   }}
-                  className="w-full bg-surface-3 border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/40 transition-all hover:border-line-strong"
+                  className="w-full bg-input border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all hover:border-line-strong"
                 />
               </>
             ) : (
@@ -418,7 +419,7 @@ export function BoardDetail() {
                 defaultValue={app.jobUrl ?? ''}
                 onBlur={(e) => { if (e.target.value !== (app.jobUrl ?? '')) save('jobUrl')(e.target.value) }}
                 placeholder="https://"
-                className="flex-1 min-w-0 bg-surface-3 border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/40 transition-all hover:border-line-strong"
+                className="flex-1 min-w-0 bg-input border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all hover:border-line-strong"
               />
               {app.jobUrl && (
                 <a href={app.jobUrl} target="_blank" rel="noopener noreferrer"
@@ -508,7 +509,7 @@ export function BoardDetail() {
               value={app.memo ?? ''}
               placeholder="면접관 3명, 복장 자유, 기술 면접 위주... (자동 저장)"
               onSave={save('memo')}
-              className="text-sm text-text-primary placeholder:text-text-quaternary"
+              className="text-sm text-text-primary placeholder:text-text-tertiary"
               multiline
               maxLength={2000}
             />

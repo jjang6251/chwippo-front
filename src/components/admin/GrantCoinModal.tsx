@@ -63,7 +63,7 @@ export function GrantCoinModal({ userId, nickname, onClose }: Props) {
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value as Reason)}
-              className="w-full appearance-none bg-card-strong border border-line text-text-primary text-sm px-3 pr-8 py-2 rounded-md"
+              className="w-full appearance-none bg-input border border-line text-text-primary placeholder:text-text-tertiary text-sm px-3 pr-8 py-2 rounded-md"
             >
               {REASONS.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -97,7 +97,7 @@ export function GrantCoinModal({ userId, nickname, onClose }: Props) {
             max={100000}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-card-strong border border-line text-text-primary text-sm px-3 py-2 rounded-md"
+            className="w-full bg-input border border-line text-text-primary placeholder:text-text-tertiary text-sm px-3 py-2 rounded-md"
             placeholder="예: 50"
           />
           {amountNum > 10000 && (
@@ -115,7 +115,7 @@ export function GrantCoinModal({ userId, nickname, onClose }: Props) {
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             maxLength={500}
-            className="w-full bg-card-strong border border-line text-text-primary text-sm px-3 py-2 rounded-md resize-none"
+            className="w-full bg-input border border-line text-text-primary placeholder:text-text-tertiary text-sm px-3 py-2 rounded-md resize-none"
             rows={2}
           />
         </div>
