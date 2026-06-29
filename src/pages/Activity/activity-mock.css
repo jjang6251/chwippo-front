@@ -162,7 +162,7 @@
     }
     .quicklog .input-row {
       display: flex; gap: 8px;
-      background: rgb(var(--surface));
+      background: rgb(var(--input-bg));
       border: 1px solid var(--line);
       border-radius: 11px;
       padding: 4px 4px 4px 14px;
@@ -170,7 +170,7 @@
     }
     .quicklog .input-row:focus-within {
       border-color: rgb(var(--brand) / 0.5);
-      box-shadow: 0 0 0 3px rgb(var(--brand) / 0.10);
+      box-shadow: 0 0 0 1px rgb(var(--brand) / 0.2);
     }
     .quicklog .input-row input {
       flex: 1; border: 0; background: transparent;
@@ -180,7 +180,7 @@
       font-family: inherit;
       outline: 0;
     }
-    .quicklog .input-row input::placeholder { color: rgb(var(--text-quaternary)); }
+    .quicklog .input-row input::placeholder { color: rgb(var(--text-tertiary)); }
     .quicklog .input-row .send {
       appearance: none; border: 0;
       background: rgb(var(--brand));
@@ -270,7 +270,7 @@
     }
     .view-toolbar .search-box input {
       width: 100%;
-      background: rgb(var(--surface));
+      background: rgb(var(--input-bg));
       border: 1px solid var(--line);
       border-radius: 10px;
       padding: 8px 12px 8px 32px;
@@ -279,10 +279,11 @@
       font-family: inherit;
       transition: all 0.15s ease;
     }
+    .view-toolbar .search-box input::placeholder { color: rgb(var(--text-tertiary)); }
     .view-toolbar .search-box input:focus {
       outline: 0;
       border-color: rgb(var(--brand) / 0.5);
-      box-shadow: 0 0 0 3px rgb(var(--brand) / 0.10);
+      box-shadow: 0 0 0 1px rgb(var(--brand) / 0.2);
     }
     .view-toolbar .search-box::before {
       content: '🔍'; position: absolute; left: 11px; top: 50%;
@@ -291,7 +292,7 @@
     }
     .view-toolbar select {
       appearance: none;
-      background: rgb(var(--surface));
+      background: rgb(var(--input-bg));
       border: 1px solid var(--line);
       border-radius: 9px;
       padding: 7px 28px 7px 11px;
@@ -1059,7 +1060,7 @@
     }
     .modal textarea, .modal input[type='text'], .modal input[type='date'], .modal select {
       width: 100%;
-      background: rgb(var(--surface-2));
+      background: rgb(var(--input-bg));
       border: 1px solid var(--line);
       border-radius: 9px;
       padding: 10px 12px;
@@ -1068,12 +1069,12 @@
       font-family: inherit;
       transition: all 0.15s ease;
     }
+    .modal textarea::placeholder, .modal input::placeholder { color: rgb(var(--text-tertiary)); }
     .modal textarea { resize: vertical; min-height: 70px; }
     .modal input:focus, .modal textarea:focus, .modal select:focus {
       outline: 0;
-      border-color: rgb(var(--brand) / 0.6);
-      background: rgb(var(--surface-3));
-      box-shadow: 0 0 0 3px rgb(var(--brand) / 0.10);
+      border-color: rgb(var(--brand) / 0.5);
+      box-shadow: 0 0 0 1px rgb(var(--brand) / 0.2);
     }
     .modal select {
       appearance: none;

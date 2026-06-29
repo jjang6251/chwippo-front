@@ -174,7 +174,7 @@ export function Coverletters() {
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="appearance-none bg-card border border-line text-text-secondary text-xs font-medium pl-2.5 pr-7 py-1 rounded-md hover:border-line-strong transition-colors cursor-pointer"
+              className="appearance-none bg-input border border-line text-text-secondary text-xs font-medium pl-2.5 pr-7 py-1 rounded-md focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 hover:border-line-strong transition-all cursor-pointer"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.key} value={opt.key}>
@@ -219,7 +219,7 @@ export function Coverletters() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="회사명 또는 직무 검색"
             aria-label="회사명 또는 직무 검색"
-            className="w-full bg-card border border-line text-text-primary text-xs pl-8 pr-3 py-1.5 rounded-md placeholder:text-text-quaternary focus:outline-none focus:border-brand transition-colors"
+            className="w-full bg-input border border-line text-text-primary text-xs pl-8 pr-3 py-1.5 rounded-md placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
         </div>
       </div>

@@ -302,7 +302,7 @@ function AnnouncementFormModal({
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 100))}
               placeholder="공지 제목"
-              className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
+              className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-tertiary"
             />
           </div>
 
@@ -316,7 +316,7 @@ function AnnouncementFormModal({
               onChange={(e) => setBody(e.target.value.slice(0, 500))}
               rows={4}
               placeholder="공지 내용을 입력하세요"
-              className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
+              className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-tertiary resize-none"
             />
           </div>
 

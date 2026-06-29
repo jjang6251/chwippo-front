@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { useAutoResize } from '@/hooks/useAutoResize'
 import { createInquiry } from '@/api/inquiries'
 import { toast } from '@/stores/toastStore'
 
@@ -17,6 +18,7 @@ export function Inquiry() {
   const [category, setCategory] = useState('')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const { ref: contentRef, autoResize: autoResizeContent } = useAutoResize(content, { min: 80, max: 500 })
   const [done, setDone] = useState(false)
 
   const mutation = useMutation({
@@ -67,7 +69,7 @@ export function Inquiry() {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full appearance-none bg-surface-2 border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors pr-8 text-text-primary"
+              className="w-full appearance-none bg-input border border-line rounded-lg px-3 pr-8 py-2.5 text-sm text-text-primary outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             >
               <option value="" disabled className="bg-surface-2 text-text-tertiary">카테고리 선택</option>
               {CATEGORIES.map((c) => (
@@ -86,7 +88,7 @@ export function Inquiry() {
             onChange={(e) => setTitle(e.target.value)}
             maxLength={100}
             placeholder="간단하게 설명해주세요"
-            className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
         </div>
 
@@ -96,12 +98,16 @@ export function Inquiry() {
             내용 * <span className="normal-case font-normal text-text-tertiary">(최소 10자)</span>
           </label>
           <textarea
+            ref={contentRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={6}
+            onChange={(e) => {
+              setContent(e.target.value)
+              autoResizeContent()
+            }}
             maxLength={2000}
             placeholder="자세히 알려주실수록 더 빠르게 도움드릴 수 있어요."
-            className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
+            style={{ minHeight: 80, lineHeight: 1.6 }}
+            className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all placeholder:text-text-tertiary resize-y"
           />
           <p className={`text-xs text-right mt-1 ${content.length >= 2000 ? 'text-danger' : content.length >= 1800 ? 'text-warning' : 'text-text-quaternary'}`}>{content.length} / 2000</p>
         </div>

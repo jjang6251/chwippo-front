@@ -17,6 +17,8 @@
   --surface: 35 33 31;
   --surface-2: 44 42 40;
   --surface-3: 54 51 48;
+  /* 입력 전용 — 컨테이너(surface-2)보다 +36 톤 밝아 입력 영역 명확. 베타 UIUX polish */
+  --input-bg: 80 75 70;
 
   --text-primary: 235 233 227;
   --text-secondary: 192 189 179;
@@ -59,6 +61,8 @@
   --surface: 255 255 255;
   --surface-2: 252 248 240;
   --surface-3: 235 230 217;
+  /* 입력 전용 — 라이트 = 컨테이너보다 어둡게 (surface-3 와 같은 톤 유지) */
+  --input-bg: 235 230 217;
 
   --text-primary: 26 24 22;
   --text-secondary: 74 70 64;
@@ -99,6 +103,7 @@
   --surface: 35 33 31;
   --surface-2: 44 42 40;
   --surface-3: 54 51 48;
+  --input-bg: 80 75 70;
   --text-primary: 235 233 227;
   --text-secondary: 192 189 179;
   --text-tertiary: #8a8780;

@@ -167,7 +167,7 @@ function FeatureRow({
             }
           }}
           placeholder="null"
-          className="w-20 bg-card-strong border border-line text-text-primary text-xs px-2 py-1 rounded-md text-right font-mono"
+          className="w-20 bg-input border border-line text-text-primary placeholder:text-text-tertiary text-xs px-2 py-1 rounded-md text-right font-mono"
         />
       </td>
       <td className="py-2 px-3">
@@ -183,7 +183,7 @@ function FeatureRow({
               onChange('avgCoinCost', v, before)
             }
           }}
-          className="w-20 bg-card-strong border border-line text-text-primary text-xs px-2 py-1 rounded-md text-right font-mono"
+          className="w-20 bg-input border border-line text-text-primary placeholder:text-text-tertiary text-xs px-2 py-1 rounded-md text-right font-mono"
         />
       </td>
       <td className="py-2 px-3 text-text-quaternary text-[10px] truncate max-w-[200px]">

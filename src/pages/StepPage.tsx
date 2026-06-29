@@ -280,7 +280,7 @@ export function StepPage() {
                 autoFocus
                 placeholder="장소 입력"
                 aria-label="면접 장소"
-                className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none"
+                className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
               />
             </div>
           ) : (
@@ -362,7 +362,7 @@ export function StepPage() {
                 if (e.key === 'Escape') setInputText('')
               }}
               placeholder="항목 추가 후 Enter"
-              className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-quaternary outline-none"
+              className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none"
             />
           </div>
         </div>
@@ -382,8 +382,12 @@ export function StepPage() {
             onBlur={handlePinnedBlur}
             placeholder="면접 당일 꼭 기억할 내용 (예상 질문 답변, 핵심 키워드, 준비물 등)"
             rows={3}
-            className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-quaternary outline-none resize-none leading-relaxed"
+            maxLength={2000}
+            className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none resize-none leading-relaxed"
           />
+          <p className={`text-[10px] text-right mt-1 ${pinnedContent.length >= 2000 ? 'text-danger' : pinnedContent.length >= 1800 ? 'text-warning' : 'text-text-quaternary'}`}>
+            {pinnedContent.length} / 2000
+          </p>
         </div>
       </div>
 

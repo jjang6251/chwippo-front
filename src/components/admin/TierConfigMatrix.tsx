@@ -185,7 +185,7 @@ export function TierConfigMatrix() {
                             )
                           }
                         }}
-                        className="w-24 bg-card-strong border border-line text-text-primary text-xs px-2 py-1 rounded-md text-right font-mono"
+                        className="w-24 bg-input border border-line text-text-primary placeholder:text-text-tertiary text-xs px-2 py-1 rounded-md text-right font-mono"
                       />
                     </td>
                   )
