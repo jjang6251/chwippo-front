@@ -285,6 +285,7 @@ export function ReflectionModal({
                 setContent(e.target.value)
                 autoResize()
               }}
+              maxLength={5000}
               placeholder="이번주에 어떤 일이 있었고, 어떤 점이 가장 기억에 남았나요?"
               style={{
                 minHeight: 200,
@@ -293,6 +294,9 @@ export function ReflectionModal({
                 lineHeight: 1.6,
               }}
             />
+            <p className={`text-[10px] text-right mt-1 ${content.length >= 5000 ? 'text-danger' : content.length >= 4500 ? 'text-warning' : content.length >= 200 ? 'text-success' : 'text-text-quaternary'}`}>
+              {content.length} / 5000
+            </p>
           </div>
 
           <div className="sect">

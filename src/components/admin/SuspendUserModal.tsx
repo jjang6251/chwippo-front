@@ -86,7 +86,7 @@ export function SuspendUserModal({ userId, nickname, onClose }: Props) {
             maxLength={500}
             rows={3}
             placeholder="예: 약관 위반 — 도배 행위 반복 (2회)"
-            className="w-full bg-card-strong border border-line text-text-primary text-sm px-3 py-2 rounded-md resize-none"
+            className="w-full bg-input border border-line text-text-primary placeholder:text-text-tertiary text-sm px-3 py-2 rounded-md resize-none"
           />
           <p className="text-text-quaternary text-[10px] text-right">
             {reason.length}/500
@@ -127,7 +127,7 @@ export function SuspendUserModal({ userId, nickname, onClose }: Props) {
               setExpiresAtLocal(e.target.value)
             }}
             disabled={permanent}
-            className="w-full bg-card-strong border border-line text-text-primary text-xs px-3 py-2 rounded-md disabled:opacity-40"
+            className="w-full bg-input border border-line text-text-primary placeholder:text-text-tertiary text-xs px-3 py-2 rounded-md disabled:opacity-40"
           />
         </div>
 

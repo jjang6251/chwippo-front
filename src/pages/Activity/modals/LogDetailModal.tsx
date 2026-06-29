@@ -306,6 +306,7 @@ export function LogDetailModal({
                 setContent(e.target.value)
                 autoResize()
               }}
+              maxLength={200}
               placeholder="예: 인스타 캠페인 ROAS 1.8 달성"
               style={{
                 minHeight: 200,
@@ -315,6 +316,9 @@ export function LogDetailModal({
               }}
               autoFocus
             />
+            <p className={`text-[10px] text-right mt-1 ${content.length >= 200 ? 'text-danger' : content.length >= 180 ? 'text-warning' : 'text-text-quaternary'}`}>
+              {content.length} / 200
+            </p>
           </div>
 
           <div className="sect">

@@ -357,7 +357,7 @@ export function CoverletterChatPanel({
           <div className="text-warning text-[11px] mb-2">⚠️ {quotaReason}</div>
         )}
         <div
-          className={`flex items-end gap-2 bg-surface border rounded-2xl p-2 transition-colors ${quotaBlocked ? 'border-line opacity-60' : 'border-line focus-within:border-brand/50 focus-within:ring-2 focus-within:ring-brand/10'}`}
+          className={`flex items-end gap-2 bg-input border rounded-2xl p-2 transition-all ${quotaBlocked ? 'border-line opacity-60' : 'border-line focus-within:border-brand/50 focus-within:ring-2 focus-within:ring-brand/10'}`}
         >
           <textarea
             ref={inputRef}
@@ -379,7 +379,7 @@ export function CoverletterChatPanel({
             disabled={quotaBlocked || sending}
             rows={2}
             maxLength={5000}
-            className="flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none disabled:opacity-50 px-1 py-1"
+            className="flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none disabled:opacity-50 px-1 py-1"
           />
           <button
             onClick={() => handleSend()}

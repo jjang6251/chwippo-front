@@ -222,7 +222,7 @@ export function OpsUsers() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="닉네임 검색"
             aria-label="닉네임 검색"
-            className="w-full bg-surface-2 border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-text-secondary outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
+            className="w-full bg-surface-2 border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-text-secondary outline-none focus:border-brand/50 transition-colors placeholder:text-text-tertiary"
           />
         </div>
         <FilterSelect
@@ -634,7 +634,7 @@ function UserDetailModal({
                     onChange={(e) => setRenameValue(e.target.value)}
                     placeholder="새 닉네임 입력"
                     maxLength={100}
-                    className="flex-1 bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary"
+                    className="flex-1 bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-tertiary"
                     autoFocus
                   />
                   <button
@@ -673,7 +673,7 @@ function UserDetailModal({
                     placeholder="경고 사유를 입력하세요 (audit log에 기록됩니다)"
                     rows={3}
                     maxLength={500}
-                    className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none"
+                    className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-tertiary resize-none"
                     autoFocus
                   />
                   <div className="flex gap-2">

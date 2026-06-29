@@ -90,7 +90,7 @@ export function InquiryDetail() {
             rows={3}
             maxLength={2000}
             placeholder="추가로 궁금한 점이 있으면 남겨주세요..."
-            className="w-full bg-bg border border-line rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand/50 transition-colors placeholder:text-text-quaternary resize-none mb-3"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y mb-3"
           />
           <div className="flex justify-end">
             <button

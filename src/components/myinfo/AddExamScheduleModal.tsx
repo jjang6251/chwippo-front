@@ -108,7 +108,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 <select
                   value={certType}
                   onChange={(e) => setCertType(e.target.value)}
-                  className="w-full appearance-none bg-surface-2 border border-line rounded-lg pl-3 pr-9 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors cursor-pointer"
+                  className="w-full appearance-none bg-input border border-line rounded-lg pl-3 pr-9 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
                 >
                   {LANGUAGE_CERT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -124,7 +124,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="예: 정보처리기사 필기"
-                className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
               />
             </div>
           )}
@@ -137,7 +137,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
               />
             </div>
             <div>
@@ -146,7 +146,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-violet/40 transition-colors"
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
               />
             </div>
           </div>
@@ -158,7 +158,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="예: 홍익대학교 종합교육관"
-              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
           </div>
 
@@ -169,9 +169,13 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
               rows={2}
+              maxLength={500}
               placeholder="준비물, 목표 점수 등"
-              className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-violet/40 transition-colors resize-none"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none"
             />
+            <p className={`text-[10px] text-right mt-1 ${memo.length >= 500 ? 'text-danger' : memo.length >= 450 ? 'text-warning' : 'text-text-quaternary'}`}>
+              {memo.length} / 500
+            </p>
           </div>
         </div>
 
