@@ -8,9 +8,10 @@ interface Props {
   onClose: () => void
   initial?: ExamSchedule | null
   defaultDate?: string
+  onDelete?: () => void
 }
 
-export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Props) {
+export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDelete }: Props) {
   const isEdit = !!initial
   const [examType, setExamType] = useState<ExamType>('language')
   const [certType, setCertType] = useState<string>('TOEIC')
@@ -179,15 +180,22 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate }: Pr
           </div>
         </div>
 
-        <div className="flex gap-2 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-line shrink-0">
+        <div className="flex items-center gap-2 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-line shrink-0">
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="text-xs text-text-quaternary hover:text-danger px-2 py-2 transition-colors"
+            >삭제</button>
+          )}
+          <div className="flex-1" />
           <button
             onClick={onClose}
-            className="flex-1 py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card active:bg-card-strong transition-colors"
+            className="min-w-[5rem] py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card active:bg-card-strong transition-colors"
           >취소</button>
           <button
             onClick={handleSubmit}
             disabled={!canSubmit || create.isPending || update.isPending}
-            className="flex-1 py-2 rounded-lg bg-violet text-text-primary text-xs font-semibold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="min-w-[5rem] py-2 rounded-lg bg-violet text-text-primary text-xs font-semibold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >{isEdit ? '수정' : '추가'}</button>
         </div>
       </div>
