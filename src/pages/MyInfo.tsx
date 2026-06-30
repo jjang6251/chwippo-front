@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, createContext, useContext } from 'react'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import { Link, useLocation } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -17,7 +17,8 @@ import { useActivities } from '@/hooks/useActivities'
 import '@/pages/Activity/activity-mock.css'
 import { useMyinfoProgress } from '@/hooks/useMyinfoProgress'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
-import type { UserProfile, LanguageCert, Cert, Award, Coverletter, CoverletterCustom, MyDocument, Education, EducationMinor } from '@/api/myinfo'
+import type { UserProfile, LanguageCert, Cert, Award, Coverletter, CoverletterCustom, MyDocument, Education } from '@/api/myinfo'
+import { EducationModal } from '@/components/myinfo/EducationModal'
 import type { ExamSchedule } from '@/types/exam-schedule'
 import { toast } from '@/stores/toastStore'
 
@@ -34,6 +35,10 @@ import { AddExamScheduleModal } from '@/components/myinfo/AddExamScheduleModal'
 import { ConvertExamToCertModal } from '@/components/myinfo/ConvertExamToCertModal'
 import { MyinfoProgressGauge } from '@/components/myinfo/MyinfoProgressGauge'
 import { StorageUsageBar } from '@/components/myinfo/StorageUsageBar'
+import { MyInfoItemRow } from '@/components/myinfo/MyInfoItemRow'
+import { MyInfoEmptyAdd } from '@/components/myinfo/MyInfoEmptyAdd'
+import { MyInfoViewRow } from '@/components/myinfo/MyInfoViewRow'
+import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 
 // ── 섹션 메타데이터 ────────────────────────────────────────
 const SECTIONS = [
@@ -57,6 +62,46 @@ const ACCENT_STYLE = {
   success: { icon: 'bg-success/15 text-success', border: 'border border-success/25', activeBorder: 'border-2 border-success', activeGlow: 'shadow-lg' },
   danger:  { icon: 'bg-danger/15 text-danger',   border: 'border border-danger/25',  activeBorder: 'border-2 border-danger',  activeGlow: 'shadow-lg'  },
   violet:  { icon: 'bg-violet/15 text-violet',   border: 'border border-violet/25',  activeBorder: 'border-2 border-violet',  activeGlow: 'shadow-lg'  },
+}
+
+// ── 섹션 collapsible 상태 (localStorage 보존) ─────────────
+const COLLAPSE_KEY = 'myinfo:collapsed:v2'
+
+interface CollapseCtxValue {
+  isCollapsed: (id: string) => boolean
+  toggle: (id: string) => void
+}
+const CollapseCtx = createContext<CollapseCtxValue | null>(null)
+
+function useCollapsedSections() {
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    const allIds = () => new Set<string>(SECTIONS.map((s) => s.id))
+    try {
+      const raw = localStorage.getItem(COLLAPSE_KEY)
+      // 첫 방문 (저장된 상태 없음) → 모두 접힘. 이후엔 사용자 마지막 상태 그대로.
+      return raw ? new Set<string>(JSON.parse(raw) as string[]) : allIds()
+    } catch { return allIds() }
+  })
+  const persist = (next: Set<string>) => {
+    setCollapsed(next)
+    try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next])) } catch { /* ignore */ }
+  }
+  return {
+    isCollapsed: (id: string) => collapsed.has(id),
+    toggle: (id: string) => {
+      const next = new Set(collapsed)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      persist(next)
+    },
+    collapseAll: () => persist(new Set(SECTIONS.map((s) => s.id))),
+    expandAll: () => persist(new Set()),
+    allCollapsed: collapsed.size >= SECTIONS.length,
+  }
+}
+
+function useCollapse(): CollapseCtxValue {
+  const ctx = useContext(CollapseCtx)
+  return ctx ?? { isCollapsed: () => false, toggle: () => {} }
 }
 
 const LANG_CERT_TYPES = ['TOEIC', 'TOEIC Speaking', 'OPIC', 'TEPS', 'JLPT', 'HSK', '기타']
@@ -83,21 +128,24 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
 
 function Field({
   label, value, onChange, onBlur, type = 'text',
-  placeholder, maxLength, copyable, as, span, required,
+  placeholder, maxLength, copyable, as, span, required, disabled,
 }: {
   label: string; value: string; onChange: (v: string) => void
   onBlur?: () => void; type?: string; placeholder?: string
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
-  required?: boolean
+  required?: boolean; disabled?: boolean
 }) {
-  const cls = 'w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all'
+  // input·select·date 시각 통일 — 명시 h-9 (36px). copyable 면 input 안 오른쪽에 CopyButton(absolute) 자리 reserve.
+  const base = 'w-full bg-input border border-line rounded-lg text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all'
+  const cls = `${base} px-3 h-9 ${copyable ? 'pr-10' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
+  const textareaCls = `${base} px-3 py-2 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
   // 자소서 소재 textarea — 베타 피드백 패턴 (auto-resize 200~500 + lineHeight 1.6)
   const { ref: textareaRef, autoResize } = useAutoResize(value, { min: 80, max: 500 })
   return (
     <div className={span ? 'col-span-2' : ''}>
       <FieldLabel label={label} required={required} />
-      <div className="flex items-start gap-1.5">
-        {as === 'textarea' ? (
+      {as === 'textarea' ? (
+        <div className="flex items-start gap-1.5">
           <div className="flex-1">
             <textarea
               ref={textareaRef}
@@ -110,7 +158,7 @@ function Field({
               placeholder={placeholder}
               maxLength={maxLength}
               style={{ minHeight: 80, lineHeight: 1.6 }}
-              className={cls + ' resize-y'}
+              className={textareaCls + ' resize-y'}
             />
             {maxLength && (
               <p
@@ -128,7 +176,10 @@ function Field({
               </p>
             )}
           </div>
-        ) : (
+          {copyable && <CopyButton value={value} />}
+        </div>
+      ) : (
+        <div className="relative">
           <input
             type={type}
             value={value}
@@ -136,11 +187,16 @@ function Field({
             onBlur={onBlur}
             placeholder={placeholder}
             maxLength={maxLength}
+            disabled={disabled}
             className={cls}
           />
-        )}
-        {copyable && <CopyButton value={value} />}
-      </div>
+          {copyable && (
+            <span className="absolute right-1 top-1/2 -translate-y-1/2">
+              <CopyButton value={value} />
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -152,7 +208,7 @@ function SelectField({ label, value, onChange, options, required }: {
     <div>
       <FieldLabel label={label} required={required} />
       <div className="relative">
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-input border border-line rounded-lg px-3 py-2 pr-8 text-xs text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all appearance-none">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-input border border-line rounded-lg px-3 h-9 pr-8 text-xs text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all appearance-none">
           <option value="">선택</option>
           {options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -165,15 +221,25 @@ function SelectField({ label, value, onChange, options, required }: {
 }
 
 // ── 모달 ──────────────────────────────────────────────────
-function Modal({ title, onClose, onSave, children, saving }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode; saving?: boolean }) {
+function Modal({ title, onClose, onSave, children, saving, onDelete }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode; saving?: boolean; onDelete?: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0" onClick={() => { if (!saving) onClose() }}>
       <div role="dialog" aria-modal="true" aria-label={title} className="bg-surface border border-line rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold text-text-primary px-6 pt-6 pb-3 shrink-0">{title}</h3>
         <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-3">{children}</div>
-        <div className="flex gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-line shrink-0">
-          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 text-xs text-text-secondary border border-line rounded-lg hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50">취소</button>
-          <button onClick={onSave} disabled={saving} className="flex-1 py-2.5 text-xs font-semibold bg-brand hover:bg-accent active:bg-accent-hover text-text-primary rounded-lg transition-colors disabled:opacity-50">{saving ? '저장 중...' : '저장'}</button>
+        <div className="flex items-center gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-line shrink-0">
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              disabled={saving}
+              className="text-xs text-text-quaternary hover:text-danger px-2 py-2.5 transition-colors disabled:opacity-50"
+            >
+              삭제
+            </button>
+          )}
+          <div className="flex-1" />
+          <button onClick={onClose} disabled={saving} className="min-w-[5rem] py-2.5 text-xs text-text-secondary border border-line rounded-lg hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50">취소</button>
+          <button onClick={onSave} disabled={saving} className="min-w-[5rem] py-2.5 text-xs font-semibold bg-brand hover:bg-accent active:bg-accent-hover text-text-primary rounded-lg transition-colors disabled:opacity-50">{saving ? '저장 중...' : '저장'}</button>
         </div>
       </div>
     </div>
@@ -203,10 +269,18 @@ function SectionCard({ id, sectionRef, saved, isActive, headerRight, children }:
 }) {
   const meta = SECTIONS.find(s => s.id === id)!
   const ac = ACCENT_STYLE[meta.accent as keyof typeof ACCENT_STYLE]
+  const { isCollapsed, toggle } = useCollapse()
+  const closed = isCollapsed(id)
   return (
     <section id={id} ref={sectionRef as React.RefCallback<HTMLElement>} className={`rounded-xl transition-all duration-300 bg-card overflow-hidden
       ${isActive ? `${ac.activeBorder} ${ac.activeGlow}` : ac.border}`}>
-      <div className="px-6 py-4 border-b border-line flex items-center justify-between">
+      <button
+        type="button"
+        onClick={() => toggle(id)}
+        aria-expanded={!closed}
+        aria-controls={`${id}-body`}
+        className={`w-full px-6 py-4 flex items-center justify-between text-left hover:bg-surface-2/40 transition-colors ${closed ? '' : 'border-b border-line'}`}
+      >
         <div className="flex items-center gap-3">
           <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base ${ac.icon}`}>{meta.icon}</span>
           <h2 className="text-sm font-semibold text-text-primary">{meta.label}</h2>
@@ -219,56 +293,11 @@ function SectionCard({ id, sectionRef, saved, isActive, headerRight, children }:
               저장됨
             </span>
           )}
+          <CollapsibleChevron open={!closed} />
         </div>
-      </div>
-      <div className="px-6 py-5">{children}</div>
-    </section>
-  )
-}
-
-// ── 확장형 아이템 카드 ────────────────────────────────────
-function ExpandableItem({ title, subtitle, badge, onEdit, onDelete, children }: {
-  title: string; subtitle?: string; badge?: string; onEdit: () => void; onDelete: () => void; children: React.ReactNode
-}) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className={`rounded-xl border transition-all duration-200 ${open ? 'border-brand/30 bg-brand/4' : 'border-line bg-card hover:border-line-strong'}`}>
-      <button className="w-full flex items-center gap-3 px-4 py-3 text-left" onClick={() => setOpen(!open)}>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-text-primary truncate">{title}</p>
-          {subtitle && <p className="text-[11px] text-text-quaternary truncate mt-0.5">{subtitle}</p>}
-        </div>
-        {badge && <span className="text-[10px] px-2 py-0.5 rounded-full bg-card-strong text-text-tertiary border border-line">{badge}</span>}
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={`text-text-quaternary flex-none transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
-          <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
       </button>
-      {open && (
-        <div className="px-4 pb-4 border-t border-line">
-          <div className="pt-4 space-y-3">{children}</div>
-          <div className="flex gap-2 mt-4 pt-3 border-t border-line">
-            <button onClick={onEdit} className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 min-h-[44px] lg:min-h-0 rounded-lg hover:bg-card-strong active:bg-surface-3 border border-line transition-colors">
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
-              편집
-            </button>
-            <button onClick={onDelete} className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 min-h-[44px] lg:min-h-0 rounded-lg hover:bg-danger/8 border border-line hover:border-danger/20 transition-colors">
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
-              삭제
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value?: string }) {
-  if (!value) return null
-  return (
-    <div className="flex gap-3">
-      <span className="text-[11px] text-text-quaternary w-20 flex-none">{label}</span>
-      <span className="text-[11px] text-text-secondary flex-1">{value}</span>
-    </div>
+      {!closed && <div id={`${id}-body`} className="px-6 py-5">{children}</div>}
+    </section>
   )
 }
 
@@ -290,6 +319,7 @@ export function MyInfo() {
   const scrollLockTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const location = useLocation()
   const { sections: progressSections } = useMyinfoProgress()
+  const collapse = useCollapsedSections()
 
   // 활성 탭이 화면 밖이면 가로 스크롤로 중앙으로 끌어옴 (모바일 sticky 칩)
   useEffect(() => {
@@ -363,11 +393,21 @@ export function MyInfo() {
   }
 
   return (
+    <CollapseCtx.Provider value={{ isCollapsed: collapse.isCollapsed, toggle: collapse.toggle }}>
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
-      <div className="mb-6">
-        <h1 className="text-text-primary text-xl font-bold">내 정보 창고</h1>
-        <p className="text-text-tertiary text-xs mt-1.5">이력서·자소서 작성 시 한 번 쓰면 평생 재활용하는 데이터 창고예요</p>
-        <p className="text-text-quaternary text-[11px] mt-0.5">필드를 벗어나면 자동 저장 · 복사 버튼으로 자소서 작성 시 바로 활용</p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-text-primary text-xl font-bold">내 정보 창고</h1>
+          <p className="text-text-tertiary text-xs mt-1.5">이력서·자소서 작성 시 한 번 쓰면 평생 재활용하는 데이터 창고예요</p>
+          <p className="text-text-quaternary text-[11px] mt-0.5">필드를 벗어나면 자동 저장 · 복사 버튼으로 자소서 작성 시 바로 활용</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => collapse.allCollapsed ? collapse.expandAll() : collapse.collapseAll()}
+          className="shrink-0 text-[11px] font-medium text-text-tertiary hover:text-text-primary px-2.5 py-1.5 rounded-md border border-line hover:bg-card-strong transition-colors"
+        >
+          {collapse.allCollapsed ? '모두 펼치기' : '모두 접기'}
+        </button>
       </div>
 
       <div className="mb-6 space-y-3">
@@ -468,10 +508,15 @@ export function MyInfo() {
         </div>
       </div>
     </div>
+    </CollapseCtx.Provider>
   )
 }
 
 // ── 기본 인적사항 ─────────────────────────────────────────
+const GENDER_KO: Record<string, string> = { MALE: '남성', FEMALE: '여성' }
+const PROFILE_FIELDS: Array<keyof Pick<UserProfile, 'name' | 'name_hanja' | 'gender' | 'birthdate' | 'phone' | 'email_personal'>> =
+  ['name', 'name_hanja', 'gender', 'birthdate', 'phone', 'email_personal']
+
 function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
   const { data: profile } = useProfile()
   const { mutate: update } = useUpdateProfile()
@@ -480,6 +525,7 @@ function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement
   const init = { name: '', name_hanja: '', gender: '', birthdate: '', phone: '', email_personal: '' }
   const [form, setForm] = useState(init)
   const [loaded, setLoaded] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   if (profile && !loaded) {
     setForm({
@@ -493,21 +539,81 @@ function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement
   const save = (key: string, val: string) =>
     update({ [key]: val || null } as Partial<UserProfile>, { onSuccess: show })
 
+  const hasAny = !!profile && PROFILE_FIELDS.some((k) => (profile[k] ?? '').toString().trim().length > 0)
+
   return (
     <SectionCard id="profile" sectionRef={sectionRef} saved={saved} isActive={isActive}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-        <Field label="이름" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} onBlur={() => save('name', form.name)} placeholder="홍길동" copyable />
-        <Field label="이름 (한자)" value={form.name_hanja} onChange={(v) => setForm(f => ({ ...f, name_hanja: v }))} onBlur={() => save('name_hanja', form.name_hanja)} placeholder="洪吉童" copyable />
-        <SelectField label="성별" value={form.gender} onChange={(v) => { setForm(f => ({ ...f, gender: v })); save('gender', v) }} options={['MALE', 'FEMALE']} />
-        <Field label="생년월일" type="date" value={form.birthdate} onChange={(v) => { setForm(f => ({ ...f, birthdate: v })); save('birthdate', v) }} />
-        <Field label="연락처" value={form.phone} onChange={(v) => setForm(f => ({ ...f, phone: v }))} onBlur={() => save('phone', form.phone)} placeholder="010-0000-0000" copyable />
-        <Field label="이메일" value={form.email_personal} onChange={(v) => setForm(f => ({ ...f, email_personal: v }))} onBlur={() => save('email_personal', form.email_personal)} placeholder="example@email.com" copyable />
-      </div>
+      {!hasAny && !editing ? (
+        <MyInfoEmptyAdd
+          emoji="👤"
+          label="기본 인적사항 입력하기"
+          example="예: 이름 · 성별 · 생년월일 · 연락처"
+          onClick={() => setEditing(true)}
+        />
+      ) : (
+        <div>
+          <div className="flex justify-end -mt-1 mb-2">
+            <EditToggleButton editing={editing} onClick={() => setEditing((v) => !v)} />
+          </div>
+          {editing ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              <Field label="이름" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} onBlur={() => save('name', form.name)} placeholder="홍길동" copyable required />
+              <Field label="이름 (한자)" value={form.name_hanja} onChange={(v) => setForm(f => ({ ...f, name_hanja: v }))} onBlur={() => save('name_hanja', form.name_hanja)} placeholder="洪吉童" copyable />
+              <SelectField label="성별" value={form.gender} onChange={(v) => { setForm(f => ({ ...f, gender: v })); save('gender', v) }} options={['MALE', 'FEMALE']} />
+              <Field label="생년월일" type="date" value={form.birthdate} onChange={(v) => { setForm(f => ({ ...f, birthdate: v })); save('birthdate', v) }} />
+              <Field label="연락처" value={form.phone} onChange={(v) => setForm(f => ({ ...f, phone: v }))} onBlur={() => save('phone', form.phone)} placeholder="010-0000-0000" copyable />
+              <Field label="이메일" value={form.email_personal} onChange={(v) => setForm(f => ({ ...f, email_personal: v }))} onBlur={() => save('email_personal', form.email_personal)} placeholder="example@email.com" copyable />
+            </div>
+          ) : (
+            <div>
+              <MyInfoViewRow label="이름" value={profile?.name} copyable />
+              <MyInfoViewRow label="이름 (한자)" value={profile?.name_hanja} copyable />
+              <MyInfoViewRow label="성별" value={profile?.gender ? GENDER_KO[profile.gender] : ''} />
+              <MyInfoViewRow label="생년월일" value={profile?.birthdate} />
+              <MyInfoViewRow label="연락처" value={profile?.phone} copyable />
+              <MyInfoViewRow label="이메일" value={profile?.email_personal} copyable />
+            </div>
+          )}
+        </div>
+      )}
     </SectionCard>
   )
 }
 
+// ── 편집/완료 토글 버튼 ───────────────────────────────────
+function EditToggleButton({ editing, onClick }: { editing: boolean; onClick: () => void }) {
+  if (editing) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand hover:text-accent px-2.5 py-1 rounded-md bg-brand/10 hover:bg-brand/15 transition-colors"
+      >
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+          <path d="M2 6L4.5 8.5L9 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        완료
+      </button>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 text-[11px] font-medium text-text-tertiary hover:text-brand px-2 py-1 rounded-md hover:bg-card-strong transition-colors"
+    >
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+        <path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      </svg>
+      편집
+    </button>
+  )
+}
+
 // ── 병역사항 ──────────────────────────────────────────────
+const MILITARY_FIELDS: Array<keyof Pick<UserProfile, 'military_branch' | 'military_type' | 'military_start' | 'military_end' | 'military_unit'>> =
+  ['military_branch', 'military_type', 'military_start', 'military_end', 'military_unit']
+
 function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
   const { data: profile } = useProfile()
   const { mutate: update } = useUpdateProfile()
@@ -515,6 +621,7 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
   const init = { military_branch: '', military_type: '', military_start: '', military_end: '', military_unit: '' }
   const [form, setForm] = useState(init)
   const [loaded, setLoaded] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   if (profile && !loaded) {
     setForm({
@@ -526,27 +633,76 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
   }
 
   const isMale = profile?.gender === 'MALE'
+  const hasAny = !!profile && MILITARY_FIELDS.some((k) => (profile[k] ?? '').toString().trim().length > 0)
+  const isServing = form.military_type === '복무 중'
   const save = (key: string, val: string) => update({ [key]: val || null } as Partial<UserProfile>, { onSuccess: show })
+
+  const handleEndChange = (v: string) => {
+    if (v && form.military_start && v < form.military_start) {
+      toast.error('전역일은 입대일 이후여야 해요.')
+      return
+    }
+    setForm(f => ({ ...f, military_end: v }))
+    save('military_end', v)
+  }
+  const handleStartChange = (v: string) => {
+    if (v && form.military_end && v > form.military_end) {
+      toast.error('입대일은 전역일 이전이어야 해요.')
+      return
+    }
+    setForm(f => ({ ...f, military_start: v }))
+    save('military_start', v)
+  }
+  const handleTypeChange = (v: string) => {
+    setForm(f => ({ ...f, military_type: v, military_end: v === '복무 중' ? '' : f.military_end }))
+    save('military_type', v)
+    if (v === '복무 중' && form.military_end) save('military_end', '')
+  }
 
   return (
     <SectionCard id="military" sectionRef={sectionRef} saved={saved} isActive={isActive}>
-      {!isMale
-        ? (
-          <div className="flex flex-col items-center py-6 gap-2">
-            <span className="text-2xl">🪖</span>
-            <p className="text-xs text-text-quaternary text-center">기본 인적사항에서 성별을 <span className="text-text-tertiary">남성</span>으로 설정하면 입력할 수 있어요</p>
+      {!isMale ? (
+        <div className="flex flex-col items-center py-6 gap-2">
+          <span className="text-2xl">🪖</span>
+          <p className="text-xs text-text-quaternary text-center">기본 인적사항에서 성별을 <span className="text-text-tertiary">남성</span>으로 설정하면 입력할 수 있어요</p>
+        </div>
+      ) : !hasAny && !editing ? (
+        <MyInfoEmptyAdd
+          emoji="🪖"
+          label="병역사항 입력하기"
+          example="예: 육군 · 만기전역 · 2018.03 ~ 2019.12"
+          onClick={() => setEditing(true)}
+        />
+      ) : (
+        <div>
+          <div className="flex justify-end -mt-1 mb-2">
+            <EditToggleButton editing={editing} onClick={() => setEditing((v) => !v)} />
           </div>
-        )
-        : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            <SelectField label="군별" value={form.military_branch} onChange={(v) => { setForm(f => ({ ...f, military_branch: v })); save('military_branch', v) }} options={MILITARY_BRANCHES} />
-            <SelectField label="전역 구분" value={form.military_type} onChange={(v) => { setForm(f => ({ ...f, military_type: v })); save('military_type', v) }} options={MILITARY_TYPES} />
-            <Field label="입대일" type="date" value={form.military_start} onChange={(v) => { setForm(f => ({ ...f, military_start: v })); save('military_start', v) }} />
-            <Field label="전역일" type="date" value={form.military_end} onChange={(v) => { setForm(f => ({ ...f, military_end: v })); save('military_end', v) }} />
-            <Field label="병과" value={form.military_unit} onChange={(v) => setForm(f => ({ ...f, military_unit: v }))} onBlur={() => save('military_unit', form.military_unit)} placeholder="보병, 통신 등" span />
-          </div>
-        )
-      }
+          {editing ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              <SelectField label="군별" value={form.military_branch} onChange={(v) => { setForm(f => ({ ...f, military_branch: v })); save('military_branch', v) }} options={MILITARY_BRANCHES} />
+              <SelectField label="전역 구분" value={form.military_type} onChange={handleTypeChange} options={MILITARY_TYPES} />
+              <Field label="입대일" type="date" value={form.military_start} onChange={handleStartChange} />
+              <Field
+                label={isServing ? '전역일 (복무 중)' : '전역일'}
+                type="date"
+                value={isServing ? '' : form.military_end}
+                onChange={handleEndChange}
+                disabled={isServing}
+              />
+              <Field label="병과" value={form.military_unit} onChange={(v) => setForm(f => ({ ...f, military_unit: v }))} onBlur={() => save('military_unit', form.military_unit)} placeholder="보병, 통신 등" span />
+            </div>
+          ) : (
+            <div>
+              <MyInfoViewRow label="군별" value={profile?.military_branch} />
+              <MyInfoViewRow label="전역 구분" value={profile?.military_type} />
+              <MyInfoViewRow label="입대일" value={profile?.military_start} />
+              <MyInfoViewRow label="전역일" value={isServing ? '복무 중' : profile?.military_end} />
+              <MyInfoViewRow label="병과" value={profile?.military_unit} />
+            </div>
+          )}
+        </div>
+      )}
     </SectionCard>
   )
 }
@@ -590,38 +746,38 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
     <SectionCard id="language-certs" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
         {isLoading && [1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-xl bg-card animate-pulse" />
+          <div key={i} className="h-14 rounded-xl bg-card animate-pulse" />
         ))}
         {!isLoading && items.length === 0 && (
-          <p className="text-text-quaternary text-xs text-center py-4">등록된 어학 자격증이 없어요. <br /><span className="text-text-quaternary/60">TOEIC, OPIC 등 취득한 어학 성적을 추가해보세요.</span></p>
+          <MyInfoEmptyAdd
+            emoji="🌐"
+            label="첫 어학 자격증 추가하기"
+            example="예: TOEIC · 990 · 2024.03"
+            onClick={openAdd}
+          />
         )}
         {items.map((item) => (
-          <ExpandableItem
+          <MyInfoItemRow
             key={item.id}
-            title={item.cert_type}
-            subtitle={[item.score_grade, item.acquired_at].filter(Boolean).join(' · ')}
-            badge={item.file_url ? '파일첨부' : undefined}
-            onEdit={() => openEdit(item)}
-            onDelete={() => setDeleteTarget(item)}
-          >
-            <DetailRow label="종류" value={item.cert_type} />
-            <DetailRow label="점수·등급" value={item.score_grade} />
-            <DetailRow label="발급기관" value={item.issuer} />
-            <DetailRow label="자격증번호" value={item.cert_number} />
-            <DetailRow label="취득일" value={item.acquired_at} />
-            <DetailRow label="만료일" value={item.expires_at} />
-            {item.file_url && (
-              <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-brand hover:underline">
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 8V9.5a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><path d="M5.5 1v6M3 5l2.5 2.5L8 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                첨부 파일 보기
-              </a>
-            )}
-          </ExpandableItem>
+            emoji="🌐"
+            accent="success"
+            title={[item.cert_type, item.score_grade].filter(Boolean).join(' · ')}
+            meta={[item.issuer, item.acquired_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
+            onClick={() => openEdit(item)}
+          />
         ))}
-        <AddButton onClick={openAdd} label="어학 자격증 추가" />
+        {!isLoading && items.length > 0 && (
+          <MyInfoEmptyAdd label="어학 자격증 추가" compact onClick={openAdd} />
+        )}
       </div>
       {modal && (
-        <Modal title={modal === 'add' ? '어학 자격증 추가' : '어학 자격증 편집'} onClose={() => setModal(null)} onSave={handleSave} saving={saving}>
+        <Modal
+          title={modal === 'add' ? '어학 자격증 추가' : '어학 자격증 편집'}
+          onClose={() => setModal(null)}
+          onSave={handleSave}
+          saving={saving}
+          onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
+        >
           <SelectField label="종류" value={form.cert_type} onChange={(v) => setForm(f => ({ ...f, cert_type: v }))} options={LANG_CERT_TYPES} required />
           <Field label="점수·등급" value={form.score_grade} onChange={(v) => setForm(f => ({ ...f, score_grade: v }))} placeholder="990 / 1+" />
           <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder="ETS" />
@@ -631,7 +787,13 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
           <FileUpload slot={slot} scope="myinfo/language-cert" onChange={setSlot} hint="예: 점수증명서, 성적표" disabled={saving} />
         </Modal>
       )}
-      {deleteTarget && <DeleteModal label={deleteTarget.cert_type} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
+      {deleteTarget && (
+        <DeleteModal
+          label={deleteTarget.cert_type}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null); setModal(null) }}
+        />
+      )}
     </SectionCard>
   )
 }
@@ -675,30 +837,38 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
     <SectionCard id="certs" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
         {isLoading && [1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-xl bg-card animate-pulse" />
+          <div key={i} className="h-14 rounded-xl bg-card animate-pulse" />
         ))}
         {!isLoading && items.length === 0 && (
-          <p className="text-text-quaternary text-xs text-center py-4">등록된 자격증이 없어요. <br /><span className="text-text-quaternary/60">정보처리기사, 운전면허 등 취득한 자격증을 추가해보세요.</span></p>
+          <MyInfoEmptyAdd
+            emoji="📜"
+            label="첫 자격증 추가하기"
+            example="예: 정보처리기사 · 한국산업인력공단 · 2024.05"
+            onClick={openAdd}
+          />
         )}
         {items.map((item) => (
-          <ExpandableItem key={item.id} title={item.name} subtitle={[item.issuer, item.acquired_at].filter(Boolean).join(' · ')} badge={item.file_url ? '파일첨부' : undefined} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
-            <DetailRow label="자격증명" value={item.name} />
-            <DetailRow label="발급기관" value={item.issuer} />
-            <DetailRow label="자격증번호" value={item.cert_number} />
-            <DetailRow label="취득일" value={item.acquired_at} />
-            <DetailRow label="만료일" value={item.expires_at} />
-            {item.file_url && (
-              <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-brand hover:underline">
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 8V9.5a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><path d="M5.5 1v6M3 5l2.5 2.5L8 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                첨부 파일 보기
-              </a>
-            )}
-          </ExpandableItem>
+          <MyInfoItemRow
+            key={item.id}
+            emoji="📜"
+            accent="brand"
+            title={item.name}
+            meta={[item.issuer, item.acquired_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
+            onClick={() => openEdit(item)}
+          />
         ))}
-        <AddButton onClick={openAdd} label="자격증 추가" />
+        {!isLoading && items.length > 0 && (
+          <MyInfoEmptyAdd label="자격증 추가" compact onClick={openAdd} />
+        )}
       </div>
       {modal && (
-        <Modal title={modal === 'add' ? '자격증 추가' : '자격증 편집'} onClose={() => setModal(null)} onSave={handleSave} saving={saving}>
+        <Modal
+          title={modal === 'add' ? '자격증 추가' : '자격증 편집'}
+          onClose={() => setModal(null)}
+          onSave={handleSave}
+          saving={saving}
+          onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
+        >
           <Field label="자격증명" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="정보처리기사" required />
           <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder="한국산업인력공단" />
           <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
@@ -707,7 +877,13 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           <FileUpload slot={slot} scope="myinfo/cert" onChange={setSlot} hint="예: 자격증, 합격증" disabled={saving} />
         </Modal>
       )}
-      {deleteTarget && <DeleteModal label={deleteTarget.name} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
+      {deleteTarget && (
+        <DeleteModal
+          label={deleteTarget.name}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null); setModal(null) }}
+        />
+      )}
     </SectionCard>
   )
 }
@@ -731,7 +907,12 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
     <SectionCard id="exam-schedules" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
         {items.length === 0 && (
-          <p className="text-text-quaternary text-xs py-4 text-center">아직 등록된 시험 일정이 없어요.</p>
+          <MyInfoEmptyAdd
+            emoji="📚"
+            label="첫 시험 일정 추가하기"
+            example="예: 정보처리기사 필기 · 2024.08.15 14:00"
+            onClick={() => setModal('add')}
+          />
         )}
         {items.map((item) => {
           const examDate = dayjs(item.exam_date)
@@ -739,323 +920,142 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
           const isPassed = dday < 0
           const variant = getDdayVariant(dday)
           return (
-            <div key={item.id} className="bg-card border border-line rounded-lg p-3">
-              <div className="flex items-start gap-3">
-                <div className="flex-none w-9 h-9 rounded-lg bg-violet/15 text-violet flex items-center justify-center text-base">📚</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-text-primary text-sm font-medium truncate">{item.name}</p>
-                    <span className={`text-[10px] font-mono font-semibold flex-none ${EXAM_DDAY_VARIANT_CLASS[variant]}`}>{getDdayLabel(dday)}</span>
-                  </div>
-                  <p className="text-text-quaternary text-[11px]">
-                    {examDate.format('M월 D일 (ddd) HH:mm')}
-                    {item.location && ` · ${item.location}`}
-                  </p>
-                  {item.memo && <p className="text-text-tertiary text-[11px] mt-1 line-clamp-2">{item.memo}</p>}
+            <MyInfoItemRow
+              key={item.id}
+              emoji="📚"
+              accent="violet"
+              title={item.name}
+              meta={[
+                examDate.format('M월 D일 (ddd) HH:mm'),
+                item.location,
+              ].filter(Boolean).join(' · ')}
+              onClick={() => setModal(item)}
+              rightSlot={
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {isPassed ? (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setConvertTarget(item) }}
+                      className="text-[10px] font-medium text-violet hover:text-text-primary px-2 py-1 rounded-md bg-violet/10 hover:bg-violet/20 border border-violet/30 transition-colors"
+                    >
+                      결과 입력
+                    </button>
+                  ) : (
+                    <span className={`text-[11px] font-mono font-semibold ${EXAM_DDAY_VARIANT_CLASS[variant]}`}>
+                      {getDdayLabel(dday)}
+                    </span>
+                  )}
+                  <span className="text-text-quaternary text-lg leading-none" aria-hidden="true">›</span>
                 </div>
-              </div>
-              <div className="flex gap-2 mt-3 pt-3 border-t border-line flex-wrap">
-                {isPassed && (
-                  <button
-                    onClick={() => setConvertTarget(item)}
-                    className="flex items-center gap-1.5 text-[11px] text-violet hover:text-text-primary px-3 py-1.5 rounded-lg bg-violet/10 hover:bg-violet/20 border border-violet/30 hover:border-violet/50 transition-colors font-medium"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 6L4.5 8.5L9 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    결과 입력 → 자격증 이관
-                  </button>
-                )}
-                <div className="flex-1" />
-                <button
-                  onClick={() => setModal(item)}
-                  className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-primary px-3 py-1.5 rounded-lg hover:bg-card-strong active:bg-surface-3 border border-line transition-colors"
-                >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M7.5 1.5L9.5 3.5L4 9H2V7L7.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
-                  편집
-                </button>
-                <button
-                  onClick={() => setDeleteTarget(item)}
-                  className="flex items-center gap-1.5 text-[11px] text-text-quaternary hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger/8 border border-line hover:border-danger/20 transition-colors"
-                >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
-                  삭제
-                </button>
-              </div>
-            </div>
+              }
+            />
           )
         })}
-        <AddButton onClick={() => setModal('add')} label="시험 일정 추가" />
+        {items.length > 0 && (
+          <MyInfoEmptyAdd label="시험 일정 추가" compact onClick={() => setModal('add')} />
+        )}
       </div>
       {modal && (
         <AddExamScheduleModal
           open={true}
           onClose={() => setModal(null)}
           initial={modal === 'add' ? null : modal}
+          onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
         />
       )}
       {convertTarget && (
         <ConvertExamToCertModal exam={convertTarget} onClose={() => setConvertTarget(null)} />
       )}
-      {deleteTarget && <DeleteModal label={deleteTarget.name} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
+      {deleteTarget && (
+        <DeleteModal
+          label={deleteTarget.name}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null); setModal(null) }}
+        />
+      )}
     </SectionCard>
   )
 }
 
 // ── 학력 ──────────────────────────────────────────────────
-const EDUCATION_DEGREES = ['고등학교', '전문대', '대학교 (학사)', '대학원 (석사)', '대학원 (박사)', '기타']
-const EDUCATION_STATUSES = ['재학중', '졸업', '졸업예정', '휴학', '수료', '편입', '중퇴']
-const MINOR_TYPES = ['복수전공', '부전공', '이중전공', '연계전공', '심화전공']
 
 function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
   const { data: items = [], isLoading } = useEducations()
-  const { mutate: create } = useCreateEducation()
-  const { saved, show } = useSaved()
-  const initialized = useRef(false)
+  const { mutateAsync: create } = useCreateEducation()
+  const { mutateAsync: update } = useUpdateEducation()
+  const { mutate: remove } = useDeleteEducation()
+  const [modal, setModal] = useState<null | 'add' | Education>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Education | null>(null)
 
-  // 진입 시 학력 0개면 빈 row 1개 자동 생성 (한 번만)
-  useEffect(() => {
-    if (initialized.current || isLoading) return
-    initialized.current = true
-    if (items.length === 0) {
-      create({ school_name: '', degree: '대학교 (학사)', status: '재학중' } as Omit<Education, 'id'>)
+  const handleSave = async (dto: Omit<Education, 'id'>) => {
+    if (modal === 'add') {
+      await create(dto)
+    } else if (modal && typeof modal === 'object') {
+      await update({ id: modal.id, dto: dto as Partial<Education> })
     }
-  }, [isLoading, items.length, create])
+  }
 
-  const handleAdd = () => {
-    create({ school_name: '', degree: '대학교 (학사)', status: '재학중' } as Omit<Education, 'id'>, {
-      onError: () => toast.error('학력 추가에 실패했어요.'),
-    })
+  const periodOf = (e: Education) => {
+    const fmt = (d?: string) => (d ? d.slice(0, 7).replace('-', '.') : '')
+    const s = fmt(e.start_at)
+    const x = fmt(e.end_at)
+    if (!s && !x) return ''
+    return `${s} ~ ${x}`
   }
 
   return (
-    <SectionCard id="education" sectionRef={sectionRef} saved={saved} isActive={isActive}>
-      <div className="space-y-4">
-        {items.map((item) => (
-          <EducationItem key={item.id} item={item} onSaved={show} />
+    <SectionCard id="education" sectionRef={sectionRef} isActive={isActive}>
+      <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-14 rounded-xl bg-card animate-pulse" />
         ))}
-        <AddButton onClick={handleAdd} label="학력 추가" />
+        {!isLoading && items.length === 0 && (
+          <MyInfoEmptyAdd
+            emoji="🎓"
+            label="첫 학력 추가하기"
+            example="예: 서울대학교 · 컴퓨터공학 · 2020-2024"
+            onClick={() => setModal('add')}
+          />
+        )}
+        {items.map((item) => {
+          const gpa = item.gpa ? (item.gpa_max ? `${item.gpa}/${item.gpa_max}` : item.gpa) : ''
+          const meta = [item.degree, item.status, periodOf(item), gpa, item.file_url && '📎 파일']
+            .filter(Boolean)
+            .join(' · ')
+          return (
+            <MyInfoItemRow
+              key={item.id}
+              emoji="🎓"
+              accent="success"
+              title={[item.school_name || '(학교명 미입력)', item.major].filter(Boolean).join(' · ')}
+              meta={meta || undefined}
+              onClick={() => setModal(item)}
+            />
+          )
+        })}
+        {!isLoading && items.length > 0 && (
+          <MyInfoEmptyAdd label="학력 추가" compact onClick={() => setModal('add')} />
+        )}
       </div>
+      {modal && (
+        <EducationModal
+          initial={modal === 'add' ? null : modal}
+          onClose={() => setModal(null)}
+          onSave={handleSave}
+          onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteModal
+          label={deleteTarget.school_name || '학력'}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null); setModal(null) }}
+        />
+      )}
     </SectionCard>
   )
 }
 
-function EducationItem({ item, onSaved }: { item: Education; onSaved: () => void }) {
-  const { mutate: update } = useUpdateEducation()
-  const { mutate: remove } = useDeleteEducation()
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [form, setForm] = useState({
-    school_name: item.school_name ?? '',
-    major:       item.major ?? '',
-    gpa:         item.gpa ?? '',
-    gpa_max:     item.gpa_max ?? '',
-    start_at:    item.start_at ?? '',
-    end_at:      item.end_at ?? '',
-    location:    item.location ?? '',
-  })
-
-  // Education은 인라인 자동저장 — pending file은 별도 state로 추적, item에서 existing 파생.
-  // file이 업로드 끝나면 setPendingFile(null) → derive로 fallback.
-  const [pendingFile, setPendingFile] = useState<File | null>(null)
-  const slot: FileSlot = pendingFile
-    ? { kind: 'pending', file: pendingFile }
-    : slotFromExisting(item.file_url, item.file_size_bytes)
-
-  const save = (
-    key: keyof Education,
-    value: string | number | EducationMinor[] | null,
-  ) => {
-    update({ id: item.id, dto: { [key]: value } as Partial<Education> }, {
-      onSuccess: onSaved,
-      onError: () => toast.error('저장에 실패했어요.'),
-    })
-  }
-
-  const minors = item.minors ?? []
-  const addMinor = (m: EducationMinor) => {
-    if (!m.name.trim()) return
-    save('minors', [...minors, m])
-  }
-  const removeMinor = (idx: number) => {
-    save('minors', minors.filter((_, i) => i !== idx))
-  }
-
-  return (
-    <div className="bg-card border border-line rounded-xl p-4 relative">
-      <button
-        onClick={() => setDeleteOpen(true)}
-        aria-label="학력 삭제"
-        className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-md text-text-quaternary hover:text-danger hover:bg-danger/8 transition-colors"
-      >
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-      </button>
-
-      <div className="space-y-3 pr-8">
-        <Field label="학교명" value={form.school_name} onChange={(v) => setForm(f => ({ ...f, school_name: v }))} onBlur={() => save('school_name', form.school_name)} placeholder="예: 서울대학교 / ○○고등학교" span required />
-        <SelectField label="학교 단계" value={item.degree ?? ''} onChange={(v) => save('degree', v)} options={EDUCATION_DEGREES} />
-        <SelectField label="상태" value={item.status ?? ''} onChange={(v) => save('status', v)} options={EDUCATION_STATUSES} />
-        <Field label="전공" value={form.major} onChange={(v) => setForm(f => ({ ...f, major: v }))} onBlur={() => save('major', form.major)} placeholder="예: 컴퓨터공학" />
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="학점" value={form.gpa} onChange={(v) => setForm(f => ({ ...f, gpa: v }))} onBlur={() => save('gpa', form.gpa)} placeholder="예: 3.8" />
-          <Field label="만점" value={form.gpa_max} onChange={(v) => setForm(f => ({ ...f, gpa_max: v }))} onBlur={() => save('gpa_max', form.gpa_max)} placeholder="예: 4.5" />
-        </div>
-        <Field label="입학일" type="date" value={form.start_at} onChange={(v) => { setForm(f => ({ ...f, start_at: v })); save('start_at', v) }} />
-        <Field label="졸업/예정일" type="date" value={form.end_at} onChange={(v) => { setForm(f => ({ ...f, end_at: v })); save('end_at', v) }} />
-        <Field label="위치" value={form.location} onChange={(v) => setForm(f => ({ ...f, location: v }))} onBlur={() => save('location', form.location)} placeholder="선택 입력" span />
-      </div>
-
-      {/* 복수·부전공 영역 */}
-      <div className="mt-4 pt-4 border-t border-line">
-        <p className="text-[11px] text-text-tertiary font-medium mb-2">복수·부전공</p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {minors.map((m, idx) => (
-            <span key={idx} className="inline-flex items-center gap-1.5 text-[11px] bg-card border border-line rounded-full pl-2.5 pr-1 py-1">
-              <span className="text-text-quaternary">{m.type}</span>
-              <span className="text-text-secondary">·</span>
-              <span className="text-text-primary">{m.name}</span>
-              {m.gpa && (
-                <>
-                  <span className="text-text-secondary">·</span>
-                  <span className="text-text-tertiary font-mono tabular-nums">
-                    {m.gpa}{m.gpa_max ? `/${m.gpa_max}` : ''}
-                  </span>
-                </>
-              )}
-              <button
-                onClick={() => removeMinor(idx)}
-                aria-label="제거"
-                className="w-5 h-5 flex items-center justify-center rounded-full text-text-quaternary hover:text-danger hover:bg-danger/10 transition-colors"
-              >
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1l6 6M7 1L1 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-              </button>
-            </span>
-          ))}
-          <MinorAddChip onAdd={addMinor} />
-        </div>
-      </div>
-
-      {/* 파일 첨부 — 인라인 자동저장: pending 즉시 업로드 + save */}
-      <div className="mt-4 pt-4 border-t border-line">
-        <FileUpload
-          slot={slot}
-          scope="myinfo/education"
-          onChange={(newSlot) => {
-            if (newSlot.kind === 'pending') {
-              setPendingFile(newSlot.file)
-              void (async () => {
-                try {
-                  const { file_url, file_size_bytes } = await resolveFileForSubmit(newSlot, 'myinfo/education')
-                  save('file_url', file_url)
-                  save('file_size_bytes', file_size_bytes)
-                } catch {
-                  toast.error('파일 업로드에 실패했어요.')
-                } finally {
-                  setPendingFile(null)
-                }
-              })()
-            } else if (newSlot.kind === 'empty') {
-              setPendingFile(null)
-              save('file_url', null)
-              save('file_size_bytes', null)
-            }
-          }}
-          hint="예: 졸업증명서, 성적증명서, 재학증명서, 학위증명서"
-        />
-      </div>
-
-      {deleteOpen && (
-        <DeleteModal
-          label={item.school_name || '학력'}
-          onClose={() => setDeleteOpen(false)}
-          onConfirm={() => { remove(item.id); setDeleteOpen(false) }}
-        />
-      )}
-    </div>
-  )
-}
-
-function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
-  const [open, setOpen] = useState(false)
-  const [type, setType] = useState(MINOR_TYPES[0])
-  const [name, setName] = useState('')
-  const [gpa, setGpa] = useState('')
-  const [gpaMax, setGpaMax] = useState('')
-
-  const reset = () => { setName(''); setGpa(''); setGpaMax(''); setOpen(false) }
-  const submit = () => {
-    if (!name.trim()) return
-    onAdd({
-      type,
-      name: name.trim(),
-      gpa: gpa.trim() || undefined,
-      gpa_max: gpaMax.trim() || undefined,
-    })
-    reset()
-  }
-  const handleEnter = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit()
-    if (e.key === 'Escape') reset()
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-[11px] text-text-quaternary hover:text-text-secondary bg-card hover:bg-card active:bg-card-strong border border-line border-dashed rounded-full px-2.5 py-1 transition-colors"
-      >
-        <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 1.5v6M1.5 4.5h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-        추가
-      </button>
-    )
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 bg-card border border-line rounded-lg px-2 py-1.5 w-full sm:w-auto">
-      <select
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        className="text-[11px] bg-card hover:bg-card-strong active:bg-surface-3 text-text-secondary px-2 py-1 rounded-md focus:outline-none focus:bg-card-strong transition-colors"
-      >
-        {MINOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-      </select>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={handleEnter}
-        autoFocus
-        placeholder="전공명"
-        className="text-[11px] bg-card text-text-primary placeholder:text-text-tertiary outline-none w-24 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors"
-      />
-      <span className="text-text-quaternary text-[10px]">·</span>
-      <input
-        value={gpa}
-        onChange={(e) => setGpa(e.target.value)}
-        onKeyDown={handleEnter}
-        placeholder="학점"
-        className="text-[11px] bg-card text-text-primary placeholder:text-text-tertiary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors font-mono tabular-nums"
-      />
-      <span className="text-text-quaternary text-[10px]">/</span>
-      <input
-        value={gpaMax}
-        onChange={(e) => setGpaMax(e.target.value)}
-        onKeyDown={handleEnter}
-        placeholder="만점"
-        className="text-[11px] bg-card text-text-primary placeholder:text-text-tertiary outline-none w-14 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 focus:bg-card-strong transition-colors font-mono tabular-nums"
-      />
-      <button
-        onClick={submit}
-        aria-label="추가"
-        className="w-7 h-7 flex items-center justify-center rounded-full text-brand hover:bg-brand/15 active:bg-brand/25 transition-colors ml-auto"
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      </button>
-      <button
-        onClick={reset}
-        aria-label="취소"
-        className="w-7 h-7 flex items-center justify-center rounded-full text-text-quaternary hover:text-text-secondary transition-colors"
-      >
-        <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 1l7 7M8 1L1 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-      </button>
-    </div>
-  )
-}
 
 // ── 수상 내역 ─────────────────────────────────────────────
 function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
@@ -1096,30 +1096,38 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
     <SectionCard id="awards" sectionRef={sectionRef} isActive={isActive}>
       <div className="space-y-2">
         {isLoading && [1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-xl bg-card animate-pulse" />
+          <div key={i} className="h-14 rounded-xl bg-card animate-pulse" />
         ))}
         {!isLoading && items.length === 0 && (
-          <p className="text-text-quaternary text-xs text-center py-4">등록된 수상 내역이 없어요. <br /><span className="text-text-quaternary/60">공모전, 교내 대회 수상 이력을 추가해보세요.</span></p>
+          <MyInfoEmptyAdd
+            emoji="🏆"
+            label="첫 수상 내역 추가하기"
+            example="예: 교내 프로그래밍 대회 · 대상 · 2024.06"
+            onClick={openAdd}
+          />
         )}
         {items.map((item) => (
-          <ExpandableItem key={item.id} title={item.contest_name} subtitle={[item.award_name, item.awarded_at].filter(Boolean).join(' · ')} badge={item.file_url ? '파일첨부' : undefined} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)}>
-            <DetailRow label="대회명" value={item.contest_name} />
-            <DetailRow label="수상명" value={item.award_name} />
-            <DetailRow label="수여기관" value={item.org} />
-            <DetailRow label="수상일자" value={item.awarded_at} />
-            {item.content && <p className="text-[11px] text-text-secondary leading-relaxed whitespace-pre-line">{item.content}</p>}
-            {item.file_url && (
-              <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-brand hover:underline">
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 8V9.5a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><path d="M5.5 1v6M3 5l2.5 2.5L8 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                첨부 파일 보기
-              </a>
-            )}
-          </ExpandableItem>
+          <MyInfoItemRow
+            key={item.id}
+            emoji="🏆"
+            accent="warning"
+            title={[item.contest_name, item.award_name].filter(Boolean).join(' · ')}
+            meta={[item.org, item.awarded_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
+            onClick={() => openEdit(item)}
+          />
         ))}
-        <AddButton onClick={openAdd} label="수상 내역 추가" />
+        {!isLoading && items.length > 0 && (
+          <MyInfoEmptyAdd label="수상 내역 추가" compact onClick={openAdd} />
+        )}
       </div>
       {modal && (
-        <Modal title={modal === 'add' ? '수상 내역 추가' : '수상 내역 편집'} onClose={() => setModal(null)} onSave={handleSave} saving={saving}>
+        <Modal
+          title={modal === 'add' ? '수상 내역 추가' : '수상 내역 편집'}
+          onClose={() => setModal(null)}
+          onSave={handleSave}
+          saving={saving}
+          onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
+        >
           <Field label="대회명" value={form.contest_name} onChange={(v) => setForm(f => ({ ...f, contest_name: v }))} placeholder="교내 프로그래밍 대회" required />
           <Field label="수상명" value={form.award_name} onChange={(v) => setForm(f => ({ ...f, award_name: v }))} placeholder="대상" />
           <Field label="수여기관" value={form.org} onChange={(v) => setForm(f => ({ ...f, org: v }))} />
@@ -1128,7 +1136,13 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
           <FileUpload slot={slot} scope="myinfo/award" onChange={setSlot} hint="예: 상장, 수상 증서" disabled={saving} />
         </Modal>
       )}
-      {deleteTarget && <DeleteModal label={deleteTarget.contest_name} onClose={() => setDeleteTarget(null)} onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null) }} />}
+      {deleteTarget && (
+        <DeleteModal
+          label={deleteTarget.contest_name}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => { remove(deleteTarget.id); setDeleteTarget(null); setModal(null) }}
+        />
+      )}
     </SectionCard>
   )
 }
@@ -1367,6 +1381,7 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
 
   const [clForm, setClForm] = useState<Record<string, string>>({})
   const [loaded, setLoaded] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [addingLabel, setAddingLabel] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<CoverletterCustom | null>(null)
@@ -1387,53 +1402,106 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
     setNewLabel(''); setAddingLabel(false)
   }
 
+  const coverFieldValue = (key: keyof Coverletter): string =>
+    (data?.coverletter as Record<string, string | undefined> | undefined)?.[key] ?? ''
+
+  const hasAny =
+    COVER_FIELDS.some(({ key }) => coverFieldValue(key).trim().length > 0) ||
+    (data?.custom ?? []).some((c) => (c.content ?? '').trim().length > 0) ||
+    (data?.custom ?? []).length > 0
+
   return (
     <SectionCard id="coverletter" sectionRef={sectionRef} saved={saved} isActive={isActive}>
-      <div className="space-y-5">
-        {COVER_FIELDS.map(({ key, label, placeholder }) => (
-          <CoverletterTextField
-            key={key}
-            label={label}
-            value={clForm[key] ?? ''}
-            placeholder={placeholder}
-            onChange={(v) => setClForm((f) => ({ ...f, [key]: v }))}
-            onBlur={() => saveCover(key, clForm[key] ?? '')}
-          />
-        ))}
-
-        {/* 커스텀 항목들 */}
-        {(data?.custom ?? []).map((item) => (
-          <CustomCoverItem
-            key={item.id}
-            item={item}
-            onUpdate={(content) => updateCustom({ id: item.id, dto: { content } }, { onSuccess: show })}
-            onDelete={() => setDeleteTarget(item)}
-          />
-        ))}
-
-        {/* 항목 추가 */}
-        {addingLabel ? (
-          <div className="flex gap-2">
-            <input
-              autoFocus
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAddCustom(); if (e.key === 'Escape') setAddingLabel(false) }}
-              placeholder="항목명 입력 (예: 해외 경험)"
-              className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-tertiary"
-            />
-            <button onClick={() => setAddingLabel(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
+      {!hasAny && !editing ? (
+        <MyInfoEmptyAdd
+          emoji="✍️"
+          label="자소서 소재 작성하기"
+          example="성격 장단점 · 성장 배경 · 직무 역량 등 6 영역"
+          onClick={() => setEditing(true)}
+        />
+      ) : (
+        <div>
+          <div className="flex justify-end -mt-1 mb-2">
+            <EditToggleButton editing={editing} onClick={() => setEditing((v) => !v)} />
           </div>
-        ) : (
-          <button onClick={() => setAddingLabel(true)} className="w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-            항목 직접 추가
-          </button>
-        )}
-      </div>
+          {editing ? (
+            <div className="space-y-5">
+              {COVER_FIELDS.map(({ key, label, placeholder }) => (
+                <CoverletterTextField
+                  key={key}
+                  label={label}
+                  value={clForm[key] ?? ''}
+                  placeholder={placeholder}
+                  onChange={(v) => setClForm((f) => ({ ...f, [key]: v }))}
+                  onBlur={() => saveCover(key, clForm[key] ?? '')}
+                />
+              ))}
+              {(data?.custom ?? []).map((item) => (
+                <CustomCoverItem
+                  key={item.id}
+                  item={item}
+                  onUpdate={(content) => updateCustom({ id: item.id, dto: { content } }, { onSuccess: show })}
+                  onDelete={() => setDeleteTarget(item)}
+                />
+              ))}
+              {addingLabel ? (
+                <div className="flex gap-2">
+                  <input
+                    autoFocus
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAddCustom(); if (e.key === 'Escape') setAddingLabel(false) }}
+                    placeholder="항목명 입력 (예: 해외 경험)"
+                    className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-tertiary"
+                  />
+                  <button onClick={() => setAddingLabel(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
+                </div>
+              ) : (
+                <MyInfoEmptyAdd label="항목 직접 추가" compact onClick={() => setAddingLabel(true)} />
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {COVER_FIELDS.map(({ key, label }) => (
+                <CoverletterViewBlock key={key} label={label} value={coverFieldValue(key)} />
+              ))}
+              {(data?.custom ?? []).map((item) => (
+                <CoverletterViewBlock key={item.id} label={item.label} value={item.content ?? ''} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      {deleteTarget && <DeleteModal label={deleteTarget.label} onClose={() => setDeleteTarget(null)} onConfirm={() => { deleteCustom(deleteTarget.id); setDeleteTarget(null) }} />}
+      {deleteTarget && (
+        <DeleteModal
+          label={deleteTarget.label}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => { deleteCustom(deleteTarget.id); setDeleteTarget(null) }}
+        />
+      )}
     </SectionCard>
+  )
+}
+
+function CoverletterViewBlock({ label, value }: { label: string; value: string }) {
+  const trimmed = value.trim()
+  const hasValue = trimmed.length > 0
+  return (
+    <div className="bg-surface-2 border border-line rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <h3 className="text-sm font-bold text-text-primary">{label}</h3>
+        <div className="flex items-center gap-2 shrink-0">
+          {hasValue && <span className="text-[10px] text-text-quaternary font-mono tabular-nums">{value.length}자</span>}
+          {hasValue && <CopyButton value={value} />}
+        </div>
+      </div>
+      {hasValue ? (
+        <p className="text-xs text-text-secondary whitespace-pre-line leading-relaxed">{value}</p>
+      ) : (
+        <p className="text-[11px] text-text-quaternary">비어있음 — 편집 버튼으로 작성하세요</p>
+      )}
+    </div>
   )
 }
 
@@ -1481,8 +1549,8 @@ function CoverletterTextField({
       : 'text-text-quaternary'
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-xs font-semibold text-text-secondary">{label}</label>
+      <div className="flex items-center justify-between mb-3">
+        <label className="text-sm font-bold text-text-primary">{label}</label>
         <div className="flex items-center gap-1">
           <CopyButton value={value} />
           {onDelete && (
