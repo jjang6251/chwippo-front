@@ -65,6 +65,7 @@ beforeEach(() => {
       signupJobCategories: null,
       signupOtherText: null,
       sampleCardsDismissedAt: null,
+    calendarHomeIntroDismissedAt: null,
     },
     accessToken: 'tok',
   })

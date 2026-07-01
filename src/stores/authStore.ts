@@ -20,6 +20,8 @@ interface User {
   signupOtherText: string | null
   /** W1 — 샘플 카드 전체 dismiss 시각 (NULL → 샘플 살아있음) */
   sampleCardsDismissedAt: string | null
+  /** 캘린더 UX 재구성 — "이제 캘린더가 홈이에요" 안내 배너 dismiss 시각 (NULL → 첫 방문 배너 노출) */
+  calendarHomeIntroDismissedAt: string | null
 }
 
 interface AuthState {

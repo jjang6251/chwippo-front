@@ -8,6 +8,21 @@ export interface DashboardStats {
   passed: number              // 합격
 }
 
+/**
+ * 캘린더 UX 재구성 — Hero CTA 라벨/링크 산출용.
+ * - writing_coverletter → "자소서 이어 쓰기" → /board/:id/coverletter
+ * - start_coverletter   → "자소서 시작하기" → /board/:id/coverletter
+ * - review_company      → "회사 조사 확인" → /board/:id#company-research
+ * - confirm_submit      → "최종 검토" → /board/:id
+ * - no_action           → "카드 열기" → /board/:id (default)
+ */
+export type NextAction =
+  | 'writing_coverletter'
+  | 'start_coverletter'
+  | 'review_company'
+  | 'confirm_submit'
+  | 'no_action'
+
 export interface DdayItem {
   type: 'step' | 'exam'
   applicationId?: string
@@ -19,6 +34,10 @@ export interface DdayItem {
   scheduledTime?: string
   dday: number
   pinnedContent?: string | null
+  /** 캘린더 UX 재구성 — Hero CTA 산출용 (step 은 5 enum · exam 은 'no_action') */
+  nextAction?: NextAction
+  /** 캘린더 UX 재구성 — 자소서 진행률 (writing_coverletter · start_coverletter 등에서만) */
+  progress?: { current: number; total: number }
 }
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
