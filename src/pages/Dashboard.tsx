@@ -33,10 +33,21 @@ import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
 import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
 import { useProfile } from '@/hooks/useMyinfo'
 import { useAuthStore } from '@/stores/authStore'
+import { useQueryClient } from '@tanstack/react-query'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
 
 export function Dashboard() {
   // W1 — TourOverlay 자동 트리거 제거. SignupQuestion + 샘플 카드가 학습 모먼트 대체
   const user = useAuthStore((s) => s.user)
+  const qc = useQueryClient()
+  const pull = usePullToRefresh(async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['dashboard'] }),
+      qc.invalidateQueries({ queryKey: ['applications'] }),
+      qc.invalidateQueries({ queryKey: ['dday'] }),
+    ])
+  })
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: dday, isLoading: ddayLoading } = useDdayList()
@@ -129,6 +140,7 @@ export function Dashboard() {
 
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
+      <PullToRefreshIndicator {...pull} />
       {/* 헤더 */}
       <div className="mb-8">
         <p className="text-text-quaternary text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>

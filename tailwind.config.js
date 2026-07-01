@@ -73,12 +73,17 @@ export default {
           '60%': { opacity: '1', transform: 'translateY(0) scale(1.01)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         fadeInUp: 'fadeInUp 0.2s ease-out',
         slideUp: 'slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
         fadeIn: 'fadeIn 0.25s ease-out',
         celebrateUp: 'celebrateUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+        shimmer: 'shimmer 1.5s ease-in-out infinite',
       },
     },
   },

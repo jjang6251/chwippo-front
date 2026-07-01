@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useApplications } from '@/hooks/useApplications'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
+import { BETA_FEATURES } from '@/config/betaFeatures'
 import { useTourStore } from '@/stores/tourStore'
 import { useAuthStore } from '@/stores/authStore'
 import { CompanyCard } from '@/components/card/CompanyCard'
@@ -54,6 +58,10 @@ export function Board() {
   const addMenuRef = useRef<HTMLDivElement>(null)
 
   const { data: applications = [], isLoading } = useApplications()
+  const qc = useQueryClient()
+  const pull = usePullToRefresh(async () => {
+    await qc.invalidateQueries({ queryKey: ['applications'] })
+  })
   const tourActive = useTourStore((s) => s.active)
   const tourStep = useTourStore((s) => s.step)
   const tourNext = useTourStore((s) => s.next)
@@ -103,6 +111,7 @@ export function Board() {
 
   return (
     <div className={`w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 ${panelStep ? 'lg:pr-96' : ''}`}>
+      <PullToRefreshIndicator {...pull} />
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -157,19 +166,21 @@ export function Board() {
 
       {/* 검색 + 필터 탭 */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        {/* 검색 */}
-        <div className="relative flex-1 sm:max-w-64">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-quaternary" width="13" height="13" viewBox="0 0 16 16" fill="none">
-            <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M12 12l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="회사명, 직무명 검색"
-            className="w-full bg-input border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
-          />
-        </div>
+        {/* W5 — 검색 (베타 D+1주 예정, 지금 hide) */}
+        {BETA_FEATURES.search && (
+          <div className="relative flex-1 sm:max-w-64">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-quaternary" width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M12 12l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="회사명, 직무명 검색"
+              className="w-full bg-input border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            />
+          </div>
+        )}
 
         {/* 필터 탭 — 모바일: 독립 칩 (가로 스크롤) / sm+: segmented control */}
         <div
