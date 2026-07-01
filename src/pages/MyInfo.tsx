@@ -39,6 +39,10 @@ import { MyInfoItemRow } from '@/components/myinfo/MyInfoItemRow'
 import { MyInfoEmptyAdd } from '@/components/myinfo/MyInfoEmptyAdd'
 import { MyInfoViewRow } from '@/components/myinfo/MyInfoViewRow'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
+import { InfoModal } from '@/components/myinfo/InfoModal'
+import { CertAutocomplete } from '@/components/myinfo/CertAutocomplete'
+import { LangCertAutocomplete } from '@/components/myinfo/LangCertAutocomplete'
+import type { CertSuggestion, LangCertSuggestion } from '@/api/schools'
 
 // ── 섹션 메타데이터 ────────────────────────────────────────
 const SECTIONS = [
@@ -104,7 +108,6 @@ function useCollapse(): CollapseCtxValue {
   return ctx ?? { isCollapsed: () => false, toggle: () => {} }
 }
 
-const LANG_CERT_TYPES = ['TOEIC', 'TOEIC Speaking', 'OPIC', 'TEPS', 'JLPT', 'HSK', '기타']
 const MILITARY_BRANCHES = ['육군', '해군', '공군', '해병대', '사회복무요원', '산업기능요원', '전문연구요원']
 const MILITARY_TYPES = ['만기전역', '의병전역', '불명예전역', '복무 중']
 
@@ -117,11 +120,42 @@ function useSaved() {
 
 // ── 공통 인풋 ──────────────────────────────────────────────
 /** 필수 입력 라벨 — ui-specs.md "필수 입력 필드" 규칙 따름 */
+// InfoModal 안 body section 그룹핑 (Education 톤과 통일)
+function ModalSection({ title, children, first }: { title: string; children: React.ReactNode; first?: boolean }) {
+  return (
+    <div className={first ? '' : 'pt-6 border-t border-line/50'}>
+      <p className="text-[13px] font-bold text-text-primary mb-3.5">{title}</p>
+      {children}
+    </div>
+  )
+}
+
+/** 자동완성 선택 후 자격증 정보 카드 (issuer · category · validYears) */
+function CertInfoCard({ issuer, category, categoryColor, validYears }: {
+  issuer: string; category?: string; categoryColor?: string; validYears?: number | null
+}) {
+  return (
+    <div className="bg-card/60 border border-line/50 rounded-xl px-4 py-3 space-y-1.5">
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-semibold text-text-primary flex-1 truncate">{issuer}</p>
+        {category && (
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${categoryColor ?? 'bg-brand/15 text-brand'}`}>
+            {category}
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-text-tertiary">
+        {validYears === null ? '평생 유효 · 자격번호 발급' : validYears ? `유효기간 ${validYears}년` : ''}
+      </p>
+    </div>
+  )
+}
+
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
-    <label className="block text-xs text-text-tertiary mb-1.5 font-medium">
+    <label className="block text-sm text-text-secondary mb-2 font-medium">
       {label}
-      {required && <span className="text-danger ml-0.5" aria-label="필수 입력">*</span>}
+      {required && <span className="text-danger ml-1" aria-label="필수 입력">*</span>}
     </label>
   )
 }
@@ -135,10 +169,10 @@ function Field({
   maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
   required?: boolean; disabled?: boolean
 }) {
-  // input·select·date 시각 통일 — 명시 h-9 (36px). copyable 면 input 안 오른쪽에 CopyButton(absolute) 자리 reserve.
-  const base = 'w-full bg-input border border-line rounded-lg text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all'
-  const cls = `${base} px-3 h-9 ${copyable ? 'pr-10' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
-  const textareaCls = `${base} px-3 py-2 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
+  // Toss 톤 — h-12 (48px), text-base, rounded-xl, focus 4px halo
+  const base = 'w-full bg-input border border-line/70 rounded-xl text-base text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all'
+  const cls = `${base} px-4 h-12 ${copyable ? 'pr-12' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
+  const textareaCls = `${base} px-4 py-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
   // 자소서 소재 textarea — 베타 피드백 패턴 (auto-resize 200~500 + lineHeight 1.6)
   const { ref: textareaRef, autoResize } = useAutoResize(value, { min: 80, max: 500 })
   return (
@@ -208,11 +242,11 @@ function SelectField({ label, value, onChange, options, required }: {
     <div>
       <FieldLabel label={label} required={required} />
       <div className="relative">
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-input border border-line rounded-lg px-3 h-9 pr-8 text-xs text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all appearance-none">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full appearance-none bg-input border border-line/70 rounded-xl pl-4 pr-11 h-12 text-base text-text-primary cursor-pointer focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all">
           <option value="">선택</option>
           {options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+        <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className="absolute right-4 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
           <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
@@ -220,31 +254,6 @@ function SelectField({ label, value, onChange, options, required }: {
   )
 }
 
-// ── 모달 ──────────────────────────────────────────────────
-function Modal({ title, onClose, onSave, children, saving, onDelete }: { title: string; onClose: () => void; onSave: () => void; children: React.ReactNode; saving?: boolean; onDelete?: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0" onClick={() => { if (!saving) onClose() }}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="bg-surface border border-line rounded-t-2xl sm:rounded-xl w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold text-text-primary px-6 pt-6 pb-3 shrink-0">{title}</h3>
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-3">{children}</div>
-        <div className="flex items-center gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-line shrink-0">
-          {onDelete && (
-            <button
-              onClick={onDelete}
-              disabled={saving}
-              className="text-xs text-text-quaternary hover:text-danger px-2 py-2.5 transition-colors disabled:opacity-50"
-            >
-              삭제
-            </button>
-          )}
-          <div className="flex-1" />
-          <button onClick={onClose} disabled={saving} className="min-w-[5rem] py-2.5 text-xs text-text-secondary border border-line rounded-lg hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50">취소</button>
-          <button onClick={onSave} disabled={saving} className="min-w-[5rem] py-2.5 text-xs font-semibold bg-brand hover:bg-accent active:bg-accent-hover text-text-primary rounded-lg transition-colors disabled:opacity-50">{saving ? '저장 중...' : '저장'}</button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: string; onClose: () => void; onConfirm: () => void }) {
   return (
@@ -719,13 +728,37 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
   const [form, setForm] = useState(emptyForm)
   const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
   const [saving, setSaving] = useState(false)
+  const [langCertMeta, setLangCertMeta] = useState<LangCertSuggestion | null>(null)
 
-  const openAdd = () => { setForm(emptyForm); setSlot(EMPTY_SLOT); setModal('add') }
+  const scoreLabel = langCertMeta
+    ? langCertMeta.scoreType === 'number'
+      ? `점수 (0~${langCertMeta.scoreMax})`
+      : '등급'
+    : '점수·등급'
+  const scorePlaceholder = langCertMeta?.scoreExample ?? '예: 990 / N1 / 5급'
+
+  const openAdd = () => { setForm(emptyForm); setSlot(EMPTY_SLOT); setLangCertMeta(null); setModal('add') }
   const openEdit = (item: LanguageCert) => {
     setForm({ cert_type: item.cert_type, score_grade: item.score_grade ?? '', issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '' })
     setSlot(slotFromExisting(item.file_url, item.file_size_bytes))
+    setLangCertMeta(null)
     setModal(item)
   }
+
+  const handleLangCertSelect = (c: LangCertSuggestion) => {
+    setLangCertMeta(c)
+    setForm((f) => ({
+      ...f,
+      cert_type: c.name,
+      issuer: f.issuer.trim() ? f.issuer : c.issuer,
+    }))
+    if (c.validYears && form.acquired_at && !form.expires_at) {
+      const acq = new Date(form.acquired_at)
+      acq.setFullYear(acq.getFullYear() + c.validYears)
+      setForm((f) => ({ ...f, expires_at: acq.toISOString().slice(0, 10) }))
+    }
+  }
+
   const handleSave = async () => {
     if (saving) return
     setSaving(true)
@@ -735,6 +768,7 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
       if (modal === 'add') await create(dto as Omit<LanguageCert, 'id'>)
       else if (modal && typeof modal === 'object') await update({ id: modal.id, dto: dto as Partial<LanguageCert> })
       setModal(null)
+      setLangCertMeta(null)
     } catch (err) {
       notifySaveError(err)
     } finally {
@@ -756,36 +790,92 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
             onClick={openAdd}
           />
         )}
-        {items.map((item) => (
-          <MyInfoItemRow
-            key={item.id}
-            emoji="🌐"
-            accent="success"
-            title={[item.cert_type, item.score_grade].filter(Boolean).join(' · ')}
-            meta={[item.issuer, item.acquired_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
-            onClick={() => openEdit(item)}
-          />
-        ))}
+        {items.map((item) => {
+          const fields = [
+            { label: '종류', value: item.cert_type ?? '' },
+            { label: '점수·등급', value: item.score_grade ?? '', mono: true },
+            { label: '발급기관', value: item.issuer ?? '' },
+            { label: '자격증번호', value: item.cert_number ?? '', mono: true },
+            { label: '취득일', value: item.acquired_at ?? '', mono: true },
+            { label: '만료일', value: item.expires_at ?? '', mono: true },
+          ]
+          return (
+            <MyInfoItemRow
+              key={item.id}
+              emoji="🌐"
+              accent="success"
+              title={[item.cert_type, item.score_grade].filter(Boolean).join(' · ')}
+              meta={[item.issuer, item.acquired_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
+              onClick={() => openEdit(item)}
+              onEdit={() => openEdit(item)}
+              detailFields={fields}
+            />
+          )
+        })}
         {!isLoading && items.length > 0 && (
           <MyInfoEmptyAdd label="어학 자격증 추가" compact onClick={openAdd} />
         )}
       </div>
       {modal && (
-        <Modal
+        <InfoModal
           title={modal === 'add' ? '어학 자격증 추가' : '어학 자격증 편집'}
+          emoji="🌐"
+          accent="success"
+          subtitle={modal !== 'add' && typeof modal === 'object' ? [modal.cert_type, modal.score_grade].filter(Boolean).join(' · ') : undefined}
           onClose={() => setModal(null)}
           onSave={handleSave}
           saving={saving}
           onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
+          saveLabel={modal === 'add' ? '추가' : '수정'}
         >
-          <SelectField label="종류" value={form.cert_type} onChange={(v) => setForm(f => ({ ...f, cert_type: v }))} options={LANG_CERT_TYPES} required />
-          <Field label="점수·등급" value={form.score_grade} onChange={(v) => setForm(f => ({ ...f, score_grade: v }))} placeholder="990 / 1+" />
-          <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder="ETS" />
-          <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
-          <Field label="취득일" type="date" value={form.acquired_at} onChange={(v) => setForm(f => ({ ...f, acquired_at: v }))} />
-          <Field label="만료일" type="date" value={form.expires_at} onChange={(v) => setForm(f => ({ ...f, expires_at: v }))} />
-          <FileUpload slot={slot} scope="myinfo/language-cert" onChange={setSlot} hint="예: 점수증명서, 성적표" disabled={saving} />
-        </Modal>
+          <ModalSection title="시험 정보" first>
+            <div className="space-y-3">
+              <div>
+                <FieldLabel label="종류" required />
+                <LangCertAutocomplete
+                  value={form.cert_type}
+                  onChange={(v) => setForm(f => ({ ...f, cert_type: v }))}
+                  onSelect={handleLangCertSelect}
+                  placeholder="예: TOEIC · JLPT · HSK"
+                />
+              </div>
+              {langCertMeta && (
+                <CertInfoCard
+                  issuer={langCertMeta.issuer}
+                  category={langCertMeta.category}
+                  validYears={langCertMeta.validYears}
+                />
+              )}
+              {langCertMeta?.scoreType === 'grade' && langCertMeta.grades ? (
+                <SelectField
+                  label={scoreLabel}
+                  value={form.score_grade}
+                  onChange={(v) => setForm(f => ({ ...f, score_grade: v }))}
+                  options={langCertMeta.grades}
+                />
+              ) : (
+                <Field label={scoreLabel} value={form.score_grade} onChange={(v) => setForm(f => ({ ...f, score_grade: v }))} placeholder={scorePlaceholder} />
+              )}
+              <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder={langCertMeta?.issuer ?? 'ETS'} />
+              <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
+            </div>
+          </ModalSection>
+          <ModalSection title="취득 · 만료">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="취득일" type="date" value={form.acquired_at} onChange={(v) => setForm(f => ({ ...f, acquired_at: v }))} />
+              {langCertMeta && langCertMeta.validYears === null ? (
+                <div className="flex items-end pb-3">
+                  <p className="text-xs text-text-quaternary italic">평생 유효</p>
+                </div>
+              ) : (
+                <Field label="만료일" type="date" value={form.expires_at} onChange={(v) => setForm(f => ({ ...f, expires_at: v }))} />
+              )}
+            </div>
+          </ModalSection>
+          <ModalSection title="증빙 파일">
+            <FileUpload slot={slot} scope="myinfo/language-cert" onChange={setSlot} hint="예: 점수증명서, 성적표" disabled={saving} />
+          </ModalSection>
+        </InfoModal>
       )}
       {deleteTarget && (
         <DeleteModal
@@ -810,22 +900,51 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   const [form, setForm] = useState(emptyForm)
   const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
   const [saving, setSaving] = useState(false)
+  /** 자격증 정적 카탈로그 메타 (자동완성 선택 후 hasNumber/validYears 등 조건부 표시 위해) */
+  const [certMeta, setCertMeta] = useState<CertSuggestion | null>(null)
+  /** 자격증번호 placeholder (선택된 자격증의 numberExample) */
+  const numberPlaceholder = certMeta?.numberExample ?? '자격번호'
+  /** hasNumber=false 시 자격번호 필드 hide */
+  const showNumberField = certMeta ? certMeta.hasNumber : true
 
-  const openAdd = () => { setForm(emptyForm); setSlot(EMPTY_SLOT); setModal('add') }
+  const openAdd = () => { setForm(emptyForm); setSlot(EMPTY_SLOT); setCertMeta(null); setModal('add') }
   const openEdit = (item: Cert) => {
     setForm({ name: item.name, issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '' })
     setSlot(slotFromExisting(item.file_url, item.file_size_bytes))
+    setCertMeta(null) // 초기엔 미매칭, 자동완성 재선택 시 재설정
     setModal(item)
   }
+
+  const handleCertSelect = (c: CertSuggestion) => {
+    setCertMeta(c)
+    setForm((f) => ({
+      ...f,
+      name: c.name,
+      // 사용자가 이미 issuer 입력했으면 유지, 아니면 자동 채움
+      issuer: f.issuer.trim() ? f.issuer : c.issuer,
+      // hasNumber=false 면 cert_number 강제 clear (저장 dto 정합성)
+      cert_number: c.hasNumber ? f.cert_number : '',
+    }))
+    // validYears 있으면 취득일 있을 때 expires_at 자동 계산 프리셋 (덮어쓰기 아님, 빈 경우만)
+    if (c.validYears && form.acquired_at && !form.expires_at) {
+      const acq = new Date(form.acquired_at)
+      acq.setFullYear(acq.getFullYear() + c.validYears)
+      setForm((f) => ({ ...f, expires_at: acq.toISOString().slice(0, 10) }))
+    }
+  }
+
   const handleSave = async () => {
     if (saving) return
     setSaving(true)
     try {
       const fileFields = await resolveFileForSubmit(slot, 'myinfo/cert')
-      const dto = { ...form, ...fileFields }
+      // hasNumber=false 이면 cert_number 확실히 undefined
+      const cleanNumber = showNumberField ? form.cert_number : ''
+      const dto = { ...form, cert_number: cleanNumber, ...fileFields }
       if (modal === 'add') await create(dto as Omit<Cert, 'id'>)
       else if (modal && typeof modal === 'object') await update({ id: modal.id, dto: dto as Partial<Cert> })
       setModal(null)
+      setCertMeta(null)
     } catch (err) {
       notifySaveError(err)
     } finally {
@@ -847,35 +966,83 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
             onClick={openAdd}
           />
         )}
-        {items.map((item) => (
-          <MyInfoItemRow
-            key={item.id}
-            emoji="📜"
-            accent="brand"
-            title={item.name}
-            meta={[item.issuer, item.acquired_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
-            onClick={() => openEdit(item)}
-          />
-        ))}
+        {items.map((item) => {
+          const fields = [
+            { label: '자격증명', value: item.name ?? '' },
+            { label: '발급기관', value: item.issuer ?? '' },
+            { label: '자격번호', value: item.cert_number ?? '', mono: true },
+            { label: '취득일', value: item.acquired_at ?? '', mono: true },
+            { label: '만료일', value: item.expires_at ?? '', mono: true },
+          ]
+          return (
+            <MyInfoItemRow
+              key={item.id}
+              emoji="📜"
+              accent="brand"
+              title={item.name}
+              meta={[item.issuer, item.acquired_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
+              onClick={() => openEdit(item)}
+              onEdit={() => openEdit(item)}
+              detailFields={fields}
+            />
+          )
+        })}
         {!isLoading && items.length > 0 && (
           <MyInfoEmptyAdd label="자격증 추가" compact onClick={openAdd} />
         )}
       </div>
       {modal && (
-        <Modal
+        <InfoModal
           title={modal === 'add' ? '자격증 추가' : '자격증 편집'}
+          emoji="📜"
+          accent="brand"
+          subtitle={modal !== 'add' && typeof modal === 'object' ? modal.name : undefined}
           onClose={() => setModal(null)}
           onSave={handleSave}
           saving={saving}
           onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
+          saveLabel={modal === 'add' ? '추가' : '수정'}
         >
-          <Field label="자격증명" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="정보처리기사" required />
-          <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder="한국산업인력공단" />
-          <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
-          <Field label="취득일" type="date" value={form.acquired_at} onChange={(v) => setForm(f => ({ ...f, acquired_at: v }))} />
-          <Field label="만료일" type="date" value={form.expires_at} onChange={(v) => setForm(f => ({ ...f, expires_at: v }))} />
-          <FileUpload slot={slot} scope="myinfo/cert" onChange={setSlot} hint="예: 자격증, 합격증" disabled={saving} />
-        </Modal>
+          <ModalSection title="자격증 정보" first>
+            <div className="space-y-3">
+              <div>
+                <FieldLabel label="자격증명" required />
+                <CertAutocomplete
+                  value={form.name}
+                  onChange={(v) => setForm(f => ({ ...f, name: v }))}
+                  onSelect={handleCertSelect}
+                  placeholder="예: 정보처리기사"
+                />
+              </div>
+              {certMeta && (
+                <CertInfoCard
+                  issuer={certMeta.issuer}
+                  category={certMeta.category}
+                  validYears={certMeta.validYears}
+                />
+              )}
+              <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder={certMeta?.issuer ?? '한국산업인력공단'} />
+              {showNumberField && (
+                <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} placeholder={numberPlaceholder} />
+              )}
+            </div>
+          </ModalSection>
+          <ModalSection title="취득 · 만료">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="취득일" type="date" value={form.acquired_at} onChange={(v) => setForm(f => ({ ...f, acquired_at: v }))} />
+              {certMeta && certMeta.validYears === null ? (
+                <div className="flex items-end pb-3">
+                  <p className="text-xs text-text-quaternary italic">평생 유효</p>
+                </div>
+              ) : (
+                <Field label="만료일" type="date" value={form.expires_at} onChange={(v) => setForm(f => ({ ...f, expires_at: v }))} />
+              )}
+            </div>
+          </ModalSection>
+          <ModalSection title="증빙 파일">
+            <FileUpload slot={slot} scope="myinfo/cert" onChange={setSlot} hint="예: 자격증, 합격증" disabled={saving} />
+          </ModalSection>
+        </InfoModal>
       )}
       {deleteTarget && (
         <DeleteModal
@@ -978,6 +1145,18 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
 }
 
 // ── 학력 ──────────────────────────────────────────────────
+type EducationAccent = 'brand' | 'accent' | 'warning' | 'success' | 'info' | 'violet'
+function degreeToStyle(degree?: string): { emoji: string; accent: EducationAccent } {
+  switch (degree) {
+    case '고등학교': return { emoji: '🏫', accent: 'warning' }
+    case '전문대':   return { emoji: '🎓', accent: 'success' }
+    case '대학교 (학사)': return { emoji: '🎓', accent: 'success' }
+    case '대학원 (석사)': return { emoji: '📘', accent: 'info' }
+    case '대학원 (박사)': return { emoji: '📚', accent: 'violet' }
+    default: return { emoji: '🎓', accent: 'brand' }
+  }
+}
+
 
 function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
   const { data: items = [], isLoading } = useEducations()
@@ -1019,17 +1198,31 @@ function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElem
         )}
         {items.map((item) => {
           const gpa = item.gpa ? (item.gpa_max ? `${item.gpa}/${item.gpa_max}` : item.gpa) : ''
-          const meta = [item.degree, item.status, periodOf(item), gpa, item.file_url && '📎 파일']
+          const meta = [item.status, periodOf(item), gpa, item.file_url && '📎 파일']
             .filter(Boolean)
             .join(' · ')
+          const style = degreeToStyle(item.degree)
+          const fields = [
+            { label: '학교명', value: item.school_name ?? '' },
+            { label: '학교 단계', value: item.degree ?? '' },
+            { label: '전공', value: item.major ?? '' },
+            { label: '상태', value: item.status ?? '' },
+            { label: '입학', value: item.start_at ?? '', mono: true },
+            { label: '졸업 (예정)', value: item.end_at ?? '', mono: true },
+            { label: '학점', value: gpa, mono: true },
+            { label: '위치', value: item.location ?? '' },
+          ]
           return (
             <MyInfoItemRow
               key={item.id}
-              emoji="🎓"
-              accent="success"
+              emoji={style.emoji}
+              accent={style.accent}
               title={[item.school_name || '(학교명 미입력)', item.major].filter(Boolean).join(' · ')}
               meta={meta || undefined}
               onClick={() => setModal(item)}
+              onEdit={() => setModal(item)}
+              badge={item.degree || undefined}
+              detailFields={fields}
             />
           )
         })}
@@ -1106,35 +1299,58 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
             onClick={openAdd}
           />
         )}
-        {items.map((item) => (
-          <MyInfoItemRow
-            key={item.id}
-            emoji="🏆"
-            accent="warning"
-            title={[item.contest_name, item.award_name].filter(Boolean).join(' · ')}
-            meta={[item.org, item.awarded_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
-            onClick={() => openEdit(item)}
-          />
-        ))}
+        {items.map((item) => {
+          const fields = [
+            { label: '대회명', value: item.contest_name ?? '' },
+            { label: '수상명', value: item.award_name ?? '' },
+            { label: '수여기관', value: item.org ?? '' },
+            { label: '수상일자', value: item.awarded_at ?? '', mono: true },
+            { label: '수상내용', value: item.content ?? '' },
+          ]
+          return (
+            <MyInfoItemRow
+              key={item.id}
+              emoji="🏆"
+              accent="warning"
+              title={[item.contest_name, item.award_name].filter(Boolean).join(' · ')}
+              meta={[item.org, item.awarded_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
+              onClick={() => openEdit(item)}
+              onEdit={() => openEdit(item)}
+              detailFields={fields}
+            />
+          )
+        })}
         {!isLoading && items.length > 0 && (
           <MyInfoEmptyAdd label="수상 내역 추가" compact onClick={openAdd} />
         )}
       </div>
       {modal && (
-        <Modal
+        <InfoModal
           title={modal === 'add' ? '수상 내역 추가' : '수상 내역 편집'}
+          emoji="🏆"
+          accent="warning"
+          subtitle={modal !== 'add' && typeof modal === 'object' ? [modal.contest_name, modal.award_name].filter(Boolean).join(' · ') : undefined}
           onClose={() => setModal(null)}
           onSave={handleSave}
           saving={saving}
           onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
+          saveLabel={modal === 'add' ? '추가' : '수정'}
         >
-          <Field label="대회명" value={form.contest_name} onChange={(v) => setForm(f => ({ ...f, contest_name: v }))} placeholder="교내 프로그래밍 대회" required />
-          <Field label="수상명" value={form.award_name} onChange={(v) => setForm(f => ({ ...f, award_name: v }))} placeholder="대상" />
-          <Field label="수여기관" value={form.org} onChange={(v) => setForm(f => ({ ...f, org: v }))} />
-          <Field label="수상일자" type="date" value={form.awarded_at} onChange={(v) => setForm(f => ({ ...f, awarded_at: v }))} />
-          <Field label="수상내용 (200자)" value={form.content} onChange={(v) => setForm(f => ({ ...f, content: v }))} maxLength={200} as="textarea" placeholder="수상 내용을 간략히 적어주세요" />
-          <FileUpload slot={slot} scope="myinfo/award" onChange={setSlot} hint="예: 상장, 수상 증서" disabled={saving} />
-        </Modal>
+          <ModalSection title="대회 정보" first>
+            <div className="space-y-3">
+              <Field label="대회명" value={form.contest_name} onChange={(v) => setForm(f => ({ ...f, contest_name: v }))} placeholder="교내 프로그래밍 대회" required />
+              <Field label="수상명" value={form.award_name} onChange={(v) => setForm(f => ({ ...f, award_name: v }))} placeholder="대상" />
+              <Field label="수여기관" value={form.org} onChange={(v) => setForm(f => ({ ...f, org: v }))} />
+              <Field label="수상일자" type="date" value={form.awarded_at} onChange={(v) => setForm(f => ({ ...f, awarded_at: v }))} />
+            </div>
+          </ModalSection>
+          <ModalSection title="상세 내용">
+            <Field label="수상 내용" value={form.content} onChange={(v) => setForm(f => ({ ...f, content: v }))} maxLength={200} as="textarea" placeholder="수상 내용을 간략히 적어주세요 (200자)" />
+          </ModalSection>
+          <ModalSection title="증빙 파일">
+            <FileUpload slot={slot} scope="myinfo/award" onChange={setSlot} hint="예: 상장, 수상 증서" disabled={saving} />
+          </ModalSection>
+        </InfoModal>
       )}
       {deleteTarget && (
         <DeleteModal
