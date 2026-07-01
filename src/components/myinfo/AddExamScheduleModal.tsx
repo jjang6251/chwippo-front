@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import dayjs from 'dayjs'
 import { useCreateExamSchedule, useUpdateExamSchedule } from '@/hooks/useExamSchedules'
 import { LANGUAGE_CERT_TYPES, type ExamSchedule, type ExamType } from '@/types/exam-schedule'
+import { InfoModal } from './InfoModal'
 
 interface Props {
   open: boolean
@@ -72,20 +73,23 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label={isEdit ? '시험 일정 수정' : '시험 일정 추가'} className="relative z-10 w-full max-w-md bg-surface border border-line rounded-t-xl sm:rounded-xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-          <h3 className="text-text-primary text-sm font-semibold">{isEdit ? '시험 일정 수정' : '시험 일정 추가'}</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-tertiary hover:bg-card active:bg-card-strong transition-colors" aria-label="닫기">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
+  const isSaving = create.isPending || update.isPending
+  const previewName = initial?.name ?? finalName
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 space-y-3">
+  return (
+    <InfoModal
+      title={isEdit ? '시험 일정 수정' : '시험 일정 추가'}
+      emoji="📚"
+      accent="violet"
+      subtitle={previewName || undefined}
+      onClose={onClose}
+      onSave={handleSubmit}
+      saving={isSaving}
+      onDelete={onDelete}
+      saveLabel={isEdit ? '수정' : '추가'}
+      saveDisabled={!canSubmit}
+    >
+      <div className="space-y-3">
           {/* 시험 종류 */}
           <div>
             <label className="block text-text-tertiary text-[11px] mb-1.5">종류</label>
@@ -178,27 +182,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
               {memo.length} / 500
             </p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-line shrink-0">
-          {onDelete && (
-            <button
-              onClick={onDelete}
-              className="text-xs text-text-quaternary hover:text-danger px-2 py-2 transition-colors"
-            >삭제</button>
-          )}
-          <div className="flex-1" />
-          <button
-            onClick={onClose}
-            className="min-w-[5rem] py-2 rounded-lg border border-line text-text-tertiary text-xs hover:bg-card active:bg-card-strong transition-colors"
-          >취소</button>
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit || create.isPending || update.isPending}
-            className="min-w-[5rem] py-2 rounded-lg bg-violet text-text-primary text-xs font-semibold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >{isEdit ? '수정' : '추가'}</button>
-        </div>
       </div>
-    </div>
+    </InfoModal>
   )
 }
