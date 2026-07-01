@@ -1,8 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useDemoMode } from '@/contexts/demoMode'
+import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '@/hooks/useCalendar'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
 import type { CalendarEvent } from '@/api/calendar'
 import { CalendarDayPanel } from '@/components/calendar/CalendarDayPanel'
 import { CalendarWeekView } from '@/components/calendar/CalendarWeekView'
@@ -86,6 +89,10 @@ function getWeekStart(date: dayjs.Dayjs): dayjs.Dayjs {
 
 export function Calendar() {
   const today = dayjs().format('YYYY-MM-DD')
+  const qc = useQueryClient()
+  const pull = usePullToRefresh(async () => {
+    await qc.invalidateQueries({ queryKey: ['calendar'] })
+  })
   const [searchParams, setSearchParams] = useSearchParams()
   const queryDate = searchParams.get('date')
   const initialDate = queryDate && dayjs(queryDate, 'YYYY-MM-DD', true).isValid() ? queryDate : today
@@ -235,6 +242,7 @@ export function Calendar() {
 
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
+      <PullToRefreshIndicator {...pull} />
 
       {/* Header — 모바일: 2행 (연/월+컨트롤) / sm+: 1행 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

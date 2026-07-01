@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSwipeable } from 'react-swipeable'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import dayjs from 'dayjs'
 import type { Application, UpdateApplicationDto } from '@/types/application'
@@ -6,6 +7,7 @@ import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
 import { StarToggle } from './StarToggle'
 import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from '@/hooks/useApplications'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { toast } from '@/stores/toastStore'
 import { celebrate } from '@/stores/celebrationStore'
 import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
@@ -41,6 +43,32 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   const { mutate: updateStep } = useUpdateCurrentStep()
   const { mutate: deleteApp, isPending: isDeleting } = useDeleteApplication()
   const { mutate: updateApp } = useUpdateApplication(application.id)
+  const isMobile = useIsMobile()
+  const [swipeOffset, setSwipeOffset] = useState(0)
+
+  // W4 — 모바일 좌 swipe=삭제 (confirm) / 우 swipe=핀 토글
+  const swipeHandlers = useSwipeable({
+    onSwiping: (e) => {
+      // 수평 20° 이내만 인정 (세로 스크롤과 충돌 방지)
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) * 0.36) return
+      setSwipeOffset(e.deltaX)
+    },
+    onSwipedLeft: (e) => {
+      setSwipeOffset(0)
+      if (Math.abs(e.deltaX) < 100 || Math.abs(e.deltaY) > Math.abs(e.deltaX) * 0.36) return
+      // 삭제는 파괴적 액션 — 기존 confirm 모달 재사용
+      setShowDeleteConfirm(true)
+    },
+    onSwipedRight: (e) => {
+      setSwipeOffset(0)
+      if (Math.abs(e.deltaX) < 100 || Math.abs(e.deltaY) > Math.abs(e.deltaX) * 0.36) return
+      updateApp({ isStarred: !application.isStarred })
+    },
+    onTouchEndOrOnMouseUp: () => setSwipeOffset(0),
+    trackMouse: false, // 데스크탑 마우스는 비활성 (모바일 touch 만)
+    delta: 20,
+    preventScrollOnSwipe: false,
+  })
 
   const isPassed = application.status === 'PASSED'
   const isFailed = application.status === 'FAILED'
@@ -94,23 +122,42 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
     })
   }
 
+  const shouldSwipeHint = isMobile && Math.abs(swipeOffset) > 20
+  const swipingLeft = shouldSwipeHint && swipeOffset < 0
+  const swipingRight = shouldSwipeHint && swipeOffset > 0
+
   return (
-    <div
-      onClick={handleCardClick}
-      data-tour-card-id={application.id}
-      className={`
-        relative group border-l-2 rounded-xl p-4 cursor-pointer
-        transition-all duration-200
-        ${STATUS_ACCENT[application.status]}
-        ${isFailed ? 'opacity-45 bg-surface-2 border border-line hover:opacity-60' : ''}
-        ${isPassed
-          ? 'passed-card bg-gradient-to-br from-success/30 to-success/5 border-2 border-success/55 hover:border-success/70 hover:shadow-lg hover:shadow-success/20'
-          : !isFailed
-          ? 'bg-surface-2 border border-line hover:border-line-strong hover:bg-surface-3 hover:shadow-lg hover:shadow-black/30'
-          : ''
-        }
-      `}
-    >
+    <div className="relative overflow-hidden rounded-xl">
+      {/* W4 좌 swipe hint 배경 (danger 삭제) */}
+      {swipingLeft && (
+        <div aria-hidden="true" className="absolute inset-0 flex items-center justify-end pr-6 bg-danger/15 text-danger text-sm font-semibold pointer-events-none">
+          🗑️ 삭제
+        </div>
+      )}
+      {/* W4 우 swipe hint 배경 (brand 즐겨찾기) */}
+      {swipingRight && (
+        <div aria-hidden="true" className="absolute inset-0 flex items-center pl-6 bg-brand/15 text-brand text-sm font-semibold pointer-events-none">
+          ⭐ {application.isStarred ? '즐겨찾기 해제' : '즐겨찾기'}
+        </div>
+      )}
+      <div
+        {...(isMobile ? swipeHandlers : {})}
+        onClick={handleCardClick}
+        data-tour-card-id={application.id}
+        style={isMobile && swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)`, transition: 'none' } : undefined}
+        className={`
+          relative group border-l-2 rounded-xl p-4 cursor-pointer
+          transition-all duration-200
+          ${STATUS_ACCENT[application.status]}
+          ${isFailed ? 'opacity-45 bg-surface-2 border border-line hover:opacity-60' : ''}
+          ${isPassed
+            ? 'passed-card bg-gradient-to-br from-success/30 to-success/5 border-2 border-success/55 hover:border-success/70 hover:shadow-lg hover:shadow-success/20'
+            : !isFailed
+            ? 'bg-surface-2 border border-line hover:border-line-strong hover:bg-surface-3 hover:shadow-lg hover:shadow-black/30'
+            : ''
+          }
+        `}
+      >
       {/* 상단: 아바타 + 회사명 + 메뉴 */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -355,6 +402,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
