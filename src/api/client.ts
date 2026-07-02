@@ -34,6 +34,8 @@ interface RefreshUser {
   signupOtherText: string | null
   /** W1 — 샘플 카드 전체 dismiss 시각 */
   sampleCardsDismissedAt: string | null
+  /** 캘린더 UX 재구성 — 안내 배너 dismiss 시각 */
+  calendarHomeIntroDismissedAt: string | null
 }
 
 interface RefreshResponse {

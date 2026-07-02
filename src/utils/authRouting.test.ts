@@ -18,13 +18,13 @@ describe('resolvePostLoginDestination', () => {
     })
   })
 
-  describe('→ /dashboard (약관 동의 완료)', () => {
-    it('termsAgreedAt = ISO 날짜 문자열 → /dashboard', () => {
-      expect(resolvePostLoginDestination('2025-05-14T10:00:00.000Z')).toBe('/dashboard')
+  describe('→ /calendar (약관 동의 완료)', () => {
+    it('termsAgreedAt = ISO 날짜 문자열 → /calendar', () => {
+      expect(resolvePostLoginDestination('2025-05-14T10:00:00.000Z')).toBe('/calendar')
     })
 
-    it('termsAgreedAt = 임의 non-empty 문자열 → /dashboard', () => {
-      expect(resolvePostLoginDestination('some-date')).toBe('/dashboard')
+    it('termsAgreedAt = 임의 non-empty 문자열 → /calendar', () => {
+      expect(resolvePostLoginDestination('some-date')).toBe('/calendar')
     })
   })
 
@@ -34,9 +34,9 @@ describe('resolvePostLoginDestination', () => {
       expect(result).toStrictEqual('/terms-agreement')
     })
 
-    it('날짜 입력 → 정확히 "/dashboard" 문자열', () => {
+    it('날짜 입력 → 정확히 "/calendar" 문자열', () => {
       const result = resolvePostLoginDestination('2025-01-01T00:00:00.000Z')
-      expect(result).toStrictEqual('/dashboard')
+      expect(result).toStrictEqual('/calendar')
     })
   })
 })
@@ -94,10 +94,10 @@ describe('parseNeedsTerms', () => {
       expect(resolvePostLoginDestination(null)).toBe('/terms-agreement')
     })
 
-    it('기존 유저 → needs_terms=false → resolvePostLoginDestination(date) = /dashboard', () => {
+    it('기존 유저 → needs_terms=false → resolvePostLoginDestination(date) = /calendar', () => {
       const termsAgreedAt = '2025-05-14T10:00:00.000Z'
       expect(parseNeedsTerms('false')).toBe(false)
-      expect(resolvePostLoginDestination(termsAgreedAt)).toBe('/dashboard')
+      expect(resolvePostLoginDestination(termsAgreedAt)).toBe('/calendar')
     })
 
     it('약관 거부 후 재로그인 → needs_terms=true → /terms-agreement 재표시', () => {
@@ -108,9 +108,9 @@ describe('parseNeedsTerms', () => {
       expect(resolvePostLoginDestination(null)).toBe('/terms-agreement')
     })
 
-    it('Landing refresh: termsAgreedAt 있는 유저 → /dashboard', () => {
+    it('Landing refresh: termsAgreedAt 있는 유저 → /calendar', () => {
       const userFromRefresh = { termsAgreedAt: '2025-05-14T10:00:00.000Z' }
-      expect(resolvePostLoginDestination(userFromRefresh.termsAgreedAt)).toBe('/dashboard')
+      expect(resolvePostLoginDestination(userFromRefresh.termsAgreedAt)).toBe('/calendar')
     })
 
     it('Landing refresh: termsAgreedAt=null 유저 → /terms-agreement', () => {

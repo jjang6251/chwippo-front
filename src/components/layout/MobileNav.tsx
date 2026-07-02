@@ -2,12 +2,13 @@ import { Link, useLocation } from 'react-router-dom'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useAuthStore } from '@/stores/authStore'
 
+// 캘린더 UX 재구성 — 캘린더가 홈. 대시보드는 "회고" 페이지로 강등
 const TABS = [
-  { label: '대시보드', path: '/dashboard', icon: GridIcon },
-  { label: '보드', path: '/board', icon: BoardIcon },
   { label: '캘린더', path: '/calendar', icon: CalendarIcon },
+  { label: '보드', path: '/board', icon: BoardIcon },
   { label: '활동 일지', path: '/activity', icon: JournalIcon },
   { label: '내정보', path: '/myinfo', icon: StorageIcon },
+  { label: '회고', path: '/dashboard', icon: GridIcon },
 ] as const
 
 export function MobileNav() {
