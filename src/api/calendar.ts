@@ -12,6 +12,11 @@ export interface CalendarEvent {
   stepName: string | null
   location: string | null
   content: string | null
+  /**
+   * 캘린더 UX 재구성 — step 타입 전용. Application.isStarred 값.
+   * 아젠다 즐겨찾기 필터에서 사용.
+   */
+  isStarred?: boolean
 }
 
 export interface DailyNote {

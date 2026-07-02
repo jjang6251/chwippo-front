@@ -1,217 +1,169 @@
-import { useState } from 'react'
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  TouchSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  arrayMove,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { DdayPinnedCard } from '@/components/dashboard/DdayPinnedCard'
-import { SectionWrapper } from '@/components/dashboard/SectionWrapper'
-import { AddSectionSheet } from '@/components/dashboard/AddSectionSheet'
 import { StatsSection } from '@/components/dashboard/sections/StatsSection'
-import { DdaySection } from '@/components/dashboard/sections/DdaySection'
-import { TodosSection } from '@/components/dashboard/sections/TodosSection'
-import { GoalsSection } from '@/components/dashboard/sections/GoalsSection'
-import { TodayScheduleSection } from '@/components/dashboard/sections/TodayScheduleSection'
-import { TopApplicationsSection } from '@/components/dashboard/sections/TopApplicationsSection'
-import { CalendarMiniSection } from '@/components/dashboard/sections/CalendarMiniSection'
-import { CoverLetterQuickSection } from '@/components/dashboard/sections/CoverLetterQuickSection'
 import { StreakSection } from '@/components/dashboard/StreakSection'
 import { StatusDoughnutSection } from '@/components/dashboard/StatusDoughnutSection'
-import { useDashboardStats, useDdayList } from '@/hooks/useDashboard'
 import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
-import { useDashboardConfig, useUpdateDashboardConfig } from '@/hooks/useDashboardConfig'
-import { useProfile } from '@/hooks/useMyinfo'
+import { MonthlyComparisonSection } from '@/components/dashboard/MonthlyComparisonSection'
+import { PersonalFunnelSection } from '@/components/dashboard/PersonalFunnelSection'
+import { InsightsSection } from '@/components/dashboard/InsightsSection'
+import { MilestonesSection } from '@/components/dashboard/MilestonesSection'
+import { useDashboardStats } from '@/hooks/useDashboard'
+import { useDashboardStreak } from '@/hooks/useDashboardStreak'
+import { useDashboardConfig } from '@/hooks/useDashboardConfig'
 import { useAuthStore } from '@/stores/authStore'
+import { useQueryClient } from '@tanstack/react-query'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
+import { dismissCalendarHomeIntro } from '@/api/users'
 
+/**
+ * 회고 = 성장 페이지 (Phase A "나 vs 나").
+ *
+ * 홈은 이제 /calendar. 이 페이지는 "지난 달보다 얼마나 성장했는지 돌아보는 곳".
+ * 레이아웃 순서 (고정):
+ *   1. Stats (4 KPI · 최상단)
+ *   2. Milestones (다음 목표 + 달성 배지)               ← 항상 표시 · sparse 사용자 대응
+ *   3. Monthly Comparison (이번 달 vs 지난 달 활동량)
+ *   4. Insights (가장 활발한 요일 · 직군 등)            ← 표본 있으면 표시
+ *   5. Streak + Doughnut (2-col grid 1.4fr : 1fr)
+ *   6. Personal Funnel (지원 → 면접 → 합격)
+ *   7. Interview Review (어제 면접 회고 유도)
+ *
+ * Phase A' (F8) — 스텝별 통과율 + 합격 이유 분석은 별도 PR.
+ * Phase B (사용자 100+명 이후) — 유사 취준생 벤치마크는 후속 PR.
+ * 섹션 visibility toggle 은 DashboardConfig 를 존중하되 순서는 고정.
+ */
 export function Dashboard() {
-  // W1 — TourOverlay 자동 트리거 제거. SignupQuestion + 샘플 카드가 학습 모먼트 대체
   const user = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
+  const qc = useQueryClient()
+  const pull = usePullToRefresh(async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['dashboard'] }),
+      qc.invalidateQueries({ queryKey: ['applications'] }),
+    ])
+  })
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
-  const { data: dday, isLoading: ddayLoading } = useDdayList()
-  const { data: profile } = useProfile()
+  const { data: streak } = useDashboardStreak()
+  const streakDays = streak?.streak.current ?? 0
   const { data: config } = useDashboardConfig()
-  const { mutate: saveConfig } = useUpdateDashboardConfig()
 
-  const [editMode, setEditMode] = useState(false)
-  const [showAddSheet, setShowAddSheet] = useState(false)
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const showIntroBanner = user?.calendarHomeIntroDismissedAt == null
 
-  const goals = profile?.goal_other
-    ?.split('\n')
-    .map((g) => g.trim())
-    .filter(Boolean) ?? []
+  function handleDismissIntro() {
+    dismissCalendarHomeIntro().then(() => {
+      if (user) setUser({ ...user, calendarHomeIntroDismissedAt: new Date().toISOString() })
+    })
+  }
 
   const now = new Date()
+  const year = now.getFullYear()
   const month = now.getMonth() + 1
-  const date = now.getDate()
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토']
-  const day = dayNames[now.getDay()]
 
-  const pinnedItem = dday?.find(
-    (item) => item.type === 'step' && item.pinnedContent && item.dday <= 1 && item.dday >= 0,
-  )
+  // 섹션 visibility — config 없으면 default true. 성장 재정의 후 goals·cover_letter_quick 는 제거됨.
+  const visibleMap = new Map<string, boolean>()
+  ;(config?.sections ?? []).forEach((s) => visibleMap.set(s.id, s.visible))
+  const isVisible = (id: string) => visibleMap.get(id) ?? true
 
-  const sections = config?.sections ?? []
-  // stats는 항상 최상단 고정 — DndContext 밖에서 별도 렌더링
-  const draggableSections = sections.filter((s) => s.visible && s.id !== 'stats')
-  const draggableIds = draggableSections.map((s) => s.id)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
-  )
-
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(event.active.id as string)
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveId(null)
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = draggableIds.indexOf(active.id as string)
-    const newIndex = draggableIds.indexOf(over.id as string)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const reordered = arrayMove(draggableSections, oldIndex, newIndex)
-    const statsSection = sections.find((s) => s.id === 'stats') ?? { id: 'stats', visible: true }
-    saveConfig({ sections: [statsSection, ...reordered] })
-  }
-
-  function handleRemove(id: string) {
-    const newSections = sections.map((s) => s.id === id ? { ...s, visible: false } : s)
-    saveConfig({ sections: newSections })
-  }
-
-  function handleToggle(id: string) {
-    const existing = sections.find((s) => s.id === id)
-    const isActive = existing?.visible === true
-    const statsSection = sections.find((s) => s.id === 'stats') ?? { id: 'stats', visible: true }
-    const rest = sections.filter((s) => s.id !== 'stats')
-    let newRest
-    if (existing) {
-      newRest = rest.map((s) => s.id === id ? { ...s, visible: !isActive } : s)
-    } else {
-      newRest = [...rest, { id, visible: true }]
-    }
-    saveConfig({ sections: [statsSection, ...newRest] })
-  }
-
-  function renderSectionContent(id: string) {
-    switch (id) {
-      case 'dday':              return <DdaySection items={dday} isLoading={ddayLoading} />
-      case 'todos':             return <TodosSection />
-      case 'goals':             return <GoalsSection goals={goals} />
-      case 'today_schedule':    return <TodayScheduleSection items={dday} isLoading={ddayLoading} />
-      case 'top_applications':  return <TopApplicationsSection />
-      case 'calendar_mini':     return <CalendarMiniSection />
-      case 'cover_letter_quick':return <CoverLetterQuickSection />
-      case 'activity_streak':   return <StreakSection />
-      case 'status_doughnut':   return <StatusDoughnutSection />
-      default:                  return null
-    }
-  }
-
-  const activeSectionIds = sections.filter((s) => s.visible).map((s) => s.id)
+  const showStreak = isVisible('activity_streak')
+  const showDoughnut = isVisible('status_doughnut')
+  const showInterviewReview = isVisible('interview_review')
+  const showMonthlyComparison = isVisible('monthly_comparison')
+  const showPersonalFunnel = isVisible('personal_funnel')
+  const showInsights = isVisible('insights')
+  const showMilestones = isVisible('milestones')
 
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
-      {/* 헤더 */}
-      <div className="mb-8">
-        <p className="text-text-quaternary text-xs mb-2 tracking-wide">{month}월 {date}일 ({day})</p>
-        <div className="flex items-end justify-between gap-2">
-          <div className="flex items-end gap-2 min-w-0 flex-1">
-            <h1 className="text-text-primary text-2xl font-bold leading-tight truncate">
-              안녕하세요,{' '}
-              <span className="text-brand">{user?.nickname ?? ''}님</span>
-            </h1>
-            <span className="text-xl mb-0.5 flex-none">👋</span>
-          </div>
+      <PullToRefreshIndicator {...pull} />
+
+      {/* 첫 방문 안내 배너 */}
+      {showIntroBanner && (
+        <div className="mb-4 lg:mb-6 rounded-xl bg-brand/6 border border-brand/20 px-4 py-2.5 flex items-center gap-3">
+          <p className="text-xs text-text-secondary flex-1">
+            이제 캘린더가 홈이에요. 여긴 성장을 돌아보는 곳이에요.
+          </p>
           <button
-            onClick={() => setEditMode((v) => !v)}
-            className={`flex-none text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${
-              editMode
-                ? 'bg-brand/20 border-brand/40 text-brand'
-                : 'bg-card border-line text-text-quaternary hover:text-text-tertiary'
-            }`}
+            onClick={handleDismissIntro}
+            aria-label="배너 닫기"
+            className="w-6 h-6 flex items-center justify-center rounded text-text-tertiary hover:text-text-secondary"
           >
-            {editMode ? '완료' : '섹션 편집'}
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M3 3l6 6M9 3L3 9" />
+            </svg>
           </button>
-        </div>
-        <p className="text-text-quaternary text-sm mt-1">오늘도 취뽀 향해 한 걸음씩!</p>
-      </div>
-
-      {/* 어제 면접 후기 CTA */}
-      <InterviewReviewCard />
-
-      {/* 면접 핀 카드 (D-1 / D-day) — 커스터마이징 대상 아님 */}
-      {pinnedItem && (
-        <div className="mb-6">
-          <DdayPinnedCard item={pinnedItem} />
         </div>
       )}
 
-      {/* stats 섹션 — 항상 최상단 고정, 드래그 없음 */}
-      <div className="mb-6 bg-card border border-line[0.07] rounded-xl p-4">
+      {/* 헤더 — 회고 페이지 */}
+      <div className="mb-8">
+        <p className="text-text-quaternary text-[11px] mb-1 tabular-nums">{year}</p>
+        <div className="flex items-end justify-between gap-2">
+          <h1 className="text-text-primary text-2xl font-bold tracking-tight">
+            {month}월 <span className="text-text-tertiary font-medium">회고</span>
+          </h1>
+          {streakDays >= 2 && (
+            <span
+              className="text-[11px] font-medium text-brand tabular-nums"
+              aria-label={`활동 ${streakDays}일 연속`}
+            >
+              🔥 {streakDays}일 연속
+            </span>
+          )}
+        </div>
+        <p className="text-text-tertiary text-xs mt-1.5">
+          {user?.nickname
+            ? `${user.nickname}님, 지난 달보다 얼마나 성장했는지 돌아봐요.`
+            : '지난 달보다 얼마나 성장했는지 돌아봐요.'}
+        </p>
+      </div>
+
+      {/* 1. Stats — 항상 최상단 고정 */}
+      <div className="mb-6 bg-card border border-line rounded-xl p-4">
         <StatsSection stats={stats} isLoading={statsLoading} />
       </div>
 
-      {/* 드래그 가능한 섹션들 */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-6 sm:space-y-4">
-            {draggableSections.map((s) => {
-              const content = renderSectionContent(s.id)
-              if (!content) return null
-              return (
-                <SectionWrapper
-                  key={s.id}
-                  id={s.id}
-                  editMode={editMode}
-                  onRemove={() => handleRemove(s.id)}
-                >
-                  {content}
-                </SectionWrapper>
-              )
-            })}
-          </div>
-        </SortableContext>
-        <DragOverlay dropAnimation={null}>
-          {activeId ? (
-            <div className="bg-card border border-line[0.07] rounded-xl p-4 shadow-2xl shadow-black/40 cursor-grabbing">
-              {renderSectionContent(activeId)}
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      {/* 2. Milestones — 다음 목표 + 달성 배지 (항상 표시, sparse 사용자엔 CTA 역할) */}
+      {showMilestones && (
+        <div className="mb-6">
+          <MilestonesSection />
+        </div>
+      )}
 
-      {/* 섹션 추가 (항상 노출) */}
-      <button
-        onClick={() => setShowAddSheet(true)}
-        className="mt-4 w-full py-3 rounded-xl border border-dashed border-line text-text-quaternary text-xs hover:border-brand/40 hover:text-brand transition-colors"
-      >
-        + 섹션 추가
-      </button>
+      {/* 3. Monthly Comparison — 이번 달 vs 지난 달 활동량 */}
+      {showMonthlyComparison && (
+        <div className="mb-6">
+          <MonthlyComparisonSection />
+        </div>
+      )}
 
-      {showAddSheet && (
-        <AddSectionSheet
-          activeSectionIds={activeSectionIds}
-          onToggle={handleToggle}
-          onClose={() => setShowAddSheet(false)}
-        />
+      {/* 4. Insights — 가장 활발한 요일 · 직군 등 (표본 있으면 표시) */}
+      {showInsights && (
+        <div className="mb-6">
+          <InsightsSection />
+        </div>
+      )}
+
+      {/* 5. Streak + Doughnut — 2-col grid */}
+      {(showStreak || showDoughnut) && (
+        <div className="mb-6 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
+          {showStreak && <StreakSection />}
+          {showDoughnut && <StatusDoughnutSection />}
+        </div>
+      )}
+
+      {/* 6. Personal Funnel — 지원 → 면접 → 합격 */}
+      {showPersonalFunnel && (
+        <div className="mb-6">
+          <PersonalFunnelSection />
+        </div>
+      )}
+
+      {/* 7. Interview Review — 어제 면접 회고 유도 */}
+      {showInterviewReview && (
+        <div className="mb-6">
+          <InterviewReviewCard />
+        </div>
       )}
     </div>
   )

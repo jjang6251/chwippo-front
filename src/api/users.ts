@@ -36,6 +36,10 @@ export const postSignupAnswer = (body: SignupAnswerBody) =>
 export const dismissAllSampleCards = () =>
   apiClient.post('/users/me/sample-cards/dismiss').then(() => undefined)
 
+// 캘린더 UX 재구성 — "이제 캘린더가 홈이에요" 안내 배너 dismiss (멱등)
+export const dismissCalendarHomeIntro = () =>
+  apiClient.post('/users/me/dismiss-calendar-home-intro').then(() => undefined)
+
 export interface DashboardSection {
   id: string
   visible: boolean

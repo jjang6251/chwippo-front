@@ -13,7 +13,8 @@ export function Landing() {
     if (checked.current) return
     checked.current = true
 
-    if (accessToken) { navigate('/dashboard', { replace: true }); return }
+    // 캘린더 UX 재구성 — 홈 = /calendar (대시보드는 "회고" 페이지로 강등)
+    if (accessToken) { navigate('/calendar', { replace: true }); return }
 
     axios
       .post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true })

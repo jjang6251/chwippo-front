@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Drawer } from 'vaul'
 import type { Education, EducationMinor } from '@/api/myinfo'
 import { FileUpload } from '@/components/myinfo/FileUpload'
 import { EMPTY_SLOT, resolveFileForSubmit, slotFromExisting, type FileSlot } from '@/utils/fileSlot'
 import { toast } from '@/stores/toastStore'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { SchoolAutocomplete } from './SchoolAutocomplete'
 import { MajorAutocomplete } from './MajorAutocomplete'
 import type { SchoolKind } from '@/api/schools'
@@ -108,25 +110,21 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
     }
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0"
-      onClick={() => { if (!saving) onClose() }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={isEdit ? '학력 편집' : '학력 추가'}
-        className="bg-surface border border-line rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[calc(100dvh-6rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <ModalHeader
-          isEdit={isEdit}
-          degree={form.degree}
-          schoolName={form.school_name}
-          onClose={onClose}
-        />
-        <div className="flex-1 min-h-0 overflow-y-auto px-8 pt-2 pb-4">
+  const isMobile = useIsMobile()
+
+  const modalHeader = (
+    <ModalHeader
+      isEdit={isEdit}
+      degree={form.degree}
+      schoolName={form.school_name}
+      onClose={onClose}
+    />
+  )
+
+  const modalContent = (
+    <>
+      {modalHeader}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-8 pt-2 pb-4">
           <Section title="학교 정보" first>
             <FieldLabel required>학교 단계</FieldLabel>
             <Select
@@ -299,6 +297,44 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
             {saving ? '저장 중...' : isEdit ? '수정' : '추가'}
           </button>
         </div>
+    </>
+  )
+
+  if (isMobile) {
+    return (
+      <Drawer.Root
+        open
+        onOpenChange={(open) => { if (!open && !saving) onClose() }}
+        shouldScaleBackground={false}
+      >
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+          <Drawer.Content
+            aria-label={isEdit ? '학력 편집' : '학력 추가'}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[92dvh] flex flex-col shadow-2xl outline-none"
+          >
+            <Drawer.Title className="sr-only">{isEdit ? '학력 편집' : '학력 추가'}</Drawer.Title>
+            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line shrink-0" aria-hidden="true" />
+            {modalContent}
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+    )
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      onClick={() => { if (!saving) onClose() }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? '학력 편집' : '학력 추가'}
+        className="bg-surface border border-line rounded-2xl w-full max-w-lg max-h-[calc(100vh-4rem)] flex flex-col shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {modalContent}
       </div>
     </div>
   )

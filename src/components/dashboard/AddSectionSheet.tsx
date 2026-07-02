@@ -8,14 +8,19 @@ interface SectionMeta {
   available: boolean
 }
 
+// 회고=성장 페이지 Phase A — 현재 유지 섹션:
+//   milestones · monthly_comparison · insights · activity_streak · status_doughnut · personal_funnel · interview_review
+// 제거된 섹션 (backend DEPRECATED_SECTION_IDS 로 자동 필터링):
+//   dday · todos · today_schedule · top_applications · calendar_mini (→ 캘린더 이관)
+//   cover_letter_quick · goals (→ 성장 재정의로 제거)
 const ALL_SECTIONS: SectionMeta[] = [
-  { id: 'dday',              label: 'D-day 임박',         icon: '📅', description: '마감일과 면접 일정을 한눈에',           available: true },
-  { id: 'todos',             label: '오늘 할 일',         icon: '✅', description: '오늘의 준비 항목 체크',                 available: true },
-  { id: 'goals',             label: '내 스펙 목표',       icon: '🎯', description: '설정한 스펙 목표 확인',                 available: true },
-  { id: 'today_schedule',    label: '오늘 일정',          icon: '📆', description: '오늘 예정된 일정 모아보기',             available: true },
-  { id: 'top_applications',  label: '관심 지원',          icon: '⭐', description: '즐겨찾기 한 지원 카드',                 available: true },
-  { id: 'calendar_mini',     label: '미니 캘린더',        icon: '🗓️', description: '월별 일정 미리보기',                   available: true },
-  { id: 'cover_letter_quick',label: '자소서 소재',        icon: '📋', description: '면접·자소서 작성 직전 빠른 참조',       available: true },
+  { id: 'milestones',         label: '내 마일스톤',     icon: '🏆', description: '달성 배지 + 다음 목표',                available: true },
+  { id: 'monthly_comparison', label: '이번 달 활동',    icon: '📈', description: '이번 달 vs 지난 달 활동량 비교',       available: true },
+  { id: 'insights',           label: '내 활동 패턴',    icon: '🔍', description: '가장 활발한 요일 · 지원 직군 등 개인 인사이트', available: true },
+  { id: 'activity_streak',    label: '활동 스트릭',     icon: '🔥', description: '연속 활동 일수 + 365일 heatmap',      available: true },
+  { id: 'status_doughnut',    label: '지원 현황',       icon: '🎯', description: '지원 status 분포 도넛',                available: true },
+  { id: 'personal_funnel',    label: '나의 지원 흐름',  icon: '📊', description: '지원 → 면접 도달 → 합격 개인 %',     available: true },
+  { id: 'interview_review',   label: '면접 회고',       icon: '💭', description: '어제 본 면접 다시 보기',              available: true },
 ]
 
 interface AddSectionSheetProps {

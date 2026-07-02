@@ -5,6 +5,7 @@ import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
 import { apiClient } from '@/api/client'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useDashboardStreak } from '@/hooks/useDashboardStreak'
 
 interface NavItem {
   label: string
@@ -16,9 +17,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
-  { label: '대시보드', path: '/dashboard', icon: GridIcon },
-  { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
+  // 캘린더 UX 재구성 — 캘린더가 홈. 대시보드는 "회고" 페이지로 강등 (streak 배지로 유도)
   { label: '캘린더', path: '/calendar', icon: CalendarIcon },
+  { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
+  { label: '회고', path: '/dashboard', icon: GridIcon },
   { label: '활동 일지', path: '/activity', icon: JournalIcon },
   // F6 PR 1 — 자소서 통합 페이지 (데스크탑 only. MobileNav 변경 X — 모바일은 카드 상세에서 진입)
   { label: '자소서', path: '/coverletters', icon: CoverLetterIcon, ai: true },
@@ -37,6 +39,9 @@ export function Sidebar() {
   const aiEnabled = useAiEnabled()
   const link = (p: string) => (isDemo ? '/demo' + p : p)
   const visibleNavItems = NAV_ITEMS.filter((item) => aiEnabled || !item.ai)
+  // 캘린더 UX 재구성 — 회고 nav 옆 streak 배지 (>=2 조건, 1일 이하는 상처 방지 hide)
+  const { data: streak } = useDashboardStreak()
+  const streakDays = streak?.streak.current ?? 0
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
@@ -68,22 +73,33 @@ export function Sidebar() {
 
         {/* Main nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
-          {visibleNavItems.map(({ label, path, icon: Icon }) => (
-            <Link
-              key={path}
-              to={link(path)}
-              {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
-              {...(path === '/activity' ? { 'data-tour': 'activity-nav' } : {})}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive(path)
-                  ? 'bg-brand/10 text-brand'
-                  : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-              }`}
-            >
-              <Icon size={16} />
-              {label}
-            </Link>
-          ))}
+          {visibleNavItems.map(({ label, path, icon: Icon }) => {
+            const showStreak = path === '/dashboard' && streakDays >= 2
+            return (
+              <Link
+                key={path}
+                to={link(path)}
+                {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
+                {...(path === '/activity' ? { 'data-tour': 'activity-nav' } : {})}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(path)
+                    ? 'bg-brand/10 text-brand'
+                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
+                }`}
+              >
+                <Icon size={16} />
+                <span className="flex-1">{label}</span>
+                {showStreak && (
+                  <span
+                    className="text-[10px] font-semibold text-brand tabular-nums"
+                    aria-label={`활동 ${streakDays}일 연속`}
+                  >
+                    🔥 {streakDays}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
 
           {/* 설정 — 메인 nav 안 (이전엔 spacer 아래) */}
           {!isDemo && (
