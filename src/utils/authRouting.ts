@@ -1,13 +1,15 @@
-export type PostAuthDestination = '/terms-agreement' | '/dashboard'
+export type PostAuthDestination = '/terms-agreement' | '/calendar'
 
 /**
  * termsAgreedAt 기반 로그인 후 이동 경로 결정.
  * Landing(refresh), AuthGuard 에서 공통 사용.
+ *
+ * 캘린더 UX 재구성 — 홈 = /calendar (기존 /dashboard 는 "회고" 페이지로 강등).
  */
 export function resolvePostLoginDestination(
   termsAgreedAt: string | null | undefined,
 ): PostAuthDestination {
-  return termsAgreedAt ? '/dashboard' : '/terms-agreement'
+  return termsAgreedAt ? '/calendar' : '/terms-agreement'
 }
 
 /**

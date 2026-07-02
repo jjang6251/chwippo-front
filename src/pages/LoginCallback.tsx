@@ -59,13 +59,14 @@ export function LoginCallback() {
     }
 
     // W1 — 신규 user (onboardedAt null) → /signup/question redirect.
-    // 약관 동의 미완 → 약관 우선. signup 답변 완료 (onboardedAt set) → /dashboard
+    // 약관 동의 미완 → 약관 우선. signup 답변 완료 → 캘린더 UX 재구성 → /calendar 로그인 후 홈
     if (needsTerms) {
       navigate('/terms-agreement', { replace: true })
     } else if (!userOnboardedAt) {
       navigate('/signup/question', { replace: true })
     } else {
-      navigate('/dashboard', { replace: true })
+      // 캘린더 UX 재구성 — 홈 = /calendar (대시보드는 "회고" 페이지로 강등)
+      navigate('/calendar', { replace: true })
     }
     // setUser는 zustand setter라 stable / window.location.hash는 마운트 1회만 읽음
     // eslint-disable-next-line react-hooks/exhaustive-deps

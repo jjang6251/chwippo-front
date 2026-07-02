@@ -1,6 +1,17 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import dayjs from 'dayjs'
 import type { DdayItem, NextAction } from '@/api/dashboard'
 import { useDemoMode } from '@/contexts/demoMode'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { CompanyAvatar } from '@/components/board/CompanyAvatar'
+
+const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
+
+/** ISO 날짜 → "7월 3일 (금)" 한국어 포맷 */
+function formatDateKo(iso: string): string {
+  const d = dayjs(iso)
+  return `${d.month() + 1}월 ${d.date()}일 (${KO_DAYS[d.day()]})`
+}
 
 /**
  * 캘린더 UX 재구성 — 대형 Hero 카드 (가장 임박한 마감 1건).
@@ -54,7 +65,7 @@ function EventTypeLabel({ event }: { event: DdayItem }) {
 
 export function CountdownHeroLarge({ event, streakDays }: Props) {
   const isDemo = useDemoMode()
-  const navigate = useNavigate()
+  const aiEnabled = useAiEnabled()
 
   const isExam = event.type === 'exam'
   const isUrgent = event.dday <= 2
@@ -80,35 +91,28 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
         ? 'bg-violet hover:bg-violet/90'
         : 'bg-brand hover:bg-brand-hover'
 
-  const ctaLabel = CTA_LABEL[event.nextAction ?? 'no_action']
-  const ctaPath = ctaLinkPath(event)
+  // AI hide 중이면 자소서 관련 next_action 을 no_action 으로 강등 (자소서 페이지가 hide 상태)
+  const effectiveAction: NextAction = !aiEnabled &&
+    (event.nextAction === 'writing_coverletter' ||
+      event.nextAction === 'start_coverletter' ||
+      event.nextAction === 'review_company' ||
+      event.nextAction === 'confirm_submit')
+    ? 'no_action'
+    : event.nextAction ?? 'no_action'
+  const ctaLabel = CTA_LABEL[effectiveAction]
+  const ctaPath = effectiveAction === 'no_action' ? `/board/${event.applicationId ?? ''}` : ctaLinkPath(event)
   const ctaTo = isDemo ? '/demo' + ctaPath : ctaPath
 
   const cardPath = `/board/${event.applicationId ?? ''}`
   const cardTo = isDemo ? '/demo' + cardPath : cardPath
 
-  function handleCardClick(e: React.MouseEvent) {
-    // CTA 버튼 등 내부 인터랙션은 카드 이동 무시
-    if ((e.target as HTMLElement).closest('button, a')) return
-    if (event.type === 'exam') return
-    navigate(cardTo)
-  }
-
+  // AI hide 상태에서는 자소서 진행률도 표시 안 함 (자소서 페이지 자체가 hide 되어 있어 진행률 무의미)
   const showProgress =
-    event.progress !== undefined && event.progress.total > 0
+    aiEnabled && event.progress !== undefined && event.progress.total > 0
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={handleCardClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          handleCardClick(e as unknown as React.MouseEvent)
-        }
-      }}
-      className={`group relative block rounded-2xl bg-surface p-7 cursor-pointer border ${borderClass} card-hover`}
+      className={`relative block rounded-2xl bg-surface p-7 border ${borderClass}`}
     >
       <div className="grid grid-cols-[1fr_auto] gap-6 items-end">
         <div>
@@ -128,17 +132,17 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
           </div>
 
           <div className="flex items-center gap-3 mb-2">
-            <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+            {/* domain 있으면 Google s2 favicon → onError 시 CompanyAvatar 내부 해시 아바타 fallback */}
+            <CompanyAvatar
+              name={event.companyName}
+              domain={event.domain}
+              size="lg"
+              className={
                 isExam
-                  ? 'bg-violet/15 border border-violet/25'
-                  : 'bg-warning/15 border border-warning/25'
-              }`}
-            >
-              <span className={`text-lg font-bold ${isExam ? 'text-violet' : 'text-warning'}`}>
-                {event.companyName.charAt(0)}
-              </span>
-            </div>
+                  ? 'border border-violet/25'
+                  : 'border border-warning/25'
+              }
+            />
             <div>
               <p className="text-xl font-bold tracking-tight text-text-primary leading-none">
                 {event.companyName}
@@ -197,7 +201,8 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
             >
               {ctaLabel}
             </Link>
-            {!isExam && (
+            {/* Secondary "카드 열기" 는 primary CTA 가 이미 "카드 열기" 인 경우 중복 노출 방지 */}
+            {!isExam && ctaLabel !== '카드 열기' && (
               <Link
                 to={cardTo}
                 className="h-9 px-3 rounded-lg border border-line-strong text-text-secondary hover:bg-surface-2 text-[11px] font-medium inline-flex items-center"
@@ -205,17 +210,50 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
                 카드 열기
               </Link>
             )}
+            {/* 공고 URL — step 카드에만 노출 (exam 은 URL 없음). 외부 링크 → new tab + noopener */}
+            {!isExam && event.jobUrl && (
+              <a
+                href={event.jobUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9 px-3 rounded-lg border border-line-strong text-text-secondary hover:bg-surface-2 text-[11px] font-medium inline-flex items-center gap-1.5"
+                title={event.jobUrl}
+              >
+                공고
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 2h6v6" />
+                  <path d="M10 2L5 7" />
+                  <path d="M9 8v2H2V3h2" />
+                </svg>
+              </a>
+            )}
           </div>
         </div>
 
+        {/* D-day 표시 — 크기 통일 (text-4xl) · 오늘은 "D-DAY" · 지난 마감은 "D+N" */}
         <div className="text-right pr-1 self-start">
-          <p className={`text-[10px] font-semibold uppercase tracking-widest mb-1 ${textColor}`}>
-            D-
+          {event.dday === 0 ? (
+            <p className={`text-4xl font-bold leading-none tracking-[-0.04em] ${textColor}`}>
+              D-DAY
+            </p>
+          ) : (
+            <p className={`text-4xl font-bold leading-none tabular-nums tracking-[-0.05em] ${textColor}`}>
+              D{event.dday > 0 ? '−' : '+'}{Math.abs(event.dday)}
+            </p>
+          )}
+          <p className="text-[11px] text-text-tertiary mt-2 tabular-nums">
+            {formatDateKo(event.date)}
           </p>
-          <p className={`text-[96px] font-bold leading-none tabular-nums tracking-[-0.04em] ${textColor}`}>
-            {event.dday}
-          </p>
-          <p className="text-[10px] text-text-quaternary mt-2 tabular-nums">{event.date}</p>
         </div>
       </div>
     </div>

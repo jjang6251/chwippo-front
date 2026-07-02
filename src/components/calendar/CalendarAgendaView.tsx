@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import type { CalendarEvent } from '@/api/calendar'
 import { AgendaEventCard } from './AgendaEventCard'
@@ -49,6 +49,26 @@ export function CalendarAgendaView({ events, starOnly = false, onAddOnDate }: Pr
   const thisWeekEnd = thisWeekStart.add(6, 'day')
   const nextWeekStart = thisWeekStart.add(7, 'day')
   const nextWeekEnd = nextWeekStart.add(6, 'day')
+  const [showPast, setShowPast] = useState(false)
+
+  // 지난 일정 (오늘 미포함 · 이번 달 및 다음 달 범위 내)
+  const pastDates = useMemo<DateGroup[]>(() => {
+    const filtered = events.filter((e) => {
+      if (!starOnly) return true
+      if (e.type !== 'step') return true
+      return e.isStarred === true
+    })
+    const byDate = new Map<string, CalendarEvent[]>()
+    for (const e of filtered) {
+      if (e.date >= todayStr) continue
+      const arr = byDate.get(e.date) ?? []
+      arr.push(e)
+      byDate.set(e.date, arr)
+    }
+    return Array.from(byDate.keys())
+      .sort((a, b) => b.localeCompare(a)) // 최근 지난 것부터
+      .map((date) => ({ date, events: byDate.get(date)!, isToday: false }))
+  }, [events, starOnly, todayStr])
 
   const groups = useMemo<WeekGroup[]>(() => {
     // 필터
@@ -130,6 +150,39 @@ export function CalendarAgendaView({ events, starOnly = false, onAddOnDate }: Pr
 
   return (
     <div>
+      {/* 지난 일정 토글 (최상단) */}
+      {pastDates.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowPast((v) => !v)}
+            className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
+          >
+            <span>{showPast ? '지난 일정 접기' : `지난 일정 보기 (${pastDates.length}일)`}</span>
+            <span className="opacity-60">{showPast ? '↓' : '↑'}</span>
+          </button>
+          {showPast && (
+            <div className="mt-3 relative pl-6 opacity-70">
+              <div
+                className="absolute left-[6px] top-0 bottom-0 w-px bg-gradient-to-b from-transparent to-line-strong"
+                aria-hidden="true"
+              />
+              <div className="space-y-4">
+                {pastDates.map((dg) => (
+                  <div key={dg.date} className="relative">
+                    <span className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-line-strong ring-2 ring-bg" />
+                    <AgendaDateHeader date={dg.date} isToday={false} />
+                    <div className="space-y-2">
+                      {dg.events.map((e) => (
+                        <AgendaEventCard key={eventKey(e)} event={e} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {groups.map((group) => {
         if (group.dates.length === 0) return null
         const isThis = group.key === 'this'

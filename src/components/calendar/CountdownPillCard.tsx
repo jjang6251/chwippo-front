@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { DdayItem } from '@/api/dashboard'
 import { useDemoMode } from '@/contexts/demoMode'
+import { CompanyAvatar } from '@/components/board/CompanyAvatar'
 
 /**
  * 캘린더 UX 재구성 — supporting pill 카드 (Hero 아래 2장).
@@ -29,16 +30,14 @@ export function CountdownPillCard({ event }: Props) {
         : 'info'
   const label = isExam ? '시험' : isDoc ? '서류 마감' : isInterview ? '면접' : stepName
 
-  const iconInitial = event.companyName.charAt(0)
-
-  const bgClass =
+  const borderColor =
     color === 'violet'
-      ? 'bg-violet/12 border-violet/25'
+      ? 'border-violet/25'
       : color === 'warning'
-        ? 'bg-warning/15 border-warning/25'
+        ? 'border-warning/25'
         : color === 'brand'
-          ? 'bg-brand/12 border-brand/25'
-          : 'bg-info/12 border-info/25'
+          ? 'border-brand/25'
+          : 'border-info/25'
   const textClass =
     color === 'violet'
       ? 'text-violet'
@@ -56,9 +55,12 @@ export function CountdownPillCard({ event }: Props) {
   return (
     <Link to={to} className="block rounded-2xl bg-surface border border-line p-4 card-hover">
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${bgClass}`}>
-          <span className={`text-sm font-bold ${textClass}`}>{iconInitial}</span>
-        </div>
+        <CompanyAvatar
+          name={event.companyName}
+          domain={event.domain}
+          size="md"
+          className={`border ${borderColor}`}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className={`text-[10px] font-medium ${textClass}`}>{label}</span>
@@ -76,9 +78,14 @@ export function CountdownPillCard({ event }: Props) {
             <p className="text-[10px] text-text-tertiary truncate mt-0.5">{event.stepName}</p>
           )}
         </div>
-        <div className="text-right tabular-nums shrink-0">
-          <p className="text-[9px] font-medium text-text-quaternary">D-</p>
-          <p className={`text-xl font-bold leading-none ${textClass}`}>{event.dday}</p>
+        <div className="text-right shrink-0">
+          {event.dday === 0 ? (
+            <p className={`text-lg font-bold leading-none ${textClass}`}>D-DAY</p>
+          ) : (
+            <p className={`text-2xl font-bold leading-none tabular-nums tracking-[-0.05em] ${textClass}`}>
+              D{event.dday > 0 ? '−' : '+'}{Math.abs(event.dday)}
+            </p>
+          )}
         </div>
       </div>
     </Link>

@@ -18,12 +18,6 @@ interface Props {
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
-function getWeekStartMonday(date: dayjs.Dayjs): dayjs.Dayjs {
-  const day = date.day()
-  const daysFromMonday = day === 0 ? 6 : day - 1
-  return date.subtract(daysFromMonday, 'day').startOf('day')
-}
-
 interface EventPresentation {
   pill?: { label: string; className: string }
   dots: { className: string; label: string }[]
@@ -89,9 +83,6 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
     }
     return map
   }, [events])
-
-  const thisWeekStart = useMemo(() => getWeekStartMonday(today), [today])
-  const thisWeekEnd = useMemo(() => thisWeekStart.add(6, 'day'), [thisWeekStart])
 
   const counts = useMemo(() => {
     let deadline = 0
@@ -167,13 +158,13 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="rounded-2xl bg-surface border border-line overflow-hidden">
+      {/* Grid — 원래 캘린더 색감·디자인 (bg-surface-2 · border-b/border-r · 오늘=원형 배지 · 선택=bg-brand/8) */}
+      <div className="bg-surface-2 border border-line rounded-xl overflow-hidden">
         <div className="grid grid-cols-7 border-b border-line">
           {DAY_LABELS.map((d, i) => (
             <div
               key={d}
-              className={`py-2.5 text-center text-[10px] font-semibold ${
+              className={`py-2.5 text-center text-xs font-medium ${
                 i === 0
                   ? 'text-danger/70'
                   : i === 6
@@ -188,11 +179,14 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
 
         <div className="grid grid-cols-7">
           {cells.map((day, i) => {
+            const isLastRow = i >= cells.length - 7
+            const isLastCol = (i + 1) % 7 === 0
+
             if (!day) {
               return (
                 <div
                   key={`empty-${i}`}
-                  className="h-24 border-t border-r border-line last:border-r-0"
+                  className={`min-h-[64px] sm:min-h-[80px] border-line ${!isLastRow ? 'border-b' : ''} ${!isLastCol ? 'border-r' : ''}`}
                 />
               )
             }
@@ -205,51 +199,47 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
             const isPast = dateStr < todayStr
             const isSun = day.day() === 0
             const isSat = day.day() === 6
-            const isThisWeek =
-              !day.isBefore(thisWeekStart) && !day.isAfter(thisWeekEnd)
 
-            const numColor = isToday
-              ? 'text-brand font-bold'
+            // 날짜 원형 배지 — 오늘만 브랜드 fill, 나머지는 색상만
+            const dateBadge = isToday
+              ? 'bg-brand text-text-primary'
               : isSun
-                ? 'text-danger/70'
+                ? 'text-danger/80'
                 : isSat
-                  ? 'text-info/70'
-                  : 'text-text-tertiary'
+                  ? 'text-info/80'
+                  : 'text-text-secondary'
 
             const cellBg = isSelected
-              ? 'bg-accent/6'
-              : isToday
-                ? 'bg-brand/10'
-                : isThisWeek
-                  ? 'bg-brand/[0.03] hover:bg-brand/[0.06]'
-                  : 'hover:bg-surface-2'
+              ? 'bg-brand/8'
+              : 'hover:bg-card active:bg-card-strong'
 
             return (
               <button
                 key={dateStr}
                 onClick={() => onSelectDate?.(dateStr)}
-                className={`h-24 px-1.5 py-1.5 text-left border-t border-r last:border-r-0 border-line transition-colors ${cellBg} ${
-                  isPast && !isToday ? 'opacity-60' : ''
-                } ${isSelected ? 'ring-2 ring-accent/40 ring-inset' : ''}`}
+                className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-line transition-colors text-left w-full ${!isLastRow ? 'border-b' : ''} ${!isLastCol ? 'border-r' : ''} ${cellBg} ${isPast && !isToday ? 'opacity-50' : ''}`}
               >
-                <span className={`text-[11px] tabular-nums block mb-1 ${numColor}`}>
+                <span
+                  className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold shrink-0 ${dateBadge}`}
+                >
                   {day.date()}
                 </span>
                 {presentation.pill && (
-                  <div
-                    className={`text-[9px] font-medium px-1.5 py-0.5 rounded border block w-full text-left mb-1 truncate ${presentation.pill.className}`}
+                  <span
+                    className={`text-[9px] font-medium px-1.5 py-0.5 rounded border block w-full text-left truncate leading-tight ${presentation.pill.className}`}
+                    title={presentation.pill.label}
                   >
                     {presentation.pill.label}
-                  </div>
+                  </span>
                 )}
                 {presentation.dots.map((dot, j) => (
-                  <div key={j} className="flex items-center gap-1 mb-1 text-[9px] text-text-secondary">
-                    <span className={`inline-block w-1 h-1 rounded-full ${dot.className}`} />
+                  <div key={j} className="flex items-center gap-1 text-[9px] text-text-secondary w-full">
+                    <span className={`inline-block w-1 h-1 rounded-full shrink-0 ${dot.className}`} />
                     <span className="truncate">{dot.label}</span>
                   </div>
                 ))}
                 {presentation.overflow > 0 && (
-                  <div className="text-[9px] text-text-quaternary">+{presentation.overflow}</div>
+                  <span className="text-[9px] text-text-quaternary">+{presentation.overflow}개</span>
                 )}
               </button>
             )

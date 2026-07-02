@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useAuthStore } from '@/stores/authStore'
+import { useDemoMode } from '@/contexts/demoMode'
 import { useCalendarEvents } from '@/hooks/useCalendar'
 import { useDdayList } from '@/hooks/useDashboard'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
@@ -38,6 +39,7 @@ export function Calendar() {
   const setUser = useAuthStore((s) => s.setUser)
   const qc = useQueryClient()
   const isMobile = useIsMobile()
+  const isDemo = useDemoMode()
 
   const [searchParams, setSearchParams] = useSearchParams()
   const urlView = searchParams.get('view')
@@ -166,16 +168,16 @@ export function Calendar() {
           <button
             aria-pressed={starOnly}
             onClick={() => setStarOnly((v) => !v)}
-            aria-label="즐겨찾기 필터"
-            className={`w-9 h-9 flex items-center justify-center rounded-lg border text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 h-9 px-3 rounded-lg border text-xs font-medium transition-colors ${
               starOnly
                 ? 'border-warning/40 bg-warning/10 text-warning'
-                : 'border-line text-text-tertiary hover:text-text-secondary'
+                : 'border-line text-text-tertiary hover:text-text-secondary hover:border-line-strong'
             }`}
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
-              <path d="M8 1.5l2 4.5 5 .5-3.7 3.3.9 5-4.2-2.5-4.2 2.5.9-5L1 6.5l5-.5z" />
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" className="text-warning">
+              <path d="M8 1.5l2 4.5 5 .5-3.7 3.3.9 5-4.2-2.5-4.2 2.5.9-5L1 6.5l5-.5z" fill={starOnly ? 'currentColor' : 'none'} />
             </svg>
+            <span className="hidden sm:inline">즐겨찾기만</span>
           </button>
           <button
             onClick={() => {
@@ -202,6 +204,20 @@ export function Calendar() {
           <span className="text-warning font-semibold tabular-nums">{thisWeekDeadlineCount}건</span>
           이에요.
         </p>
+        {monthlyEvents.length > 0 && (
+          <>
+            <span className="w-px h-3 bg-line-strong" />
+            <p className="text-[11px] text-text-tertiary">
+              이번 달 <span className="text-text-secondary tabular-nums">{monthlyEvents.length}건</span>
+            </p>
+          </>
+        )}
+        <a
+          href={isDemo ? '/demo/dashboard' : '/dashboard'}
+          className="ml-auto text-[10px] text-brand hover:text-brand-hover"
+        >
+          회고 보기 →
+        </a>
       </div>
 
       {/* Tabs */}
@@ -327,6 +343,23 @@ export function Calendar() {
         defaultDate={addSheetDate}
         onClose={() => setAddSheetOpen(false)}
       />
+
+      {/* Footer 단축키 힌트 (데스크탑만) */}
+      {!isMobile && (
+        <footer className="mt-16 flex items-center justify-between text-[10px] text-text-quaternary">
+          <span className="tabular-nums">KST · {today.format('YYYY년 M월 D일')}</span>
+          <span className="flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-line font-mono text-[10px]">T</kbd>
+              오늘
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-line font-mono text-[10px]">N</kbd>
+              새 일정
+            </span>
+          </span>
+        </footer>
+      )}
     </div>
   )
 }
