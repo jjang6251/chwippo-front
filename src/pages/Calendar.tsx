@@ -18,7 +18,6 @@ import { CountdownHeroLarge } from '@/components/calendar/CountdownHeroLarge'
 import { CountdownPillCard } from '@/components/calendar/CountdownPillCard'
 import { EmptyDeadlineHero } from '@/components/calendar/EmptyDeadlineHero'
 import { AddEventSheet } from '@/components/calendar/AddEventSheet'
-import { dismissCalendarHomeIntro } from '@/api/users'
 
 type CalendarView = 'agenda' | 'month'
 const VIEW_STORAGE_KEY = 'calendar-view'
@@ -36,7 +35,6 @@ function resolveInitialView(urlParam: string | null): CalendarView {
 
 export function Calendar() {
   const user = useAuthStore((s) => s.user)
-  const setUser = useAuthStore((s) => s.setUser)
   const qc = useQueryClient()
   const isMobile = useIsMobile()
   const isDemo = useDemoMode()
@@ -51,8 +49,6 @@ export function Calendar() {
   const [starOnly, setStarOnly] = useState(false)
   const [addSheetOpen, setAddSheetOpen] = useState(false)
   const [addSheetDate, setAddSheetDate] = useState<string>(todayStr)
-
-  const showIntroBanner = user?.calendarHomeIntroDismissedAt == null
 
   // 이번 달 이벤트 (사이드 미니맵 + 월별 그리드 공유)
   const monthYear = today.year()
@@ -107,12 +103,6 @@ export function Calendar() {
     setAddSheetOpen(true)
   }
 
-  function handleDismissIntro() {
-    dismissCalendarHomeIntro().then(() => {
-      if (user) setUser({ ...user, calendarHomeIntroDismissedAt: new Date().toISOString() })
-    })
-  }
-
   // Fantastical-style 헤더 날짜 표시
   const dateHeader = (
     <div>
@@ -142,24 +132,6 @@ export function Calendar() {
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <PullToRefreshIndicator {...pull} />
-
-      {/* 첫 방문 안내 배너 */}
-      {showIntroBanner && (
-        <div className="mb-4 lg:mb-6 rounded-xl bg-brand/6 border border-brand/20 px-4 py-2.5 flex items-center gap-3">
-          <p className="text-xs text-text-secondary flex-1">
-            이제 캘린더가 홈이에요. 회고는 대시보드에서 볼 수 있어요.
-          </p>
-          <button
-            onClick={handleDismissIntro}
-            aria-label="배너 닫기"
-            className="w-6 h-6 flex items-center justify-center rounded text-text-tertiary hover:text-text-secondary"
-          >
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M3 3l6 6M9 3L3 9" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Header */}
       <header className="flex items-end justify-between mb-4">

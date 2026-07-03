@@ -13,7 +13,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
-import { dismissCalendarHomeIntro } from '@/api/users'
 
 /**
  * 회고 = 성장 페이지 (Phase A "나 vs 나").
@@ -34,7 +33,6 @@ import { dismissCalendarHomeIntro } from '@/api/users'
  */
 export function Dashboard() {
   const user = useAuthStore((s) => s.user)
-  const setUser = useAuthStore((s) => s.setUser)
   const qc = useQueryClient()
   const pull = usePullToRefresh(async () => {
     await Promise.all([
@@ -47,14 +45,6 @@ export function Dashboard() {
   const { data: streak } = useDashboardStreak()
   const streakDays = streak?.streak.current ?? 0
   const { data: config } = useDashboardConfig()
-
-  const showIntroBanner = user?.calendarHomeIntroDismissedAt == null
-
-  function handleDismissIntro() {
-    dismissCalendarHomeIntro().then(() => {
-      if (user) setUser({ ...user, calendarHomeIntroDismissedAt: new Date().toISOString() })
-    })
-  }
 
   const now = new Date()
   const year = now.getFullYear()
@@ -76,24 +66,6 @@ export function Dashboard() {
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <PullToRefreshIndicator {...pull} />
-
-      {/* 첫 방문 안내 배너 */}
-      {showIntroBanner && (
-        <div className="mb-4 lg:mb-6 rounded-xl bg-brand/6 border border-brand/20 px-4 py-2.5 flex items-center gap-3">
-          <p className="text-xs text-text-secondary flex-1">
-            이제 캘린더가 홈이에요. 여긴 성장을 돌아보는 곳이에요.
-          </p>
-          <button
-            onClick={handleDismissIntro}
-            aria-label="배너 닫기"
-            className="w-6 h-6 flex items-center justify-center rounded text-text-tertiary hover:text-text-secondary"
-          >
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M3 3l6 6M9 3L3 9" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* 헤더 — 회고 페이지 */}
       <div className="mb-8">
