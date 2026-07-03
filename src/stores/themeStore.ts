@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { postToNative } from '@/utils/nativeBridge'
 
 export type Theme = 'dark' | 'light' | 'system'
 const STORAGE_KEY = 'chwippo-theme'
@@ -10,7 +11,10 @@ function resolveTheme(theme: Theme): 'dark' | 'light' {
 }
 
 function applyTheme(theme: Theme) {
-  document.documentElement.setAttribute('data-theme', resolveTheme(theme))
+  const resolved = resolveTheme(theme)
+  document.documentElement.setAttribute('data-theme', resolved)
+  // chwippo-mobile WebView 로 sync (bridge 없는 환경 · no-op)
+  postToNative({ type: 'theme', theme: resolved })
 }
 
 function loadInitial(): Theme {

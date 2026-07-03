@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useTourStore } from '@/stores/tourStore'
 import { useThemeStore, type Theme } from '@/stores/themeStore'
 import { apiClient } from '@/api/client'
+import { postToNative } from '@/utils/nativeBridge'
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
   { value: 'dark', label: '다크', icon: '🌙' },
@@ -29,6 +30,7 @@ export function Settings() {
   async function handleLogout() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
+    postToNative({ type: 'logout' })
     navigate('/')
   }
 

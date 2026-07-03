@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
 import { deleteAccount } from '@/api/users'
 import { apiClient } from '@/api/client'
+import { postToNative } from '@/utils/nativeBridge'
 
 export function ProfileSettings() {
   const user = useAuthStore((s) => s.user)
@@ -18,6 +19,8 @@ export function ProfileSettings() {
     mutationFn: deleteAccount,
     onSuccess: () => {
       clearAuth()
+      // chwippo-mobile 즉시 clearAll + login redirect
+      postToNative({ type: 'account-deleted' })
       navigate('/')
     },
     onError: () => toast.error('오류가 발생했습니다. 다시 시도해주세요.'),
@@ -26,6 +29,7 @@ export function ProfileSettings() {
   async function handleLogout() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
+    postToNative({ type: 'logout' })
     navigate('/')
   }
 
