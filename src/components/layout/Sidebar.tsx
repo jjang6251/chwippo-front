@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
 import { apiClient } from '@/api/client'
+import { postToNative } from '@/utils/nativeBridge'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
 
@@ -58,6 +59,7 @@ export function Sidebar() {
   async function handleLogout() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
+    postToNative({ type: 'logout' })
     navigate('/')
   }
 
