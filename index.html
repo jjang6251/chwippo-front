@@ -27,17 +27,44 @@
     </script>
     <title>치뽀 — 취업 일정 관리</title>
     <script>
-      // FOUC 방지 — React mount 전에 테마 적용. (localStorage 우선 + 미설정 시 system OS 설정 따름)
+      // FOUC 방지 — React mount 전에 테마 적용 · chwippo-mobile 브릿지로 즉시 postMessage.
+      // localStorage 우선 · 미설정 시 system (OS 설정 따름) · matchMedia change 실시간 감지.
       (function () {
-        try {
+        function resolve() {
           var stored = localStorage.getItem('chwippo-theme');
           var theme = stored === 'light' || stored === 'system' || stored === 'dark' ? stored : 'system';
-          var resolved = theme === 'system'
-            ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-            : theme;
-          document.documentElement.setAttribute('data-theme', resolved);
-        } catch (e) {
-          document.documentElement.setAttribute('data-theme', 'dark');
+          if (theme !== 'system') return theme;
+          return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        function postTheme(t) {
+          try {
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'theme', theme: t }));
+            }
+          } catch (_) {}
+        }
+        function applyAndPost() {
+          try {
+            var resolved = resolve();
+            document.documentElement.setAttribute('data-theme', resolved);
+            postTheme(resolved);
+          } catch (_) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            postTheme('dark');
+          }
+        }
+        applyAndPost();
+        // OS system dark/light 변경 실시간 감지 · 사용자가 'system' 모드일 때만 반응
+        if (window.matchMedia) {
+          try {
+            var mq = window.matchMedia('(prefers-color-scheme: light)');
+            var listener = function () {
+              var stored = localStorage.getItem('chwippo-theme') || 'system';
+              if (stored === 'system') applyAndPost();
+            };
+            if (mq.addEventListener) mq.addEventListener('change', listener);
+            else if (mq.addListener) mq.addListener(listener);
+          } catch (_) {}
         }
       })();
     </script>
