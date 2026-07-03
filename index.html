@@ -5,9 +5,26 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="치뽀 — 취준생을 위한 취업 일정·자소서·면접 올인원 관리 웹앱" />
-    <!-- Google AdSense 사이트 검토용 -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1653373526340159"
-         crossorigin="anonymous"></script>
+    <!-- Google AdSense · 사이트 검토용 · chwippo-mobile WebView 안에서는 로드 X (Apple 4.2 방어) -->
+    <script>
+      (function () {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var isNative =
+            params.get('native') === '1' ||
+            /chwippo-mobile-webview/i.test(navigator.userAgent) ||
+            window.sessionStorage.getItem('chwippo:native-mode') === '1';
+          if (isNative) return;
+          var s = document.createElement('script');
+          s.async = true;
+          s.crossOrigin = 'anonymous';
+          s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1653373526340159';
+          document.head.appendChild(s);
+        } catch (_) {
+          // 실패 시 광고 안 로드 (안전 방향)
+        }
+      })();
+    </script>
     <title>치뽀 — 취업 일정 관리</title>
     <script>
       // FOUC 방지 — React mount 전에 테마 적용. (localStorage 우선 + 미설정 시 system OS 설정 따름)
