@@ -124,7 +124,7 @@ describe('SignupQuestion', () => {
     expect(otherInputAfter.value).toBe('')
   })
 
-  it('"계속하기" 클릭 → postSignupAnswer 호출 + /dashboard navigate', async () => {
+  it('"계속하기" 클릭 → postSignupAnswer 호출 + /calendar navigate', async () => {
     render(<SignupQuestion />, { wrapper })
 
     fireEvent.click(screen.getByRole('button', { name: '백엔드 개발' }))
@@ -137,7 +137,7 @@ describe('SignupQuestion', () => {
       })
     })
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith('/dashboard', { replace: true })
+      expect(navigateMock).toHaveBeenCalledWith('/calendar', { replace: true })
     })
   })
 
@@ -157,7 +157,7 @@ describe('SignupQuestion', () => {
     })
   })
 
-  it('"건너뛰기" 클릭 → 빈 array 전송 + /dashboard navigate (선택 0개도 OK)', async () => {
+  it('"건너뛰기" 클릭 → 빈 array 전송 + /calendar navigate (선택 0개도 OK)', async () => {
     render(<SignupQuestion />, { wrapper })
 
     fireEvent.click(screen.getByRole('button', { name: /건너뛰기/ }))
@@ -166,7 +166,7 @@ describe('SignupQuestion', () => {
       expect(postMock).toHaveBeenCalledWith({ jobCategories: [] })
     })
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith('/dashboard', { replace: true })
+      expect(navigateMock).toHaveBeenCalledWith('/calendar', { replace: true })
     })
   })
 

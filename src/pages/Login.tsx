@@ -10,7 +10,7 @@ export function Login() {
   const isSuspended = searchParams.get('error') === 'suspended'
 
   useEffect(() => {
-    if (accessToken) { navigate('/dashboard', { replace: true }); return }
+    if (accessToken) { navigate('/calendar', { replace: true }); return }
     if (isSuspended) return
     // 유효한 refresh 쿠키가 있으면 자동 리다이렉트
     axios
@@ -18,7 +18,7 @@ export function Login() {
       .then(({ data }) => {
         const token = data.data?.accessToken ?? data.accessToken
         setAccessToken(token)
-        navigate('/dashboard', { replace: true })
+        navigate('/calendar', { replace: true })
       })
       .catch(() => { /* refresh 실패는 무시 — 로그인 화면 유지 */ })
     // 마운트 시 1회만 자동 로그인 체크

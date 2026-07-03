@@ -141,7 +141,7 @@ export function SignupQuestion() {
       {
         onSuccess: () => {
           toast.success('환영해요! 샘플 카드를 준비했어요')
-          navigate('/dashboard', { replace: true })
+          navigate('/calendar', { replace: true })
         },
         onError: () => toast.error('저장에 실패했어요. 다시 시도해주세요.'),
       },
@@ -152,7 +152,7 @@ export function SignupQuestion() {
     signupAnswer.mutate(
       { jobCategories: [] },
       {
-        onSuccess: () => navigate('/dashboard', { replace: true }),
+        onSuccess: () => navigate('/calendar', { replace: true }),
         onError: () => toast.error('저장에 실패했어요. 다시 시도해주세요.'),
       },
     )
