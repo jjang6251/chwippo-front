@@ -7,6 +7,7 @@ import { apiClient } from '@/api/client'
 import { postToNative } from '@/utils/nativeBridge'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
+import { NotificationBell } from '@/components/notification/NotificationBell'
 
 interface NavItem {
   label: string
@@ -67,10 +68,11 @@ export function Sidebar() {
     <>
       <aside data-nav className="hidden lg:flex flex-col w-56 shrink-0 bg-surface border-r border-line min-h-screen sticky top-0 h-screen">
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-line">
+        <div className="px-5 py-4 border-b border-line flex items-center justify-between">
           <Link to={link('/dashboard')} className="text-lg font-bold text-brand tracking-tight">
             치뽀{isDemo && <span className="ml-1.5 text-[10px] font-medium text-text-quaternary align-middle">데모</span>}
           </Link>
+          {!isDemo && <NotificationBell size={18} />}
         </div>
 
         {/* Main nav */}

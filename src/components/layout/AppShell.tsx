@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { MobileNav } from './MobileNav'
@@ -10,9 +11,11 @@ import { CoinChip } from '@/components/common/CoinChip'
 import { CoinOnboardingModal } from '@/components/common/CoinOnboardingModal'
 import { SuspendedModal } from '@/components/auth/SuspendedModal'
 import { UserNotificationModal } from '@/components/notification/UserNotificationModal'
+import { PermissionPromptModal } from '@/components/notification/PermissionPromptModal'
 import { useMyCoinBalance } from '@/hooks/useMyCoin'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useNativeMode } from '@/hooks/useNativeMode'
+import { useAuthStore } from '@/stores/authStore'
 
 export function AppShell() {
   const isDemo = useDemoMode()
@@ -21,6 +24,15 @@ export function AppShell() {
   const isNative = useNativeMode()
   // PR_B2 Phase 1 — me 응답에서 suspendedAt + pending_notification 감지
   const { data: coinBalance } = useMyCoinBalance()
+  // 알림 soft-ask — native + 최초 로그인(alarm_prompted_at NULL) 1회
+  const user = useAuthStore((s) => s.user)
+  const [permDismissed, setPermDismissed] = useState(false)
+  const showPermPrompt =
+    !isDemo &&
+    isNative &&
+    !coinBalance?.suspendedAt &&
+    user?.alarmPromptedAt == null &&
+    !permDismissed
   return (
     <div className="min-h-screen bg-bg text-text-primary flex flex-col">
       {isDemo && <DemoBanner />}
@@ -55,6 +67,11 @@ export function AppShell() {
       {!isDemo && !coinBalance?.suspendedAt && coinBalance?.pendingNotification && (
         <UserNotificationModal notification={coinBalance.pendingNotification} />
       )}
+      {/* 알림 soft-ask (native 최초 1회) */}
+      <PermissionPromptModal
+        open={showPermPrompt}
+        onClose={() => setPermDismissed(true)}
+      />
     </div>
   )
 }
