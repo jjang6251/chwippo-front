@@ -22,6 +22,8 @@ interface User {
   sampleCardsDismissedAt: string | null
   /** 캘린더 UX 재구성 — "이제 캘린더가 홈이에요" 안내 배너 dismiss 시각 (NULL → 첫 방문 배너 노출) */
   calendarHomeIntroDismissedAt: string | null
+  /** 알림 — soft-ask 모달 표시 시각 (NULL → native 최초 1회 모달) */
+  alarmPromptedAt: string | null
 }
 
 interface AuthState {

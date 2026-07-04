@@ -48,6 +48,7 @@ beforeEach(() => {
       aiConsentVersion: null, onboardedCoinAt: null,
       signupJobCategories: null, signupOtherText: null, sampleCardsDismissedAt: null,
     calendarHomeIntroDismissedAt: null,
+    alarmPromptedAt: null,
     },
   })
 })

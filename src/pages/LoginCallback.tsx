@@ -54,7 +54,8 @@ export function LoginCallback() {
         signupJobCategories: null,
         signupOtherText: null,
         sampleCardsDismissedAt: null,
-    calendarHomeIntroDismissedAt: null,
+        calendarHomeIntroDismissedAt: null,
+        alarmPromptedAt: null,
       })
     }
 
