@@ -192,3 +192,55 @@
     color: inherit;
   }
 }
+
+/* iOS Safari date/time input reset — Bootstrap issue #34433 정확한 원인 fix.
+   iOS 는 <input type="date"> 의 값 ("2026. 7. 10.") 을 ::-webkit-date-and-time-value
+   pseudo 로 render · CSS 상속 무시하고 iOS 기본 큰 폰트 + 가운데 정렬로 표시.
+   pseudo element 에 font-size: inherit + text-align: left 로 강제. */
+input[type='date'],
+input[type='datetime-local'],
+input[type='time'],
+input[type='month'] {
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+/* 값 텍스트 자체 — 이게 폰트 크기 · 정렬 원인 */
+input[type='date']::-webkit-date-and-time-value,
+input[type='datetime-local']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value {
+  font-size: inherit;
+  text-align: left;
+  min-height: 1.4em;
+  margin: 0;
+  padding: 0;
+}
+/* datetime-edit 계열 (일부 iOS 는 pseudo 다르게 사용) */
+input[type='date']::-webkit-datetime-edit,
+input[type='date']::-webkit-datetime-edit-fields-wrapper,
+input[type='date']::-webkit-datetime-edit-text,
+input[type='date']::-webkit-datetime-edit-year-field,
+input[type='date']::-webkit-datetime-edit-month-field,
+input[type='date']::-webkit-datetime-edit-day-field,
+input[type='datetime-local']::-webkit-datetime-edit,
+input[type='datetime-local']::-webkit-datetime-edit-fields-wrapper,
+input[type='datetime-local']::-webkit-datetime-edit-text,
+input[type='time']::-webkit-datetime-edit,
+input[type='time']::-webkit-datetime-edit-fields-wrapper,
+input[type='time']::-webkit-datetime-edit-hour-field,
+input[type='time']::-webkit-datetime-edit-minute-field,
+input[type='time']::-webkit-datetime-edit-meridiem-field {
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+input[type='date']::-webkit-inner-spin-button,
+input[type='time']::-webkit-inner-spin-button {
+  height: auto;
+}
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+}
