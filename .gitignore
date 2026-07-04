@@ -35,3 +35,6 @@ playwright-report/
 
 # Coverage reports
 coverage/
+
+# AI 지침 파일 — 로컬 전용 (공개 레포 노출 방지)
+CLAUDE.md
