@@ -26,6 +26,7 @@ import { Terms } from '@/pages/Terms'
 import { NotFound } from '@/pages/NotFound'
 import { Settings } from '@/pages/settings/Settings'
 import { AlarmSettings } from '@/pages/settings/AlarmSettings'
+import { Notifications } from '@/pages/Notifications'
 import { ProfileSettings } from '@/pages/settings/ProfileSettings'
 import { Help } from '@/pages/settings/Help'
 import { OpsPage } from '@/pages/ops/OpsPage'
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/inquiry" element={<InquiryList />} />
             <Route path="/inquiry/new" element={<InquiryNew />} />
             <Route path="/inquiry/:id" element={<InquiryDetail />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/alarm" element={<AlarmSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />

@@ -2,6 +2,7 @@ import { useLocation, Link } from 'react-router-dom'
 import { useDemoMode } from '@/contexts/demoMode'
 import { CoinChip } from '@/components/common/CoinChip'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { NotificationBell } from '@/components/notification/NotificationBell'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
@@ -43,6 +44,7 @@ export function MobileHeader() {
               <CoinChip />
             </div>
           )}
+          <NotificationBell size={18} />
           <Link
             to="/settings"
             aria-label="설정"

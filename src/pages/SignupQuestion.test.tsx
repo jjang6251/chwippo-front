@@ -66,6 +66,7 @@ beforeEach(() => {
       signupOtherText: null,
       sampleCardsDismissedAt: null,
     calendarHomeIntroDismissedAt: null,
+    alarmPromptedAt: null,
     },
     accessToken: 'tok',
   })

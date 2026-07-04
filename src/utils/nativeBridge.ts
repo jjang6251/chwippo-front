@@ -7,12 +7,16 @@
  *   - theme: 웹 theme 변경 → native tab bar / safe area 색 sync
  *   - logout: 사용자 로그아웃 완료 → native 즉시 clearAll · login redirect
  *   - account-deleted: 회원 탈퇴 완료 → 동일
+ *   - request-notification-permission: soft-ask 허용 → native OS 권한 요청 트리거
+ *   - open-notification-settings: OS 권한 거부 상태에서 "알림 받기" → 설정 앱 이동
  */
 
 export type NativeMessage =
   | { type: 'theme'; theme: 'dark' | 'light' }
   | { type: 'logout' }
   | { type: 'account-deleted' }
+  | { type: 'request-notification-permission' }
+  | { type: 'open-notification-settings' }
 
 interface RNWindow {
   ReactNativeWebView?: {
