@@ -16,6 +16,7 @@ import { useMyCoinBalance } from '@/hooks/useMyCoin'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useNativeMode } from '@/hooks/useNativeMode'
 import { useAuthStore } from '@/stores/authStore'
+import { BETA_FEATURES } from '@/config/betaFeatures'
 
 export function AppShell() {
   const isDemo = useDemoMode()
@@ -24,10 +25,13 @@ export function AppShell() {
   const isNative = useNativeMode()
   // PR_B2 Phase 1 — me 응답에서 suspendedAt + pending_notification 감지
   const { data: coinBalance } = useMyCoinBalance()
-  // 알림 soft-ask — native + 최초 로그인(alarm_prompted_at NULL) 1회
+  // 알림 soft-ask — native + 최초 로그인(alarm_prompted_at NULL) 1회.
+  // BETA_FEATURES.nativePushReady false 동안은 숨김 (native 권한 핸들러 미구현 → 눌러도 무동작).
+  // Apple Developer + mobile 완료 후 flag flip (plan Step 6).
   const user = useAuthStore((s) => s.user)
   const [permDismissed, setPermDismissed] = useState(false)
   const showPermPrompt =
+    BETA_FEATURES.nativePushReady &&
     !isDemo &&
     isNative &&
     !coinBalance?.suspendedAt &&

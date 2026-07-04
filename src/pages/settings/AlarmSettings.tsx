@@ -1,5 +1,6 @@
 import { useAlarmConfig, useUpdateAlarmConfig } from '@/hooks/useNotifications'
 import { useNativeMode } from '@/hooks/useNativeMode'
+import { BETA_FEATURES } from '@/config/betaFeatures'
 import { Toggle } from '@/components/common/Toggle'
 import { toast } from '@/stores/toastStore'
 import { postToNative } from '@/utils/nativeBridge'
@@ -157,8 +158,8 @@ export function AlarmSettings() {
             </div>
           </section>
 
-          {/* 푸시 권한 (native 전용) */}
-          {isNative && (
+          {/* 푸시 권한 (native 전용 · nativePushReady flip 후 노출) */}
+          {isNative && BETA_FEATURES.nativePushReady && (
             <section className="bg-surface-2 border border-line rounded-xl p-5">
               <p className="text-sm font-semibold mb-1">기기 알림 권한</p>
               <p className="text-xs text-text-tertiary leading-relaxed mb-3">
