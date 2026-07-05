@@ -75,3 +75,29 @@ export interface AdminAnalytics {
 
 export const getAdminAnalytics = (days: number) =>
   apiClient.get('/admin/analytics', { params: { days } }).then(unwrap<AdminAnalytics>)
+
+// ── A8 Activation 측정 ──
+
+export interface ActivationCohort {
+  weekStart: string
+  cohortSize: number
+  setup: number
+  ahaBeta: number
+  ahaAi: number
+  d7: number
+  d30: number
+}
+
+export interface ActivationData {
+  cohorts: ActivationCohort[]
+  funnel: { signup: number; setup: number; ahaBeta: number; d7: number }
+  briefing: {
+    receivedUserDays: number
+    actedRateRead: number | null
+    actedRateUnread: number | null
+  }
+  generatedAt: string
+}
+
+export const getAdminActivation = () =>
+  apiClient.get('/admin/activation').then(unwrap<ActivationData>)
