@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getAdminInquiries, getAdminInquiryDetail, addAdminComment, closeInquiry, type AdminInquiry } from '@/api/admin'
 import { type InquiryComment } from '@/api/inquiries'
@@ -22,9 +22,13 @@ const STATUS_COLOR: Record<string, string> = {
 const CATEGORIES = ['전체', '버그 신고', '기능 추가 요청', '기능 개선', '알림 문의', '계정·개인정보', '사용 방법 문의', '기타']
 
 export function OpsInquiries() {
+  // Discord 문의 알림 딥링크 — ?id=xxx 로 진입 시 해당 문의 자동 선택
+  const [searchParams] = useSearchParams()
   const [statusFilter, setStatusFilter] = useState<string>('전체')
   const [catFilter, setCatFilter] = useState('전체')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(
+    searchParams.get('id'),
+  )
   const [comment, setComment] = useState('')
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const qc = useQueryClient()
