@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
 import { getAdminStats, getAdminAnalytics, type DayData, type GlobalStorage } from '@/api/admin'
+import { ActivationSection } from '@/components/admin/ActivationSection'
 import dayjs from 'dayjs'
 
 const PERIODS = [
@@ -202,6 +203,9 @@ export function OpsPage() {
           </div>
         ))}
       </div>
+
+      {/* A8 — Activation (아하 모먼트) */}
+      <ActivationSection />
     </div>
   )
 }
