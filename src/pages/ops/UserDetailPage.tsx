@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/api/client'
+import { AiQuotaOverrideCard } from '@/components/admin/AiQuotaOverrideCard'
 import { GrantCoinModal } from '@/components/admin/GrantCoinModal'
 import { RevokeCoinModal } from '@/components/admin/RevokeCoinModal'
 import { SuspendUserModal } from '@/components/admin/SuspendUserModal'
@@ -300,6 +301,7 @@ export function UserDetailPage() {
       )}
 
       {tab === 'coin' && (
+        <div className="space-y-4">
         <div className="bg-card border border-line rounded-xl p-5 space-y-3">
           <h3 className="text-text-primary text-sm font-semibold">코인 잔액</h3>
           {coinBalance ? (
@@ -326,6 +328,9 @@ export function UserDetailPage() {
             <Stat label="면접 prep" value={activityStats.interviewPrepCount} />
             <Stat label="활동 일지" value={activityStats.activityLogCount} />
           </div>
+        </div>
+        {/* cost hardening B-4 — AI 개별 한도 */}
+        <AiQuotaOverrideCard userId={basic.id} />
         </div>
       )}
 

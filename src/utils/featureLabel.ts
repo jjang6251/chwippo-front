@@ -71,6 +71,8 @@ export const AUDIT_ACTION_KR: Record<
   update_tier: { label: 'Tier 변경', icon: '⬆️', tone: 'info' },
   reset_ai_quota: { label: 'AI 한도 리셋', icon: '🔄', tone: 'neutral' },
   auto_ban_ai: { label: 'AI 자동 ban', icon: '🚫', tone: 'danger' },
+  set_user_ai_quota_override: { label: 'AI 개별 한도 설정', icon: '🎚️', tone: 'warning' },
+  clear_user_ai_quota_override: { label: 'AI 개별 한도 해제', icon: '🎚️', tone: 'neutral' },
   update_ai_quota: { label: 'AI 한도 매트릭스 변경', icon: '📊', tone: 'info' },
   update_alert_thresholds: { label: '알람 임계치 변경', icon: '🚨', tone: 'info' },
   close_inquiry: { label: '문의 종료', icon: '📨', tone: 'neutral' },
