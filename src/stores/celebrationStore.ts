@@ -13,6 +13,14 @@ export interface FirstCardCelebrationData {
   planned: boolean
 }
 
+/** A9 — 탈락 케어 오버레이 데이터. 카드가 FAILED 필터로 언마운트돼도 살아남도록
+ *  스텝 스냅샷을 함께 전달 (합격 celebrate 와 같은 전역 오버레이 패턴) */
+export interface FailedCareData {
+  applicationId: string
+  steps: Array<{ name: string; orderIndex: number }>
+  currentStepIndex: number
+}
+
 interface CelebrationState {
   companyName: string | null
   celebrate: (companyName: string) => void
@@ -21,6 +29,10 @@ interface CelebrationState {
   firstCard: FirstCardCelebrationData | null
   showFirstCard: (data: FirstCardCelebrationData) => void
   dismissFirstCard: () => void
+  /** A9 — 탈락 케어 (독립 슬롯) */
+  failedCare: FailedCareData | null
+  showFailedCare: (data: FailedCareData) => void
+  dismissFailedCare: () => void
 }
 
 export const useCelebrationStore = create<CelebrationState>((set) => ({
@@ -30,7 +42,13 @@ export const useCelebrationStore = create<CelebrationState>((set) => ({
   firstCard: null,
   showFirstCard: (data) => set({ firstCard: data }),
   dismissFirstCard: () => set({ firstCard: null }),
+  failedCare: null,
+  showFailedCare: (data) => set({ failedCare: data }),
+  dismissFailedCare: () => set({ failedCare: null }),
 }))
+
+export const showFailedCare = (data: FailedCareData) =>
+  useCelebrationStore.getState().showFailedCare(data)
 
 // 컴포넌트 밖(뮤테이션 onSuccess 등)에서 호출 가능
 export const celebrate = (companyName: string) =>

@@ -32,6 +32,10 @@ export interface Application {
   isStarred: boolean
   /** W1 — 가상 회사 샘플 카드 (signup 직군 답변 기반 자동 생성) 여부 */
   isSample?: boolean
+  /** A9 — 탈락 회고 한 줄 ("이번 지원에서 얻은 것") */
+  failedTakeaway?: string | null
+  /** A9 — 회고 입력·수정 시각 (성장 페이지 정렬) */
+  failedTakeawayAt?: string | null
   /** W2 — 회사 도메인 (favicon 로딩 용). backend 가 companies.json lookup 후 inject. 매칭 X 시 undefined */
   domain?: string
   steps: ApplicationStep[]
@@ -79,6 +83,8 @@ export interface UpdateApplicationDto {
   currentStepIndex?: number
   needsDetail?: boolean
   isStarred?: boolean
+  /** A9 — 탈락 회고 한 줄. 빈 문자열 = 삭제 */
+  failedTakeaway?: string
 }
 
 export interface UpdateStepsDto {
