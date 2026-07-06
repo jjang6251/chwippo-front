@@ -8,6 +8,9 @@
  * A4 — 일정 충돌 배너:
  * 5. 근접(2h 미만) 시간 일정 2개 → danger 배너 + 일정 나열
  * 6. 충돌 없으면 배너 없음
+ *
+ * A6 — 공휴일 뱃지:
+ * 7. 공휴일 날짜 → 헤더에 이름 뱃지 / 평일 → 없음
  */
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -125,5 +128,13 @@ describe('CalendarDayPanel — 마감 임박 준비 (A3)', () => {
   it('6) [A4] 충돌 없으면 배너 없음', () => {
     renderPanel(TODAY)
     expect(screen.queryByText(/일정이 겹쳐요|시간 일정이 2개/)).toBeNull()
+  })
+
+  it('7) [A6] 공휴일 날짜 → 헤더 뱃지 / 평일 → 없음', () => {
+    const { unmount } = renderPanel('2026-09-25')
+    expect(screen.getByText('추석')).toBeInTheDocument()
+    unmount()
+    renderPanel('2026-07-08')
+    expect(screen.queryByText('추석')).toBeNull()
   })
 })

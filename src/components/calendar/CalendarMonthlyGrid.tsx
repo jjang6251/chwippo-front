@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import type { CalendarEvent } from '@/api/calendar'
 import { detectScheduleConflicts } from '@/utils/scheduleConflict'
+import { getHolidayName } from '@/utils/holidays'
 
 /**
  * 캘린더 UX 재구성 — 월별 뷰 그리드 (탭 활성 시).
@@ -203,11 +204,13 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
             const isPast = dateStr < todayStr
             const isSun = day.day() === 0
             const isSat = day.day() === 6
+            // A6 — 공휴일은 일요일과 같은 빨간 톤 + 이름 라벨
+            const holidayName = getHolidayName(dateStr)
 
             // 날짜 원형 배지 — 오늘만 브랜드 fill, 나머지는 색상만
             const dateBadge = isToday
               ? 'bg-brand text-text-primary'
-              : isSun
+              : isSun || holidayName
                 ? 'text-danger/80'
                 : isSat
                   ? 'text-info/80'
@@ -236,6 +239,11 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
                       aria-label="일정 충돌 주의"
                     >
                       ⚠️
+                    </span>
+                  )}
+                  {holidayName && (
+                    <span className="text-[9px] text-danger/70 font-medium truncate max-w-[48px] leading-tight" title={holidayName}>
+                      {holidayName}
                     </span>
                   )}
                 </span>

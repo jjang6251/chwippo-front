@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import type { CalendarEvent } from '@/api/calendar'
+import { getHolidayName } from '@/utils/holidays'
 
 /**
  * 캘린더 UX 재구성 — 사이드 미니 월맵 (B안).
@@ -129,6 +130,8 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
             const isSelected = dateStr === selectedDate
             const isSun = day.day() === 0
             const isSat = day.day() === 6
+            // A6 — 공휴일은 일요일과 같은 빨간 톤 (미니맵은 이름 생략 · title 로만)
+            const holidayName = getHolidayName(dateStr)
             const isThisWeek =
               !day.isBefore(thisWeekStart) && !day.isAfter(thisWeekEnd)
 
@@ -136,6 +139,7 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
               <button
                 key={dateStr}
                 onClick={() => onSelectDate?.(dateStr)}
+                title={holidayName ?? undefined}
                 className={`h-8 flex flex-col items-center justify-center rounded ${
                   isSelected
                     ? 'bg-accent/10 ring-1 ring-accent/40'
@@ -152,7 +156,7 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
                       ? 'font-bold text-brand'
                       : isSelected
                         ? 'font-semibold text-accent'
-                        : isSun
+                        : isSun || holidayName
                           ? 'text-danger/70'
                           : isSat
                             ? 'text-info/70'
