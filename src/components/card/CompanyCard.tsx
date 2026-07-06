@@ -9,7 +9,7 @@ import { StarToggle } from './StarToggle'
 import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { toast } from '@/stores/toastStore'
-import { celebrate } from '@/stores/celebrationStore'
+import { celebrate, showFailedCare } from '@/stores/celebrationStore'
 import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
 import { CompanyAvatar } from '@/components/board/CompanyAvatar'
 
@@ -185,11 +185,14 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
                 </span>
               )}
             </div>
+            {/* 직무명 줄 — 없어도 빈 줄로 높이 예약 (카드 높이 통일) */}
             {application.jobTitle ? (
               <p className="text-text-tertiary text-xs truncate mt-0.5">{application.jobTitle}</p>
             ) : isPlanned ? (
               <p className="text-text-quaternary text-xs mt-0.5">{formatRegisteredDate(application.createdAt)}</p>
-            ) : null}
+            ) : (
+              <p className="text-xs mt-0.5" aria-hidden>&nbsp;</p>
+            )}
           </div>
         </div>
 
@@ -230,6 +233,23 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
                     className="w-full text-left px-3.5 py-2 text-xs text-warning hover:bg-warning/8 transition-colors"
                   >불합격 처리</button>
                 )}
+                {/* A9 — 잘못 처리한 결과 롤백 (합격·불합격 공통) */}
+                {(application.status === 'FAILED' || application.status === 'PASSED') && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMenuOpen(false)
+                      updateApp(
+                        { status: application.steps.length > 0 ? 'IN_PROGRESS' : 'PLANNED' },
+                        {
+                          onSuccess: () => toast.show('결과를 되돌렸어요 — 진행 중으로 복귀했어요.'),
+                          onError: () => toast.error('되돌리기에 실패했습니다.'),
+                        },
+                      )
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-text-secondary hover:bg-card transition-colors"
+                  >결과 되돌리기</button>
+                )}
                 <div className="mx-3 my-1 border-t border-line" />
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setMenuOpen(false) }}
@@ -241,19 +261,17 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
         </div>
       </div>
 
-      {/* 태그들 */}
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {tags.map((tag) => {
-            const colorClass = JOB_CATEGORY_COLOR[tag] ?? JOB_CATEGORY_COLOR['기타']
-            return (
-              <span key={tag} className={`inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-medium rounded-full border ${colorClass}`}>
-                {JOB_CATEGORY_EMOJI[tag]} {tag}
-              </span>
-            )
-          })}
-        </div>
-      )}
+      {/* 태그들 — 없어도 한 줄 높이 예약 (카드 높이 통일) */}
+      <div className="flex flex-wrap gap-1 mb-3 min-h-[22px]">
+        {tags.map((tag) => {
+          const colorClass = JOB_CATEGORY_COLOR[tag] ?? JOB_CATEGORY_COLOR['기타']
+          return (
+            <span key={tag} className={`inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-medium rounded-full border ${colorClass}`}>
+              {JOB_CATEGORY_EMOJI[tag]} {tag}
+            </span>
+          )
+        })}
+      </div>
 
       {/* 스텝바 + 현재 단계명 */}
       {!isPlanned && application.steps.length > 0 && (
@@ -327,10 +345,20 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
               <button onClick={() => setShowFailConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
               <button
                 onClick={() => {
+                  // A9 — 처리 성공 시 전역 케어 오버레이. 카드는 FAILED 필터로 즉시
+                  // 언마운트되므로 (인라인 모달은 케어가 뜨자마자 사라짐) 스냅샷 전달
+                  const snapshot = {
+                    applicationId: application.id,
+                    currentStepIndex: application.currentStepIndex,
+                    steps: application.steps.map((st) => ({
+                      name: st.name,
+                      orderIndex: st.orderIndex,
+                    })),
+                  }
                   updateApp(
                     { status: 'FAILED' } as UpdateApplicationDto,
                     {
-                      onSuccess: () => toast.show(`${application.companyName} 불합격 처리됐어요.`),
+                      onSuccess: () => showFailedCare(snapshot),
                       onError: () => toast.error('처리에 실패했습니다.'),
                     },
                   )
@@ -362,10 +390,44 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
             <p className="text-text-tertiary text-xs mb-5">
               <span className="text-text-secondary font-medium">{application.companyName}</span> 카드와 모든 정보가 삭제됩니다.
             </p>
+            {/* A9 — 진행 중 카드 삭제 인터셉트: 탈락이라 지우는 경우가 많음 →
+              * 불합격 기록의 이득(자소서 재사용·통과율 통계)을 그 순간에 제시 */}
+            {application.status === 'IN_PROGRESS' && (
+              <div className="bg-brand/8 border border-brand/25 rounded-lg px-3 py-2.5 mb-4">
+                <p className="text-[11px] text-text-secondary leading-relaxed mb-2">
+                  💡 탈락이라 지우시는 거라면 — <span className="font-semibold">불합격으로 기록</span>하면
+                  자소서는 다음 지원에서 재사용되고, 나의 통과율 통계에도 남아요.
+                </p>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false)
+                    // A9 — 세 번째 불합격 진입 경로도 동일한 전역 케어 오버레이로
+                    const snapshot = {
+                      applicationId: application.id,
+                      currentStepIndex: application.currentStepIndex,
+                      steps: application.steps.map((st) => ({
+                        name: st.name,
+                        orderIndex: st.orderIndex,
+                      })),
+                    }
+                    updateApp(
+                      { status: 'FAILED' },
+                      {
+                        onSuccess: () => showFailedCare(snapshot),
+                        onError: () => toast.error('업데이트에 실패했습니다.'),
+                      },
+                    )
+                  }}
+                  className="w-full py-2 text-xs font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 rounded-lg transition-colors"
+                >
+                  불합격으로 기록 (삭제 안 함)
+                </button>
+              </div>
+            )}
             <div className="flex gap-2">
               <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
               <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-danger/80 hover:bg-danger rounded-lg transition-colors disabled:opacity-50">
-                {isDeleting ? '삭제 중...' : '삭제'}
+                {isDeleting ? '삭제 중...' : application.status === 'IN_PROGRESS' ? '그래도 삭제' : '삭제'}
               </button>
             </div>
           </div>
