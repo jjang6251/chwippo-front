@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { CoverletterGenerateSection } from '@/components/coverletter/CoverletterGenerateSection'
 import { CoverletterOutdatedBanner } from '@/components/coverletter/CoverletterOutdatedBanner'
 import {
@@ -22,7 +23,9 @@ const COMMON_QUESTIONS = [
   { label: '직무 역량·핵심 경험', question: '지원 직무와 관련된 본인의 핵심 역량과 경험을 작성해 주세요.', category: '직무역량·핵심경험' },
 ]
 
+// A1 — AI 요소(조사)만 조건부
 export function CoverLetterTab({ applicationId, active }: { applicationId: string; active: boolean }) {
+  const aiEnabled = useAiEnabled()
   const { data: items, isLoading } = useCoverletters(applicationId, active)
   const { mutate: create, isPending: creating } = useCreateCoverletter(applicationId)
   // PR_B1c — application 의 generation status 별 UI 분기 (polling 자동)
@@ -42,12 +45,39 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
   const list = items ?? []
   const fullscreenHref = `/board/${applicationId}/coverletter`
 
-  // PR_B1c — 자소서 row 없을 때만 GenerateSection (status 별 4 UI). row 있으면 legacy UI 유지
+  // A1 — 빈 상태 = 3경로 시작점: ✍️ 직접 쓰기(상시) · 🔎 회사 조사(AI 켜짐 시)
   if (list.length === 0) {
     if (!application) return null
     return (
       <div className="space-y-3">
-        <CoverletterGenerateSection application={application} />
+        <div className="border border-line bg-surface-2 rounded-xl p-4">
+          <p className="text-text-primary text-sm font-semibold mb-1">
+            ✍️ 바로 쓰기 — 문항을 추가하고 자유롭게 작성하세요
+          </p>
+          <p className="text-[11px] text-text-quaternary mb-2.5">
+            다른 곳에 써둔 자소서가 있다면 문항 추가 후 붙여넣으면 돼요
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {COMMON_QUESTIONS.map((q) => (
+              <button
+                key={q.label}
+                onClick={() => handleAdd(q.question, q.category)}
+                disabled={creating}
+                className="text-[11px] text-text-tertiary bg-surface-3 border border-line hover:border-brand/40 hover:text-text-secondary px-2 py-1 rounded-full transition-colors disabled:opacity-40"
+              >
+                + {q.label}
+              </button>
+            ))}
+            <button
+              onClick={() => handleAdd('')}
+              disabled={creating}
+              className="text-[11px] text-brand bg-brand/8 border border-brand/25 hover:bg-brand/15 px-2 py-1 rounded-full transition-colors disabled:opacity-40"
+            >
+              + 직접 입력
+            </button>
+          </div>
+        </div>
+        {aiEnabled && <CoverletterGenerateSection application={application} />}
       </div>
     )
   }

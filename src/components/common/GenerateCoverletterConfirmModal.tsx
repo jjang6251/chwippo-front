@@ -63,10 +63,10 @@ export function GenerateCoverletterConfirmModal({
           className="text-text-primary text-lg font-bold mb-1 flex items-center gap-2"
         >
           <span aria-hidden>✨</span>
-          <span>자소서를 생성할까요?</span>
+          <span>회사 조사를 진행할까요?</span>
         </h2>
         <p className="text-text-tertiary text-xs mb-4">
-          <strong className="text-text-secondary">{companyName}</strong> 의 회사 정보를 자동 조사하고 자소서 작성을 준비해요.
+          <strong className="text-text-secondary">{companyName}</strong> 의 최신 정보를 검색해 AI 초안·챗·점검에 반영해요. 조사 없이도 자소서 작성은 가능해요.
         </p>
 
         {/* 코인 안내 */}

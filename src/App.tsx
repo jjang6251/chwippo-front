@@ -94,16 +94,17 @@ export default function App() {
             {/* AI 기능 라우트 — VITE_AI_FEATURES_ENABLED=false 시 dashboard redirect */}
             <Route element={<AiFeatureGuard />}>
               <Route path="/coverletters" element={<Coverletters />} />
-              <Route
-                path="/board/:applicationId/coverletter"
-                element={<CoverletterDocPage />}
-              />
               <Route path="/interviews" element={<Interviews />} />
               <Route
                 path="/interviews/:sessionId"
                 element={<InterviewSessionPage />}
               />
             </Route>
+            {/* A1 — 직접 쓰기 경로 개방: 자소서 문서는 AI 없이도 사용 (내부 AI 요소만 useAiEnabled 조건부) */}
+              <Route
+                path="/board/:applicationId/coverletter"
+                element={<CoverletterDocPage />}
+              />
             <Route
               path="/activity/:activityId/logs/:logId/note"
               element={<NotePage />}
