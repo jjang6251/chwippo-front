@@ -4,6 +4,10 @@
  * 2. 오늘 아닌 날짜 → 그룹 미표시 (hook enabled=false)
  * 3. 체크 클릭 → 원본 checklist 토글 mutation (read-through)
  * 4. 임박 항목 0개 → 그룹 헤더 미표시
+ *
+ * A4 — 일정 충돌 배너:
+ * 5. 근접(2h 미만) 시간 일정 2개 → danger 배너 + 일정 나열
+ * 6. 충돌 없으면 배너 없음
  */
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -90,5 +94,36 @@ describe('CalendarDayPanel — 마감 임박 준비 (A3)', () => {
   it('4) 임박 항목 0개 → 그룹 헤더 미표시', () => {
     renderPanel(TODAY)
     expect(screen.queryByText('🔥 마감 임박 준비')).toBeNull()
+  })
+
+  it('5) [A4] 근접 시간 일정 2개 → 겹침 배너 + 일정 나열', () => {
+    const base = {
+      date: TODAY,
+      type: 'step' as const,
+      applicationId: 'a',
+      stepId: 's',
+      examId: null,
+      noteId: null,
+      location: null,
+      content: null,
+    }
+    render(
+      <MemoryRouter>
+        <CalendarDayPanel
+          date={TODAY}
+          events={[
+            { ...base, time: '14:00', companyName: '카카오', stepName: '면접' },
+            { ...base, time: '15:00', companyName: '네이버', stepName: '면접' },
+          ]}
+        />
+      </MemoryRouter>,
+    )
+    expect(screen.getByText(/일정이 겹쳐요/)).toBeInTheDocument()
+    expect(screen.getByText(/14:00 카카오 면접 · 15:00 네이버 면접/)).toBeInTheDocument()
+  })
+
+  it('6) [A4] 충돌 없으면 배너 없음', () => {
+    renderPanel(TODAY)
+    expect(screen.queryByText(/일정이 겹쳐요|시간 일정이 2개/)).toBeNull()
   })
 })

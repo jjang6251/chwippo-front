@@ -11,6 +11,7 @@ import {
   useCompleteUrgentChecklistItem,
 } from '@/hooks/useCalendar'
 import { calcDday, getDdayLabel } from '@/utils/dday'
+import { detectScheduleConflicts } from '@/utils/scheduleConflict'
 
 const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const BASE_HOUR = 6
@@ -126,6 +127,8 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
 
   // note 타입은 daily-notes 에서 별도 fetch → events 에서 제외 (중복 방지)
   const nonNoteEvents = events.filter((e) => e.type !== 'note')
+  // A4 — 이 날짜의 시간 일정 충돌 (시간 있는 step·exam 2개+)
+  const dayConflict = detectScheduleConflicts(events).get(date) ?? null
   const allDayEvents = nonNoteEvents.filter((e) => !e.time)
   const timedEvents = nonNoteEvents.filter((e) => !!e.time).sort(compareByTime)
 
@@ -171,6 +174,30 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
           </button>
         )}
       </div>
+
+      {/* A4 — 일정 충돌 경고 */}
+      {dayConflict && (
+        <div
+          className={`mx-4 mt-3 px-3 py-2 rounded-lg border text-[11px] leading-relaxed ${
+            dayConflict.level === 'overlap'
+              ? 'bg-danger/8 border-danger/25 text-danger'
+              : 'bg-warning/8 border-warning/25 text-warning'
+          }`}
+        >
+          <p className="font-semibold mb-0.5">
+            {dayConflict.level === 'overlap'
+              ? '⚠️ 일정이 겹쳐요 — 시간 확인이 필요해요'
+              : '⚠️ 이 날 시간 일정이 2개 이상이에요'}
+          </p>
+          <p className="text-text-tertiary">
+            {dayConflict.events
+              .map((e) =>
+                `${e.time} ${[e.companyName, e.stepName].filter(Boolean).join(' ')}`.trim(),
+              )
+              .join(' · ')}
+          </p>
+        </div>
+      )}
 
       {/* 1. 종일 */}
       <div className="px-4 py-3 border-b border-line">
