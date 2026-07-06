@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { apiClient } from '@/api/client'
 import { toast } from '@/stores/toastStore'
@@ -74,6 +74,16 @@ export function AiFeedbackSection({ clId, answer, onApplyText }: AiFeedbackSecti
         .then(unwrap<FeedbackResult>),
     onError: () => toast.error('점검 요청에 실패했어요. 잠시 후 다시 시도해 주세요.'),
   })
+
+  // 점검 호출 중 새로고침 = 코인 차감 + 결과 유실 (결과는 세션성 — 저장 안 함) → 이탈 경고
+  useEffect(() => {
+    if (!mutation.isPending) return
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [mutation.isPending])
 
   const result = mutation.data
   const feedback = result?.status === 'ok' ? result.feedback : undefined
