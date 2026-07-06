@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastContainer } from '@/components/common/ToastContainer'
 import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
+import { FirstCardCelebration } from '@/components/common/FirstCardCelebration'
 import { AiConsentRequiredModal } from '@/components/common/AiConsentRequiredModal'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AiFeatureGuard } from '@/components/auth/AiFeatureGuard'
@@ -135,6 +136,7 @@ export default function App() {
       </Routes>
       <ToastContainer />
       <CelebrationOverlay />
+      <FirstCardCelebration />
       <AiConsentRequiredModal />
     </BrowserRouter>
   )

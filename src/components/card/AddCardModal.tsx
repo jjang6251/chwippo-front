@@ -12,6 +12,10 @@ import {
 import { JOB_GROUPS, type JobCategory } from '@/utils/sampleData'
 import { toast } from '@/stores/toastStore'
 import { useTourStore } from '@/stores/tourStore'
+import { useQueryClient } from '@tanstack/react-query'
+import { showFirstCardCelebration } from '@/stores/celebrationStore'
+import { shouldCelebrateFirstCard } from '@/utils/firstCardCelebration'
+import type { Application } from '@/types/application'
 
 interface AddCardModalProps {
   open: boolean
@@ -48,6 +52,7 @@ export function AddCardModal({
   const [templateTouched, setTemplateTouched] = useState(false)
   const [showMoreGroups, setShowMoreGroups] = useState(false)
   const { mutate: create, isPending } = useCreateApplication()
+  const qc = useQueryClient()
   const tourActive = useTourStore((s) => s.active)
   const tourStep = useTourStore((s) => s.step)
   const onCardCreated = useTourStore((s) => s.onCardCreated)
@@ -98,6 +103,23 @@ export function AddCardModal({
         onSuccess: (data) => {
           toast.success(`${companyName} 카드가 추가됐어요.`)
           if (tourActive && tourStep === 4) onCardCreated(data.id)
+          // A5 — 첫 실 카드면 보상 연출 (계정당 1회 · 투어 중 생략은 판정 함수가 처리)
+          if (
+            shouldCelebrateFirstCard({
+              userId: user?.id,
+              existingApplications: qc.getQueryData<Application[]>(['applications']),
+              createdId: data.id,
+              tourActive,
+            })
+          ) {
+            showFirstCardCelebration({
+              appId: data.id,
+              companyName: companyName.trim(),
+              hadTemplate: !isPlanned,
+              deadline: !isPlanned && deadline ? deadline : null,
+              planned: isPlanned,
+            })
+          }
           handleClose()
         },
         onError: () => toast.error('카드 추가에 실패했습니다.'),
