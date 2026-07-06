@@ -7,7 +7,10 @@ import {
   useCreateDailyNote,
   useUpdateDailyNote,
   useDeleteDailyNote,
+  useUrgentChecklist,
+  useCompleteUrgentChecklistItem,
 } from '@/hooks/useCalendar'
+import { calcDday, getDdayLabel } from '@/utils/dday'
 
 const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const BASE_HOUR = 6
@@ -116,6 +119,10 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
   const { mutate: createNote } = useCreateDailyNote(date)
   const { mutate: updateNote } = useUpdateDailyNote(date)
   const { mutate: deleteNote } = useDeleteDailyNote(date)
+  // A3 — 오늘 패널에만 D-3 이내 스텝 미완 체크리스트 합류 (read-through)
+  const { data: urgentItems = [] } = useUrgentChecklist(isToday)
+  const { mutate: completeUrgent, isPending: completingUrgent } =
+    useCompleteUrgentChecklistItem()
 
   // note 타입은 daily-notes 에서 별도 fetch → events 에서 제외 (중복 방지)
   const nonNoteEvents = events.filter((e) => e.type !== 'note')
@@ -191,6 +198,44 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
             )}
           </p>
         </div>
+        {/* A3 — 마감 임박 준비 (D-3 이내 스텝 미완 체크리스트, 오늘만). 체크 = 원본 checklist 토글 */}
+        {isToday && urgentItems.length > 0 && (
+          <div className="mb-3 space-y-1.5">
+            <p className="text-[10px] font-medium text-warning">🔥 마감 임박 준비</p>
+            {urgentItems.map((item) => {
+              const dday = calcDday(item.date)
+              return (
+                <div key={item.itemId} className="flex items-center gap-2">
+                  <button
+                    aria-label="완료 표시"
+                    disabled={completingUrgent}
+                    onClick={() =>
+                      completeUrgent({
+                        applicationId: item.applicationId,
+                        stepId: item.stepId,
+                        itemId: item.itemId,
+                      })
+                    }
+                    className="relative w-3.5 h-3.5 rounded-sm border border-warning/50 hover:border-warning shrink-0 transition-colors disabled:opacity-50"
+                  />
+                  <span className="text-[11px] flex-1 min-w-0 truncate text-text-secondary">
+                    {item.content}
+                  </span>
+                  <Link
+                    to={`/board/${item.applicationId}/steps/${item.stepId}`}
+                    className="shrink-0 inline-flex items-center gap-1 text-[10px] text-text-quaternary hover:text-text-secondary bg-surface-3 border border-line px-1.5 py-0.5 rounded-full transition-colors"
+                    title={`${item.companyName} ${item.stepName} 준비 체크리스트로 이동`}
+                  >
+                    <span className="max-w-[72px] truncate">{item.companyName}</span>
+                    <span className="text-warning font-mono font-semibold">
+                      {getDdayLabel(dday)}
+                    </span>
+                  </Link>
+                </div>
+              )
+            })}
+          </div>
+        )}
         <div className="space-y-1.5">
           {unscheduledNotes.map((n) => (
             <div key={n.id} className="flex items-center gap-2 group/note">
