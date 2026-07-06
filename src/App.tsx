@@ -99,12 +99,12 @@ export default function App() {
                 path="/interviews/:sessionId"
                 element={<InterviewSessionPage />}
               />
-            </Route>
-            {/* A1 — 직접 쓰기 경로 개방: 자소서 문서는 AI 없이도 사용 (내부 AI 요소만 useAiEnabled 조건부) */}
+              {/* A1 3경로 UI 는 AI 재활성화(useAiEnabled=true) 때 공개 — 베타는 자소서 진입점 전체 숨김 유지 */}
               <Route
                 path="/board/:applicationId/coverletter"
                 element={<CoverletterDocPage />}
               />
+            </Route>
             <Route
               path="/activity/:activityId/logs/:logId/note"
               element={<NotePage />}
