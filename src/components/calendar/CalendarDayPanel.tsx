@@ -12,6 +12,7 @@ import {
 } from '@/hooks/useCalendar'
 import { calcDday, getDdayLabel } from '@/utils/dday'
 import { detectScheduleConflicts } from '@/utils/scheduleConflict'
+import { getHolidayName } from '@/utils/holidays'
 
 const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const BASE_HOUR = 6
@@ -159,6 +160,11 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
           {isToday && (
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-brand/15 text-brand">
               오늘
+            </span>
+          )}
+          {getHolidayName(date) && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-danger/10 text-danger border border-danger/20">
+              {getHolidayName(date)}
             </span>
           )}
         </div>
