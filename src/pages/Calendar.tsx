@@ -15,6 +15,7 @@ import { CalendarMonthlyGrid } from '@/components/calendar/CalendarMonthlyGrid'
 import { CalendarSideMinimap } from '@/components/calendar/CalendarSideMinimap'
 import { CalendarDayPanel } from '@/components/calendar/CalendarDayPanel'
 import { CountdownHeroLarge } from '@/components/calendar/CountdownHeroLarge'
+import { TodayBriefingBanner } from '@/components/calendar/TodayBriefingBanner'
 import { CountdownPillCard } from '@/components/calendar/CountdownPillCard'
 import { EmptyDeadlineHero } from '@/components/calendar/EmptyDeadlineHero'
 import { AddEventSheet } from '@/components/calendar/AddEventSheet'
@@ -222,6 +223,9 @@ export function Calendar() {
         <div className={isMobile ? '' : 'grid grid-cols-[1fr_320px] gap-8'}>
           {/* Main — Agenda */}
           <div>
+            {/* A7 — 오늘 브리핑 진입점 (오늘 브리핑 알림 있을 때만) */}
+            <TodayBriefingBanner />
+
             {/* 임박한 일정 */}
             <div className="mb-3">
               <h2 className="text-base font-bold text-text-primary tracking-tight">
@@ -290,6 +294,8 @@ export function Calendar() {
       ) : (
         <div className={isMobile ? '' : 'grid grid-cols-[1fr_320px] gap-8'}>
           <div>
+            {/* A7 — 오늘 브리핑 진입점 (아젠다 뷰와 동일 — 뷰 상관없이 노출) */}
+            <TodayBriefingBanner />
             <CalendarMonthlyGrid
               events={agendaEvents}
               selectedDate={selectedDate}
