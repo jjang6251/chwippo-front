@@ -61,7 +61,7 @@ export function AddCardModal({
       // 모달 open 마다 signup default 로 reset (부모가 unmount 안 시키고 open prop 만 토글)
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setTags(presetCategories.length > 0 ? [presetCategories[0]] : [])
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setShowMoreGroups(false)
     }
     // presetCategories 변경 시점은 user 변경 = 모달 open 과 무관 → open 만 의존

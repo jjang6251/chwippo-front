@@ -17,6 +17,7 @@ import {
   useSendCoverletterChatStream,
 } from '@/hooks/useCoverletterDoc'
 import { toast } from '@/stores/toastStore'
+import { countChars } from '@/utils/charCount'
 import type { Activity } from '@/types/activity'
 import type {
   CoverletterChatMessage,
@@ -522,7 +523,7 @@ function MessageBubble({
   onReject,
 }: {
   message: CoverletterChatMessage
-  clMap: Map<string, { id: string; question: string; answer: string | null; category: string | null; number: number }>
+  clMap: Map<string, { id: string; question: string; answer: string | null; category: string | null; charLimit: number | null; number: number }>
   appliedUpdateKeys: Set<string>
   onApply: (u: CoverletterSuggestedUpdate) => void
   onReject: (clId: string) => void
@@ -636,8 +637,28 @@ function MessageBubble({
                       {cl?.question && cl.question.length > 28 ? '…' : ''}
                     </span>
                   </div>
-                  <p className="text-text-tertiary text-[11px] leading-relaxed line-clamp-3 mb-2">
+                  <p className="text-text-tertiary text-[11px] leading-relaxed line-clamp-3 mb-1.5">
                     {u.newAnswer}
+                  </p>
+                  {/* 글자수 — 제한 초과 시 경고 (AI 가 제한을 못 지킨 경우 사용자가 알고 적용).
+                    * 카운트 기준은 문항 카드와 동일 (countChars 공백 포함) */}
+                  <p className="text-[10px] font-mono mb-2">
+                    {(() => {
+                      const n = countChars(u.newAnswer).total
+                      return cl?.charLimit != null && n > cl.charLimit ? (
+                        <span className="text-warning">
+                          ⚠️ {n}자 / 제한 {cl.charLimit}자 — 적용 후 다듬어
+                          주세요
+                        </span>
+                      ) : (
+                        <span className="text-text-quaternary">
+                          {n}자
+                          {cl?.charLimit != null
+                            ? ` / 제한 ${cl.charLimit}자`
+                            : ''}
+                        </span>
+                      )
+                    })()}
                   </p>
                   {handled ? (
                     <span className="text-[10px] text-text-quaternary">
@@ -648,9 +669,9 @@ function MessageBubble({
                       <button
                         onClick={() => onApply(u)}
                         className="flex-1 text-[11px] font-semibold px-2 py-1 rounded bg-brand text-text-primary hover:bg-accent transition-colors"
-                        title="이 문항에 답변 적용 — 변경 영역 미리보기 후 확인"
+                        title="제안 답변 확인 — 변경 영역 미리보기 후 적용"
                       >
-                        ✓ 이 문항에 적용
+                        답변 확인하기
                       </button>
                       <button
                         onClick={() => onReject(u.clId)}

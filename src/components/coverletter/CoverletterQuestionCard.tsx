@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { CoverLetterImportModal } from '@/components/card/CoverLetterImportModal'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import { CoverLetterCleanupModal } from '@/components/card/CoverLetterCleanupModal'
@@ -46,6 +47,7 @@ export function CoverletterQuestionCard({
   onDelete,
   onAskAI,
 }: Props) {
+  const aiEnabled = useAiEnabled()
   const [question, setQuestion] = useState(cl.question)
   const [answer, setAnswer] = useState(cl.answer ?? '')
   // 베타 피드백 — 자소서 답변이 길어지면 scroll 필요. auto-resize (min 200 / max 600 — 자소서 답변은 더 길게 허용)
@@ -74,9 +76,18 @@ export function CoverletterQuestionCard({
   // 답변 변경 자동저장 (debounce 1.5s)
   useEffect(() => {
     if (!initialized.current) return
-    if (answer === (cl.answer ?? '')) return
+    if (answer === (cl.answer ?? '')) {
+      // 로컬 == 서버 → 저장할 것 없음. ref 를 여기서 해제해야 외부 변경(AI 적용 등)
+      // 동기화가 재개됨. cleanup 에서 해제하면 안 됨 — cleanup 은 sync effect 보다
+      // 먼저 돌아서 "사용자 편집 중" 보호가 깨짐.
+      saveTimerRef.current = null
+      return
+    }
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
+      // 발화 후 ref 해제 필수 — 남겨두면 외부 변경 동기화가 영구 skip 되고,
+      // 이 effect 가 stale 로컬 답변을 재저장해 적용 내용을 롤백시킴
+      saveTimerRef.current = null
       onUpdate({ answer })
     }, 1500)
     return () => {
@@ -253,7 +264,7 @@ export function CoverletterQuestionCard({
           setAnswer(e.target.value)
           autoResizeAnswer()
         }}
-        placeholder="여기에 답변을 작성하세요. 또는 우측 AI 채팅으로 초안 생성. (자동 저장)"
+        placeholder={aiEnabled ? "여기에 답변을 작성하세요. 또는 우측 AI 채팅으로 초안 생성. (자동 저장)" : "여기에 답변을 작성하세요. (자동 저장)"}
         style={{ minHeight: 80, lineHeight: 1.65 }}
         className="w-full bg-input border border-line rounded-[11px] px-3.5 py-3 text-[13px] text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
       />
@@ -280,13 +291,15 @@ export function CoverletterQuestionCard({
 
       {/* 액션 */}
       <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-line">
-        <button
-          onClick={onAskAI}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand hover:text-accent border border-brand/30 hover:border-brand/50 bg-brand/8 hover:bg-brand/12 px-2.5 py-1.5 rounded-md transition-colors"
-          title="이 문항을 AI 에게 물어보거나 답변 도움 요청"
-        >
-          ✨ AI 에게 묻기
-        </button>
+        {aiEnabled && (
+          <button
+            onClick={onAskAI}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand hover:text-accent border border-brand/30 hover:border-brand/50 bg-brand/8 hover:bg-brand/12 px-2.5 py-1.5 rounded-md transition-colors"
+            title="이 문항을 AI 에게 물어보거나 답변 도움 요청"
+          >
+            ✨ AI 에게 묻기
+          </button>
+        )}
         <button
           onClick={() => setShowImport(true)}
           className="text-[11px] text-text-tertiary hover:text-text-secondary border border-line hover:border-line-strong px-2.5 py-1.5 rounded-md transition-colors"
@@ -360,6 +373,7 @@ export function CoverletterQuestionCard({
         <CoverLetterCleanupModal
           text={answer}
           limit={cl.charLimit}
+          aiFeedbackClId={aiEnabled ? cl.id : null}
           onClose={() => setShowCleanup(false)}
           onApply={(cleaned) => {
             setAnswer(cleaned)

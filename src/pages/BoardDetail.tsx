@@ -434,6 +434,7 @@ export function BoardDetail() {
 
       {/* 탭: 전형 단계 / 자소서 / 면접 준비 (AI 비활성화 시 steps 만 표시) */}
       <div className="flex gap-1 p-1 bg-surface-2 border border-line rounded-lg mb-4">
+        {/* A1 3경로 UI 는 AI 재활성화 때 공개 — 베타는 자소서·면접 탭 숨김 유지 */}
         {(aiEnabled
           ? [
               { v: 'steps' as const, label: '전형 단계' },

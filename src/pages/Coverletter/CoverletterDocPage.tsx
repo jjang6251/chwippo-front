@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useNavigate, useParams } from 'react-router-dom'
 import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPanel'
 import { CoverletterGenerateSection } from '@/components/coverletter/CoverletterGenerateSection'
 import { CoverletterOutdatedBanner } from '@/components/coverletter/CoverletterOutdatedBanner'
@@ -27,6 +28,7 @@ import type { CompanyResearchData } from '@/types/interviewPrep'
  * Phase D — AI 채팅 (다음)
  */
 export function CoverletterDocPage() {
+  const aiEnabled = useAiEnabled()
   const { applicationId } = useParams<{ applicationId: string }>()
   const navigate = useNavigate()
   const { data: app, isLoading: appLoading } = useApplication(applicationId ?? '')
@@ -158,29 +160,9 @@ export function CoverletterDocPage() {
     )
   }
 
-  // PR_B1c Phase F — 회사조사 안 됐으면 GenerateSection inline 표시 (자소서 chat 차단 안내)
-  if (app.coverletterGenerationStatus !== 'completed') {
-    return (
-      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 space-y-4">
-        <header className="mb-2 space-y-2">
-          <div className="text-xs text-text-tertiary">
-            <Link
-              to={`/board/${applicationId}`}
-              className="hover:text-text-primary transition-colors"
-            >
-              {app.companyName}
-            </Link>
-            <span className="mx-1.5">›</span>
-            <span>자소서</span>
-          </div>
-          <h1 className="text-text-primary text-xl font-bold">
-            {app.companyName} 자소서
-          </h1>
-        </header>
-        <CoverletterGenerateSection application={app} />
-      </div>
-    )
-  }
+  // A1 — 전면 차단 게이트 제거: 조사 여부와 무관하게 문항 작성 가능.
+  //   조사 미완이면 아래 본 UI 상단에 compact GenerateSection 카드로만 노출.
+
 
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
@@ -207,6 +189,17 @@ export function CoverletterDocPage() {
           </p>
         )}
       </header>
+
+      {/* A1 — 조사 미완이면 상단 compact 조사 카드 (차단 아님·업셀). AI 켜짐 시만.
+        * 조사 캐시는 회사 단위 공유 — 같은 회사 다른 카드가 이미 조사했으면 (배너에 내용 표시됨)
+        * 이 카드의 status 가 idle 이어도 숨김. 안 그러면 이미 보이는 데이터에 50코인 재차감 유도. */}
+      {aiEnabled &&
+        app.coverletterGenerationStatus !== 'completed' &&
+        !(research?.status === 'ok' && research.research) && (
+        <div className="mb-4">
+          <CoverletterGenerateSection application={app} compact />
+        </div>
+      )}
 
       {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
       <CoverletterOutdatedBanner application={app} />
@@ -276,12 +269,12 @@ export function CoverletterDocPage() {
          * h: viewport - top(88) - 아래 여백(72) = calc(100vh - 160px). 약 vh 85%.
          */}
         <aside className="hidden lg:flex flex-col bg-card border border-line rounded-[14px] p-3.5 shadow-md self-start sticky top-[88px] h-[calc(100vh-160px)] overflow-hidden">
-          <CoverletterChatPanel
+          {aiEnabled && <CoverletterChatPanel
             applicationId={applicationId ?? ''}
             onApplyUpdate={handleApplyUpdate}
             prefill={chatPrefill}
             onPrefillConsumed={() => setChatPrefill(null)}
-          />
+          />}
         </aside>
       </div>
 
@@ -307,7 +300,7 @@ export function CoverletterDocPage() {
             aria-modal="true"
             aria-label="AI 채팅 패널"
           >
-            <CoverletterChatPanel
+            {aiEnabled && <CoverletterChatPanel
               applicationId={applicationId ?? ''}
               onApplyUpdate={(u) => {
                 handleApplyUpdate(u)
@@ -316,7 +309,7 @@ export function CoverletterDocPage() {
               onCloseMobile={() => setMobileChatOpen(false)}
               prefill={chatPrefill}
               onPrefillConsumed={() => setChatPrefill(null)}
-            />
+            />}
           </div>
         </div>
       )}
