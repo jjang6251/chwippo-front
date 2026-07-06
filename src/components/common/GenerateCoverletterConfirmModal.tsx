@@ -114,7 +114,7 @@ export function GenerateCoverletterConfirmModal({
             disabled={isPending || insufficient}
             className="flex-1 bg-brand hover:bg-brand-hover text-text-primary text-sm font-semibold px-4 py-2.5 rounded-md transition-colors disabled:opacity-50"
           >
-            {isPending ? '생성 중...' : `생성 (🪙 ${COIN_COST})`}
+            {isPending ? '조사 중...' : `조사 시작 (🪙 ${COIN_COST})`}
           </button>
         </div>
       </div>

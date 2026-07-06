@@ -76,6 +76,12 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
               + 직접 입력
             </button>
           </div>
+          <Link
+            to={fullscreenHref}
+            className="inline-block mt-3 text-[11px] font-medium text-text-tertiary hover:text-text-primary transition-colors"
+          >
+            자소서 풀페이지에서 작성 →
+          </Link>
         </div>
         {aiEnabled && <CoverletterGenerateSection application={application} />}
       </div>

@@ -648,9 +648,9 @@ function MessageBubble({
                       <button
                         onClick={() => onApply(u)}
                         className="flex-1 text-[11px] font-semibold px-2 py-1 rounded bg-brand text-text-primary hover:bg-accent transition-colors"
-                        title="이 문항에 답변 적용 — 변경 영역 미리보기 후 확인"
+                        title="제안 답변 확인 — 변경 영역 미리보기 후 적용"
                       >
-                        ✓ 이 문항에 적용
+                        답변 확인하기
                       </button>
                       <button
                         onClick={() => onReject(u.clId)}

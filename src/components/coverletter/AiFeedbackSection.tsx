@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { apiClient } from '@/api/client'
 import { toast } from '@/stores/toastStore'
@@ -42,7 +43,30 @@ const KIND_LABEL: Record<FeedbackIssue['kind'], { label: string; tone: string }>
 
 const unwrap = <T,>(r: { data: { data: T } }) => r.data.data
 
-export function AiFeedbackSection({ clId }: { clId: string }) {
+interface AiFeedbackSectionProps {
+  clId: string
+  /** 현재 답변 텍스트 — 예시 문장 적용(치환)용. 없으면 적용 버튼 미노출 */
+  answer?: string
+  /** 예시 적용 — 치환된 전체 답변으로 저장 (CleanupModal onApply 경유) */
+  onApplyText?: (next: string) => void
+}
+
+export function AiFeedbackSection({ clId, answer, onApplyText }: AiFeedbackSectionProps) {
+  // 예시 적용 상태 — index 기준 (적용됨 / 원문 못 찾음)
+  const [appliedIdx, setAppliedIdx] = useState<Set<number>>(new Set())
+  const [notFoundIdx, setNotFoundIdx] = useState<Set<number>>(new Set())
+  const canApply = answer !== undefined && !!onApplyText
+
+  const handleApplySuggestion = (i: number, target: string, improved: string) => {
+    if (!canApply) return
+    if (!answer.includes(target)) {
+      setNotFoundIdx((prev) => new Set(prev).add(i))
+      return
+    }
+    onApplyText(answer.replace(target, improved))
+    setAppliedIdx((prev) => new Set(prev).add(i))
+  }
+
   const mutation = useMutation({
     mutationFn: () =>
       apiClient
@@ -118,11 +142,34 @@ export function AiFeedbackSection({ clId }: { clId: string }) {
             <div className="bg-card border border-line rounded-lg px-3 py-2 space-y-1.5">
               <p className="text-[10px] text-text-quaternary font-medium">예시 방향 (참고용)</p>
               {feedback.suggestions.map((sg, i) => (
-                <p key={i} className="text-[11px] leading-relaxed">
-                  <span className="text-text-quaternary line-through">{sg.target}</span>
-                  <span className="text-text-tertiary mx-1">→</span>
-                  <span className="text-text-secondary">{sg.improved}</span>
-                </p>
+                <div key={i} className="flex items-start gap-2">
+                  <p className="flex-1 min-w-0 text-[11px] leading-relaxed">
+                    <span className="text-text-quaternary line-through">{sg.target}</span>
+                    <span className="text-text-tertiary mx-1">→</span>
+                    <span className="text-text-secondary">{sg.improved}</span>
+                    {notFoundIdx.has(i) && (
+                      <span className="block text-[10px] text-warning mt-0.5">
+                        원문을 찾을 수 없어요 — 이미 수정된 문장이에요
+                      </span>
+                    )}
+                  </p>
+                  {canApply &&
+                    (appliedIdx.has(i) ? (
+                      <span className="shrink-0 text-[10px] text-text-quaternary py-0.5">
+                        ✓ 적용됨
+                      </span>
+                    ) : (
+                      !notFoundIdx.has(i) && (
+                        <button
+                          onClick={() => handleApplySuggestion(i, sg.target, sg.improved)}
+                          className="shrink-0 text-[10px] font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-2 py-0.5 rounded transition-colors"
+                          title="답변에서 이 문장만 바꿔요"
+                        >
+                          이 문장 적용
+                        </button>
+                      )
+                    ))}
+                </div>
               ))}
             </div>
           )}

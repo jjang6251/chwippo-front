@@ -6,6 +6,8 @@
  * 2. 성공 — 잘한 점 / kind 라벨 + 원문 인용 / 예시(취소선→개선) / 총평 렌더
  * 3. blocked — reason 표시
  * 4. API 실패 → 에러 토스트 (mutation onError)
+ * 5. 예시 적용 — 원문 있으면 치환 콜백 + ✓ 적용됨 / 원문 없으면 안내 + 콜백 미호출
+ * 6. answer/onApplyText 미전달(하위호환) → 적용 버튼 미노출
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -90,5 +92,55 @@ describe('AiFeedbackSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
     await waitFor(() => expect(toast.error).toHaveBeenCalled())
+  })
+
+  it('예시 적용 — 원문 포함 시 치환 콜백 + ✓ 적용됨 전환', async () => {
+    postMock.mockResolvedValue(OK_RESPONSE as never)
+    const onApplyText = vi.fn()
+    wrap(
+      <AiFeedbackSection
+        clId="cl-1"
+        answer="저는 끊임없는 열정으로 성장했습니다"
+        onApplyText={onApplyText}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
+    fireEvent.click(await screen.findByRole('button', { name: '이 문장 적용' }))
+
+    expect(onApplyText).toHaveBeenCalledWith(
+      '저는 채널 7개를 직접 비교하며으로 성장했습니다',
+    )
+    expect(screen.getByText('✓ 적용됨')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이 문장 적용' })).toBeNull()
+  })
+
+  it('예시 적용 — 원문 없으면(이미 수정) 안내 + 콜백 미호출', async () => {
+    postMock.mockResolvedValue(OK_RESPONSE as never)
+    const onApplyText = vi.fn()
+    wrap(
+      <AiFeedbackSection
+        clId="cl-1"
+        answer="이미 전부 고쳐 쓴 답변입니다"
+        onApplyText={onApplyText}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
+    fireEvent.click(await screen.findByRole('button', { name: '이 문장 적용' }))
+
+    expect(onApplyText).not.toHaveBeenCalled()
+    expect(
+      screen.getByText(/원문을 찾을 수 없어요/),
+    ).toBeInTheDocument()
+  })
+
+  it('answer/onApplyText 미전달 → 적용 버튼 미노출 (하위호환)', async () => {
+    postMock.mockResolvedValue(OK_RESPONSE as never)
+    wrap(<AiFeedbackSection clId="cl-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
+    await screen.findByText('AI 티 나는 표현')
+    expect(screen.queryByRole('button', { name: '이 문장 적용' })).toBeNull()
   })
 })

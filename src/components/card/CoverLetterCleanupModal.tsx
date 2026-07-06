@@ -50,7 +50,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
           <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">
             닫기
           </button>
-          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} />}
+          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} answer={text} onApplyText={onApply} />}
         </div>
       ) : (
         <>
@@ -99,7 +99,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
               </button>
             )}
           </div>
-          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} />}
+          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} answer={text} onApplyText={onApply} />}
         </>
       )}
     </Modal>

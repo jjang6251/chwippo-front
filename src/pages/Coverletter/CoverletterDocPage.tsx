@@ -190,8 +190,12 @@ export function CoverletterDocPage() {
         )}
       </header>
 
-      {/* A1 — 조사 미완이면 상단 compact 조사 카드 (차단 아님·업셀). AI 켜짐 시만 */}
-      {aiEnabled && app.coverletterGenerationStatus !== 'completed' && (
+      {/* A1 — 조사 미완이면 상단 compact 조사 카드 (차단 아님·업셀). AI 켜짐 시만.
+        * 조사 캐시는 회사 단위 공유 — 같은 회사 다른 카드가 이미 조사했으면 (배너에 내용 표시됨)
+        * 이 카드의 status 가 idle 이어도 숨김. 안 그러면 이미 보이는 데이터에 50코인 재차감 유도. */}
+      {aiEnabled &&
+        app.coverletterGenerationStatus !== 'completed' &&
+        !(research?.status === 'ok' && research.research) && (
         <div className="mb-4">
           <CoverletterGenerateSection application={app} compact />
         </div>

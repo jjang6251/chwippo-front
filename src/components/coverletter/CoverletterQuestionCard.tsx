@@ -76,9 +76,18 @@ export function CoverletterQuestionCard({
   // 답변 변경 자동저장 (debounce 1.5s)
   useEffect(() => {
     if (!initialized.current) return
-    if (answer === (cl.answer ?? '')) return
+    if (answer === (cl.answer ?? '')) {
+      // 로컬 == 서버 → 저장할 것 없음. ref 를 여기서 해제해야 외부 변경(AI 적용 등)
+      // 동기화가 재개됨. cleanup 에서 해제하면 안 됨 — cleanup 은 sync effect 보다
+      // 먼저 돌아서 "사용자 편집 중" 보호가 깨짐.
+      saveTimerRef.current = null
+      return
+    }
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
+      // 발화 후 ref 해제 필수 — 남겨두면 외부 변경 동기화가 영구 skip 되고,
+      // 이 effect 가 stale 로컬 답변을 재저장해 적용 내용을 롤백시킴
+      saveTimerRef.current = null
       onUpdate({ answer })
     }, 1500)
     return () => {
