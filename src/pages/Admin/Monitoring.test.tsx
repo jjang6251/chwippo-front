@@ -257,8 +257,11 @@ describe('Monitoring page', () => {
       render(<Monitoring />, { wrapper })
       await waitForRow()
 
-      expect(screen.getByLabelText('admin 시간당 grant 합계 (코인)')).toHaveValue(
-        5000,
+      // flaky fix — 로딩 종료 ≠ input 상태 반영. 값이 실제로 주입될 때까지 대기
+      await waitFor(() =>
+        expect(
+          screen.getByLabelText('admin 시간당 grant 합계 (코인)'),
+        ).toHaveValue(5000),
       )
       expect(screen.getByLabelText('문의 SLA 시간')).toHaveValue(12)
       expect(screen.getByLabelText('cost outlier σ')).toHaveValue(3.5)
