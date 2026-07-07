@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import type { CalendarEvent } from '@/api/calendar'
+import { detectScheduleConflicts } from '@/utils/scheduleConflict'
+import { getHolidayName } from '@/utils/holidays'
 
 /**
  * 캘린더 UX 재구성 — 월별 뷰 그리드 (탭 활성 시).
@@ -83,6 +85,9 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
     }
     return map
   }, [events])
+
+  // A4 — 일정 충돌 (시간 있는 step·exam 이 같은 날 2개+)
+  const conflicts = useMemo(() => detectScheduleConflicts(events), [events])
 
   const counts = useMemo(() => {
     let deadline = 0
@@ -199,11 +204,13 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
             const isPast = dateStr < todayStr
             const isSun = day.day() === 0
             const isSat = day.day() === 6
+            // A6 — 공휴일은 일요일과 같은 빨간 톤 + 이름 라벨
+            const holidayName = getHolidayName(dateStr)
 
             // 날짜 원형 배지 — 오늘만 브랜드 fill, 나머지는 색상만
             const dateBadge = isToday
               ? 'bg-brand text-text-primary'
-              : isSun
+              : isSun || holidayName
                 ? 'text-danger/80'
                 : isSat
                   ? 'text-info/80'
@@ -219,10 +226,26 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
                 onClick={() => onSelectDate?.(dateStr)}
                 className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-line transition-colors text-left w-full ${!isLastRow ? 'border-b' : ''} ${!isLastCol ? 'border-r' : ''} ${cellBg} ${isPast && !isToday ? 'opacity-50' : ''}`}
               >
-                <span
-                  className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold shrink-0 ${dateBadge}`}
-                >
-                  {day.date()}
+                <span className="flex items-center gap-0.5">
+                  <span
+                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold shrink-0 ${dateBadge}`}
+                  >
+                    {day.date()}
+                  </span>
+                  {conflicts.has(dateStr) && (
+                    <span
+                      className={`text-[10px] leading-none ${conflicts.get(dateStr)!.level === 'overlap' ? 'text-danger' : 'text-warning'}`}
+                      title={conflicts.get(dateStr)!.level === 'overlap' ? '일정이 겹쳐요 — 시간 확인 필요' : '같은 날 시간 일정 2개 이상'}
+                      aria-label="일정 충돌 주의"
+                    >
+                      ⚠️
+                    </span>
+                  )}
+                  {holidayName && (
+                    <span className="text-[9px] text-danger/70 font-medium truncate max-w-[48px] leading-tight" title={holidayName}>
+                      {holidayName}
+                    </span>
+                  )}
                 </span>
                 {presentation.pill && (
                   <span

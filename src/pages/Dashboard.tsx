@@ -4,6 +4,7 @@ import { StatusDoughnutSection } from '@/components/dashboard/StatusDoughnutSect
 import { InterviewReviewCard } from '@/components/dashboard/InterviewReviewCard'
 import { MonthlyComparisonSection } from '@/components/dashboard/MonthlyComparisonSection'
 import { PersonalFunnelSection } from '@/components/dashboard/PersonalFunnelSection'
+import { TakeawaysSection } from '@/components/dashboard/TakeawaysSection'
 import { InsightsSection } from '@/components/dashboard/InsightsSection'
 import { MilestonesSection } from '@/components/dashboard/MilestonesSection'
 import { useDashboardStats } from '@/hooks/useDashboard'
@@ -123,6 +124,9 @@ export function Dashboard() {
           {showDoughnut && <StatusDoughnutSection />}
         </div>
       )}
+
+      {/* A9 — 탈락 회고 누적 ("얻은 것 목록" 재프레임 · 회고 0개면 미렌더 — 여백도 없음) */}
+      <TakeawaysSection />
 
       {/* 6. Personal Funnel — 지원 → 면접 → 합격 */}
       {showPersonalFunnel && (

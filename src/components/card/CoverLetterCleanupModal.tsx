@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
+import { AiFeedbackSection } from '@/components/coverletter/AiFeedbackSection'
 import { Modal } from '@/components/common/Modal'
 import { cleanupCoverletter } from '@/utils/coverletterCleanup'
 
@@ -6,6 +7,8 @@ interface CoverLetterCleanupModalProps {
   text: string
   limit: number | null
   onClose: () => void
+  /** A1 — AI 심층 점검 층 (2층 구조). 전달 + AI 켜짐 시에만 노출 */
+  aiFeedbackClId?: string | null
   onApply: (cleaned: string) => void
 }
 
@@ -26,7 +29,7 @@ function highlight(text: string, ranges: Array<[number, number]>): ReactNode {
   return out
 }
 
-export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: CoverLetterCleanupModalProps) {
+export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedbackClId }: CoverLetterCleanupModalProps) {
   const result = useMemo(() => cleanupCoverletter(text, limit), [text, limit])
   const { cleaned, issues, ranges } = result
   const nothingToFix = issues.length === 0
@@ -47,6 +50,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: Cover
           <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">
             닫기
           </button>
+          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} answer={text} onApplyText={onApply} />}
         </div>
       ) : (
         <>
@@ -95,6 +99,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply }: Cover
               </button>
             )}
           </div>
+          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} answer={text} onApplyText={onApply} />}
         </>
       )}
     </Modal>

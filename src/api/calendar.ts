@@ -49,3 +49,20 @@ export const deleteDailyNote = (id: string) =>
 
 export const carryOverDailyNote = (id: string) =>
   apiClient.patch<{ data: DailyNote }>(`/calendar/daily-notes/${id}/carry-over`).then((r) => r.data.data)
+
+/** A3 — D-3 이내 스텝의 미완 체크리스트 (오늘 할 일 자동 합류, read-through) */
+export interface UrgentChecklistItem {
+  itemId: string
+  content: string
+  stepId: string
+  stepName: string
+  applicationId: string
+  companyName: string
+  /** 스텝 날짜 (KST YYYY-MM-DD) */
+  date: string
+}
+
+export const getUrgentChecklist = () =>
+  apiClient
+    .get<{ data: UrgentChecklistItem[] }>('/calendar/urgent-checklist')
+    .then((r) => r.data.data)

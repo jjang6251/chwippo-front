@@ -11,6 +11,7 @@ export interface PendingNotification {
   type:
     | 'coin_grant'
     | 'coin_revoke'
+    | 'quota_override'
     | 'matrix_change'
     | 'tier_downgrade'
     | 'tier_upgrade'
@@ -22,6 +23,7 @@ export interface PendingNotification {
 const ICON: Record<PendingNotification['type'], string> = {
   coin_grant: '🪙',
   coin_revoke: '⚖️',
+  quota_override: '🎚️',
   matrix_change: '📊',
   tier_downgrade: '⬇️',
   tier_upgrade: '⬆️',

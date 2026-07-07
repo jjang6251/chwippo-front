@@ -151,7 +151,7 @@ export function CoverletterGenerateSection({
     return (
       <div className={`${wrapClass} border-danger/40 bg-danger/5`}>
         <div className={iconClass}>❌</div>
-        <p className={titleClass}>자소서 생성에 실패했어요</p>
+        <p className={titleClass}>회사 조사에 실패했어요</p>
         {!compact && (
           <p className={descClass}>
             회사 정보 조사 중 오류가 발생했어요. 다시 시도해주세요.
@@ -179,21 +179,25 @@ export function CoverletterGenerateSection({
     )
   }
 
-  // 'idle' (default)
+  // 'idle' (default) — A1: "자소서 생성"이 아니라 "회사 조사" (선택적 부스터, 차단 아님)
   return (
     <div className={`${wrapClass} border-line bg-surface-2/30`}>
-      <div className={iconClass}>✨</div>
+      <div className={iconClass}>🔎</div>
       <p className={titleClass}>
-        {compact ? '자소서 생성 안 됨' : '아직 자소서 작성이 시작되지 않았어요'}
+        {compact ? '회사 조사로 품질 올리기' : '회사 조사로 자소서 품질을 올려보세요'}
       </p>
       <p className={descClass}>
         {compact
-          ? '🪙 50 코인'
-          : `${application.companyName} 의 회사 정보를 자동 조사하고`}
+          ? '🪙 약 50코인 · 초안·챗·점검에 회사 맥락 반영'
+          : `${application.companyName} 의 최신 정보를 검색해`}
         {!compact && (
           <>
             <br />
-            자소서 작성을 시작할 수 있어요. (🪙 50 코인)
+            AI 초안·챗·점검에 회사 맥락이 반영돼요. (🪙 약 50코인)
+            <br />
+            <span className="text-text-quaternary">
+              조사 없이도 자소서 작성은 자유롭게 가능해요
+            </span>
           </>
         )}
       </p>
@@ -203,7 +207,7 @@ export function CoverletterGenerateSection({
         disabled={isPending}
         className={`bg-brand hover:bg-brand-hover text-text-primary ${buttonClass} transition-colors disabled:opacity-50`}
       >
-        ✨ 자소서 생성하기
+        🔎 회사 조사 시작 (+약 50코인)
       </button>
       {confirmOpen && (
         <GenerateCoverletterConfirmModal

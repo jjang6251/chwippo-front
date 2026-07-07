@@ -25,6 +25,7 @@ import { InterviewPrepTab } from '@/components/card/InterviewPrepTab'
 import { DdayBadge } from '@/components/card/DdayBadge'
 import { StarToggle } from '@/components/card/StarToggle'
 import { SetResultModal } from '@/components/card/SetResultModal'
+import { FailedTakeawayBox } from '@/components/card/FailedTakeawayBox'
 import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
 import { toast } from '@/stores/toastStore'
@@ -357,7 +358,24 @@ export function BoardDetail() {
             {app.status === 'PASSED' && (
               <span className="text-xs text-success font-medium bg-success/10 px-2 py-1 rounded-full border border-success/20 whitespace-nowrap">🎉 최종 합격</span>
             )}
-            {ddayTarget && app.status !== 'PASSED' && <DdayBadge deadline={ddayTarget} />}
+            {app.status === 'FAILED' && (
+              <span className="text-xs text-text-tertiary font-medium bg-surface-3 px-2 py-1 rounded-full border border-line whitespace-nowrap">불합격</span>
+            )}
+            {/* A9 — 결과 되돌리기 (잘못 처리 롤백 · 합격/불합격 공통) */}
+            {(app.status === 'PASSED' || app.status === 'FAILED') && (
+              <button
+                onClick={() =>
+                  update({
+                    status: (app.steps?.length ?? 0) > 0 ? 'IN_PROGRESS' : 'PLANNED',
+                  })
+                }
+                className="text-[11px] text-text-quaternary hover:text-text-secondary underline underline-offset-2 whitespace-nowrap transition-colors"
+                title="결과 입력을 취소하고 진행 중으로 되돌려요"
+              >
+                결과 되돌리기
+              </button>
+            )}
+            {ddayTarget && app.status !== 'PASSED' && app.status !== 'FAILED' && <DdayBadge deadline={ddayTarget} />}
           </div>
         </div>
 
@@ -381,6 +399,9 @@ export function BoardDetail() {
             {currentTags.length > 0 ? '+ 태그 수정' : '+ 태그 추가'}
           </button>
         </div>
+
+        {/* A9 — 탈락 회고 (FAILED 카드만 · 컴포넌트 내부에서 가드) */}
+        <FailedTakeawayBox application={app} />
 
         {/* 마감일 + URL */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -434,6 +455,7 @@ export function BoardDetail() {
 
       {/* 탭: 전형 단계 / 자소서 / 면접 준비 (AI 비활성화 시 steps 만 표시) */}
       <div className="flex gap-1 p-1 bg-surface-2 border border-line rounded-lg mb-4">
+        {/* A1 3경로 UI 는 AI 재활성화 때 공개 — 베타는 자소서·면접 탭 숨김 유지 */}
         {(aiEnabled
           ? [
               { v: 'steps' as const, label: '전형 단계' },

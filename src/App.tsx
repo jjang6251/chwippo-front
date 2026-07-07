@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastContainer } from '@/components/common/ToastContainer'
 import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
+import { FirstCardCelebration } from '@/components/common/FirstCardCelebration'
+import { FailedCareOverlay } from '@/components/card/FailedCareOverlay'
 import { AiConsentRequiredModal } from '@/components/common/AiConsentRequiredModal'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AiFeatureGuard } from '@/components/auth/AiFeatureGuard'
@@ -94,14 +96,15 @@ export default function App() {
             {/* AI 기능 라우트 — VITE_AI_FEATURES_ENABLED=false 시 dashboard redirect */}
             <Route element={<AiFeatureGuard />}>
               <Route path="/coverletters" element={<Coverletters />} />
-              <Route
-                path="/board/:applicationId/coverletter"
-                element={<CoverletterDocPage />}
-              />
               <Route path="/interviews" element={<Interviews />} />
               <Route
                 path="/interviews/:sessionId"
                 element={<InterviewSessionPage />}
+              />
+              {/* A1 3경로 UI 는 AI 재활성화(useAiEnabled=true) 때 공개 — 베타는 자소서 진입점 전체 숨김 유지 */}
+              <Route
+                path="/board/:applicationId/coverletter"
+                element={<CoverletterDocPage />}
               />
             </Route>
             <Route
@@ -134,6 +137,8 @@ export default function App() {
       </Routes>
       <ToastContainer />
       <CelebrationOverlay />
+      <FirstCardCelebration />
+      <FailedCareOverlay />
       <AiConsentRequiredModal />
     </BrowserRouter>
   )

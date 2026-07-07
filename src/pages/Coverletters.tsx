@@ -390,10 +390,17 @@ function ApplicationGroup({
 
   if (!hasItems) {
     if (!application) return null
+    // A1 — 문항 0개도 진입 가능 (바로 쓰기 경로). 조사는 선택 옵션으로 병기
     return (
       <div className="border border-line bg-surface-2 rounded-xl overflow-hidden flex flex-col">
         {Header}
-        <div className="p-3 flex-1">
+        <div className="p-3 flex-1 flex flex-col gap-2">
+          <Link
+            to={`/board/${applicationId}/coverletter`}
+            className="block text-center text-xs font-semibold text-brand bg-brand/8 border border-brand/25 hover:bg-brand/15 px-3 py-2 rounded-md transition-colors"
+          >
+            ✍️ 바로 쓰기 — 문항 추가하고 작성 →
+          </Link>
           <CoverletterGenerateSection application={application} compact />
         </div>
       </div>

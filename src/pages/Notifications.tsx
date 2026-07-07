@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useMarkAllRead,
   useMarkNotificationRead,
@@ -22,6 +22,18 @@ const TYPE_META: Record<
   admin: { icon: '🔔', ring: 'border-info/30', tint: 'bg-info/10' },
 }
 
+/** A7 — 타입 필터 (브리핑 아카이브 겸용). '?type=briefing' 딥링크 = 캘린더 배너 진입 */
+const FILTER_TABS: Array<{ key: NotificationType | 'all'; label: string }> = [
+  { key: 'all', label: '전체' },
+  { key: 'briefing', label: '📅 브리핑' },
+  { key: 'deadline_urgent', label: '⏰ 마감 긴급' },
+  { key: 'admin', label: '🔔 운영' },
+]
+
+function isNotificationType(v: string | null): v is NotificationType {
+  return v === 'briefing' || v === 'deadline_urgent' || v === 'admin'
+}
+
 function relativeTime(iso: string, now: number = Date.now()): string {
   const diff = now - new Date(iso).getTime()
   const minutes = Math.floor(diff / 60_000)
@@ -36,6 +48,7 @@ function relativeTime(iso: string, now: number = Date.now()): string {
 
 export function Notifications() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const {
     data,
     isLoading,
@@ -47,7 +60,17 @@ export function Notifications() {
   const markRead = useMarkNotificationRead()
   const markAll = useMarkAllRead()
 
-  const items = data?.pages.flatMap((p) => p.items) ?? []
+  // A7 — 타입 필터: 로드된 페이지에 대한 클라이언트 필터 ("더 보기"로 과거 아카이브 탐색)
+  const typeParam = searchParams.get('type')
+  const filter: NotificationType | 'all' = isNotificationType(typeParam)
+    ? typeParam
+    : 'all'
+  const setFilter = (key: NotificationType | 'all') =>
+    setSearchParams(key === 'all' ? {} : { type: key }, { replace: true })
+
+  const allItems = data?.pages.flatMap((p) => p.items) ?? []
+  const items =
+    filter === 'all' ? allItems : allItems.filter((n) => n.type === filter)
   const unread = data?.pages[0]?.unreadCount ?? 0
 
   function handleTap(n: NotificationItem) {
@@ -71,6 +94,28 @@ export function Notifications() {
         )}
       </div>
 
+      {/* A7 — 타입 필터 (브리핑 아카이브) */}
+      <div className="flex gap-1 mb-4 flex-wrap">
+        {FILTER_TABS.map((tab) => {
+          const isActive = filter === tab.key
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => setFilter(tab.key)}
+              className={`text-xs font-medium px-2.5 py-1 rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${
+                isActive
+                  ? 'bg-brand/10 text-brand border-brand/30'
+                  : 'bg-card border-line text-text-tertiary hover:text-text-secondary hover:border-line-strong'
+              }`}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
       {isLoading && <NotificationSkeleton />}
 
       {isError && (
@@ -85,10 +130,16 @@ export function Notifications() {
             🔔
           </div>
           <p className="text-sm font-medium text-text-secondary mb-1">
-            새 알림이 없어요
+            {filter === 'briefing'
+              ? '아직 받은 브리핑이 없어요'
+              : filter !== 'all'
+                ? '해당 유형 알림이 없어요'
+                : '새 알림이 없어요'}
           </p>
           <p className="text-xs text-text-tertiary">
-            마감·면접이 다가오면 여기로 알려드릴게요.
+            {filter === 'briefing'
+              ? '마감·면접이 다가오면 매일 아침 8시에 정리해드려요.'
+              : '마감·면접이 다가오면 여기로 알려드릴게요.'}
           </p>
         </div>
       )}
