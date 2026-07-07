@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { activityApi } from '@/api/activity'
 import type {
   CreateActivityDto,
@@ -7,6 +12,7 @@ import type {
   UpdateActivityDto,
   UpdateActivityLogDto,
   UpdateActivityReflectionDto,
+  QuickCreateLogDto,
 } from '@/types/activity'
 
 const QK = {
@@ -17,6 +23,7 @@ const QK = {
   logs: (activityId: string) => ['activities', activityId, 'logs'] as const,
   reflections: (activityId: string) =>
     ['activities', activityId, 'reflections'] as const,
+  timeline: ['activity-timeline'] as const,
 }
 
 export function useActivities(includeArchived = false) {
@@ -77,8 +84,13 @@ export function useActivityLogs(activityId: string | undefined) {
 
 // log 변경 후 카드 리스트 (`useActivities`) 가 즉시 반영되도록 QK.all prefix 무효화.
 // QK.all=['activities'] 는 list/detail/logs/reflections 키 전부의 공통 prefix.
+// activity-redesign — 타임라인·streak 캐시도 함께 (기록·삭제가 잔디에 즉시 반영,
+//   백엔드 streak 5분 캐시는 서비스 쓰기 경로에서 무효화됨).
 function invalidateAllActivities(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: QK.all, refetchType: 'all' })
+  qc.invalidateQueries({ queryKey: QK.timeline, refetchType: 'all' })
+  qc.invalidateQueries({ queryKey: ['dashboard', 'streak'], refetchType: 'all' })
+  qc.invalidateQueries({ queryKey: ['activity-insights'], refetchType: 'all' })
 }
 
 export function useCreateLog(activityId: string) {
@@ -211,3 +223,22 @@ export function useRemoveReflection(_activityId: string) {
   })
 }
 
+/** activity-redesign — 유저 전체 날짜 타임라인 (무한 스크롤) */
+export function useActivityTimeline() {
+  return useInfiniteQuery({
+    queryKey: QK.timeline,
+    queryFn: ({ pageParam }) => activityApi.timeline(pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    staleTime: 30_000,
+  })
+}
+
+/** activity-redesign — 퀵캡처 (활동 미지정 → 기본함 · isRest 멱등) */
+export function useQuickCreateLog() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (dto: QuickCreateLogDto) => activityApi.quickCreateLog(dto),
+    onSuccess: () => invalidateAllActivities(qc),
+  })
+}

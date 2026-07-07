@@ -1368,8 +1368,10 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   const { data: activities = [] } = useActivities(false)
   const [showCompleted, setShowCompleted] = useState(false)
   const today = new Date().toISOString().slice(0, 10)
-  const ongoing = activities.filter((a) => !a.archivedAt && (!a.endedAt || a.endedAt >= today))
-  const completed = activities.filter((a) => !a.archivedAt && a.endedAt && a.endedAt < today)
+  // 기본함(미분류) 은 활동이 아니라 퀵캡처 수신함 — 경험 카드에서 제외
+  const visibleActs = activities.filter((a) => !a.isInbox)
+  const ongoing = visibleActs.filter((a) => !a.archivedAt && (!a.endedAt || a.endedAt >= today))
+  const completed = visibleActs.filter((a) => !a.archivedAt && a.endedAt && a.endedAt < today)
   const allLogs = activities.flatMap((a) => a.logs ?? [])
   // 이번주 KST 월요일
   const monday = (() => {

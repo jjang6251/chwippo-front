@@ -95,12 +95,15 @@ export function NewInterviewSessionModal({
   }
 
   const clList = coverletters ?? []
-  const actList = activities ?? []
+  // 기본함(미분류) 맨 위 고정 — 퀵캡처 기록도 면접 소재로 첨부 가능
+  const actList = [...(activities ?? [])].sort(
+    (a, b) => (b.isInbox ? 1 : 0) - (a.isInbox ? 1 : 0),
+  )
   const steps = app?.steps ?? []
 
   return (
     <Modal open onClose={onClose} title="새 면접 세션" width="max-w-2xl">
-      <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+      <div className="space-y-5 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
         {/* 1. 회사·직무 confirm */}
         <section>
           <div className="border border-line bg-surface rounded-lg p-3">
@@ -236,7 +239,7 @@ export function NewInterviewSessionModal({
             {clList.length === 0 ? (
               <p className="text-text-faint text-sm">자소서 문항이 없어요.</p>
             ) : (
-              <div className="max-h-32 overflow-y-auto space-y-1 border border-line rounded-lg p-2 bg-surface">
+              <div className="max-h-32 overflow-y-auto overscroll-contain space-y-1 border border-line rounded-lg p-2 bg-surface">
                 {clList.map((cl) => (
                   <label
                     key={cl.id}
@@ -275,12 +278,12 @@ export function NewInterviewSessionModal({
             {actList.length === 0 ? (
               <p className="text-text-faint text-xs">활동이 없어요.</p>
             ) : (
-              <div className="max-h-44 overflow-y-auto space-y-1 border border-line rounded-lg p-2 bg-surface">
+              <div className="max-h-44 overflow-y-auto overscroll-contain space-y-1 border border-line rounded-lg p-2 bg-surface">
                 {actList.map((act) => (
                   <ActivityLogPicker
                     key={act.id}
                     activityId={act.id}
-                    activityName={act.name}
+                    activityName={act.isInbox ? '📥 미분류 기록' : act.name}
                     selectedLogIds={selectedLogIds}
                     onChangeSelected={setSelectedLogIds}
                   />
@@ -381,7 +384,8 @@ function ActivityLogPicker({
   )
   const checkboxRef = useRef<HTMLInputElement>(null)
 
-  const allLogs = logs ?? []
+  // 쉬어가기(rest) 기록은 면접 소재가 아님
+  const allLogs = (logs ?? []).filter((l) => l.cat !== 'rest')
   const selectedInThis = allLogs.filter((l) => selectedLogIds.has(l.id))
   const selectAll =
     allLogs.length > 0 && selectedInThis.length === allLogs.length

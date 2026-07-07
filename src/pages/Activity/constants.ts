@@ -1,5 +1,5 @@
 // mock (plans/activity-journal-mock.html) 상수 1:1.
-import type { ActivityType } from '@/types/activity'
+import type { ActivityType, LogMood, QuantValue } from '@/types/activity'
 
 export const TYPE_KO: Record<ActivityType, string> = {
   intern: '인턴',
@@ -17,6 +17,10 @@ export const TYPE_KO: Record<ActivityType, string> = {
 }
 
 export const CAT_KO: Record<string, string> = {
+  // 취준 실전 3종 (auto-tagger v2) — 편집기 칩도 이 순서로 노출
+  coding_test: '코테',
+  interview: '면접',
+  apply: '지원',
   develop: '개발',
   meeting: '회의',
   presentation: '발표',
@@ -89,6 +93,35 @@ export const CL_COLOR: Record<string, string> = {
   own_strength: 'rgb(245 158 11)', // amber
   collaboration: 'rgb(236 72 153)', // pink
   challenge: 'rgb(220 38 38)', // red
+}
+
+// LogDetailModal·LogTagEditor 공용 감정 칩 (autoTag 미지원 — 수동 선택 전용)
+export const MOOD_CHIPS: Array<[LogMood, string, string]> = [
+  ['proud', '🌟', '뿌듯'],
+  ['learning', '🌱', '배움'],
+  ['frustrated', '😮‍💨', '힘듦'],
+  ['neutral', '🙂', '평범'],
+]
+
+/**
+ * 태그 칩 색 스타일 (타임라인·태그 편집기 공용).
+ * COMP_COLOR·CL_COLOR 데이터 시각화 예외 (위 COMP_COLOR docstring) 를 칩에도 동일 적용 —
+ * 인사이트 차트와 같은 태그 = 같은 색.
+ */
+export function tagColorStyle(rgb: string) {
+  return {
+    color: rgb,
+    backgroundColor: rgb.replace(')', ' / 0.12)'),
+    borderColor: rgb.replace(')', ' / 0.28)'),
+  }
+}
+
+/** quant 칩 표시용 포맷 (타임라인·태그 편집기 공용) */
+export function fmtQuant(q: QuantValue): string {
+  if (q.type === 'before-after') return `${q.before}→${q.after}${q.unit ?? ''}`
+  if (q.type === 'count')
+    return `${q.metric ? `${q.metric} ` : ''}${q.value}${q.unit}`
+  return q.raw
 }
 
 export const MOOD_EM: Record<string, string> = {

@@ -81,11 +81,14 @@ export function EditInterviewSessionModal({
   }
 
   const clList = coverletters ?? []
-  const actList = activities ?? []
+  // 기본함(미분류) 맨 위 고정 — 퀵캡처 기록도 면접 소재로 첨부 가능
+  const actList = [...(activities ?? [])].sort(
+    (a, b) => (b.isInbox ? 1 : 0) - (a.isInbox ? 1 : 0),
+  )
 
   return (
     <Modal open onClose={onClose} title="면접 세션 편집" width="max-w-2xl">
-      <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+      <div className="space-y-5 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
         <p className="text-text-tertiary text-xs leading-relaxed bg-info/5 border border-info/20 rounded-lg p-3">
           💡 자료를 바꾸고 저장한 뒤 <strong>"↻ 다시 생성"</strong> 을 누르면 새
           자료 기반으로 질문이 재생성돼요. (기존 질문·내 메모는 사라집니다)
@@ -167,7 +170,7 @@ export function EditInterviewSessionModal({
           {clList.length === 0 ? (
             <p className="text-text-faint text-sm">자소서 문항이 없어요.</p>
           ) : (
-            <div className="max-h-32 overflow-y-auto space-y-1 border border-line rounded-lg p-2 bg-surface">
+            <div className="max-h-32 overflow-y-auto overscroll-contain space-y-1 border border-line rounded-lg p-2 bg-surface">
               {clList.map((cl) => (
                 <label
                   key={cl.id}
@@ -206,7 +209,7 @@ export function EditInterviewSessionModal({
           {actList.length === 0 ? (
             <p className="text-text-faint text-sm">활동이 없어요.</p>
           ) : (
-            <div className="max-h-44 overflow-y-auto space-y-1 border border-line rounded-lg p-2 bg-surface">
+            <div className="max-h-44 overflow-y-auto overscroll-contain space-y-1 border border-line rounded-lg p-2 bg-surface">
               {actList.map((act) => (
                 <LogPicker
                   key={act.id}
@@ -259,7 +262,8 @@ function LogPicker({
   )
   const checkboxRef = useRef<HTMLInputElement>(null)
 
-  const allLogs = logs ?? []
+  // 쉬어가기(rest) 기록은 면접 소재가 아님
+  const allLogs = (logs ?? []).filter((l) => l.cat !== 'rest')
   const selectedInThis = allLogs.filter((l) => selectedLogIds.has(l.id))
   const selectAll =
     allLogs.length > 0 && selectedInThis.length === allLogs.length

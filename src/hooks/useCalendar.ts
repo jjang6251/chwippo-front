@@ -34,6 +34,8 @@ export function useTodayDailyNotes() {
 function invalidateCalendarAndDday(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['calendar'], refetchType: 'all' })
   qc.invalidateQueries({ queryKey: ['dashboard', 'dday'], refetchType: 'all' })
+  // daily_notes 는 streak 소스 — 기록 즉시 잔디 반영 (백엔드 5분 캐시는 수용)
+  qc.invalidateQueries({ queryKey: ['dashboard', 'streak'], refetchType: 'all' })
 }
 
 export function useCreateDailyNote(date: string) {
