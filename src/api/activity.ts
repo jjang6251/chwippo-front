@@ -1,6 +1,8 @@
 import { apiClient } from './client'
 import type {
   Activity,
+  QuickCreateLogDto,
+  TimelinePage,
   ActivityLog,
   ActivityReflection,
   CreateActivityDto,
@@ -15,6 +17,18 @@ import type {
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
 export const activityApi = {
+  // activity-redesign — 퀵캡처 (활동 미지정 → 기본함 · isRest 멱등)
+  quickCreateLog: (dto: QuickCreateLogDto) =>
+    apiClient.post<{ data: ActivityLog }>('/activity-logs', dto).then(unwrap),
+
+  // activity-redesign — 유저 전체 날짜 타임라인 (keyset cursor)
+  timeline: (cursor?: string) =>
+    apiClient
+      .get<{ data: TimelinePage }>('/activity-logs', {
+        params: cursor ? { cursor } : undefined,
+      })
+      .then(unwrap),
+
   list: (includeArchived = false) =>
     apiClient
       .get<{ data: Activity[] }>('/activities', {

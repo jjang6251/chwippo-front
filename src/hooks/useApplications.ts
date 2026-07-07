@@ -30,6 +30,8 @@ export function useApplication(id: string) {
 function invalidateCalendarAndDday(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['calendar'], refetchType: 'all' })
   qc.invalidateQueries({ queryKey: ['dashboard', 'dday'], refetchType: 'all' })
+  // applications 생성·변경도 streak 소스 (created/updated_at)
+  qc.invalidateQueries({ queryKey: ['dashboard', 'streak'], refetchType: 'all' })
 }
 
 export function useCreateApplication() {

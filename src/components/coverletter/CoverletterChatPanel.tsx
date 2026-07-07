@@ -705,6 +705,10 @@ function ActivityTreeSection({
   onSelectChange: (set: Set<string>) => void
 }) {
   const { data: activities = [], isLoading } = useActivities(false)
+  // 기본함(미분류) 은 퀵캡처 기록의 소재 창고 — 맨 위 고정 (숨기지 않고 잘 보이게)
+  const sortedActivities = [...activities].sort(
+    (a, b) => (b.isInbox ? 1 : 0) - (a.isInbox ? 1 : 0),
+  )
 
   return (
     <div className={open ? 'border-t border-line pt-2' : ''}>
@@ -740,7 +744,7 @@ function ActivityTreeSection({
         )}
       </div>
       {open && (
-        <div className="max-h-[160px] overflow-y-auto pb-2 space-y-1">
+        <div className="max-h-[160px] overflow-y-auto overscroll-contain pb-2 space-y-1">
           {isLoading ? (
             <div className="text-[10px] text-text-quaternary text-center py-2">
               불러오는 중…
@@ -750,7 +754,7 @@ function ActivityTreeSection({
               활동 일지에 기록을 먼저 추가해 주세요.
             </p>
           ) : (
-            activities.map((a) => (
+            sortedActivities.map((a) => (
               <ActivityRow
                 key={a.id}
                 activity={a}
@@ -775,9 +779,11 @@ function ActivityRow({
   onSelectChange: (set: Set<string>) => void
 }) {
   const [expanded, setExpanded] = useState(false)
-  const { data: logs = [] } = useActivityLogs(
+  const { data: rawLogs = [] } = useActivityLogs(
     expanded ? activity.id : undefined,
   )
+  // 쉬어가기(rest) 기록은 자소서 소재가 아님
+  const logs = rawLogs.filter((l) => l.cat !== 'rest')
 
   return (
     <div className="border border-line bg-surface-2 rounded">
@@ -788,7 +794,7 @@ function ActivityRow({
       >
         <CollapsibleChevron open={expanded} />
         <span className="flex-1 text-left truncate font-medium">
-          {activity.name}
+          {activity.isInbox ? '📥 미분류 기록' : activity.name}
         </span>
       </button>
       {expanded && logs.length > 0 && (

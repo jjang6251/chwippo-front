@@ -23,6 +23,9 @@ interface Props {
 }
 
 const CAT_CHIPS: Array<[LogCategory, string]> = [
+  ['coding_test', '코테·알고리즘'],
+  ['interview', '면접'],
+  ['apply', '지원·자소서'],
   ['develop', '개발·구현'],
   ['meeting', '회의·기획'],
   ['presentation', '발표·강연'],

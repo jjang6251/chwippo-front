@@ -14,7 +14,6 @@ import type { Activity, CoverletterTag } from '@/types/activity'
 import { activityApi } from '@/api/activity'
 import { ActivityCard } from './ActivityCard'
 import { ActivityFormModal } from './modals/ActivityFormModal'
-import { ActivityPickerModal } from './modals/ActivityPickerModal'
 import { BulkLogModal } from './modals/BulkLogModal'
 import { ActivitySummaryModal } from './modals/ActivitySummaryModal'
 import { ClPopover } from './modals/ClPopover'
@@ -25,12 +24,8 @@ import { ReflectionModal } from './modals/ReflectionModal'
 import { ReflectionPickerModal } from './modals/ReflectionPickerModal'
 import { TYPE_KO } from './constants'
 import {
-  calcStreak,
-  evalMappingConfidence,
   getISOWeekMonday,
-  isActivityOngoing,
   isThisWeek,
-  RECENT_USE_WINDOW_MS,
   todayLocal,
   weeklyRotatingPrompt,
 } from './utils'
@@ -38,15 +33,12 @@ import './activity-mock.css'
 
 type ViewMode = 'ongoing' | 'completed' | 'all' | 'archived'
 type SortMode = 'recent' | 'start' | 'name'
-type MobileMode = 'log' | 'cards'
 
 export function ActivityPage() {
   const [view, setView] = useState<ViewMode>('ongoing')
   const [filterType, setFilterType] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortMode>('recent')
-  const [mobileMode, setMobileMode] = useState<MobileMode>('log')
-  const [quickInput, setQuickInput] = useState('')
 
   const navigate = useNavigate()
   const qcRef = useQueryClient()
@@ -79,13 +71,6 @@ export function ActivityPage() {
     logId: string
     anchor: HTMLElement
   } | null>(null)
-  // Quick log 자동 매핑 state
-  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
-  const [recent, setRecent] = useState<{ id: string | null; at: number }>({
-    id: null,
-    at: 0,
-  })
-  const [pickerOpen, setPickerOpen] = useState(false)
   // Confirm modal (activity delete + log delete + 409 archive swap)
   const [confirmState, setConfirmState] = useState<
     | { mode: 'delete'; activityId: string }
@@ -116,18 +101,19 @@ export function ActivityPage() {
   )
 
   const today = todayLocal()
-  const ongoing = activities.filter(
+  // activity-redesign — 기본함(inbox)은 관리 서랍 목록에서 제외 (미분류 기록은 타임라인에서)
+  const visibleActivities = activities.filter((a) => !a.isInbox)
+  const ongoing = visibleActivities.filter(
     (a) => !a.archivedAt && (!a.endedAt || a.endedAt >= today),
   )
-  const completed = activities.filter(
+  const completed = visibleActivities.filter(
     (a) => !a.archivedAt && a.endedAt && a.endedAt < today,
   )
-  const archived = activities.filter((a) => !!a.archivedAt)
+  const archived = visibleActivities.filter((a) => !!a.archivedAt)
 
   // 이번주 로그 개수
   const allLogs = activities.flatMap((a) => a.logs ?? [])
   const weekLogs = allLogs.filter((l) => isThisWeek(l.occurredAt))
-  const weekActSet = new Set(weekLogs.map((l) => l.activityId))
   // 이번주 회전 prompt — 사용자 cl 분포 기반 부족한 카테고리 우선
   const weekRotPrompt = useMemo(
     () => weeklyRotatingPrompt(getISOWeekMonday(), allLogs),
@@ -174,96 +160,6 @@ export function ActivityPage() {
     }
     return acts
   }, [activities, view, filterType, searchQuery, sortBy])
-
-  // ─── Quick log 매핑 결과 (input + selectedTarget + recent 기준) ───
-  const mapping = useMemo(() => {
-    if (selectedTargetId) {
-      const act = activities.find((a) => a.id === selectedTargetId)
-      if (act) {
-        return {
-          activity: act,
-          confidence: 'HIGH' as const,
-          cands: [act],
-          forced: true,
-        }
-      }
-    }
-    if (!quickInput.trim()) {
-      return { activity: null, confidence: 'LOW' as const, cands: [], forced: false }
-    }
-    return { ...evalMappingConfidence(quickInput, activities, recent), forced: false }
-  }, [selectedTargetId, quickInput, activities, recent])
-
-  async function createQuickLog(activityId: string, content: string) {
-    try {
-      await activityApi.createLog(activityId, {
-        content,
-        occurredAt: todayLocal(),
-      })
-      setRecent({ id: activityId, at: Date.now() })
-      qcRef.invalidateQueries({ queryKey: ['activities'], refetchType: 'all' })
-      const target = activities.find((a) => a.id === activityId)
-      toast.success(`✓ ${target?.name ?? '활동'} 에 기록`)
-      setQuickInput('')
-      setSelectedTargetId(null)
-    } catch {
-      toast.error('기록 추가 중 오류가 발생했어요')
-    }
-  }
-
-  function handleQuickSend() {
-    const content = quickInput.trim()
-    if (!content) return
-    // 1) 명시 선택된 활동 → 그대로
-    if (selectedTargetId) {
-      void createQuickLog(selectedTargetId, content)
-      return
-    }
-    // 2) 자동 매핑
-    const { activity, confidence } = mapping
-    if (activity && (confidence === 'HIGH' || confidence === 'MID')) {
-      void createQuickLog(activity.id, content)
-      return
-    }
-    // 3) LOW → picker
-    setPickerOpen(true)
-  }
-
-  function handlePickerSelect(activityId: string) {
-    setPickerOpen(false)
-    const content = quickInput.trim()
-    if (content) {
-      void createQuickLog(activityId, content)
-    } else {
-      // 명시 선택 모드 (content 없이) — 활동만 선택해두기
-      setSelectedTargetId(activityId)
-    }
-  }
-
-  // hints 후보 — 진행중 활동 중 최근 기록순 (최근 5분 활동은 최상단)
-  const hintActivities = useMemo(() => {
-    const ongoing = activities.filter(isActivityOngoing)
-    const recentMap: Record<string, string> = {}
-    allLogs.forEach((l) => {
-      if (!recentMap[l.activityId] || l.occurredAt > recentMap[l.activityId]) {
-        recentMap[l.activityId] = l.occurredAt
-      }
-    })
-    const sorted = [...ongoing].sort((a, b) =>
-      (recentMap[b.id] ?? '0').localeCompare(recentMap[a.id] ?? '0'),
-    )
-    const isRecent = (id: string) =>
-      // eslint-disable-next-line react-hooks/purity -- 5분 윈도우 비교, 매 useMemo 평가마다 의도된 실시간 판정
-      id === recent.id && Date.now() - recent.at < RECENT_USE_WINDOW_MS
-    const recentIdx = sorted.findIndex((a) => isRecent(a.id))
-    if (recentIdx > 0) {
-      const [r] = sorted.splice(recentIdx, 1)
-      sorted.unshift(r)
-    }
-    return { sorted, isRecent }
-  }, [activities, allLogs, recent])
-
-  const streak = useMemo(() => calcStreak(allLogs), [allLogs])
 
   function handleArchive(activityId: string) {
     const target = activities.find((a) => a.id === activityId)
@@ -444,204 +340,37 @@ export function ActivityPage() {
         <header className="page-head">
           <div className="head-row">
             <h1>
-              내 활동 <span className="accent">일지</span>
+              내 <span className="accent">활동</span>
             </h1>
             <Link to="/activity/insights" className="head-link">
               📊 내 데이터 →
             </Link>
           </div>
           <div className="sub">
-            한 번에 다 쓰지 마세요. 일주일에 한 줄씩만 적어도 자소서·면접에 자동
-            활용됩니다.
+            <Link to="/activity" className="hover:underline">← 활동 기록(타임라인)으로</Link>
+            {' · '}활동 만들기·수정·총괄 회고는 여기서 관리해요.
           </div>
         </header>
 
-        <div className="mobile-subtab" role="tablist">
-          <button
-            type="button"
-            data-msub="log"
-            aria-pressed={mobileMode === 'log'}
-            onClick={() => setMobileMode('log')}
-          >
-            ✶ 기록
-          </button>
-          <button
-            type="button"
-            data-msub="cards"
-            aria-pressed={mobileMode === 'cards'}
-            onClick={() => setMobileMode('cards')}
-          >
-            📋 활동 <span className="num">{ongoing.length + completed.length}</span>
-          </button>
-        </div>
-
-        <div
-          className="activities-log-area"
-          data-mobile-mode={mobileMode}
-        >
-          <section className="quicklog">
-            <div className="head">
-              <div className="ic">✶</div>
-              <div>
-                <div className="title">오늘 무엇을 했나요?</div>
-                <div className="helper">한 줄이면 충분해요.</div>
-              </div>
-              <span className="streak">
-                {streak === 0
-                  ? '🌱 시작!'
-                  : streak === 1
-                    ? '🌱 첫 기록!'
-                    : `🔥 ${streak}일째`}
-              </span>
-            </div>
-            <div className="input-row">
-              <input
-                type="text"
-                value={quickInput}
-                onChange={(e) => setQuickInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleQuickSend()
-                }}
-                placeholder="예: 인스타 캠페인 ROAS 1.8 달성"
-              />
-              {mapping.activity && (
-                <button
-                  type="button"
-                  className={`map-chip${
-                    mapping.confidence === 'HIGH' ? ' matched' : ' mid'
-                  }`}
-                  title={
-                    mapping.confidence === 'HIGH'
-                      ? '자동 매핑 — 확신 높음 (클릭해 변경)'
-                      : '최근 입력한 활동 (클릭해 변경)'
-                  }
-                  onClick={() => setPickerOpen(true)}
-                >
-                  {mapping.activity.name}
-                  {mapping.confidence === 'MID' && ' (방금)'}
-                </button>
-              )}
-              {!mapping.activity && quickInput.trim() && (
-                <button
-                  type="button"
-                  className="map-chip"
-                  title="클릭해서 활동 선택"
-                  onClick={() => setPickerOpen(true)}
-                >
-                  활동 선택 →
-                </button>
-              )}
-              <button
-                type="button"
-                className="send"
-                onClick={handleQuickSend}
-                disabled={!quickInput.trim()}
-              >
-                기록 →
-              </button>
-            </div>
-
-            {selectedTargetId && (
-              <div className="selected-target">
-                <span className="arr">→</span>
-                <span className="name">
-                  {activities.find((a) => a.id === selectedTargetId)?.name}
-                </span>
-                <span className="text-text-tertiary">에 추가됩니다</span>
-                <button
-                  className="clear"
-                  type="button"
-                  aria-label="선택 해제"
-                  onClick={() => setSelectedTargetId(null)}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-
-            {/* Hints: 진행중 활동 chip 최대 5개 + 더보기 + 새 활동 */}
-            <div className="hints">
-              {hintActivities.sorted.length === 0 ? (
-                <>
-                  <span className="hints-label">진행 중 활동 없음</span>
-                  <button
-                    type="button"
-                    className="hint new"
-                    onClick={() => {
-                      setEditingId(null)
-                      setFormOpen(true)
-                    }}
-                  >
-                    + 새 활동 시작
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span className="hints-label">어디에?</span>
-                  {hintActivities.sorted.slice(0, 5).map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className={`hint${hintActivities.isRecent(a.id) ? ' recent' : ''}`}
-                      onClick={() => setSelectedTargetId(a.id)}
-                    >
-                      {a.name}
-                    </button>
-                  ))}
-                  {hintActivities.sorted.length > 5 && (
-                    <button
-                      type="button"
-                      className="hint"
-                      onClick={() => {
-                        // 명시 선택 모드 (quickInput 비워두고 picker 열기)
-                        setQuickInput('')
-                        setPickerOpen(true)
-                      }}
-                    >
-                      +{hintActivities.sorted.length - 5}개 더
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="hint new"
-                    onClick={() => {
-                      setEditingId(null)
-                      setFormOpen(true)
-                    }}
-                  >
-                    + 새 활동
-                  </button>
-                </>
-              )}
-            </div>
-          </section>
-
+<div className="activities-cards-area">
+          {/* 이번주 회고 진입 (축약) — 기록 입구는 타임라인 퀵캡처로 일원화 (2026-07-08) */}
           {weekLogs.length > 0 && (
             <div className="week-summary" style={{ marginBottom: 18 }}>
-              <div className="ic">✶</div>
+              <div className="ic">✍</div>
               <div className="meta">
-                <div className="lbl">이번주 회고 prompt</div>
+                <div className="lbl">이번주 회고</div>
                 <div className="title">{weekRotPrompt.prompt}</div>
-                <div className="sub">
-                  {weekActSet.size}개 활동 · {weekLogs.length}개 기록 — 회고하면
-                  자소서 답변 소재로 활용돼요
-                </div>
               </div>
               <button
                 type="button"
                 className="cta"
                 onClick={() => setReflPickerOpen(true)}
               >
-                활동 선택 → 회고 ✍
+                회고 남기기
               </button>
             </div>
           )}
-        </div>
 
-        <div
-          className="activities-cards-area"
-          data-mobile-mode={mobileMode}
-        >
           <div className="view-toolbar">
             <div className="view-tabs" role="tablist">
               <button
@@ -915,14 +644,6 @@ export function ActivityPage() {
         weekStart={reflModal?.weekStart}
         weekLogs={weekLogs}
         onClose={() => setReflModal(null)}
-      />
-
-      <ActivityPickerModal
-        open={pickerOpen}
-        activities={activities}
-        content={quickInput.trim()}
-        onClose={() => setPickerOpen(false)}
-        onPick={handlePickerSelect}
       />
 
       <BulkLogModal

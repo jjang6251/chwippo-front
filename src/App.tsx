@@ -38,6 +38,7 @@ import { OpsUsers } from '@/pages/ops/OpsUsers'
 import { UserDetailPage } from '@/pages/ops/UserDetailPage'
 import { TermsAgreement } from '@/pages/TermsAgreement'
 import { ActivityPage } from '@/pages/Activity/ActivityPage'
+import { ActivityTimelinePage } from '@/pages/Activity/timeline/ActivityTimelinePage'
 import { NotePage } from '@/pages/Activity/NotePage'
 import { InsightsPage } from '@/pages/Activity/InsightsPage'
 import { Coverletters } from '@/pages/Coverletters'
@@ -91,7 +92,9 @@ export default function App() {
             <Route path="/settings/alarm" element={<AlarmSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/help" element={<Help />} />
-            <Route path="/activity" element={<ActivityPage />} />
+            {/* activity-redesign — 기본 화면 = 날짜 타임라인, 관리는 /activity/manage */}
+            <Route path="/activity" element={<ActivityTimelinePage />} />
+            <Route path="/activity/manage" element={<ActivityPage />} />
             <Route path="/activity/insights" element={<InsightsPage />} />
             {/* AI 기능 라우트 — VITE_AI_FEATURES_ENABLED=false 시 dashboard redirect */}
             <Route element={<AiFeatureGuard />}>
