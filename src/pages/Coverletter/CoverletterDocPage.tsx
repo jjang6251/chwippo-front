@@ -6,6 +6,7 @@ import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPa
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
 import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
 import { useApplication } from '@/hooks/useApplications'
+import { useAiFeedbackUnloadGuard } from '@/hooks/useAiFeedbackUnloadGuard'
 import {
   useCoverletters,
   useCreateCoverletter,
@@ -40,8 +41,21 @@ export function CoverletterDocPage() {
   const { mutate: updateCl } = useUpdateCoverletter(applicationId ?? '')
   const { mutate: removeCl } = useRemoveCoverletter(applicationId ?? '')
 
+  // A1 — AI 점검 진행 중 페이지 이탈 경고 (섹션은 모달 안이라 페이지 레벨 가드 필요)
+  useAiFeedbackUnloadGuard()
+
   // 펼침 카드 set — 자유 다중 펴기. 첫 카드는 default 펼침
   const [expandedClIds, setExpandedClIds] = useState<Set<string>>(new Set())
+  // AI 적용 시 해당 카드로 스크롤 + 플래시. ref 맵 (펼친 카드 루트 div)
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const [flashClId, setFlashClId] = useState<string | null>(null)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+    },
+    [],
+  )
   // cls 첫 로드 시 첫 카드 자동 펼침
   const firstExpandRef = useRef(false)
   useEffect(() => {
@@ -94,6 +108,19 @@ export function CoverletterDocPage() {
         next.add(update.clId)
         return next
       })
+      // 적용된 카드로 스크롤 + 플래시 (연속 적용이면 마지막 문항 기준 1회)
+      const reduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      requestAnimationFrame(() => {
+        cardRefs.current.get(update.clId)?.scrollIntoView({
+          block: 'center',
+          behavior: reduced ? 'auto' : 'smooth',
+        })
+      })
+      setFlashClId(update.clId)
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+      flashTimerRef.current = setTimeout(() => setFlashClId(null), 1200)
     },
     [cls, updateCl],
   )
@@ -235,6 +262,11 @@ export function CoverletterDocPage() {
                   onDelete={() => handleDelete(cl.id)}
                   onAskAI={() => handleAskAI(cl.id, cl.question)}
                   readOnly={readOnly}
+                  flash={flashClId === cl.id}
+                  containerRef={(el) => {
+                    if (el) cardRefs.current.set(cl.id, el)
+                    else cardRefs.current.delete(cl.id)
+                  }}
                 />
               ))}
               {!readOnly && (

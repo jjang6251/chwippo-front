@@ -9,8 +9,8 @@
  * 5. dayUsed >= dayLimit → "오늘 한도 소진" + danger variant
  * 6. dayLeft <= 20% → warn variant (잔여 부족 경고)
  */
-import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AiQuotaChip } from './AiQuotaChip'
 import { useMyAiQuota } from '@/hooks/useMyAiQuotas'
 
@@ -22,6 +22,7 @@ const mocked = vi.mocked(useMyAiQuota)
 
 describe('AiQuotaChip', () => {
   beforeEach(() => mocked.mockReset())
+  afterEach(() => vi.useRealTimers())
 
   it('quota 미로드 시 렌더 X (silent fail)', () => {
     mocked.mockReturnValue(undefined)
@@ -120,6 +121,45 @@ describe('AiQuotaChip', () => {
     })
     render(<AiQuotaChip feature="note_summary" />)
     expect(screen.getByText('오늘 한도 소진')).toBeInTheDocument()
+  })
+
+  it('cooldown 실시간 tick — 1초 경과 시 라벨 감소', () => {
+    vi.useFakeTimers()
+    const now = Date.now()
+    vi.setSystemTime(now)
+    mocked.mockReturnValue({
+      feature: 'note_summary',
+      enabled: true,
+      dayUsed: 1,
+      dayLimit: 5,
+      monthUsed: 1,
+      monthLimit: 100,
+      cooldownSeconds: 30,
+      nextAvailableAt: new Date(now + 5000).toISOString(),
+    })
+    render(<AiQuotaChip feature="note_summary" />)
+    expect(screen.getByText('⏳ 5초')).toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByText('⏳ 4초')).toBeInTheDocument()
+  })
+
+  it('60초 이상 cooldown → "분 초" 병기', () => {
+    const future = new Date(Date.now() + 90_000).toISOString()
+    mocked.mockReturnValue({
+      feature: 'note_summary',
+      enabled: true,
+      dayUsed: 1,
+      dayLimit: 5,
+      monthUsed: 1,
+      monthLimit: 100,
+      cooldownSeconds: 120,
+      nextAvailableAt: future,
+    })
+    render(<AiQuotaChip feature="note_summary" />)
+    // 90초 → "1분 30초" (초 병기 — tick 체감)
+    expect(screen.getByText(/1분 \d+초/)).toBeInTheDocument()
   })
 
   it('dayLeft ≤ 20% → warn variant (잔여 1/5)', () => {

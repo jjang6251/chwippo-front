@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { useAiFeedbackStore } from '@/stores/aiFeedbackStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
 import { apiClient } from '@/api/client'
@@ -37,6 +39,7 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const clearAuth = useAuthStore((s) => s.clearAuth)
+  const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const isDemo = useDemoMode()
   const showLogin = useLoginModalStore((s) => s.show)
@@ -65,6 +68,9 @@ export function Sidebar() {
   async function handleLogout() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
+    // 공용 PC 계정 전환 시 이전 사용자 데이터 잔존 방지 — 서버 캐시·AI 점검 결과 전체 초기화
+    queryClient.clear()
+    useAiFeedbackStore.getState().resetAll()
     postToNative({ type: 'logout' })
     navigate('/')
   }

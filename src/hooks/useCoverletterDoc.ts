@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { coverletterDocApi } from '@/api/coverletterDoc'
+import { clearChatPending, setChatPending } from '@/utils/chatPendingMarker'
 import type {
   ChatAssistantStatus,
   ChatSendDto,
@@ -40,11 +41,16 @@ const messagesKey = (applicationId: string) =>
  * 채팅 이력 — DB 영구 (90일 KST cron). 페이지 mount 시 자동 로드.
  * 다른 디바이스에서도 동일 application 진입 시 같은 이력 표시.
  */
-export function useCoverletterMessages(applicationId: string, enabled = true) {
+export function useCoverletterMessages(
+  applicationId: string,
+  enabled = true,
+  refetchInterval: number | false = false,
+) {
   return useQuery({
     queryKey: messagesKey(applicationId),
     queryFn: () => coverletterDocApi.listMessages(applicationId),
     enabled: enabled && !!applicationId,
+    refetchInterval,
   })
 }
 
@@ -229,6 +235,10 @@ export function useSendCoverletterChatStream(applicationId: string) {
       let currentReply = ''
       let currentSuggested: CoverletterSuggestedUpdate[] | undefined
 
+      // 스트림 시작 직전 marker set — 새로고침으로 끊겨도 재진입 시 "생성 중" 배너.
+      // 정상 종료(onDone/onError/catch) 는 finally 에서 clear.
+      setChatPending(applicationId)
+
       try {
         await coverletterDocApi.sendChatStream(applicationId, dto, {
           onUserSaved: (m) => {
@@ -261,6 +271,7 @@ export function useSendCoverletterChatStream(applicationId: string) {
         const message = err instanceof Error ? err.message : 'stream failed'
         onErrorCallback?.(message)
       } finally {
+        clearChatPending(applicationId)
         setSending(false)
       }
     },
