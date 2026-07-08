@@ -40,7 +40,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
       {/* 무엇을 검사하는지 안내 */}
       <div className="text-[11px] text-text-quaternary leading-relaxed bg-card border border-line rounded-lg px-3 py-2 mb-4">
         <span className="text-text-tertiary">맞춤법은 검사하지 않아요.</span> 형식만 정리합니다 —
-        연속된 줄바꿈·공백, 줄 앞뒤 공백, 탭, 문장 도중 줄바꿈(쉼표 뒤), 한글 자모 단독(ㅋㅋ), 이모지·그림문자, 전각 공백, 둥근 따옴표, 문장부호 외 특수문자, 글자수 초과.
+        과도한 빈 줄(문단 구분 1개는 유지)·연속 공백, 줄 앞뒤 공백, 탭, 문장 도중 줄바꿈(쉼표 뒤), 한글 자모 단독(ㅋㅋ), 이모지·그림문자, 특수 공백, 둥근 따옴표→직선, 전각 문장부호→반각, 반복된 문장부호, 허용 외 특수문자, 글자수 초과.
       </div>
 
       {nothingToFix ? (

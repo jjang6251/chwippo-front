@@ -5,7 +5,7 @@ import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
 import { apiClient } from '@/api/client'
 import { postToNative } from '@/utils/nativeBridge'
-import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
 import { NotificationBell } from '@/components/notification/NotificationBell'
 
@@ -14,8 +14,10 @@ interface NavItem {
   path: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: any
-  /** AI 기능 — `VITE_AI_FEATURES_ENABLED=false` 일 때 hide */
+  /** AI 기능 — `useAiEnabled()` false 일 때 hide */
   ai?: boolean
+  /** 면접 AI — `useInterviewAiEnabled()` false 일 때 hide (비공개 유지) */
+  interviewAi?: boolean
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
@@ -27,7 +29,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   // F6 PR 1 — 자소서 통합 페이지 (데스크탑 only. MobileNav 변경 X — 모바일은 카드 상세에서 진입)
   { label: '자소서', path: '/coverletters', icon: CoverLetterIcon, ai: true },
   // F6 PR 2 Phase 4 — 면접 준비 통합 페이지 (데스크탑 only. 동일 정책)
-  { label: '면접 준비', path: '/interviews', icon: InterviewIcon, ai: true },
+  { label: '면접 준비', path: '/interviews', icon: InterviewIcon, ai: true, interviewAi: true },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
@@ -39,8 +41,11 @@ export function Sidebar() {
   const isDemo = useDemoMode()
   const showLogin = useLoginModalStore((s) => s.show)
   const aiEnabled = useAiEnabled()
+  const interviewAiEnabled = useInterviewAiEnabled()
   const link = (p: string) => (isDemo ? '/demo' + p : p)
-  const visibleNavItems = NAV_ITEMS.filter((item) => aiEnabled || !item.ai)
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => (aiEnabled || !item.ai) && (interviewAiEnabled || !item.interviewAi),
+  )
   // 캘린더 UX 재구성 — 회고 nav 옆 streak 배지 (>=2 조건, 1일 이하는 상처 방지 hide)
   const { data: streak } = useDashboardStreak()
   const streakDays = streak?.streak.current ?? 0

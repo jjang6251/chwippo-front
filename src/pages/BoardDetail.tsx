@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import { useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
@@ -186,6 +186,7 @@ export function BoardDetail() {
     'steps' | 'coverletter' | 'interview'
   >('steps')
   const aiEnabled = useAiEnabled()
+  const interviewAiEnabled = useInterviewAiEnabled()
 
   const tourActive = useTourStore((s) => s.active)
   const tourStep = useTourStore((s) => s.step)
@@ -453,17 +454,17 @@ export function BoardDetail() {
         </div>
       </div>
 
-      {/* 탭: 전형 단계 / 자소서 / 면접 준비 (AI 비활성화 시 steps 만 표시) */}
+      {/* 탭: 전형 단계 / 자소서 / 면접 준비 — 기능별 flag 로 노출 (useAiEnabled.ts) */}
       <div className="flex gap-1 p-1 bg-surface-2 border border-line rounded-lg mb-4">
-        {/* A1 3경로 UI 는 AI 재활성화 때 공개 — 베타는 자소서·면접 탭 숨김 유지 */}
-        {(aiEnabled
-          ? [
-              { v: 'steps' as const, label: '전형 단계' },
-              { v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' },
-              { v: 'interview' as const, label: '면접 준비' },
-            ]
-          : [{ v: 'steps' as const, label: '전형 단계' }]
-        ).map((t) => (
+        {[
+          { v: 'steps' as const, label: '전형 단계' },
+          ...(aiEnabled
+            ? [{ v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' }]
+            : []),
+          ...(interviewAiEnabled
+            ? [{ v: 'interview' as const, label: '면접 준비' }]
+            : []),
+        ].map((t) => (
           <button
             key={t.v}
             onClick={() => {
@@ -545,7 +546,7 @@ export function BoardDetail() {
       )}
 
       {aiEnabled && activeTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
-      {aiEnabled && activeTab === 'interview' && (
+      {interviewAiEnabled && activeTab === 'interview' && (
         <InterviewPrepTab applicationId={app.id} active />
       )}
 

@@ -31,18 +31,6 @@ export function useCompanyResearchCache(applicationId: string, enabled = true) {
   })
 }
 
-/**
- * LLM fetch 트리거 (cache miss/expired 시 자동, 또는 사용자 수동).
- * 성공 시 cache invalidate → useCompanyResearchCache 재조회.
- */
-export function useFetchCompanyResearch(applicationId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: () => coverletterDocApi.fetchResearch(applicationId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: researchKey(applicationId) }),
-  })
-}
 
 // ── chat ──
 const messagesKey = (applicationId: string) =>
