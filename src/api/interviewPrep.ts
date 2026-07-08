@@ -99,14 +99,6 @@ export const interviewPrepApi = {
       )
       .then(unwrap),
 
-  /** 회사 조사 트리거 (cache miss/expired 시 LLM web_search) */
-  triggerCompanyResearch: (sessionId: string) =>
-    apiClient
-      .post<{ data: CompanyResearchResult }>(
-        `/interview-prep-sessions/${sessionId}/research`,
-      )
-      .then(unwrap),
-
   /** 사용자 자유 메모 update (AI 정보와 분리) */
   updateUserResearchNotes: (sessionId: string, notes: string | null) =>
     apiClient.patch(`/interview-prep-sessions/${sessionId}/user-notes`, {

@@ -23,7 +23,6 @@ const COLUMNS: Array<{
     | 'monthlyCoinLimit'
     | 'inputTokenCapPerCall'
     | 'defaultCooldownSeconds'
-    | 'companyResearchDailyCap'
     | 'noteSummaryCooldownMinutes'
     | 'priceKrw'
   >
@@ -37,12 +36,6 @@ const COLUMNS: Array<{
     key: 'defaultCooldownSeconds',
     label: 'Cooldown',
     unit: '초',
-    type: 'number',
-  },
-  {
-    key: 'companyResearchDailyCap',
-    label: '회사조사 일 cap',
-    unit: '회',
     type: 'number',
   },
   {

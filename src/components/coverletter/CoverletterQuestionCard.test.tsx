@@ -105,3 +105,49 @@ describe('CoverletterQuestionCard — 자동저장/외부 동기화', () => {
     expect(textarea).toHaveValue('타이핑 중인 내용')
   })
 })
+
+describe('CoverletterQuestionCard — 보기 전용(readOnly)', () => {
+  function renderReadOnly(cl: ApplicationCoverletter, readOnly = true) {
+    return render(
+      <CoverletterQuestionCard
+        cl={cl}
+        number={1}
+        applicationId="app-1"
+        expanded
+        onToggle={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onAskAI={vi.fn()}
+        readOnly={readOnly}
+      />,
+    )
+  }
+
+  it('1) readOnly 펼침 → 질문·답변 텍스트 표시 + textarea/삭제 버튼 부재', () => {
+    renderReadOnly(makeCl())
+    // 질문·답변 표시 전용
+    expect(screen.getByText('지원 동기를 작성하세요')).toBeInTheDocument()
+    expect(screen.getByText('기존 답변')).toBeInTheDocument()
+    // 편집 UI 부재
+    expect(screen.queryByPlaceholderText(ANSWER_PLACEHOLDER)).toBeNull()
+    expect(screen.queryByText('삭제')).toBeNull()
+  })
+
+  it('2) readOnly → 검사·가져오기 버튼 부재', () => {
+    renderReadOnly(makeCl())
+    expect(screen.queryByText(/자소서 검사/)).toBeNull()
+    expect(screen.queryByText(/답변 가져오기/)).toBeNull()
+  })
+
+  it('3) 답변 없으면 "(아직 작성 안 됨)" 표시', () => {
+    renderReadOnly(makeCl({ answer: '' }))
+    expect(screen.getByText('(아직 작성 안 됨)')).toBeInTheDocument()
+  })
+
+  it('4) readOnly=false → 편집 textarea·삭제·검사 UI 존재', () => {
+    renderReadOnly(makeCl(), false)
+    expect(screen.getByPlaceholderText(ANSWER_PLACEHOLDER)).toBeInTheDocument()
+    expect(screen.getByText('삭제')).toBeInTheDocument()
+    expect(screen.getByText(/자소서 검사/)).toBeInTheDocument()
+  })
+})

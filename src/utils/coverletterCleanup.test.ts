@@ -13,11 +13,40 @@ describe('cleanupCoverletter', () => {
     expect(r.ranges).toHaveLength(0)
   })
 
-  it('연속된 줄바꿈(빈 줄)은 1개로', () => {
-    expect(cleanupCoverletter('첫 줄\n둘째 줄').cleaned).toBe('첫 줄\n둘째 줄')
-    const r = cleanupCoverletter('첫 문단\n\n\n둘째 문단')
-    expect(r.cleaned).toBe('첫 문단\n둘째 문단')
+  it('빈 줄 1개(문단 구분)는 그대로 둠', () => {
+    const r = cleanupCoverletter('a\n\nb')
+    expect(r.cleaned).toBe('a\n\nb')
+    expect(r.issues).toHaveLength(0)
+  })
+
+  it('과도한 빈 줄(2개 이상)은 1개로 축약', () => {
+    const r = cleanupCoverletter('a\n\n\n\nb')
+    expect(r.cleaned).toBe('a\n\nb')
     expect(r.issues.map((i) => i.key)).toContain('newlines')
+  })
+
+  it('전각 문장부호는 반각으로 변환', () => {
+    const r = cleanupCoverletter('（주）테스트！')
+    expect(r.cleaned).toBe('(주)테스트!')
+    expect(r.issues.map((i) => i.key)).toContain('fullwidthPunct')
+  })
+
+  it('㈜ 기호는 (주)로 변환', () => {
+    const r = cleanupCoverletter('㈜치뽀')
+    expect(r.cleaned).toBe('(주)치뽀')
+    expect(r.issues.map((i) => i.key)).toContain('fullwidthPunct')
+  })
+
+  it('NBSP는 일반 공백으로 정규화', () => {
+    const r = cleanupCoverletter('a b')
+    expect(r.cleaned).toBe('a b')
+    expect(r.issues.map((i) => i.key)).toContain('fullwidth')
+  })
+
+  it('반복된 문장부호는 1개로 축약', () => {
+    const r = cleanupCoverletter('정말요??')
+    expect(r.cleaned).toBe('정말요?')
+    expect(r.issues.map((i) => i.key)).toContain('dupPunct')
   })
 
   it('줄 끝 쉼표 뒤 줄바꿈은 한 문장으로 합침', () => {
@@ -111,7 +140,7 @@ describe('cleanupCoverletter', () => {
   })
 
   it('정리 결과는 멱등 (다시 돌려도 그대로, 이슈 없음)', () => {
-    const messy = '  첫 문단ㅋㅋ★  \n\n\n\n둘째　문단😀\t끝   '
+    const messy = '  첫 문단ㅋㅋ★  \n\n\n\n（주）둘째　문단😀\t셋째!! 끝??   '
     const once = cleanupCoverletter(messy)
     const twice = cleanupCoverletter(once.cleaned)
     expect(twice.cleaned).toBe(once.cleaned)
