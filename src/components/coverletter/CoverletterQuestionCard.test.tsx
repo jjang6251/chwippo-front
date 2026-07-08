@@ -106,6 +106,24 @@ describe('CoverletterQuestionCard — 자동저장/외부 동기화', () => {
   })
 })
 
+describe('CoverletterQuestionCard — placeholder 잔존 경고', () => {
+  it('answer 에 "[본인 경험 채우기: …]" 포함 → 경고 배지 렌더', () => {
+    render(
+      <CoverletterQuestionCard
+        cl={makeCl({ answer: '저는 [본인 경험 채우기: 사례] 를 통해 성장했습니다.' })}
+        number={1}
+        applicationId="app-1"
+        expanded
+        onToggle={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onAskAI={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(/채워야 할 부분 1곳/)).toBeInTheDocument()
+  })
+})
+
 describe('CoverletterQuestionCard — 보기 전용(readOnly)', () => {
   function renderReadOnly(cl: ApplicationCoverletter, readOnly = true) {
     return render(

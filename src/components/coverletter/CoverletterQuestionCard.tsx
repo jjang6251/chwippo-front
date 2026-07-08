@@ -7,6 +7,7 @@ import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { Modal } from '@/components/common/Modal'
 import { useCoverletterSourceRefs } from '@/hooks/useCoverletterSourceRefs'
 import { countChars } from '@/utils/charCount'
+import { countFillPlaceholders } from '@/utils/coverletterPlaceholder'
 import {
   COVERLETTER_CATEGORIES,
   COVERLETTER_CATEGORY_EMOJI,
@@ -37,6 +38,10 @@ interface Props {
   onAskAI: () => void
   /** 보기 전용 — 모바일·RN 네이티브. 편집·AI 요소 미노출 (CEO 결정 2026-07-09) */
   readOnly?: boolean
+  /** AI 적용 직후 강조 플래시 (부모가 1.2s 후 해제) */
+  flash?: boolean
+  /** 펼친 카드 루트 ref — 부모가 적용 시 scrollIntoView 대상 등록 */
+  containerRef?: (el: HTMLDivElement | null) => void
 }
 
 export function CoverletterQuestionCard({
@@ -49,6 +54,8 @@ export function CoverletterQuestionCard({
   onDelete,
   onAskAI,
   readOnly = false,
+  flash = false,
+  containerRef,
 }: Props) {
   const aiEnabled = useAiEnabled()
   const [question, setQuestion] = useState(cl.question)
@@ -112,6 +119,7 @@ export function CoverletterQuestionCard({
   const byteCount = includeSpaces ? counts.bytes : counts.bytesWithoutSpaces
   const overLimit = cl.charLimit != null && charCount > cl.charLimit
   const hasAnswer = useMemo(() => answer.trim().length > 0, [answer])
+  const fillCount = useMemo(() => countFillPlaceholders(answer), [answer])
 
   // source_refs (답변 있을 때만)
   const { data: sourceRefs = [] } = useCoverletterSourceRefs(cl.id, hasAnswer)
@@ -175,8 +183,11 @@ export function CoverletterQuestionCard({
   // 펴짐 모드 — 편집
   return (
     <div
+      ref={containerRef}
       id={`cl-${cl.id}`}
-      className="bg-card border border-brand/40 rounded-[14px] p-4 lg:p-[18px] shadow-md"
+      className={`bg-card border border-brand/40 rounded-[14px] p-4 lg:p-[18px] shadow-md transition-shadow ${
+        flash ? 'ring-2 ring-brand/60' : ''
+      }`}
     >
       {/* 헤더 — 번호 + 분류 + 글자수 limit + 닫기 */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3 text-[11px] text-text-tertiary">
@@ -319,6 +330,11 @@ export function CoverletterQuestionCard({
         ) : (
           <span className="text-text-quaternary">✎ 자동 저장돼요</span>
         )}
+        {fillCount > 0 && (
+          <span className="text-[10px] text-warning">
+            ⚠️ 채워야 할 부분 {fillCount}곳
+          </span>
+        )}
         <div className="flex items-center gap-2 text-text-tertiary">
           <button
             onClick={() => setIncludeSpaces((v) => !v)}
@@ -335,6 +351,11 @@ export function CoverletterQuestionCard({
           <span className="font-mono text-text-quaternary">
             · {byteCount.toLocaleString()}byte
           </span>
+          {overLimit && !readOnly && (
+            <span className="text-[10px] text-text-quaternary">
+              · [검사]의 AI 심층 점검이 줄일 문장을 짚어드려요
+            </span>
+          )}
         </div>
       </div>
 
@@ -425,6 +446,8 @@ export function CoverletterQuestionCard({
           text={answer}
           limit={cl.charLimit}
           aiFeedbackClId={aiEnabled ? cl.id : null}
+          lastFeedback={cl.lastFeedback}
+          lastFeedbackAt={cl.lastFeedbackAt}
           onClose={() => setShowCleanup(false)}
           onApply={(cleaned) => {
             setAnswer(cleaned)

@@ -33,6 +33,32 @@ export const COVERLETTER_CATEGORY_STYLE: Record<string, string> = {
 export const coverletterCategory = (c: string | null) =>
   c && COVERLETTER_CATEGORY_STYLE[c] ? c : '기타'
 
+/** A1 — AI 심층 점검 결과 (짚어주기: 잘한 점 + 인용 지적 + 예시 + 총평). */
+export interface CoverletterFeedbackIssue {
+  kind:
+    | 'ai_tone'
+    | 'structure'
+    | 'question_mismatch'
+    | 'company_mismatch'
+    | 'over_limit'
+    | 'vague'
+  quote: string
+  advice: string
+}
+
+export interface CoverletterFeedback {
+  strengths: string[]
+  issues: CoverletterFeedbackIssue[]
+  suggestions: Array<{ target: string; improved: string }>
+  summary: string
+}
+
+export interface CoverletterFeedbackResult {
+  status: 'ok' | 'blocked' | 'error'
+  reason?: string
+  feedback?: CoverletterFeedback
+}
+
 export interface ApplicationCoverletter {
   id: string
   applicationId: string
@@ -43,6 +69,9 @@ export interface ApplicationCoverletter {
   orderIndex: number
   createdAt: string
   updatedAt: string
+  /** A1 — 마지막 AI 점검 결과 (서버 저장). 없으면 null */
+  lastFeedback?: CoverletterFeedback | null
+  lastFeedbackAt?: string | null
 }
 
 export interface CreateCoverletterDto {
