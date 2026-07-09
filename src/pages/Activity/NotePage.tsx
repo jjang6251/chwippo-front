@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { isAxiosError } from 'axios'
 import { toast } from '@/stores/toastStore'
-import { useActivities, useUpdateLog } from '@/hooks/useActivities'
+import { useActivities, useUpdateLog,
+  useRemoveLog,
+} from '@/hooks/useActivities'
 import type { ActivityLog } from '@/types/activity'
 import { AISummarySection } from './AISummarySection'
 import { LogDetailModal } from './modals/LogDetailModal'
@@ -61,6 +64,13 @@ export function NotePage() {
     [activity, activities, logId],
   )
 
+  // 이동 후보 — 비아카이브 활동 + 기본함 (현재 활동이 아카이브면 현재도 포함해 표시)
+  const movableActivities = useMemo(() => {
+    const list = activities.filter((a) => !a.archivedAt)
+    if (activity && activity.archivedAt) list.unshift(activity)
+    return list
+  }, [activities, activity])
+
   // 모바일(≤920px) 에선 default collapsed, 데스크탑은 항상 보임 (CSS 가 처리)
   // 사용자가 모바일에서 expand 한 후 데스크탑으로 resize → expanded 상태 유지 (CSS 가 무시하고 보여줌)
   // 데스크탑에서 모바일로 resize → toggle 버튼 등장, 마지막 상태 그대로
@@ -80,6 +90,9 @@ export function NotePage() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
   const [editMetaOpen, setEditMetaOpen] = useState(false)
+  // 기록 삭제 (자세히 수정 모달의 "기록 삭제" — 기존엔 onRequestDelete 미연결로 무반응이던 버그)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const removeLog = useRemoveLog('')
   // 에디터 plain text 길이 (AI 요약 활성 조건)
   const [textLen, setTextLen] = useState(0)
   // 저장 상태 — body·title 합쳐 표시
@@ -359,7 +372,52 @@ export function NotePage() {
 
           <div className="np-meta-row">
             <div className="k">활동</div>
-            <div className="v act-name">{activity.name}</div>
+            {/* 활동 이동 — "일단 기본함에 쓰고 나중에 정리" 흐름의 완결 (2026-07-08) */}
+            <div className="relative flex-1 min-w-0">
+              <select
+                value={activityId}
+                aria-label="이 기록의 활동 변경"
+                onChange={(e) => {
+                  const nextId = e.target.value
+                  if (nextId === activityId) return
+                  update.mutate(
+                    { logId, dto: { activityId: nextId } },
+                    {
+                      onSuccess: () => {
+                        const target = movableActivities.find((a) => a.id === nextId)
+                        toast.success(
+                          `→ "${target?.isInbox ? '기본함' : target?.name ?? '활동'}" 으로 이동했어요`,
+                        )
+                        navigate(`/activity/${nextId}/logs/${logId}/note`, {
+                          replace: true,
+                        })
+                      },
+                      onError: () => toast.error('이동에 실패했습니다.'),
+                    },
+                  )
+                }}
+                className="w-full appearance-none bg-input border border-line rounded-lg pl-2.5 pr-8 py-1.5 text-xs text-text-primary focus:outline-none focus:border-brand/60 cursor-pointer"
+              >
+                {movableActivities.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.isInbox ? '기본함 (미분류)' : a.name}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary"
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 4.5L6 7.5L9 4.5" />
+              </svg>
+            </div>
           </div>
 
           <div className="np-meta-row">
@@ -450,7 +508,61 @@ export function NotePage() {
         activityId={activityId}
         editing={log}
         onClose={() => setEditMetaOpen(false)}
+        onRequestDelete={() => {
+          setEditMetaOpen(false)
+          setDeleteConfirmOpen(true)
+        }}
       />
+
+      {deleteConfirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={() => setDeleteConfirmOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="기록 삭제 확인"
+            className="bg-surface border border-line rounded-xl p-6 w-full max-w-xs shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-text-primary font-semibold text-sm mb-1">기록을 삭제할까요?</h3>
+            <p className="text-text-tertiary text-xs mb-5">노트 본문까지 함께 삭제됩니다.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteConfirmOpen(false)}
+                className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  if (!log) return
+                  removeLog.mutate(log.id, {
+                    onSuccess: () => {
+                      toast.success('🗑 기록이 삭제되었어요')
+                      navigate('/activity')
+                    },
+                    onError: (err) => {
+                      setDeleteConfirmOpen(false)
+                      if (isAxiosError(err) && err.response?.status === 409) {
+                        const msg = (err.response.data as { message?: string } | undefined)?.message
+                        toast.error(msg ?? '자소서·면접이 참조 중인 기록이에요.')
+                      } else {
+                        toast.error('삭제에 실패했습니다.')
+                      }
+                    },
+                  })
+                }}
+                disabled={removeLog.isPending}
+                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-danger/80 hover:bg-danger rounded-lg transition-colors disabled:opacity-50"
+              >
+                {removeLog.isPending ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

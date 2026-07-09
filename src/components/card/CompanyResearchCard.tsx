@@ -1,14 +1,10 @@
 import { useEffect, useState } from 'react'
-import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import {
   useCompanyResearch,
-  useTriggerCompanyResearch,
   useUpdateUserResearchNotes,
 } from '@/hooks/useInterviewPrep'
-import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
-import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { toast } from '@/stores/toastStore'
 import type { InterviewKeyword, ResearchSource } from '@/types/interviewPrep'
 
@@ -34,35 +30,11 @@ interface Props {
  */
 export function CompanyResearchCard({ sessionId, userNotes }: Props) {
   const { data: research, isLoading } = useCompanyResearch(sessionId)
-  const { mutate: trigger, isPending: triggering } =
-    useTriggerCompanyResearch(sessionId)
-  const { blocked: quotaBlocked, reason: quotaReason } =
-    useAiQuotaBlocked('company_research')
-  const ensureAiConsent = useRequireAiConsent()
   const [cardExpanded, setCardExpanded] = useState(true) // 카드 전체 toggle (default 펼침)
   const [showMore, setShowMore] = useState(false) // "더 보기" — 나머지 5 항목
   const [showSources, setShowSources] = useState(false) // 출처 토글 (default 접힘)
   const [editingNotes, setEditingNotes] = useState(false)
 
-  const handleTrigger = async () => {
-    if (!(await ensureAiConsent())) return
-    trigger(undefined, {
-      onSuccess: (result) => {
-        if (result.status === 'ok') {
-          toast.show(
-            result.isCached
-              ? '캐시된 정보로 표시했어요.'
-              : '회사 조사를 마쳤어요.',
-          )
-        } else if (result.status === 'opt_out') {
-          toast.show('이 회사는 정보 수집 동의가 철회됐어요.')
-        } else {
-          toast.error(result.reason ?? '조사에 실패했어요.')
-        }
-      },
-      onError: () => toast.error('AI 호출 중 오류가 발생했어요.'),
-    })
-  }
 
   return (
     <>
@@ -101,22 +73,11 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                 ))}
               </div>
             ) : !research ? (
-              <div className="space-y-2">
+              <div className="bg-surface border border-line rounded-md p-2.5">
                 <p className="text-text-tertiary text-xs leading-relaxed">
-                  AI 가 공식 자료 (위키·언론사·공시) 를 검색해 회사·직무 정보를
-                  정리해줘요.
+                  아직 이 회사의 조사 자료가 준비되지 않았어요. 인기 기업부터
+                  순차적으로 제공하고 있어요 — 준비되면 자동으로 표시됩니다.
                 </p>
-                <button
-                  onClick={handleTrigger}
-                  disabled={triggering || quotaBlocked}
-                  className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold px-3 py-2 rounded-md transition-colors disabled:opacity-50"
-                  title={quotaReason ?? undefined}
-                >
-                  {triggering ? '🔍 조사중... (5-10초 소요)' : '🔍 회사 조사 시작'}
-                </button>
-                <div className="flex justify-end">
-                  <AiQuotaChip feature="company_research" />
-                </div>
               </div>
             ) : research.status === 'opt_out' ? (
               <div className="bg-warning/5 border border-warning/20 rounded-md p-2.5">
@@ -130,14 +91,6 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                 <p className="text-danger text-xs leading-relaxed">
                   {research.reason}
                 </p>
-                <button
-                  onClick={handleTrigger}
-                  disabled={triggering || quotaBlocked}
-                  className="mt-2 text-text-tertiary hover:text-brand text-[11px] disabled:opacity-50"
-                  title={quotaReason ?? undefined}
-                >
-                  {triggering ? '🔍 재시도중... (5-10초)' : '다시 시도'}
-                </button>
               </div>
             ) : research.research ? (
               <>

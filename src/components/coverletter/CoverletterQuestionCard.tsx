@@ -7,6 +7,7 @@ import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { Modal } from '@/components/common/Modal'
 import { useCoverletterSourceRefs } from '@/hooks/useCoverletterSourceRefs'
 import { countChars } from '@/utils/charCount'
+import { countFillPlaceholders } from '@/utils/coverletterPlaceholder'
 import {
   COVERLETTER_CATEGORIES,
   COVERLETTER_CATEGORY_EMOJI,
@@ -35,6 +36,12 @@ interface Props {
   onDelete: () => void
   /** "✨ AI 에게 묻기" — 부모가 ChatPanel input 에 prefill */
   onAskAI: () => void
+  /** 보기 전용 — 모바일·RN 네이티브. 편집·AI 요소 미노출 (CEO 결정 2026-07-09) */
+  readOnly?: boolean
+  /** AI 적용 직후 강조 플래시 (부모가 1.2s 후 해제) */
+  flash?: boolean
+  /** 펼친 카드 루트 ref — 부모가 적용 시 scrollIntoView 대상 등록 */
+  containerRef?: (el: HTMLDivElement | null) => void
 }
 
 export function CoverletterQuestionCard({
@@ -46,12 +53,21 @@ export function CoverletterQuestionCard({
   onUpdate,
   onDelete,
   onAskAI,
+  readOnly = false,
+  flash = false,
+  containerRef,
 }: Props) {
   const aiEnabled = useAiEnabled()
   const [question, setQuestion] = useState(cl.question)
   const [answer, setAnswer] = useState(cl.answer ?? '')
   // 베타 피드백 — 자소서 답변이 길어지면 scroll 필요. auto-resize (min 200 / max 600 — 자소서 답변은 더 길게 허용)
   const { ref: answerRef, autoResize: autoResizeAnswer } = useAutoResize(answer, { min: 80, max: 600 })
+  // 카드가 접힌 채 마운트되면 훅 내부 effect(value 변경 시)가 초기 확장을 못 잡음 — 펼침 시점에 명시 resize
+  useEffect(() => {
+    if (!expanded || readOnly) return
+    const id = requestAnimationFrame(autoResizeAnswer)
+    return () => cancelAnimationFrame(id)
+  }, [expanded, readOnly, autoResizeAnswer])
   const [limitInput, setLimitInput] = useState(
     cl.charLimit != null ? String(cl.charLimit) : '',
   )
@@ -103,6 +119,7 @@ export function CoverletterQuestionCard({
   const byteCount = includeSpaces ? counts.bytes : counts.bytesWithoutSpaces
   const overLimit = cl.charLimit != null && charCount > cl.charLimit
   const hasAnswer = useMemo(() => answer.trim().length > 0, [answer])
+  const fillCount = useMemo(() => countFillPlaceholders(answer), [answer])
 
   // source_refs (답변 있을 때만)
   const { data: sourceRefs = [] } = useCoverletterSourceRefs(cl.id, hasAnswer)
@@ -166,8 +183,11 @@ export function CoverletterQuestionCard({
   // 펴짐 모드 — 편집
   return (
     <div
+      ref={containerRef}
       id={`cl-${cl.id}`}
-      className="bg-card border border-brand/40 rounded-[14px] p-4 lg:p-[18px] shadow-md"
+      className={`bg-card border border-brand/40 rounded-[14px] p-4 lg:p-[18px] shadow-md transition-shadow ${
+        flash ? 'ring-2 ring-brand/60' : ''
+      }`}
     >
       {/* 헤더 — 번호 + 분류 + 글자수 limit + 닫기 */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3 text-[11px] text-text-tertiary">
@@ -177,56 +197,72 @@ export function CoverletterQuestionCard({
         >
           Q{number}
         </span>
-        <label className="flex items-center gap-1.5">
-          <span>유형</span>
-          <span className="relative">
-            <select
-              value={category}
-              onChange={(e) => onUpdate({ category: e.target.value })}
-              className="appearance-none bg-surface-2 border border-line rounded-md pl-2 pr-8 py-1 text-[11px] text-text-secondary focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors cursor-pointer"
-            >
-              {COVERLETTER_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none"
-            >
-              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+        {readOnly ? (
+          <span
+            className={`inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-md border ${categoryStyle}`}
+          >
+            {COVERLETTER_CATEGORY_EMOJI[category]} {category}
           </span>
-        </label>
-        <label className="flex items-center gap-1.5">
-          <span>글자수 제한</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            value={limitInput}
-            onChange={(e) => setLimitInput(e.target.value)}
-            onBlur={() => {
-              const raw =
-                limitInput.trim() === ''
-                  ? null
-                  : Math.max(0, Math.floor(Number(limitInput) || 0))
-              const next = raw === 0 ? null : raw
-              if (next !== cl.charLimit) onUpdate({ charLimit: next })
-              setLimitInput(next != null ? String(next) : '')
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-            }}
-            placeholder="없음"
-            className="w-16 bg-surface-2 border border-line rounded-md px-2 py-1 font-mono text-[11px] text-text-secondary placeholder:text-text-tertiary focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors"
-          />
-          <span className="text-text-quaternary">자</span>
-        </label>
+        ) : (
+          <label className="flex items-center gap-1.5">
+            <span>유형</span>
+            <span className="relative">
+              <select
+                value={category}
+                onChange={(e) => onUpdate({ category: e.target.value })}
+                className="appearance-none bg-surface-2 border border-line rounded-md pl-2 pr-8 py-1 text-[11px] text-text-secondary focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors cursor-pointer"
+              >
+                {COVERLETTER_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none"
+              >
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </label>
+        )}
+        {readOnly ? (
+          cl.charLimit != null && (
+            <span className="font-mono text-text-quaternary">
+              제한 {cl.charLimit}자
+            </span>
+          )
+        ) : (
+          <label className="flex items-center gap-1.5">
+            <span>글자수 제한</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={limitInput}
+              onChange={(e) => setLimitInput(e.target.value)}
+              onBlur={() => {
+                const raw =
+                  limitInput.trim() === ''
+                    ? null
+                    : Math.max(0, Math.floor(Number(limitInput) || 0))
+                const next = raw === 0 ? null : raw
+                if (next !== cl.charLimit) onUpdate({ charLimit: next })
+                setLimitInput(next != null ? String(next) : '')
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              }}
+              placeholder="없음"
+              className="w-16 bg-surface-2 border border-line rounded-md px-2 py-1 font-mono text-[11px] text-text-secondary placeholder:text-text-tertiary focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors"
+            />
+            <span className="text-text-quaternary">자</span>
+          </label>
+        )}
         <div className="flex-1" />
         <button
           onClick={onToggle}
@@ -239,24 +275,43 @@ export function CoverletterQuestionCard({
       </div>
 
       {/* question */}
-      <textarea
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        onBlur={() => {
-          const v = question.trim()
-          if (!v) {
-            setQuestion(cl.question)
-            return
-          }
-          if (v !== cl.question) onUpdate({ question: v })
-        }}
-        rows={2}
-        maxLength={500}
-        placeholder="예: 우리 회사에 지원한 동기를 작성해 주세요."
-        className="w-full resize-none bg-surface-2 border border-line rounded-lg px-3 py-2 font-serif text-base text-text-primary leading-relaxed placeholder:text-text-tertiary placeholder:font-sans focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors mb-4"
-      />
+      {readOnly ? (
+        <p className="w-full font-serif text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words mb-4">
+          {cl.question || (
+            <span className="text-text-quaternary font-sans text-sm">
+              (문항 미입력)
+            </span>
+          )}
+        </p>
+      ) : (
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onBlur={() => {
+            const v = question.trim()
+            if (!v) {
+              setQuestion(cl.question)
+              return
+            }
+            if (v !== cl.question) onUpdate({ question: v })
+          }}
+          rows={2}
+          maxLength={500}
+          placeholder="예: 우리 회사에 지원한 동기를 작성해 주세요."
+          className="w-full resize-none bg-surface-2 border border-line rounded-lg px-3 py-2 font-serif text-base text-text-primary leading-relaxed placeholder:text-text-tertiary placeholder:font-sans focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors mb-4"
+        />
+      )}
 
       {/* answer */}
+      {readOnly ? (
+        hasAnswer ? (
+          <div className="w-full whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed">
+            {answer}
+          </div>
+        ) : (
+          <p className="text-sm text-text-quaternary">(아직 작성 안 됨)</p>
+        )
+      ) : (
       <textarea
         ref={answerRef}
         value={answer}
@@ -268,8 +323,18 @@ export function CoverletterQuestionCard({
         style={{ minHeight: 80, lineHeight: 1.65 }}
         className="w-full bg-input border border-line rounded-[11px] px-3.5 py-3 text-[13px] text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
       />
+      )}
       <div className="flex items-center justify-between gap-2 mt-2 text-xs flex-wrap">
-        <span className="text-text-quaternary">✎ 자동 저장돼요</span>
+        {readOnly ? (
+          <span />
+        ) : (
+          <span className="text-text-quaternary">✎ 자동 저장돼요</span>
+        )}
+        {fillCount > 0 && (
+          <span className="text-[10px] text-warning">
+            ⚠️ 채워야 할 부분 {fillCount}곳
+          </span>
+        )}
         <div className="flex items-center gap-2 text-text-tertiary">
           <button
             onClick={() => setIncludeSpaces((v) => !v)}
@@ -286,10 +351,16 @@ export function CoverletterQuestionCard({
           <span className="font-mono text-text-quaternary">
             · {byteCount.toLocaleString()}byte
           </span>
+          {overLimit && !readOnly && (
+            <span className="text-[10px] text-text-quaternary">
+              · [검사]의 AI 심층 점검이 줄일 문장을 짚어드려요
+            </span>
+          )}
         </div>
       </div>
 
-      {/* 액션 */}
+      {/* 액션 — readOnly(모바일·네이티브)에선 편집·AI 미노출 */}
+      {!readOnly && (
       <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-line">
         {aiEnabled && (
           <button
@@ -321,6 +392,7 @@ export function CoverletterQuestionCard({
           삭제
         </button>
       </div>
+      )}
 
       {/* source chips */}
       {sourceRefs.length > 0 && (
@@ -374,6 +446,8 @@ export function CoverletterQuestionCard({
           text={answer}
           limit={cl.charLimit}
           aiFeedbackClId={aiEnabled ? cl.id : null}
+          lastFeedback={cl.lastFeedback}
+          lastFeedbackAt={cl.lastFeedbackAt}
           onClose={() => setShowCleanup(false)}
           onApply={(cleaned) => {
             setAnswer(cleaned)

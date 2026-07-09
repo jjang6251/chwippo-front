@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPanel'
-import { CoverletterGenerateSection } from '@/components/coverletter/CoverletterGenerateSection'
-import { CoverletterOutdatedBanner } from '@/components/coverletter/CoverletterOutdatedBanner'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
-import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
+import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
 import { useApplication } from '@/hooks/useApplications'
+import { useAiFeedbackUnloadGuard } from '@/hooks/useAiFeedbackUnloadGuard'
 import {
   useCoverletters,
   useCreateCoverletter,
@@ -15,10 +15,8 @@ import {
 } from '@/hooks/useApplicationCoverletters'
 import {
   useCompanyResearchCache,
-  useFetchCompanyResearch,
 } from '@/hooks/useCoverletterDoc'
 import type { UpdateCoverletterDto } from '@/types/coverletter'
-import type { CompanyResearchData } from '@/types/interviewPrep'
 
 /**
  * F1 자소서 풀페이지 (회사 단위) — `/board/:applicationId/coverletter`.
@@ -29,6 +27,7 @@ import type { CompanyResearchData } from '@/types/interviewPrep'
  */
 export function CoverletterDocPage() {
   const aiEnabled = useAiEnabled()
+  const readOnly = useCoverletterReadOnly()
   const { applicationId } = useParams<{ applicationId: string }>()
   const navigate = useNavigate()
   const { data: app, isLoading: appLoading } = useApplication(applicationId ?? '')
@@ -42,8 +41,21 @@ export function CoverletterDocPage() {
   const { mutate: updateCl } = useUpdateCoverletter(applicationId ?? '')
   const { mutate: removeCl } = useRemoveCoverletter(applicationId ?? '')
 
+  // A1 — AI 점검 진행 중 페이지 이탈 경고 (섹션은 모달 안이라 페이지 레벨 가드 필요)
+  useAiFeedbackUnloadGuard()
+
   // 펼침 카드 set — 자유 다중 펴기. 첫 카드는 default 펼침
   const [expandedClIds, setExpandedClIds] = useState<Set<string>>(new Set())
+  // AI 적용 시 해당 카드로 스크롤 + 플래시. ref 맵 (펼친 카드 루트 div)
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const [flashClId, setFlashClId] = useState<string | null>(null)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+    },
+    [],
+  )
   // cls 첫 로드 시 첫 카드 자동 펼침
   const firstExpandRef = useRef(false)
   useEffect(() => {
@@ -96,6 +108,19 @@ export function CoverletterDocPage() {
         next.add(update.clId)
         return next
       })
+      // 적용된 카드로 스크롤 + 플래시 (연속 적용이면 마지막 문항 기준 1회)
+      const reduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      requestAnimationFrame(() => {
+        cardRefs.current.get(update.clId)?.scrollIntoView({
+          block: 'center',
+          behavior: reduced ? 'auto' : 'smooth',
+        })
+      })
+      setFlashClId(update.clId)
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+      flashTimerRef.current = setTimeout(() => setFlashClId(null), 1200)
     },
     [cls, updateCl],
   )
@@ -105,13 +130,7 @@ export function CoverletterDocPage() {
     data: research,
     isLoading: researchLoading,
   } = useCompanyResearchCache(applicationId ?? '', !!applicationId)
-  const {
-    mutate: fetchResearch,
-    isPending: fetchingResearch,
-    isError: researchFetchError,
-  } = useFetchCompanyResearch(applicationId ?? '')
 
-  const autoFetchedRef = useRef(false)
   const [bannerExpanded, setBannerExpanded] = useState(false)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
   // 카드의 "✨ AI 에게 묻기" prefill — nonce 로 매번 새 이벤트 처리
@@ -127,14 +146,6 @@ export function CoverletterDocPage() {
     [],
   )
 
-  // PR_B1c CTO 검토 M3 — silent 50 코인 차감 차단:
-  //   기존엔 cache null 시 자동 fetchResearch() → 사용자 동의 없이 50 코인 차감.
-  //   특히 legacy backfill (자소서 row 있어 status='completed' 됐지만 cache 없는 application)
-  //   진입 시 매번 차감. 동의 modal 우회 = 정책 위반.
-  //   → 자동 fetch 제거. cache 없으면 OutdatedBanner 가 명시 "다시 조사" 동의 modal 제공.
-  void autoFetchedRef // 변수 보존 (cleanup 안 함 — 다른 곳 영향 없음)
-  void fetchResearch
-  void fetchingResearch
   void researchLoading
 
   if (appLoading || clsLoading) {
@@ -190,19 +201,11 @@ export function CoverletterDocPage() {
         )}
       </header>
 
-      {/* A1 — 조사 미완이면 상단 compact 조사 카드 (차단 아님·업셀). AI 켜짐 시만.
-        * 조사 캐시는 회사 단위 공유 — 같은 회사 다른 카드가 이미 조사했으면 (배너에 내용 표시됨)
-        * 이 카드의 status 가 idle 이어도 숨김. 안 그러면 이미 보이는 데이터에 50코인 재차감 유도. */}
-      {aiEnabled &&
-        app.coverletterGenerationStatus !== 'completed' &&
-        !(research?.status === 'ok' && research.research) && (
-        <div className="mb-4">
-          <CoverletterGenerateSection application={app} compact />
+      {readOnly && (
+        <div className="bg-card border border-line rounded-lg px-3 py-2 text-xs text-text-tertiary mb-5">
+          📱 모바일에서는 보기 전용이에요 — 작성·수정은 PC에서 진행해 주세요.
         </div>
       )}
-
-      {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
-      <CoverletterOutdatedBanner application={app} />
 
       {/* Phase B — 회사 조사 banner.
         * PR UI: default collapse (outdated 우선 표시 — 사용자 인지 부하 ↓).
@@ -210,17 +213,23 @@ export function CoverletterDocPage() {
         */}
       <CompanyResearchBanner
         research={research}
-        loading={researchLoading || fetchingResearch}
-        error={researchFetchError}
+        loading={researchLoading}
         expanded={bannerExpanded}
         onToggle={() => setBannerExpanded((v) => !v)}
-        onRetry={() => fetchResearch()}
       />
 
       {/* write-shell: 2-pane (Phase D 에서 채움) */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-[18px] lg:gap-[22px]">
         <div className="space-y-3">
           {cls.length === 0 ? (
+            readOnly ? (
+              <div className="bg-surface-2 border border-dashed border-line rounded-xl p-8 text-center">
+                <div className="text-2xl mb-2">📝</div>
+                <p className="text-text-secondary text-sm font-medium">
+                  아직 작성된 문항이 없어요. PC에서 문항을 추가해 시작하세요.
+                </p>
+              </div>
+            ) : (
             <div className="bg-surface-2 border border-dashed border-line rounded-xl p-8 text-center">
               <div className="text-2xl mb-2">📝</div>
               <p className="text-text-secondary text-sm font-medium mb-1">
@@ -238,6 +247,7 @@ export function CoverletterDocPage() {
                 + 첫 문항 추가하기
               </button>
             </div>
+            )
           ) : (
             <>
               {cls.map((cl, idx) => (
@@ -251,15 +261,23 @@ export function CoverletterDocPage() {
                   onUpdate={(dto) => handleUpdate(cl.id, dto)}
                   onDelete={() => handleDelete(cl.id)}
                   onAskAI={() => handleAskAI(cl.id, cl.question)}
+                  readOnly={readOnly}
+                  flash={flashClId === cl.id}
+                  containerRef={(el) => {
+                    if (el) cardRefs.current.set(cl.id, el)
+                    else cardRefs.current.delete(cl.id)
+                  }}
                 />
               ))}
-              <button
-                onClick={() => createCl({ question: '' })}
-                disabled={creating}
-                className="w-full py-2.5 text-xs font-medium text-text-secondary border border-dashed border-line rounded-lg hover:border-brand/40 hover:text-text-primary transition-colors disabled:opacity-40"
-              >
-                + 문항 추가
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => createCl({ question: '' })}
+                  disabled={creating}
+                  className="w-full py-2.5 text-xs font-medium text-text-secondary border border-dashed border-line rounded-lg hover:border-brand/40 hover:text-text-primary transition-colors disabled:opacity-40"
+                >
+                  + 문항 추가
+                </button>
+              )}
             </>
           )}
         </div>
@@ -269,7 +287,7 @@ export function CoverletterDocPage() {
          * h: viewport - top(88) - 아래 여백(72) = calc(100vh - 160px). 약 vh 85%.
          */}
         <aside className="hidden lg:flex flex-col bg-card border border-line rounded-[14px] p-3.5 shadow-md self-start sticky top-[88px] h-[calc(100vh-160px)] overflow-hidden">
-          {aiEnabled && <CoverletterChatPanel
+          {aiEnabled && !readOnly && <CoverletterChatPanel
             applicationId={applicationId ?? ''}
             onApplyUpdate={handleApplyUpdate}
             prefill={chatPrefill}
@@ -278,14 +296,16 @@ export function CoverletterDocPage() {
         </aside>
       </div>
 
-      {/* 모바일 FAB */}
-      <button
-        onClick={() => setMobileChatOpen(true)}
-        className="lg:hidden fixed bottom-[100px] right-4 z-40 px-4 py-3 bg-brand text-text-primary text-sm font-semibold rounded-full shadow-lg hover:bg-accent active:scale-95 transition-all"
-        aria-label="AI 채팅 패널 열기"
-      >
-        ✨ AI
-      </button>
+      {/* 모바일 FAB — readOnly(모바일·네이티브)에선 AI 미노출 */}
+      {aiEnabled && !readOnly && (
+        <button
+          onClick={() => setMobileChatOpen(true)}
+          className="lg:hidden fixed bottom-[100px] right-4 z-40 px-4 py-3 bg-brand text-text-primary text-sm font-semibold rounded-full shadow-lg hover:bg-accent active:scale-95 transition-all"
+          aria-label="AI 채팅 패널 열기"
+        >
+          ✨ AI
+        </button>
+      )}
 
       {/* 모바일 bottom sheet */}
       {mobileChatOpen && (
@@ -300,7 +320,7 @@ export function CoverletterDocPage() {
             aria-modal="true"
             aria-label="AI 채팅 패널"
           >
-            {aiEnabled && <CoverletterChatPanel
+            {aiEnabled && !readOnly && <CoverletterChatPanel
               applicationId={applicationId ?? ''}
               onApplyUpdate={(u) => {
                 handleApplyUpdate(u)
@@ -314,171 +334,6 @@ export function CoverletterDocPage() {
         </div>
       )}
 
-    </div>
-  )
-}
-
-// ── 회사 조사 banner (접기 default, 8 항목 펼치기) ─────────
-interface BannerProps {
-  research:
-    | { status: 'ok'; research?: CompanyResearchData; isCached?: boolean; cachedAt?: string }
-    | { status: 'blocked' | 'opt_out'; reason?: string }
-    | null
-    | undefined
-  loading: boolean
-  error: boolean
-  expanded: boolean
-  onToggle: () => void
-  onRetry: () => void
-}
-
-function CompanyResearchBanner({
-  research,
-  loading,
-  error,
-  expanded,
-  onToggle,
-  onRetry,
-}: BannerProps) {
-  if (loading) {
-    return (
-      <div className="bg-info/8 border border-info/20 rounded-lg p-3 mb-5 text-info text-xs">
-        🔍 회사·직무 정보 조회 중…
-      </div>
-    )
-  }
-
-  if (error || (research && research.status === 'blocked')) {
-    return (
-      <div className="bg-warning/8 border border-warning/20 rounded-lg p-3 mb-5 flex items-center justify-between">
-        <span className="text-warning text-xs">
-          ⚠️ 회사 조사 실패{' '}
-          {research && research.status === 'blocked' && research.reason
-            ? `· ${research.reason}`
-            : ''}
-        </span>
-        <button
-          onClick={onRetry}
-          className="text-[11px] text-text-tertiary hover:text-text-primary border border-line px-2 py-1 rounded transition-colors"
-        >
-          다시 시도
-        </button>
-      </div>
-    )
-  }
-
-  if (research && research.status === 'opt_out') {
-    return (
-      <div className="bg-card border border-line rounded-lg p-3 mb-5 text-text-tertiary text-xs">
-        ℹ️ {research.reason ?? '이 회사는 정보 수집 동의를 철회했어요.'}
-      </div>
-    )
-  }
-
-  if (!research || research.status !== 'ok' || !research.research) {
-    return null
-  }
-
-  const data = research.research
-  const summary = data.businessSummary?.trim()
-  const isEmpty =
-    !summary && !data.recentTrends?.trim() &&
-    (!data.interviewKeywords || data.interviewKeywords.length === 0)
-
-  if (isEmpty) {
-    return (
-      <div className="bg-card border border-line rounded-lg p-3 mb-5 text-text-tertiary text-xs">
-        🔍 회사 정보를 충분히 모으지 못했어요. 직접 입력해 활용하세요.
-      </div>
-    )
-  }
-
-  return (
-    <div className="bg-card border border-line rounded-lg mb-4 overflow-hidden">
-      <button
-        onClick={onToggle}
-        aria-expanded={expanded}
-        aria-label="회사 조사 펼치기/접기"
-        className="w-full flex items-center justify-between gap-3 px-3 py-2 hover:bg-card-strong transition-colors"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-text-secondary text-xs font-medium shrink-0">
-            🏢 회사·직무 조사
-          </span>
-          {!expanded && summary && (
-            <span className="text-text-tertiary text-[11px] truncate">
-              {summary}
-            </span>
-          )}
-        </div>
-        <CollapsibleChevron open={expanded} />
-      </button>
-      {expanded && (
-        <div className="px-3 pb-3 space-y-2 text-xs">
-          {summary && (
-            <Section title="비즈니스 요약" content={summary} />
-          )}
-          {data.recentTrends?.trim() && (
-            <Section title="최근 동향" content={data.recentTrends} />
-          )}
-          {data.coreValues?.trim() && (
-            <Section title="핵심 가치" content={data.coreValues} />
-          )}
-          {data.visionMission?.trim() && (
-            <Section title="비전·미션" content={data.visionMission} />
-          )}
-          {data.jobInsights?.trim() && (
-            <Section title="직무 인사이트" content={data.jobInsights} />
-          )}
-          {data.interviewKeywords && data.interviewKeywords.length > 0 && (
-            <ChipSection
-              title="면접·자소서 키워드"
-              chips={data.interviewKeywords.map((k) =>
-                typeof k === 'string' ? k : k.keyword,
-              )}
-            />
-          )}
-          {research.cachedAt && (
-            <p className="text-text-quaternary text-[10px] pt-1">
-              · 캐시 {new Date(research.cachedAt).toLocaleDateString('ko-KR')}{' '}
-              {research.isCached === false ? '(방금 조사됨)' : ''}
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Section({ title, content }: { title: string; content: string }) {
-  return (
-    <div>
-      <div className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider mb-1">
-        {title}
-      </div>
-      <p className="text-text-secondary leading-relaxed whitespace-pre-wrap">
-        {content}
-      </p>
-    </div>
-  )
-}
-
-function ChipSection({ title, chips }: { title: string; chips: string[] }) {
-  return (
-    <div>
-      <div className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider mb-1">
-        {title}
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {chips.map((c, i) => (
-          <span
-            key={i}
-            className="text-[11px] text-info bg-info/10 border border-info/20 px-1.5 py-0.5 rounded"
-          >
-            {c}
-          </span>
-        ))}
-      </div>
     </div>
   )
 }

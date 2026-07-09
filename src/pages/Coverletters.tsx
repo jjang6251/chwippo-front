@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CoverletterGenerateSection } from '@/components/coverletter/CoverletterGenerateSection'
 import { useApplication, useApplications } from '@/hooks/useApplications'
+import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import {
   COVERLETTER_CATEGORY_EMOJI,
   COVERLETTER_CATEGORY_STYLE,
@@ -11,14 +11,14 @@ import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
 import type { Application } from '@/types/application'
 
-type StatusFilter = 'all' | 'IN_PROGRESS' | 'PASSED' | 'FAILED'
+type StatusFilter = 'ACTIVE' | 'PASSED' | 'FAILED' | 'all'
 type SortKey = 'deadline' | 'recent' | 'name'
 
 const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: '전체' },
-  { key: 'IN_PROGRESS', label: '진행 중' },
+  { key: 'ACTIVE', label: '진행중' },
   { key: 'PASSED', label: '합격' },
-  { key: 'FAILED', label: '탈락' },
+  { key: 'FAILED', label: '불합격' },
+  { key: 'all', label: '전체' },
 ]
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
@@ -54,22 +54,26 @@ export function Coverletters() {
 
   // PR UI C — 검색 + status 탭 + 정렬
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ACTIVE')
   const [sortKey, setSortKey] = useState<SortKey>('deadline')
 
   // PASSED/FAILED 도 보여줌 (작성 이력 참고용). 단 archived (deleted_at) 는 API 단에서 제외됨
   const allActive = useMemo(
     () =>
       applications.filter((a) =>
-        ['CREATED', 'IN_PROGRESS', 'PASSED', 'FAILED'].includes(a.status),
+        ['PLANNED', 'IN_PROGRESS', 'PASSED', 'FAILED'].includes(a.status),
       ),
     [applications],
   )
 
   const active = useMemo(() => {
     let list: Application[] = allActive
-    // status 탭 필터
-    if (statusFilter !== 'all') {
+    // status 탭 필터 — ACTIVE 는 PLANNED(지원 예정) + IN_PROGRESS 묶음 (진행중 메인)
+    if (statusFilter === 'ACTIVE') {
+      list = list.filter(
+        (a) => a.status === 'PLANNED' || a.status === 'IN_PROGRESS',
+      )
+    } else if (statusFilter !== 'all') {
       list = list.filter((a) => a.status === statusFilter)
     }
     // 회사명 / 직무 검색
@@ -151,7 +155,12 @@ export function Coverletters() {
               const count =
                 tab.key === 'all'
                   ? allActive.length
-                  : allActive.filter((a) => a.status === tab.key).length
+                  : tab.key === 'ACTIVE'
+                    ? allActive.filter(
+                        (a) =>
+                          a.status === 'PLANNED' || a.status === 'IN_PROGRESS',
+                      ).length
+                    : allActive.filter((a) => a.status === tab.key).length
               const isActive = statusFilter === tab.key
               return (
                 <button
@@ -227,7 +236,14 @@ export function Coverletters() {
       {active.length === 0 ? (
         <div className="bg-surface-2 border border-dashed border-line rounded-xl p-6 text-center">
           <p className="text-text-tertiary text-xs">
-            {search ? `"${search}" 검색 결과가 없어요` : '해당 조건의 카드가 없어요'}
+            {search
+              ? `"${search}" 검색 결과가 없어요`
+              : statusFilter === 'ACTIVE' &&
+                  allActive.some(
+                    (a) => a.status === 'PASSED' || a.status === 'FAILED',
+                  )
+                ? '진행 중인 지원이 없어요. 지난 지원은 합격·불합격 탭에서 볼 수 있어요.'
+                : '해당 조건의 카드가 없어요'}
           </p>
         </div>
       ) : (
@@ -280,6 +296,7 @@ function ApplicationGroup({
   jobTitle: string | null
   jobCategory: string | null
 }) {
+  const readOnly = useCoverletterReadOnly()
   const { data: items = [], isLoading } = useCoverletters(applicationId, true)
   // PR_B1c — application 의 coverletterGenerationStatus 별 UI 분기 (polling 자동)
   const { data: application } = useApplication(applicationId)
@@ -399,9 +416,8 @@ function ApplicationGroup({
             to={`/board/${applicationId}/coverletter`}
             className="block text-center text-xs font-semibold text-brand bg-brand/8 border border-brand/25 hover:bg-brand/15 px-3 py-2 rounded-md transition-colors"
           >
-            ✍️ 바로 쓰기 — 문항 추가하고 작성 →
+            {readOnly ? '자소서 보기 →' : '✍️ 바로 쓰기 — 문항 추가하고 작성 →'}
           </Link>
-          <CoverletterGenerateSection application={application} compact />
         </div>
       </div>
     )

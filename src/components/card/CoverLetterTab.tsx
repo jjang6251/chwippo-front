@@ -1,13 +1,14 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAiEnabled } from '@/hooks/useAiEnabled'
-import { CoverletterGenerateSection } from '@/components/coverletter/CoverletterGenerateSection'
-import { CoverletterOutdatedBanner } from '@/components/coverletter/CoverletterOutdatedBanner'
 import {
   useCoverletters,
   useCreateCoverletter,
 } from '@/hooks/useApplicationCoverletters'
 import { useApplication } from '@/hooks/useApplications'
+import { useCompanyResearchCache } from '@/hooks/useCoverletterDoc'
+import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import { CoverLetterCard } from '@/components/card/CoverLetterCard'
+import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
 import { toast } from '@/stores/toastStore'
 
 /**
@@ -25,11 +26,26 @@ const COMMON_QUESTIONS = [
 
 // A1 — AI 요소(조사)만 조건부
 export function CoverLetterTab({ applicationId, active }: { applicationId: string; active: boolean }) {
-  const aiEnabled = useAiEnabled()
+  const readOnly = useCoverletterReadOnly()
   const { data: items, isLoading } = useCoverletters(applicationId, active)
   const { mutate: create, isPending: creating } = useCreateCoverletter(applicationId)
   // PR_B1c — application 의 generation status 별 UI 분기 (polling 자동)
   const { data: application } = useApplication(applicationId)
+  // 회사 조사 배너 — 모바일 주 진입점에서도 조사 열람 (보기용, readOnly 무관)
+  const { data: research, isLoading: researchLoading } = useCompanyResearchCache(
+    applicationId,
+    active,
+  )
+  const [bannerExpanded, setBannerExpanded] = useState(false)
+
+  const researchBanner = (
+    <CompanyResearchBanner
+      research={research}
+      loading={researchLoading}
+      expanded={bannerExpanded}
+      onToggle={() => setBannerExpanded((v) => !v)}
+    />
+  )
 
   const handleAdd = (question = '', category?: string) =>
     create({ question, category }, { onError: () => toast.error('추가에 실패했습니다.') })
@@ -50,48 +66,56 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
     if (!application) return null
     return (
       <div className="space-y-3">
+        {researchBanner}
         <div className="border border-line bg-surface-2 rounded-xl p-4">
-          <p className="text-text-primary text-sm font-semibold mb-1">
-            ✍️ 바로 쓰기 — 문항을 추가하고 자유롭게 작성하세요
-          </p>
-          <p className="text-[11px] text-text-quaternary mb-2.5">
-            다른 곳에 써둔 자소서가 있다면 문항 추가 후 붙여넣으면 돼요
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {COMMON_QUESTIONS.map((q) => (
-              <button
-                key={q.label}
-                onClick={() => handleAdd(q.question, q.category)}
-                disabled={creating}
-                className="text-[11px] text-text-tertiary bg-surface-3 border border-line hover:border-brand/40 hover:text-text-secondary px-2 py-1 rounded-full transition-colors disabled:opacity-40"
-              >
-                + {q.label}
-              </button>
-            ))}
-            <button
-              onClick={() => handleAdd('')}
-              disabled={creating}
-              className="text-[11px] text-brand bg-brand/8 border border-brand/25 hover:bg-brand/15 px-2 py-1 rounded-full transition-colors disabled:opacity-40"
-            >
-              + 직접 입력
-            </button>
-          </div>
+          {readOnly ? (
+            <p className="text-[11px] text-text-quaternary mb-2.5">
+              자소서는 PC에서 작성할 수 있어요. 작성한 내용은 여기서 볼 수 있어요.
+            </p>
+          ) : (
+            <>
+              <p className="text-text-primary text-sm font-semibold mb-1">
+                ✍️ 바로 쓰기 — 문항을 추가하고 자유롭게 작성하세요
+              </p>
+              <p className="text-[11px] text-text-quaternary mb-2.5">
+                다른 곳에 써둔 자소서가 있다면 문항 추가 후 붙여넣으면 돼요
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {COMMON_QUESTIONS.map((q) => (
+                  <button
+                    key={q.label}
+                    onClick={() => handleAdd(q.question, q.category)}
+                    disabled={creating}
+                    className="text-[11px] text-text-tertiary bg-surface-3 border border-line hover:border-brand/40 hover:text-text-secondary px-2 py-1 rounded-full transition-colors disabled:opacity-40"
+                  >
+                    + {q.label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handleAdd('')}
+                  disabled={creating}
+                  className="text-[11px] text-brand bg-brand/8 border border-brand/25 hover:bg-brand/15 px-2 py-1 rounded-full transition-colors disabled:opacity-40"
+                >
+                  + 직접 입력
+                </button>
+              </div>
+            </>
+          )}
           <Link
             to={fullscreenHref}
             className="inline-block mt-3 text-[11px] font-medium text-text-tertiary hover:text-text-primary transition-colors"
           >
-            자소서 풀페이지에서 작성 →
+            {readOnly ? '자소서 풀페이지에서 보기 →' : '자소서 풀페이지에서 작성 →'}
           </Link>
         </div>
-        {aiEnabled && <CoverletterGenerateSection application={application} />}
       </div>
     )
   }
 
   return (
     <div className="space-y-3">
+      {researchBanner}
       {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
-      {application && <CoverletterOutdatedBanner application={application} />}
       {/* PR UI — list.length===0 dead branch 제거 (line 47 에서 early return) */}
       <>
           {/* 풀페이지 진입 강조 */}
@@ -124,7 +148,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
         </>
 
       {/* 빠른 추가 — 인라인 (풀페이지 안 가도 빠른 추가 가능, but 편집은 풀페이지에서) */}
-      {list.length > 0 && (
+      {list.length > 0 && !readOnly && (
         <div className="border border-line bg-surface-2 rounded-xl p-4">
           <p className="text-[11px] text-text-quaternary mb-2.5">
             빠른 추가 — 자주 쓰는 문항 (편집은 풀페이지에서)

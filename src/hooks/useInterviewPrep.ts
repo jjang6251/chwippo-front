@@ -110,22 +110,6 @@ export function useCompanyResearch(sessionId: string, enabled = true) {
   })
 }
 
-/** 회사 조사 트리거 (LLM web_search). 성공 시 cache 갱신 */
-export function useTriggerCompanyResearch(sessionId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: () => interviewPrepApi.triggerCompanyResearch(sessionId),
-    onSuccess: (result) => {
-      if (result.status === 'ok' || result.status === 'opt_out') {
-        qc.setQueryData(researchKey(sessionId), result)
-      }
-      // 5.6.x — quota 차감 즉시 반영 (chip 갱신)
-      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
-      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
-    },
-  })
-}
-
 /** 사용자 자유 메모 update — 1.5s debounce 또는 명시 저장 */
 export function useUpdateUserResearchNotes(sessionId: string) {
   const qc = useQueryClient()

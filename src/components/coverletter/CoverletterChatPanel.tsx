@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CoverletterDiffModal } from '@/components/coverletter/CoverletterDiffModal'
+import { CoverletterBulkApplyModal } from '@/components/coverletter/CoverletterBulkApplyModal'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { Modal } from '@/components/common/Modal'
@@ -17,7 +18,9 @@ import {
   useSendCoverletterChatStream,
 } from '@/hooks/useCoverletterDoc'
 import { toast } from '@/stores/toastStore'
+import { clearChatPending, getChatPending } from '@/utils/chatPendingMarker'
 import { countChars } from '@/utils/charCount'
+import { countFillPlaceholders } from '@/utils/coverletterPlaceholder'
 import type { Activity } from '@/types/activity'
 import type {
   CoverletterChatMessage,
@@ -83,11 +86,25 @@ export function CoverletterChatPanel({
   prefill,
   onPrefillConsumed,
 }: Props) {
-  const { data: messagesRaw, isLoading } = useCoverletterMessages(applicationId)
+  // 재진입 "생성 중" 안내 — 직전 스트림이 새로고침 등으로 끊겼는지 marker 로 감지.
+  // 배너 활성 중엔 messages 를 5초 폴링해 뒤늦게 저장된 응답을 잡는다.
+  const [pendingBanner, setPendingBanner] = useState<{ at: number } | null>(null)
+  const bannerShownRef = useRef(false)
+  const { data: messagesRaw, isLoading } = useCoverletterMessages(
+    applicationId,
+    true,
+    pendingBanner ? 5000 : false,
+  )
   // 방어 — backend dev restart 도중 vite proxy HTML, 또는 setQueryData race 로 undefined 섞임 차단
-  const messages = Array.isArray(messagesRaw)
-    ? messagesRaw.filter((m): m is CoverletterChatMessage => !!m && typeof m.id === 'string')
-    : []
+  const messages = useMemo(
+    () =>
+      Array.isArray(messagesRaw)
+        ? messagesRaw.filter(
+            (m): m is CoverletterChatMessage => !!m && typeof m.id === 'string',
+          )
+        : [],
+    [messagesRaw],
+  )
   const { sendStream, sending } = useSendCoverletterChatStream(applicationId)
   const { mutate: deleteAll, isPending: deleting } = useDeleteCoverletterMessages(applicationId)
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('coverletter_chat')
@@ -106,6 +123,13 @@ export function CoverletterChatPanel({
   const [pendingUpdate, setPendingUpdate] = useState<CoverletterSuggestedUpdate | null>(
     null,
   )
+  // "모두 적용" 요약 모달 (미처리 제안 2개+ 일괄 적용)
+  const [bulkUpdates, setBulkUpdates] = useState<{
+    msgId: string
+    updates: CoverletterSuggestedUpdate[]
+  } | null>(null)
+  // 자료 0개 + "전체 답변 생성" 시 안내 (대기 중인 prompt 보관)
+  const [nudge, setNudge] = useState<{ prompt: string } | null>(null)
 
   const [input, setInput] = useState('')
   const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set())
@@ -124,6 +148,64 @@ export function CoverletterChatPanel({
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages.length])
+
+  // Task ③ — 스트리밍 중 이탈(새로고침·탭 닫기) 경고. 서버는 끊겨도 완주·저장하므로
+  // 문구는 참고용 (표준 beforeunload 는 커스텀 문구 미지원).
+  useEffect(() => {
+    if (!sending) return
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [sending])
+
+  // marker 이후의 assistant 메시지가 이미 있는지 판단용 (placeholder 제외)
+  const lastAssistantAt = useMemo(() => {
+    let max = 0
+    for (const m of messages) {
+      if (m.role === 'assistant' && m.id !== PENDING_ASSISTANT_MSG_ID) {
+        const t = new Date(m.createdAt).getTime()
+        if (t > max) max = t
+      }
+    }
+    return max
+  }, [messages])
+
+  // Task ④ — 재진입 "생성 중" 배너 + 응답 도착 감지 + 90초 안전 타임아웃.
+  // 같은 세션 활성 스트림 중(sending)엔 placeholder 가 이미 표시되므로 배너 스킵.
+  useEffect(() => {
+    if (sending) return
+    const marker = getChatPending(applicationId)
+    if (!marker) {
+      bannerShownRef.current = false
+      // 다른 자소서로 전환 시 남아있던 배너 정리 (mount 시 동기 set — AISummarySection 과 동일 패턴)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPendingBanner(null)
+      return
+    }
+    const arrived = lastAssistantAt >= marker.at
+    const stale = Date.now() - marker.at >= 90_000
+    if (arrived || stale) {
+      // 응답 도착(arrived) 또는 90초 초과(stale, 서버 실패 가능) → marker·배너 정리.
+      // 배너가 떠 있던 상태에서 응답이 도착했을 때만 토스트로 알림.
+      clearChatPending(applicationId)
+      if (arrived && bannerShownRef.current) toast.show('✨ AI 응답이 도착했어요')
+      bannerShownRef.current = false
+      setPendingBanner(null)
+      return
+    }
+    // 아직 응답 전 → 배너 표시 + 남은 시간만큼 안전 타임아웃
+    bannerShownRef.current = true
+    setPendingBanner(marker)
+    const id = setTimeout(() => {
+      clearChatPending(applicationId)
+      setPendingBanner(null)
+      bannerShownRef.current = false
+    }, 90_000 - (Date.now() - marker.at))
+    return () => clearTimeout(id)
+  }, [applicationId, lastAssistantAt, sending])
 
   // 카드의 "✨ AI 에게 묻기" prefill — input 자동 채움 + focus + scroll.
   // prefill 은 외부 trigger (nonce 가 매번 변경) 라 effect 에서 setState 정상.
@@ -194,6 +276,12 @@ export function CoverletterChatPanel({
   }
 
   const handleChipClick = (chip: (typeof CHIPS)[number]) => {
+    const noReferences =
+      selectedLogIds.size + selectedMyinfoKeys.size + selectedAwardIds.size === 0
+    if (chip.label === '전체 답변 생성' && noReferences) {
+      setNudge({ prompt: chip.prompt })
+      return
+    }
     handleSend(chip.prompt)
   }
 
@@ -218,6 +306,21 @@ export function CoverletterChatPanel({
       return next
     })
     setPendingUpdate(null)
+  }
+
+  // "모두 적용" — 미처리 제안을 개별 diff 모달 없이 순회 적용 (이 요약 모달이 확인 대체)
+  const handleBulkApply = (msgId: string, updates: CoverletterSuggestedUpdate[]) => {
+    updates.forEach((u) => {
+      const key = `${msgId}:${u.clId}`
+      if (appliedUpdateKeys.has(key)) return
+      onApplyUpdate(u)
+    })
+    setAppliedUpdateKeys((prev) => {
+      const next = new Set(prev)
+      updates.forEach((u) => next.add(`${msgId}:${u.clId}`))
+      return next
+    })
+    setBulkUpdates(null)
   }
 
   const handleReject = (msgId: string, clId: string) => {
@@ -288,8 +391,17 @@ export function CoverletterChatPanel({
               appliedUpdateKeys={appliedUpdateKeys}
               onApply={(u) => handleApplyClick(m.id, u)}
               onReject={(clId) => handleReject(m.id, clId)}
+              onBulkApply={(updates) => setBulkUpdates({ msgId: m.id, updates })}
             />
           ))
+        )}
+        {pendingBanner && (
+          <div
+            aria-live="polite"
+            className="bg-info/8 border border-info/20 text-info text-[11px] rounded-lg p-2.5"
+          >
+            ⏳ 직전 요청의 답변을 아직 생성 중이에요 — 완료되면 대화에 나타나요.
+          </div>
         )}
         <div ref={listEndRef} />
       </div>
@@ -339,7 +451,13 @@ export function CoverletterChatPanel({
                 type="button"
                 onClick={() => handleChipClick(c)}
                 disabled={isDisabled}
-                title={needsLog ? '활동 일지를 먼저 선택하세요' : undefined}
+                title={
+                  needsLog
+                    ? '활동 일지를 먼저 선택하세요'
+                    : c.label === '전체 검수'
+                      ? '전반적인 방향 조언이에요 — 제출 직전 정밀 점검은 각 문항 카드의 [검사] 버튼'
+                      : undefined
+                }
                 className="text-[11px] px-2 py-1 rounded-full bg-card hover:bg-card-strong border border-line hover:border-brand/40 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-card disabled:hover:border-line"
               >
                 {c.label}
@@ -356,6 +474,38 @@ export function CoverletterChatPanel({
           )}
         {quotaBlocked && (
           <div className="text-warning text-[11px] mb-2">⚠️ {quotaReason}</div>
+        )}
+        {nudge && (
+          <div className="bg-brand/8 border border-brand/25 rounded-lg p-2.5 text-xs mb-2">
+            <p className="text-text-secondary leading-relaxed mb-2">
+              활동을 선택하면 내 경험이 답변에 들어가요. 자료 없이 만들면 [본인 경험
+              채우기] 빈칸이 섞인 일반적인 답변이 나와요.
+            </p>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setNudge(null)
+                  setReferencesOpen(true)
+                  setActivityTreeOpen(true)
+                }}
+                className="text-[11px] font-semibold px-2.5 py-1 rounded bg-brand text-text-primary hover:bg-accent transition-colors"
+              >
+                자료 선택하기
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const p = nudge.prompt
+                  setNudge(null)
+                  handleSend(p)
+                }}
+                className="text-[11px] px-2.5 py-1 rounded text-text-secondary border border-line hover:text-text-primary transition-colors"
+              >
+                그냥 진행
+              </button>
+            </div>
+          </div>
         )}
         <div
           className={`flex items-end gap-2 bg-input border rounded-2xl p-2 transition-all ${quotaBlocked ? 'border-line opacity-60' : 'border-line focus-within:border-brand/50 focus-within:ring-2 focus-within:ring-brand/10'}`}
@@ -416,6 +566,25 @@ export function CoverletterChatPanel({
           currentAnswer={clMap.get(pendingUpdate.clId)?.answer ?? ''}
           newAnswer={pendingUpdate.newAnswer}
           onApply={handleDiffApply}
+        />
+      )}
+
+      {/* "모두 적용" 요약 모달 */}
+      {bulkUpdates && (
+        <CoverletterBulkApplyModal
+          open={true}
+          onClose={() => setBulkUpdates(null)}
+          items={bulkUpdates.updates.map((u) => {
+            const cl = clMap.get(u.clId)
+            return {
+              clId: u.clId,
+              number: cl?.number,
+              question: cl?.question ?? '문항',
+              newAnswer: u.newAnswer,
+              charLimit: cl?.charLimit ?? null,
+            }
+          })}
+          onConfirm={() => handleBulkApply(bulkUpdates.msgId, bulkUpdates.updates)}
         />
       )}
 
@@ -521,12 +690,14 @@ function MessageBubble({
   appliedUpdateKeys,
   onApply,
   onReject,
+  onBulkApply,
 }: {
   message: CoverletterChatMessage
   clMap: Map<string, { id: string; question: string; answer: string | null; category: string | null; charLimit: number | null; number: number }>
   appliedUpdateKeys: Set<string>
   onApply: (u: CoverletterSuggestedUpdate) => void
   onReject: (clId: string) => void
+  onBulkApply: (updates: CoverletterSuggestedUpdate[]) => void
 }) {
   const isUser = message.role === 'user'
   const citations = message.citations
@@ -607,6 +778,24 @@ function MessageBubble({
         {/* suggestedUpdates (Wanted 1-click + Cursor diff 패턴) */}
         {message.suggestedUpdates && message.suggestedUpdates.length > 0 && (
           <div className="mt-2.5 space-y-2 pt-2 border-t border-line">
+            {(() => {
+              const unhandled = message.suggestedUpdates!.filter((u) => {
+                const key = `${message.id}:${u.clId}`
+                const cl = clMap.get(u.clId)
+                const isAlreadyApplied = !!cl && (cl.answer ?? '') === u.newAnswer
+                return !(appliedUpdateKeys.has(key) || isAlreadyApplied)
+              })
+              // 스트리밍 중(pending)엔 newAnswer 가 아직 자라는 중 — 적용 차단
+              return unhandled.length >= 2 && !isPendingAssistant ? (
+                <button
+                  onClick={() => onBulkApply(unhandled)}
+                  className="w-full text-[11px] font-semibold px-2 py-1.5 rounded bg-brand text-text-primary hover:bg-accent transition-colors"
+                  title="미처리 제안을 요약 확인 후 한 번에 적용"
+                >
+                  모두 적용 ({unhandled.length}개 문항)
+                </button>
+              ) : null
+            })()}
             {message.suggestedUpdates.map((u) => {
               const key = `${message.id}:${u.clId}`
               const cl = clMap.get(u.clId)
@@ -647,8 +836,8 @@ function MessageBubble({
                       const n = countChars(u.newAnswer).total
                       return cl?.charLimit != null && n > cl.charLimit ? (
                         <span className="text-warning">
-                          ⚠️ {n}자 / 제한 {cl.charLimit}자 — 적용 후 다듬어
-                          주세요
+                          ⚠️ {n}자 / 제한 {cl.charLimit}자 — 그대로 적용해도
+                          돼요. 마지막에 AI 심층 점검이 줄일 문장을 짚어드려요
                         </span>
                       ) : (
                         <span className="text-text-quaternary">
@@ -660,9 +849,21 @@ function MessageBubble({
                       )
                     })()}
                   </p>
+                  {(() => {
+                    const fills = countFillPlaceholders(u.newAnswer)
+                    return fills > 0 ? (
+                      <p className="text-[10px] text-warning mb-2 -mt-1">
+                        ⚠️ 채워야 할 부분 {fills}곳
+                      </p>
+                    ) : null
+                  })()}
                   {handled ? (
                     <span className="text-[10px] text-text-quaternary">
                       ✓ 처리됨
+                    </span>
+                  ) : isPendingAssistant ? (
+                    <span className="text-[10px] text-text-quaternary animate-pulse">
+                      작성 중…
                     </span>
                   ) : (
                     <div className="flex gap-1.5">
@@ -705,6 +906,10 @@ function ActivityTreeSection({
   onSelectChange: (set: Set<string>) => void
 }) {
   const { data: activities = [], isLoading } = useActivities(false)
+  // 기본함(미분류) 은 퀵캡처 기록의 소재 창고 — 맨 위 고정 (숨기지 않고 잘 보이게)
+  const sortedActivities = [...activities].sort(
+    (a, b) => (b.isInbox ? 1 : 0) - (a.isInbox ? 1 : 0),
+  )
 
   return (
     <div className={open ? 'border-t border-line pt-2' : ''}>
@@ -740,7 +945,7 @@ function ActivityTreeSection({
         )}
       </div>
       {open && (
-        <div className="max-h-[160px] overflow-y-auto pb-2 space-y-1">
+        <div className="max-h-[160px] overflow-y-auto overscroll-contain pb-2 space-y-1">
           {isLoading ? (
             <div className="text-[10px] text-text-quaternary text-center py-2">
               불러오는 중…
@@ -750,7 +955,7 @@ function ActivityTreeSection({
               활동 일지에 기록을 먼저 추가해 주세요.
             </p>
           ) : (
-            activities.map((a) => (
+            sortedActivities.map((a) => (
               <ActivityRow
                 key={a.id}
                 activity={a}
@@ -775,9 +980,11 @@ function ActivityRow({
   onSelectChange: (set: Set<string>) => void
 }) {
   const [expanded, setExpanded] = useState(false)
-  const { data: logs = [] } = useActivityLogs(
+  const { data: rawLogs = [] } = useActivityLogs(
     expanded ? activity.id : undefined,
   )
+  // 쉬어가기(rest) 기록은 자소서 소재가 아님
+  const logs = rawLogs.filter((l) => l.cat !== 'rest')
 
   return (
     <div className="border border-line bg-surface-2 rounded">
@@ -788,7 +995,7 @@ function ActivityRow({
       >
         <CollapsibleChevron open={expanded} />
         <span className="flex-1 text-left truncate font-medium">
-          {activity.name}
+          {activity.isInbox ? '📥 미분류 기록' : activity.name}
         </span>
       </button>
       {expanded && logs.length > 0 && (

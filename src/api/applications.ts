@@ -2,7 +2,6 @@ import { apiClient } from './client'
 import type {
   Application,
   CreateApplicationDto,
-  GenerateCoverletterResult,
   UpdateApplicationDto,
   UpdateStepsDto,
 } from '@/types/application'
@@ -32,15 +31,4 @@ export const applicationsApi = {
   dismissSample: (id: string) =>
     apiClient.post(`/applications/${id}/sample-dismiss`).then(() => undefined),
 
-  /**
-   * PR_B1c — 자소서 생성 (회사조사 trigger + 50 코인 차감).
-   * status 'completed' / 'already_in_progress' / 'already_completed' / 'coin_insufficient'
-   * LLM 실패 시 500 throw → axios catch
-   */
-  generateCoverletter: (id: string) =>
-    apiClient
-      .post<{ data: GenerateCoverletterResult }>(
-        `/applications/${id}/generate-coverletter`,
-      )
-      .then(unwrap),
 }

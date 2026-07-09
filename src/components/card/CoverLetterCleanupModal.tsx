@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react'
 import { AiFeedbackSection } from '@/components/coverletter/AiFeedbackSection'
 import { Modal } from '@/components/common/Modal'
 import { cleanupCoverletter } from '@/utils/coverletterCleanup'
+import type { CoverletterFeedback } from '@/types/coverletter'
 
 interface CoverLetterCleanupModalProps {
   text: string
@@ -9,6 +10,9 @@ interface CoverLetterCleanupModalProps {
   onClose: () => void
   /** A1 — AI 심층 점검 층 (2층 구조). 전달 + AI 켜짐 시에만 노출 */
   aiFeedbackClId?: string | null
+  /** 서버가 저장한 마지막 점검 결과 — 모달 재진입 시 표시 */
+  lastFeedback?: CoverletterFeedback | null
+  lastFeedbackAt?: string | null
   onApply: (cleaned: string) => void
 }
 
@@ -29,7 +33,7 @@ function highlight(text: string, ranges: Array<[number, number]>): ReactNode {
   return out
 }
 
-export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedbackClId }: CoverLetterCleanupModalProps) {
+export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedbackClId, lastFeedback, lastFeedbackAt }: CoverLetterCleanupModalProps) {
   const result = useMemo(() => cleanupCoverletter(text, limit), [text, limit])
   const { cleaned, issues, ranges } = result
   const nothingToFix = issues.length === 0
@@ -40,7 +44,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
       {/* 무엇을 검사하는지 안내 */}
       <div className="text-[11px] text-text-quaternary leading-relaxed bg-card border border-line rounded-lg px-3 py-2 mb-4">
         <span className="text-text-tertiary">맞춤법은 검사하지 않아요.</span> 형식만 정리합니다 —
-        연속된 줄바꿈·공백, 줄 앞뒤 공백, 탭, 문장 도중 줄바꿈(쉼표 뒤), 한글 자모 단독(ㅋㅋ), 이모지·그림문자, 전각 공백, 둥근 따옴표, 문장부호 외 특수문자, 글자수 초과.
+        과도한 빈 줄(문단 구분 1개는 유지)·연속 공백, 줄 앞뒤 공백, 탭, 문장 도중 줄바꿈(쉼표 뒤), 한글 자모 단독(ㅋㅋ), 이모지·그림문자, 특수 공백, 둥근 따옴표→직선, 전각 문장부호→반각, 반복된 문장부호, 허용 외 특수문자, 글자수 초과.
       </div>
 
       {nothingToFix ? (
@@ -50,7 +54,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
           <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">
             닫기
           </button>
-          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} answer={text} onApplyText={onApply} />}
+          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} answer={text} onApplyText={onApply} lastFeedback={lastFeedback} lastFeedbackAt={lastFeedbackAt} />}
         </div>
       ) : (
         <>
@@ -99,7 +103,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
               </button>
             )}
           </div>
-          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} answer={text} onApplyText={onApply} />}
+          {aiFeedbackClId && <AiFeedbackSection clId={aiFeedbackClId} answer={text} onApplyText={onApply} lastFeedback={lastFeedback} lastFeedbackAt={lastFeedbackAt} />}
         </>
       )}
     </Modal>

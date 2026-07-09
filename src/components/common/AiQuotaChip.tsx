@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useMyAiQuota } from '@/hooks/useMyAiQuotas'
 import type { LlmFeature } from '@/types/aiQuota'
 
@@ -26,6 +27,20 @@ interface ChipState {
  */
 export function AiQuotaChip({ feature, size = 'sm' }: Props) {
   const quota = useMyAiQuota(feature)
+  // cooldown 활성(nextAvailableAt 미래) 일 때만 매초 tick 으로 리렌더 → "⏳ N초" 실시간 감소.
+  // cooldown 없으면 interval 아예 안 걸어 다수 chip 렌더 시 낭비 방지.
+  const cooldownTarget =
+    quota?.nextAvailableAt ? new Date(quota.nextAvailableAt).getTime() : null
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (cooldownTarget == null || cooldownTarget <= Date.now()) return
+    const id = setInterval(() => {
+      setTick((t) => t + 1)
+      if (cooldownTarget <= Date.now()) clearInterval(id)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [cooldownTarget])
+
   if (!quota) return null
   if (!shouldShow(quota)) return null
 
@@ -125,7 +140,9 @@ function computeState(quota: {
 
 function formatSeconds(sec: number): string {
   if (sec < 60) return `${sec}초`
-  const m = Math.ceil(sec / 60)
-  if (m < 60) return `${m}분`
-  return `${Math.ceil(m / 60)}시간`
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  // 초 병기 — 분 단위 반올림이면 120초 cooldown 에서 tick 체감이 없음
+  if (m < 60) return `${m}분 ${s}초`
+  return `${Math.floor(m / 60)}시간`
 }

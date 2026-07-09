@@ -124,6 +124,21 @@ export function ActivityCard({
         <span className="date">{formatPeriod(act) || '기간 미정'}</span>
       </div>
 
+      {/* 활동 총괄 회고 — 완료 + 미작성이면 명시 CTA (2026-07-08: [+] 메뉴에서 이동. 마무리 행위라 완료 활동에서만 유도) */}
+      {!ongoing && !act.summaryReflection && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onSummaryReflect) onSummaryReflect(act.id)
+          }}
+          className="w-full text-left mt-2 mb-1 px-3 py-2 border border-dashed border-line rounded-md text-[11px] text-text-tertiary hover:text-text-secondary hover:border-brand/40 transition-colors"
+        >
+          📖 이 활동, 한 번 정리해볼까요?{' '}
+          <span className="text-text-quaternary">— 총괄 회고 남기기</span>
+        </button>
+      )}
+
       {/* 활동 총괄 회고 미리보기 (베타 피드백 2026-06-23) — 작성됐을 때만 표시. 클릭 시 모달 */}
       {act.summaryReflection && (
         <button
@@ -196,20 +211,6 @@ export function ActivityCard({
                   <span className="ic">📚</span>
                   <span>여러 줄</span>
                   <span className="sub">한 번에 정리</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setAddMenuOpen(false)
-                    if (onSummaryReflect) onSummaryReflect(act.id)
-                  }}
-                >
-                  <span className="ic">📖</span>
-                  <span>활동 총괄</span>
-                  <span className="sub">
-                    {act.summaryReflection ? '수정 (작성됨)' : '끝난 활동 wrap up'}
-                  </span>
                 </button>
               </div>
             </div>

@@ -31,7 +31,8 @@ export function ReflectionPickerModal({
   if (!open) return null
 
   // 진행 중 (ongoing) 활동만 — 완료·보관 제외
-  const acts = activities.filter(isActivityOngoing)
+  // 기본함(미분류) 은 회고 대상 아님 — 활동 단위 서사가 없음
+  const acts = activities.filter((a) => isActivityOngoing(a) && !a.isInbox)
   const catLabel = CL_LABEL[cat] ?? ''
   const catEmoji = catLabel.split(' ')[0] || '✶'
 

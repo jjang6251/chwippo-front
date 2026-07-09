@@ -1,11 +1,13 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { useAiFeedbackStore } from '@/stores/aiFeedbackStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
 import { apiClient } from '@/api/client'
 import { postToNative } from '@/utils/nativeBridge'
-import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
 import { NotificationBell } from '@/components/notification/NotificationBell'
 
@@ -14,8 +16,10 @@ interface NavItem {
   path: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: any
-  /** AI 기능 — `VITE_AI_FEATURES_ENABLED=false` 일 때 hide */
+  /** AI 기능 — `useAiEnabled()` false 일 때 hide */
   ai?: boolean
+  /** 면접 AI — `useInterviewAiEnabled()` false 일 때 hide (비공개 유지) */
+  interviewAi?: boolean
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
@@ -27,7 +31,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   // F6 PR 1 — 자소서 통합 페이지 (데스크탑 only. MobileNav 변경 X — 모바일은 카드 상세에서 진입)
   { label: '자소서', path: '/coverletters', icon: CoverLetterIcon, ai: true },
   // F6 PR 2 Phase 4 — 면접 준비 통합 페이지 (데스크탑 only. 동일 정책)
-  { label: '면접 준비', path: '/interviews', icon: InterviewIcon, ai: true },
+  { label: '면접 준비', path: '/interviews', icon: InterviewIcon, ai: true, interviewAi: true },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
@@ -35,12 +39,16 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const clearAuth = useAuthStore((s) => s.clearAuth)
+  const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const isDemo = useDemoMode()
   const showLogin = useLoginModalStore((s) => s.show)
   const aiEnabled = useAiEnabled()
+  const interviewAiEnabled = useInterviewAiEnabled()
   const link = (p: string) => (isDemo ? '/demo' + p : p)
-  const visibleNavItems = NAV_ITEMS.filter((item) => aiEnabled || !item.ai)
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => (aiEnabled || !item.ai) && (interviewAiEnabled || !item.interviewAi),
+  )
   // 캘린더 UX 재구성 — 회고 nav 옆 streak 배지 (>=2 조건, 1일 이하는 상처 방지 hide)
   const { data: streak } = useDashboardStreak()
   const streakDays = streak?.streak.current ?? 0
@@ -60,6 +68,9 @@ export function Sidebar() {
   async function handleLogout() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
+    // 공용 PC 계정 전환 시 이전 사용자 데이터 잔존 방지 — 서버 캐시·AI 점검 결과 전체 초기화
+    queryClient.clear()
+    useAiFeedbackStore.getState().resetAll()
     postToNative({ type: 'logout' })
     navigate('/')
   }

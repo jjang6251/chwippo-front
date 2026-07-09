@@ -5,7 +5,7 @@ import { FirstCardCelebration } from '@/components/common/FirstCardCelebration'
 import { FailedCareOverlay } from '@/components/card/FailedCareOverlay'
 import { AiConsentRequiredModal } from '@/components/common/AiConsentRequiredModal'
 import { AuthGuard } from '@/components/layout/AuthGuard'
-import { AiFeatureGuard } from '@/components/auth/AiFeatureGuard'
+import { AiFeatureGuard, InterviewAiGuard } from '@/components/auth/AiFeatureGuard'
 import { AdminGuard } from '@/components/layout/AdminGuard'
 import { AppShell } from '@/components/layout/AppShell'
 import { DemoShell } from '@/components/demo/DemoShell'
@@ -38,6 +38,7 @@ import { OpsUsers } from '@/pages/ops/OpsUsers'
 import { UserDetailPage } from '@/pages/ops/UserDetailPage'
 import { TermsAgreement } from '@/pages/TermsAgreement'
 import { ActivityPage } from '@/pages/Activity/ActivityPage'
+import { ActivityTimelinePage } from '@/pages/Activity/timeline/ActivityTimelinePage'
 import { NotePage } from '@/pages/Activity/NotePage'
 import { InsightsPage } from '@/pages/Activity/InsightsPage'
 import { Coverletters } from '@/pages/Coverletters'
@@ -91,20 +92,24 @@ export default function App() {
             <Route path="/settings/alarm" element={<AlarmSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/help" element={<Help />} />
-            <Route path="/activity" element={<ActivityPage />} />
+            {/* activity-redesign — 기본 화면 = 날짜 타임라인, 관리는 /activity/manage */}
+            <Route path="/activity" element={<ActivityTimelinePage />} />
+            <Route path="/activity/manage" element={<ActivityPage />} />
             <Route path="/activity/insights" element={<InsightsPage />} />
-            {/* AI 기능 라우트 — VITE_AI_FEATURES_ENABLED=false 시 dashboard redirect */}
+            {/* AI 기능 라우트 — flag off 시 dashboard redirect (useAiEnabled.ts) */}
             <Route element={<AiFeatureGuard />}>
               <Route path="/coverletters" element={<Coverletters />} />
+              <Route
+                path="/board/:applicationId/coverletter"
+                element={<CoverletterDocPage />}
+              />
+            </Route>
+            {/* 면접 AI 라우트 — 비공개 유지 (useInterviewAiEnabled) */}
+            <Route element={<InterviewAiGuard />}>
               <Route path="/interviews" element={<Interviews />} />
               <Route
                 path="/interviews/:sessionId"
                 element={<InterviewSessionPage />}
-              />
-              {/* A1 3경로 UI 는 AI 재활성화(useAiEnabled=true) 때 공개 — 베타는 자소서 진입점 전체 숨김 유지 */}
-              <Route
-                path="/board/:applicationId/coverletter"
-                element={<CoverletterDocPage />}
               />
             </Route>
             <Route

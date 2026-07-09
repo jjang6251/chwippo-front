@@ -2,6 +2,33 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { CoinTier } from '@/types/coinSystem'
 import { TIER_LABEL, TIER_PRICE_KRW } from '@/types/coinSystem'
+import { useMyAiQuotas } from '@/hooks/useMyAiQuotas'
+import type { LlmFeature, MyAiQuotaRow } from '@/types/aiQuota'
+import { AiQuotaChip } from './AiQuotaChip'
+
+/** 공개된 사용자 트리거 AI feature — 이 순서·이 라벨로 표시 (면접 계열 비공개 제외) */
+const QUOTA_FEATURES: { feature: LlmFeature; label: string }[] = [
+  { feature: 'coverletter_chat', label: '자소서 AI 채팅' },
+  { feature: 'coverletter_feedback', label: 'AI 심층 점검' },
+  { feature: 'note_summary', label: '활동 노트 AI 요약' },
+]
+
+/** 사용량 색: 소진 → danger, 임박(80%+) → warning, 그 외 기본 */
+function usageColor(used: number, limit: number): string {
+  if (used >= limit) return 'text-danger'
+  if (limit > 0 && used / limit >= 0.8) return 'text-warning'
+  return 'text-text-secondary'
+}
+
+/** cooldownSeconds 표기 — 60 이상이면 "N분" */
+function formatCooldown(sec: number): string {
+  return sec >= 60 ? `${Math.floor(sec / 60)}분` : `${sec}초`
+}
+
+/** 현재 쿨다운 중 (nextAvailableAt 미래) */
+function isCoolingDown(quota: MyAiQuotaRow): boolean {
+  return !!quota.nextAvailableAt && new Date(quota.nextAvailableAt) > new Date()
+}
 
 interface Props {
   balance: number
@@ -42,6 +69,16 @@ export function ProUpgradeModal({
 
   const [renderedNow] = useState(() => Date.now())
 
+  // AI 사용 한도 — 로딩·실패 시 data 없음 → 아래 quotaRows 빈 배열 → 섹션 자체 숨김 (silent)
+  const { data: quotas } = useMyAiQuotas()
+  const quotaRows = QUOTA_FEATURES.map((f) => ({
+    ...f,
+    quota: quotas?.find((r) => r.feature === f.feature),
+  })).filter(
+    (r): r is { feature: LlmFeature; label: string; quota: MyAiQuotaRow } =>
+      Boolean(r.quota),
+  )
+
   const resetDateStr = new Date(nextResetAt).toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
@@ -63,7 +100,7 @@ export function ProUpgradeModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-surface border border-line rounded-xl p-6 shadow-2xl"
+        className="w-full max-w-md bg-surface border border-line rounded-xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <h2
@@ -121,6 +158,56 @@ export function ProUpgradeModal({
             </p>
           )}
         </div>
+
+        {/* AI 사용 한도 — 코인과 별개 (연속 호출 방지 한도) */}
+        {quotaRows.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-text-secondary text-xs font-semibold">
+              AI 사용 한도
+            </h3>
+            <p className="text-text-quaternary text-[10px] mb-2">
+              코인과 별개로, 과도한 연속 호출을 막기 위한 한도예요.
+            </p>
+            <div className="space-y-2">
+              {quotaRows.map(({ feature, label, quota }) => (
+                <div
+                  key={feature}
+                  className="bg-surface-2 border border-line rounded-md px-3 py-2.5"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-text-primary text-xs font-medium">
+                      {label}
+                    </span>
+                    {isCoolingDown(quota) && (
+                      <AiQuotaChip feature={feature} size="sm" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] text-text-tertiary">
+                    <span>
+                      오늘{' '}
+                      <span
+                        className={`font-mono ${usageColor(quota.dayUsed, quota.dayLimit)}`}
+                      >
+                        {`${quota.dayUsed} / ${quota.dayLimit}회`}
+                      </span>
+                    </span>
+                    <span>
+                      이번 달{' '}
+                      <span
+                        className={`font-mono ${usageColor(quota.monthUsed, quota.monthLimit)}`}
+                      >
+                        {`${quota.monthUsed} / ${quota.monthLimit}회`}
+                      </span>
+                    </span>
+                  </div>
+                  <p className="text-text-quaternary text-[10px] mt-1">
+                    요청 간격 {formatCooldown(quota.cooldownSeconds)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 결제 안내 */}
         {tier !== 'standard' && (

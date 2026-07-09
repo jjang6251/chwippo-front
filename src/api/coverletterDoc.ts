@@ -81,11 +81,6 @@ export const coverletterDocApi = {
       .get(`/applications/${applicationId}/coverletter/research`)
       .then(unwrap<CompanyResearchResult | null>),
 
-  fetchResearch: (applicationId: string) =>
-    apiClient
-      .post(`/applications/${applicationId}/coverletter/research`)
-      .then(unwrap<CompanyResearchResult>),
-
   // ── chat ──
   listMessages: (applicationId: string) =>
     apiClient

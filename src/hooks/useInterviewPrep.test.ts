@@ -17,7 +17,6 @@ vi.mock('@/api/interviewPrep', () => ({
     remove: vi.fn(),
     generate: vi.fn(),
     createFollowup: vi.fn(),
-    triggerCompanyResearch: vi.fn(),
   },
 }))
 
@@ -26,13 +25,11 @@ import {
   useCreateInterviewFollowup,
   useDeleteInterviewSession,
   useGenerateInterviewSession,
-  useTriggerCompanyResearch,
 } from './useInterviewPrep'
 
 const removeMock = vi.mocked(interviewPrepApi.remove)
 const generateMock = vi.mocked(interviewPrepApi.generate)
 const followupMock = vi.mocked(interviewPrepApi.createFollowup)
-const companyResearchMock = vi.mocked(interviewPrepApi.triggerCompanyResearch)
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -125,17 +122,4 @@ describe('AI mutation → ai-quotas invalidate (5.6.6 검증)', () => {
     })
   })
 
-  it('6) useTriggerCompanyResearch onSuccess → ai-quotas invalidate', async () => {
-    companyResearchMock.mockResolvedValue({ status: 'ok' } as never)
-    const { invalidateSpy, Wrap } = makeWrapper()
-    const { result } = renderHook(
-      () => useTriggerCompanyResearch('session-1'),
-      { wrapper: Wrap },
-    )
-    result.current.mutate()
-    await waitFor(() => expect(companyResearchMock).toHaveBeenCalled())
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ['me', 'ai-quotas'],
-    })
-  })
 })

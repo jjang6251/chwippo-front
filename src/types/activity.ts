@@ -15,6 +15,10 @@ export type ActivityType =
   | 'other'
 
 export type LogCategory =
+  // 취준 실전 3종 (auto-tagger v2)
+  | 'coding_test'
+  | 'interview'
+  | 'apply'
   | 'develop'
   | 'meeting'
   | 'presentation'
@@ -27,6 +31,8 @@ export type LogCategory =
   | 'analysis'
   | 'creative'
   | 'other'
+  // activity-redesign — 쉬어가기
+  | 'rest'
 
 export type LogComp =
   | 'technical'
@@ -67,6 +73,8 @@ export interface Activity {
   startedAt: string | null
   endedAt: string | null
   archivedAt: string | null
+  /** activity-redesign — 유저별 숨김 기본함 (미분류 로그 컨테이너) */
+  isInbox?: boolean
   legacyExperienceId: string | null
   /** 활동 총괄 회고 (베타 피드백 2026-06-23) — 끝난 활동 wrap up. NULL=미작성. 5000자 cap */
   summaryReflection: string | null
@@ -138,7 +146,10 @@ export interface CreateActivityLogDto {
   note?: Record<string, unknown>
 }
 
-export type UpdateActivityLogDto = Partial<CreateActivityLogDto>
+// activityId — 로그의 활동 이동 (기본함 → 활동 등, activity-redesign)
+export type UpdateActivityLogDto = Partial<CreateActivityLogDto> & {
+  activityId?: string
+}
 
 export interface CreateActivityReflectionDto {
   content: string
@@ -158,4 +169,39 @@ export interface SummarizeNoteResult {
   remainingPerNote?: number
   /** 5.6.8 — admin 통제 per-note 한도 (백엔드 응답). UI 가 "N/M" 의 M 동적 표시 */
   perNoteLimit?: number
+}
+
+/** activity-redesign — 타임라인 항목 (GET /activity-logs) */
+export interface TimelineLogItem {
+  id: string
+  content: string
+  occurredAt: string
+  cat: string | null
+  cl: string[]
+  comps: string[]
+  mood: string | null
+  quant: QuantValue | null
+  keywords: string[]
+  hasNote: boolean
+  createdAt: string
+  activityId: string
+  activityName: string
+  activityIsInbox: boolean
+  relatedStepId: string | null
+  stepName: string | null
+  companyName: string | null
+}
+
+export interface TimelinePage {
+  items: TimelineLogItem[]
+  nextCursor: string | null
+}
+
+/** activity-redesign — 퀵캡처 생성 (활동 미지정 → 기본함) */
+export interface QuickCreateLogDto {
+  content?: string
+  activityId?: string
+  relatedStepId?: string
+  isRest?: boolean
+  occurredAt?: string
 }
