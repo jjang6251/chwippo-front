@@ -28,7 +28,7 @@ export function Terms() {
         <DocSection title="제2조 (용어 정의)">
           <ul className="space-y-2">
             <DefItem label="서비스">치뽀 웹사이트 및 관련 기능 일체</DefItem>
-            <DefItem label="회원">카카오 계정으로 로그인하여 서비스를 이용하는 자</DefItem>
+            <DefItem label="회원">소셜 계정(카카오 또는 Apple)으로 로그인하여 서비스를 이용하는 자</DefItem>
             <DefItem label="콘텐츠">회원이 서비스 내에 입력·저장한 지원 정보, 자소서, 내 정보 등 일체</DefItem>
           </ul>
         </DocSection>
@@ -57,11 +57,11 @@ export function Terms() {
 
         <DocSection title="제5조 (회원 가입)">
           <p className="mb-3">
-            서비스는 카카오 소셜 로그인으로만 가입할 수 있습니다.
+            서비스는 카카오 또는 Apple 소셜 로그인으로 가입할 수 있습니다.
             만 14세 미만은 서비스를 이용할 수 없습니다.
           </p>
           <p>
-            회원은 타인의 카카오 계정을 무단으로 사용할 수 없습니다.
+            회원은 타인의 소셜 계정을 무단으로 사용할 수 없습니다.
           </p>
         </DocSection>
 
