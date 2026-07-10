@@ -7,6 +7,17 @@ import { deleteAccount } from '@/api/users'
 import { apiClient } from '@/api/client'
 import { postToNative } from '@/utils/nativeBridge'
 
+const PROVIDER_LABEL: Record<'kakao' | 'apple', string> = {
+  kakao: '카카오',
+  apple: 'Apple',
+}
+
+/** loginProviders → "카카오 · Apple" 표시. 없거나 빈 배열이면 fallback */
+function providerNames(providers: ('kakao' | 'apple')[] | undefined): string | null {
+  if (!providers || providers.length === 0) return null
+  return providers.map((p) => PROVIDER_LABEL[p]).join(' · ')
+}
+
 export function ProfileSettings() {
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
@@ -14,6 +25,8 @@ export function ProfileSettings() {
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  const providerLabel = providerNames(user?.loginProviders)
 
   const deleteMutation = useMutation({
     mutationFn: deleteAccount,
@@ -46,7 +59,7 @@ export function ProfileSettings() {
         </div>
         <div className="flex items-center justify-between py-2">
           <span className="text-sm text-text-quaternary">로그인 방식</span>
-          <span className="text-sm">카카오</span>
+          <span className="text-sm">{providerLabel ?? '소셜 로그인'}</span>
         </div>
       </section>
 
@@ -106,7 +119,7 @@ export function ProfileSettings() {
             <h3 className="text-base font-bold mb-2">정말 탈퇴하시겠어요?</h3>
             <p className="text-sm text-text-quaternary mb-6 leading-relaxed">
               지원 카드, 내 정보, 파일 등 모든 데이터가 즉시 삭제되며
-              복구할 수 없습니다. 카카오 연동도 함께 해제됩니다.
+              복구할 수 없습니다. {providerLabel ?? '소셜 로그인'} 연동도 함께 해제됩니다.
             </p>
             <div className="flex gap-2">
               <button

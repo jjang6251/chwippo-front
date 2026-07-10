@@ -20,6 +20,7 @@ const MENU = [
 ] as const
 
 export function Settings() {
+  const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const startTour = useTourStore((s) => s.start)
   const theme = useThemeStore((s) => s.theme)
@@ -53,6 +54,20 @@ export function Settings() {
             <span className="text-text-tertiary text-sm">›</span>
           </Link>
         ))}
+
+        {user?.role === 'admin' && (
+          <Link
+            to="/ops"
+            className="flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
+          >
+            <span className="text-xl w-7 text-center">🛠</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">관리자 페이지</p>
+              <p className="text-xs text-text-tertiary mt-0.5">운영 관리 콘솔</p>
+            </div>
+            <span className="text-text-tertiary text-sm">›</span>
+          </Link>
+        )}
       </div>
 
       <div className="bg-surface-2 border border-line rounded-xl mb-4 px-5 py-4">

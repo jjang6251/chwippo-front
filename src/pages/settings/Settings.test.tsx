@@ -109,3 +109,19 @@ describe('Settings — 로그아웃 확인 모달', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/')
   })
 })
+
+describe('Settings — 관리자 페이지 진입 링크', () => {
+  it('admin role: "관리자 페이지" 링크 노출 + /ops 링크', () => {
+    useAuthStore.setState((s) => ({ user: { ...s.user!, role: 'admin' } }))
+    renderSettings()
+
+    const link = screen.getByRole('link', { name: /관리자 페이지/ })
+    expect(link).toBeTruthy()
+    expect(link.getAttribute('href')).toBe('/ops')
+  })
+
+  it('일반 user role: "관리자 페이지" 링크 미노출', () => {
+    renderSettings()
+    expect(screen.queryByRole('link', { name: /관리자 페이지/ })).toBeNull()
+  })
+})

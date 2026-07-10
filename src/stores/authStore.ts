@@ -24,6 +24,8 @@ interface User {
   calendarHomeIntroDismissedAt: string | null
   /** 알림 — soft-ask 모달 표시 시각 (NULL → native 최초 1회 모달) */
   alarmPromptedAt: string | null
+  /** 로그인 방식 파생 필드 — /auth/me 에서 내려줌 (배포 순서 무관 optional) */
+  loginProviders?: ('kakao' | 'apple')[]
 }
 
 interface AuthState {
