@@ -68,11 +68,6 @@ const CHIPS = [
     requireSelectedLog: false,
   },
   {
-    label: '전체 검수',
-    prompt: '내가 작성한 답변들을 검토하고 개선점을 알려줘.',
-    requireSelectedLog: false,
-  },
-  {
     label: '활동 더 자세히',
     prompt: '내 활동 일지의 가장 관련 있는 경험을 더 자세히 답변에 녹여줘.',
     requireSelectedLog: true,
@@ -445,6 +440,16 @@ export function CoverletterChatPanel({
           {CHIPS.map((c) => {
             const needsLog = c.requireSelectedLog && selectedLogIds.size === 0
             const isDisabled = sending || quotaBlocked || needsLog
+            const isGenerateAll = c.label === '전체 답변 생성'
+            // 예상 코인 — 문항당 약 4.5코인 (output 5× 가중 환산 어림). 실제 차감은 토큰 사용량 기준.
+            const estimatedCoin =
+              isGenerateAll && cls.length > 0
+                ? Math.max(1, Math.round(cls.length * 4.5))
+                : 0
+            const label =
+              isGenerateAll && estimatedCoin > 0
+                ? `${c.label} (≈${estimatedCoin}코인)`
+                : c.label
             return (
               <button
                 key={c.label}
@@ -454,13 +459,13 @@ export function CoverletterChatPanel({
                 title={
                   needsLog
                     ? '활동 일지를 먼저 선택하세요'
-                    : c.label === '전체 검수'
-                      ? '전반적인 방향 조언이에요 — 제출 직전 정밀 점검은 각 문항 카드의 [검사] 버튼'
+                    : isGenerateAll
+                      ? '실제 차감은 토큰 사용량 기준이에요 — 답변 길이·문항 수에 따라 달라져요. 문항이 5개 이상이면 두 번에 나눠 생성돼요.'
                       : undefined
                 }
                 className="text-[11px] px-2 py-1 rounded-full bg-card hover:bg-card-strong border border-line hover:border-brand/40 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-card disabled:hover:border-line"
               >
-                {c.label}
+                {label}
               </button>
             )
           })}
@@ -678,6 +683,9 @@ function EmptyState() {
       <p className="text-text-tertiary text-xs leading-relaxed">
         AI 와 대화하며 자소서를 작성해보세요. 활동 일지·회사 조사 정보를
         자동으로 활용합니다. 아래 빠른 명령 또는 직접 입력으로 시작.
+      </p>
+      <p className="text-text-quaternary text-[11px] leading-relaxed">
+        제출 전 점검은 각 문항 카드의 [검사] 버튼에서 할 수 있어요.
       </p>
     </div>
   )
