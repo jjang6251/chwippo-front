@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { CoverLetterImportModal } from '@/components/card/CoverLetterImportModal'
 import { useAutoResize } from '@/hooks/useAutoResize'
@@ -59,15 +59,25 @@ export function CoverletterQuestionCard({
 }: Props) {
   const aiEnabled = useAiEnabled()
   const [question, setQuestion] = useState(cl.question)
+  // 문항 인라인 편집 — 새 문항(비어 있음)은 바로 편집 모드, 기존 문항은 읽기 뷰(클릭 시 편집)
+  const [editingQuestion, setEditingQuestion] = useState(!cl.question)
   const [answer, setAnswer] = useState(cl.answer ?? '')
   // 베타 피드백 — 자소서 답변이 길어지면 scroll 필요. auto-resize (min 200 / max 600 — 자소서 답변은 더 길게 허용)
   const { ref: answerRef, autoResize: autoResizeAnswer } = useAutoResize(answer, { min: 80, max: 600 })
+  // 문항도 길면 내부 scroll 발생 — auto-resize (min 56 / max 400)
+  const { ref: questionRef, autoResize: autoResizeQuestion } = useAutoResize(question, { min: 56, max: 400 })
   // 카드가 접힌 채 마운트되면 훅 내부 effect(value 변경 시)가 초기 확장을 못 잡음 — 펼침 시점에 명시 resize
   useEffect(() => {
     if (!expanded || readOnly) return
     const id = requestAnimationFrame(autoResizeAnswer)
     return () => cancelAnimationFrame(id)
   }, [expanded, readOnly, autoResizeAnswer])
+  // 편집 재진입 시에도 동일 — textarea 재마운트인데 값은 그대로라 훅 effect 가 안 잡음
+  useEffect(() => {
+    if (!editingQuestion || readOnly) return
+    const id = requestAnimationFrame(autoResizeQuestion)
+    return () => cancelAnimationFrame(id)
+  }, [editingQuestion, readOnly, autoResizeQuestion])
   const [limitInput, setLimitInput] = useState(
     cl.charLimit != null ? String(cl.charLimit) : '',
   )
@@ -77,6 +87,21 @@ export function CoverletterQuestionCard({
 
   const initialized = useRef(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 저장 발화 시점에 footer 문구를 "저장됨 ✓" 로 2초간 전환 (자동저장 피드백)
+  const [justSaved, setJustSaved] = useState(false)
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flagSaved = useCallback(() => {
+    setJustSaved(true)
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+    savedTimerRef.current = setTimeout(() => setJustSaved(false), 2000)
+  }, [])
+  useEffect(
+    () => () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+    },
+    [],
+  )
 
   // 외부에서 cl 변경 (예: AI 적용으로 부모가 updateCl) — 로컬 state 동기화.
   // 단 사용자가 직접 편집해 debounce 가 active 면 skip (사용자 입력 우선).
@@ -105,11 +130,12 @@ export function CoverletterQuestionCard({
       // 이 effect 가 stale 로컬 답변을 재저장해 적용 내용을 롤백시킴
       saveTimerRef.current = null
       onUpdate({ answer })
+      flagSaved()
     }, 1500)
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     }
-  }, [answer, cl.answer, onUpdate])
+  }, [answer, cl.answer, onUpdate, flagSaved])
 
   const category = coverletterCategory(cl.category)
   const categoryStyle = COVERLETTER_CATEGORY_STYLE[category]
@@ -118,6 +144,8 @@ export function CoverletterQuestionCard({
   const charCount = includeSpaces ? counts.total : counts.withoutSpaces
   const byteCount = includeSpaces ? counts.bytes : counts.bytesWithoutSpaces
   const overLimit = cl.charLimit != null && charCount > cl.charLimit
+  const nearLimit =
+    cl.charLimit != null && !overLimit && charCount >= cl.charLimit * 0.9
   const hasAnswer = useMemo(() => answer.trim().length > 0, [answer])
   const fillCount = useMemo(() => countFillPlaceholders(answer), [answer])
 
@@ -157,7 +185,7 @@ export function CoverletterQuestionCard({
           <div className="flex-1" />
           <CollapsibleChevron open={false} />
         </div>
-        <p className="font-serif text-sm text-text-primary leading-snug line-clamp-2 mb-1.5">
+        <p className="font-serif text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words mb-1.5">
           {cl.question || (
             <span className="text-text-quaternary font-medium font-sans">
               (문항 미입력 — 클릭해서 작성)
@@ -165,8 +193,8 @@ export function CoverletterQuestionCard({
           )}
         </p>
         {hasAnswer && (
-          <>
-            <p className="text-text-secondary text-xs leading-relaxed line-clamp-2">
+          <div className="mt-2 pl-2.5 border-l-2 border-line">
+            <p className="text-text-secondary text-xs leading-relaxed whitespace-pre-wrap break-words">
               {answer}
             </p>
             <p
@@ -174,7 +202,7 @@ export function CoverletterQuestionCard({
             >
               {charCount} / {cl.charLimit ?? '∞'}
             </p>
-          </>
+          </div>
         )}
       </button>
     )
@@ -251,7 +279,10 @@ export function CoverletterQuestionCard({
                     ? null
                     : Math.max(0, Math.floor(Number(limitInput) || 0))
                 const next = raw === 0 ? null : raw
-                if (next !== cl.charLimit) onUpdate({ charLimit: next })
+                if (next !== cl.charLimit) {
+                  onUpdate({ charLimit: next })
+                  flagSaved()
+                }
                 setLimitInput(next != null ? String(next) : '')
               }}
               onKeyDown={(e) => {
@@ -283,19 +314,56 @@ export function CoverletterQuestionCard({
             </span>
           )}
         </p>
+      ) : !editingQuestion ? (
+        <button
+          type="button"
+          onClick={() => setEditingQuestion(true)}
+          aria-label="문항 편집"
+          className="group w-full text-left flex items-start gap-1.5 px-3 py-2 rounded-lg hover:bg-surface-2 transition-colors mb-4"
+        >
+          <span className="flex-1 font-serif text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+            {cl.question || (
+              <span className="text-text-quaternary font-sans text-sm">
+                (문항 미입력 — 클릭해 입력)
+              </span>
+            )}
+          </span>
+          <span
+            aria-hidden
+            className="shrink-0 text-text-quaternary text-xs opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
+          >
+            ✎
+          </span>
+        </button>
       ) : (
         <textarea
+          ref={questionRef}
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          onChange={(e) => {
+            setQuestion(e.target.value)
+            autoResizeQuestion()
+          }}
           onBlur={() => {
             const v = question.trim()
+            if (!v && !cl.question) return // 빈 문항 → 편집 모드 유지
             if (!v) {
               setQuestion(cl.question)
+              setEditingQuestion(false)
               return
             }
-            if (v !== cl.question) onUpdate({ question: v })
+            if (v !== cl.question) {
+              onUpdate({ question: v })
+              flagSaved()
+            }
+            setEditingQuestion(false)
           }}
-          rows={2}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setQuestion(cl.question)
+              setEditingQuestion(false)
+            }
+          }}
+          autoFocus
           maxLength={500}
           placeholder="예: 우리 회사에 지원한 동기를 작성해 주세요."
           className="w-full resize-none bg-surface-2 border border-line rounded-lg px-3 py-2 font-serif text-base text-text-primary leading-relaxed placeholder:text-text-tertiary placeholder:font-sans focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors mb-4"
@@ -321,14 +389,20 @@ export function CoverletterQuestionCard({
         }}
         placeholder={aiEnabled ? "여기에 답변을 작성하세요. 또는 우측 AI 채팅으로 초안 생성. (자동 저장)" : "여기에 답변을 작성하세요. (자동 저장)"}
         style={{ minHeight: 80, lineHeight: 1.65 }}
-        className="w-full bg-input border border-line rounded-[11px] px-3.5 py-3 text-[13px] text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+        className="w-full bg-input border border-line rounded-[11px] px-3.5 py-3 text-sm text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
       />
       )}
       <div className="flex items-center justify-between gap-2 mt-2 text-xs flex-wrap">
         {readOnly ? (
           <span />
         ) : (
-          <span className="text-text-quaternary">✎ 자동 저장돼요</span>
+          <span className="text-text-quaternary" aria-live="polite">
+            {justSaved ? (
+              <span className="text-success">저장됨 ✓</span>
+            ) : (
+              '✎ 자동 저장돼요'
+            )}
+          </span>
         )}
         {fillCount > 0 && (
           <span className="text-[10px] text-warning">
@@ -344,7 +418,7 @@ export function CoverletterQuestionCard({
             {includeSpaces ? '공백포함' : '공백제외'}
           </button>
           <span
-            className={`font-mono ${overLimit ? 'text-danger' : 'text-text-tertiary'}`}
+            className={`font-mono ${overLimit ? 'text-danger' : nearLimit ? 'text-warning' : 'text-text-tertiary'}`}
           >
             {charCount.toLocaleString()} / {cl.charLimit?.toLocaleString() ?? '∞'}자
           </span>
