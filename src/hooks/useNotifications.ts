@@ -4,6 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import { postToNative } from '@/utils/nativeBridge'
 import {
   getAlarmConfig,
   getNotifications,
@@ -41,6 +42,8 @@ export function useMarkNotificationRead() {
     mutationFn: markNotificationRead,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['notifications'] })
+      // native 종 배지 즉시 갱신 (WebView 밖이면 no-op)
+      postToNative({ type: 'notifications-read' })
     },
   })
 }
@@ -51,6 +54,7 @@ export function useMarkAllRead() {
     mutationFn: markAllNotificationsRead,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['notifications'] })
+      postToNative({ type: 'notifications-read' })
     },
   })
 }
