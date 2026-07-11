@@ -65,6 +65,16 @@ export function CoverletterDocPage() {
     }
   }, [cls])
 
+  // 문항 점프 칩 — 해당 카드로 스크롤 + 플래시 (flash 메커니즘 재사용)
+  const handleJump = useCallback((clId: string) => {
+    document
+      .getElementById(`cl-${clId}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setFlashClId(clId)
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+    flashTimerRef.current = setTimeout(() => setFlashClId(null), 1200)
+  }, [])
+
   const handleToggle = useCallback((clId: string) => {
     setExpandedClIds((prev) => {
       const next = new Set(prev)
@@ -250,6 +260,34 @@ export function CoverletterDocPage() {
             )
           ) : (
             <>
+              {cls.length >= 2 && (
+                <nav
+                  aria-label="문항 바로가기"
+                  className="flex flex-wrap gap-1.5 mb-4"
+                >
+                  {cls.map((cl, idx) => {
+                    const unwritten = !(cl.answer ?? '').trim()
+                    return (
+                      <button
+                        key={cl.id}
+                        onClick={() => handleJump(cl.id)}
+                        aria-label={
+                          unwritten ? `Q${idx + 1} (미작성)` : `Q${idx + 1}`
+                        }
+                        className="text-[11px] font-mono px-2.5 py-1 rounded-md transition-colors inline-flex items-center gap-1.5 bg-surface-2 border border-line text-text-secondary hover:border-brand/40 hover:text-text-primary"
+                      >
+                        Q{idx + 1}
+                        {unwritten && (
+                          <span
+                            className="w-1.5 h-1.5 rounded-full bg-warning"
+                            aria-hidden
+                          />
+                        )}
+                      </button>
+                    )
+                  })}
+                </nav>
+              )}
               {cls.map((cl, idx) => (
                 <CoverletterQuestionCard
                   key={cl.id}
