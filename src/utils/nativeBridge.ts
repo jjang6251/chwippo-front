@@ -9,6 +9,7 @@
  *   - account-deleted: 회원 탈퇴 완료 → 동일
  *   - request-notification-permission: soft-ask 허용 → native OS 권한 요청 트리거
  *   - open-notification-settings: OS 권한 거부 상태에서 "알림 받기" → 설정 앱 이동
+ *   - notifications-read: 알림 읽음 처리 완료 → native 종 배지 즉시 갱신
  */
 
 export type NativeMessage =
@@ -17,6 +18,7 @@ export type NativeMessage =
   | { type: 'account-deleted' }
   | { type: 'request-notification-permission' }
   | { type: 'open-notification-settings' }
+  | { type: 'notifications-read' }
 
 interface RNWindow {
   ReactNativeWebView?: {
