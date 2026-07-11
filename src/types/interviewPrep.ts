@@ -34,6 +34,8 @@ export interface CompanyResearchData {
   recentTrends?: string
   financials?: string
   competitors?: string
+  /** 2차 seed (v2026-07.3)부터 — "왜 이 회사인가" 근거 (경쟁사 대비 구조적 차이) */
+  differentiators?: string
   jobInsights?: string
   // PR 보강 — InterviewKeyword 객체 (카테고리별 색상) — 기존 cache 호환 위해 string union
   interviewKeywords?: (InterviewKeyword | string)[]
