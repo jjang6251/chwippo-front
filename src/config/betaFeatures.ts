@@ -18,10 +18,10 @@ export const BETA_FEATURES = {
   /**
    * 네이티브 푸시 준비 완료 여부.
    * false = 앱(native)의 soft-ask 모달·권한 버튼 숨김 (native 핸들러 미구현이라 눌러도 무동작).
-   * **Apple Developer 결제 + mobile Step 1~4 완료 후 true 로 flip** (plan Step 6).
+   * 2026-07-11 true flip (plan Step 6) — mobile Step 1~4 + EAS 빌드 + TestFlight 배포 완료.
    * true 로 바꾸면: PermissionPromptModal 트리거 + AlarmSettings 권한 CTA 노출.
    */
-  nativePushReady: false,
+  nativePushReady: true,
 } as const
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES
