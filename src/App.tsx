@@ -36,6 +36,7 @@ import { OpsInquiries } from '@/pages/ops/OpsInquiries'
 import { OpsAnnouncements } from '@/pages/ops/OpsAnnouncements'
 import { OpsUsers } from '@/pages/ops/OpsUsers'
 import { UserDetailPage } from '@/pages/ops/UserDetailPage'
+import { OpsCompanyResearchPage } from '@/pages/ops/OpsCompanyResearchPage'
 import { TermsAgreement } from '@/pages/TermsAgreement'
 import { ActivityPage } from '@/pages/Activity/ActivityPage'
 import { ActivityTimelinePage } from '@/pages/Activity/timeline/ActivityTimelinePage'
@@ -48,7 +49,6 @@ import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
 import { AiUsage } from '@/pages/Admin/AiUsage'
 import { AiQuotas } from '@/pages/Admin/AiQuotas'
 import { AuditLogs } from '@/pages/Admin/AuditLogs'
-import { CompanyResearchMetrics } from '@/pages/Admin/CompanyResearchMetrics'
 import { Monitoring } from '@/pages/Admin/Monitoring'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 
@@ -132,8 +132,8 @@ export default function App() {
               {/* PR_B2 Phase 4 */}
               <Route path="/ops/audit-logs" element={<AuditLogs />} />
               <Route
-                path="/ops/company-research-metrics"
-                element={<CompanyResearchMetrics />}
+                path="/ops/company-research"
+                element={<OpsCompanyResearchPage />}
               />
             </Route>
           </Route>

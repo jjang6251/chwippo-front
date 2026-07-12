@@ -85,12 +85,18 @@ export function CompanyResearchBanner({
         <CollapsibleChevron open={expanded} />
       </button>
       {expanded && (
-        <div className="px-3 pb-3 space-y-2 text-xs">
+        <div className="px-3 pb-1.5 text-xs">
           {summary && (
             <Section title="비즈니스 요약" content={summary} />
           )}
           {data.recentTrends?.trim() && (
             <Section title="최근 동향" content={data.recentTrends} />
+          )}
+          {data.differentiators?.trim() && (
+            <Section
+              title="차별점 — 왜 이 회사인가"
+              content={data.differentiators}
+            />
           )}
           {data.coreValues?.trim() && (
             <Section title="핵심 가치" content={data.coreValues} />
@@ -110,7 +116,7 @@ export function CompanyResearchBanner({
             />
           )}
           {research.cachedAt && (
-            <p className="text-text-quaternary text-[10px] pt-1">
+            <p className="text-text-quaternary text-[10px] py-1.5">
               · 캐시 {new Date(research.cachedAt).toLocaleDateString('ko-KR')}{' '}
               {research.isCached === false ? '(방금 조사됨)' : ''}
             </p>
@@ -121,13 +127,26 @@ export function CompanyResearchBanner({
   )
 }
 
+/**
+ * 섹션 제목 — F안 (2026-07-12 CEO 확정): brand 틱 + 제목 승격으로
+ * 박스·구분선 없이 타이포 위계만으로 섹션 구분감 확보.
+ */
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-1.5 mb-1">
+      <span aria-hidden className="w-1 h-3 rounded-full bg-brand/60" />
+      <span className="text-[11px] text-text-secondary font-semibold">
+        {title}
+      </span>
+    </div>
+  )
+}
+
 function Section({ title, content }: { title: string; content: string }) {
   return (
-    <div>
-      <div className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider mb-1">
-        {title}
-      </div>
-      <p className="text-text-secondary leading-relaxed whitespace-pre-wrap">
+    <div className="py-2">
+      <SectionTitle title={title} />
+      <p className="text-text-secondary leading-relaxed whitespace-pre-wrap pl-2.5">
         {content}
       </p>
     </div>
@@ -136,11 +155,9 @@ function Section({ title, content }: { title: string; content: string }) {
 
 function ChipSection({ title, chips }: { title: string; chips: string[] }) {
   return (
-    <div>
-      <div className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider mb-1">
-        {title}
-      </div>
-      <div className="flex flex-wrap gap-1">
+    <div className="py-2">
+      <SectionTitle title={title} />
+      <div className="flex flex-wrap gap-1 pl-2.5">
         {chips.map((c, i) => (
           <span
             key={i}

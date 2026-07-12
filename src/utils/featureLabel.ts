@@ -17,6 +17,7 @@ export const FEATURE_LABEL_KR: Record<string, string> = {
   interview_prep_session: '면접 질문 생성',
   interview_prep_followup: '면접 꼬리질문',
   company_research: '회사 조사',
+  jobposting_parse: '공고 요건 정리',
   // legacy / deprecated
   coverletter: '자소서 (legacy)',
   interview: '면접 (legacy)',
@@ -102,4 +103,24 @@ export const ALERT_TYPE_KR: Record<string, string> = {
 
 export function alertTypeLabel(type: string): string {
   return ALERT_TYPE_KR[type] ?? type
+}
+
+/** feature → 카테고리 (AI 한도·사용량 페이지 그룹핑 공용 — AiUsage 필터 optgroup 과 동일 분류) */
+export const FEATURE_CATEGORY_KR: Record<string, string> = {
+  coverletter_draft_v2: '자소서',
+  coverletter_chat: '자소서',
+  coverletter_feedback: '자소서',
+  coverletter_recommend: '자소서',
+  jobposting_parse: '자소서',
+  interview_prep_session: '면접',
+  interview_prep_followup: '면접',
+  company_research: '회사 조사',
+  note_summary: '노트',
+}
+
+/** 카테고리 표시 순서 — 미분류(legacy 등)는 '기타' 로 맨 뒤 */
+export const FEATURE_CATEGORY_ORDER = ['자소서', '면접', '회사 조사', '노트', '기타']
+
+export function featureCategory(feature: string): string {
+  return FEATURE_CATEGORY_KR[feature] ?? '기타'
 }

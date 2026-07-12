@@ -1,3 +1,5 @@
+import type { JobPosting } from '@/api/jobPosting'
+
 export type ApplicationStatus = 'PLANNED' | 'IN_PROGRESS' | 'PASSED' | 'FAILED'
 
 export interface ApplicationStep {
@@ -44,6 +46,13 @@ export interface Application {
   coverletterGenerationStartedAt?: string | null
   /** PR_B1c Phase A — 회사명/직무 변경 시 NOW() 저장 (outdated banner 노출) */
   coverletterResearchOutdatedAt?: string | null
+  /** 공고 요건 파싱 결과 (자소서 페이지 배너 · GET /applications/:id whitelist). 미입력 시 null */
+  jobPosting?: JobPosting | null
+  /**
+   * 공고 요건 파싱 진행 lock. 'parsing' = 정리 중 (배너가 CTA 대신 진행 상태 표시).
+   * null = idle. 서버가 started_at 2분 초과 시 stale 로 간주해 null 로 내려줌 (읽기 시점 판정).
+   */
+  jobPostingStatus?: 'parsing' | null
   createdAt: string
   updatedAt: string
 }

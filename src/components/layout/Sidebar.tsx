@@ -57,7 +57,15 @@ export function Sidebar() {
 
   const isActive = (path: string) => {
     const target = link(path)
-    if (path === '/board' || path === '/activity' || path === '/interviews') {
+    // 자소서 문서는 URL 이 /board/:id/coverletter 지만 맥락은 자소서 — 보드 아닌 자소서 하이라이트
+    const isCoverletterDoc = /^\/board\/[^/]+\/coverletter/.test(location.pathname)
+    if (path === '/coverletters') {
+      return location.pathname.startsWith(target) || isCoverletterDoc
+    }
+    if (path === '/board') {
+      return location.pathname.startsWith(target) && !isCoverletterDoc
+    }
+    if (path === '/activity' || path === '/interviews') {
       return location.pathname.startsWith(target)
     }
     return location.pathname === target

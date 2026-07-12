@@ -117,7 +117,8 @@ describe('AiQuotas page', () => {
     ] as never)
     render(<AiQuotas />, { wrapper })
     await waitForRow()
-    expect(screen.getByText('노트 요약')).toBeInTheDocument()
+    // 카테고리 그룹 헤더 도입(2026-07-13) — '회사 조사' 등은 헤더에도 등장하므로 1개 이상 단언
+    expect(screen.getAllByText('노트 요약').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('자소서 (legacy)')).toBeInTheDocument()
     expect(screen.getByText('면접 (legacy)')).toBeInTheDocument()
     expect(screen.getByText('점수 (deprecated)')).toBeInTheDocument()
@@ -125,7 +126,7 @@ describe('AiQuotas page', () => {
     expect(screen.getByText('자동 태그 (deprecated)')).toBeInTheDocument()
     expect(screen.getByText('자소서 AI 답변')).toBeInTheDocument()
     expect(screen.getByText('면접 질문 생성')).toBeInTheDocument()
-    expect(screen.getByText('회사 조사')).toBeInTheDocument()
+    expect(screen.getAllByText('회사 조사').length).toBeGreaterThanOrEqual(1)
     // undefined 토스트 방지 fallback — 모든 행에 한국어 표시
     expect(screen.queryByText('undefined')).toBeNull()
   })

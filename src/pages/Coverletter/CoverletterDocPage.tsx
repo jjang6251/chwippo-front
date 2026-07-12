@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPanel'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
 import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
+import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { useApplication } from '@/hooks/useApplications'
 import { useAiFeedbackUnloadGuard } from '@/hooks/useAiFeedbackUnloadGuard'
 import {
@@ -64,6 +65,16 @@ export function CoverletterDocPage() {
       setExpandedClIds(new Set([cls[0].id]))
     }
   }, [cls])
+
+  // 문항 점프 칩 — 해당 카드로 스크롤 + 플래시 (flash 메커니즘 재사용)
+  const handleJump = useCallback((clId: string) => {
+    document
+      .getElementById(`cl-${clId}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setFlashClId(clId)
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+    flashTimerRef.current = setTimeout(() => setFlashClId(null), 1200)
+  }, [])
 
   const handleToggle = useCallback((clId: string) => {
     setExpandedClIds((prev) => {
@@ -132,6 +143,7 @@ export function CoverletterDocPage() {
   } = useCompanyResearchCache(applicationId ?? '', !!applicationId)
 
   const [bannerExpanded, setBannerExpanded] = useState(false)
+  const [jpExpanded, setJpExpanded] = useState(false)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
   // 카드의 "✨ AI 에게 묻기" prefill — nonce 로 매번 새 이벤트 처리
   const [chatPrefill, setChatPrefill] = useState<
@@ -218,6 +230,16 @@ export function CoverletterDocPage() {
         onToggle={() => setBannerExpanded((v) => !v)}
       />
 
+      {/* 공고 요건 배너 — 회사 조사 아래. app.jobPosting (상세 whitelist) 사용 */}
+      <JobPostingBanner
+        applicationId={applicationId ?? ''}
+        jobPosting={app.jobPosting}
+        jobPostingStatus={app.jobPostingStatus}
+        readOnly={readOnly}
+        expanded={jpExpanded}
+        onToggle={() => setJpExpanded((v) => !v)}
+      />
+
       {/* write-shell: 2-pane (Phase D 에서 채움) */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-[18px] lg:gap-[22px]">
         <div className="space-y-3">
@@ -250,6 +272,34 @@ export function CoverletterDocPage() {
             )
           ) : (
             <>
+              {cls.length >= 2 && (
+                <nav
+                  aria-label="문항 바로가기"
+                  className="flex flex-wrap gap-1.5 mb-4"
+                >
+                  {cls.map((cl, idx) => {
+                    const unwritten = !(cl.answer ?? '').trim()
+                    return (
+                      <button
+                        key={cl.id}
+                        onClick={() => handleJump(cl.id)}
+                        aria-label={
+                          unwritten ? `Q${idx + 1} (미작성)` : `Q${idx + 1}`
+                        }
+                        className="text-[11px] font-mono px-2.5 py-1 rounded-md transition-colors inline-flex items-center gap-1.5 bg-surface-2 border border-line text-text-secondary hover:border-brand/40 hover:text-text-primary"
+                      >
+                        Q{idx + 1}
+                        {unwritten && (
+                          <span
+                            className="w-1.5 h-1.5 rounded-full bg-warning"
+                            aria-hidden
+                          />
+                        )}
+                      </button>
+                    )
+                  })}
+                </nav>
+              )}
               {cls.map((cl, idx) => (
                 <CoverletterQuestionCard
                   key={cl.id}
