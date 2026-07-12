@@ -15,11 +15,16 @@ export function useApplication(id: string) {
     /**
      * PR_B1c — coverletter generation in_progress 일 때 3초마다 polling.
      * completed/failed 로 변경 감지 시 양쪽 화면 동기화.
+     * jobposting-parse — 공고 요건 파싱 중(parsing)이면 2초마다 polling.
+     * 파싱 완료(jobPosting 도착·status null) 시 배너가 자동 전환.
      */
     refetchInterval: (query) => {
       const data = query.state.data
       if (data && data.coverletterGenerationStatus === 'in_progress') {
         return 3000
+      }
+      if (data && data.jobPostingStatus === 'parsing') {
+        return 2000
       }
       return false
     },

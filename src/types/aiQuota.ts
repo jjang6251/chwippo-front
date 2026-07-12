@@ -16,6 +16,7 @@ export type LlmFeature =
   | 'interview_prep_followup'
   | 'company_research'
   | 'coverletter_chat'
+  | 'jobposting_parse'
 
 /** GET /me/ai-quotas 응답 row */
 export interface MyAiQuotaRow {

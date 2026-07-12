@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPanel'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
 import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
+import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { useApplication } from '@/hooks/useApplications'
 import { useAiFeedbackUnloadGuard } from '@/hooks/useAiFeedbackUnloadGuard'
 import {
@@ -142,6 +143,7 @@ export function CoverletterDocPage() {
   } = useCompanyResearchCache(applicationId ?? '', !!applicationId)
 
   const [bannerExpanded, setBannerExpanded] = useState(false)
+  const [jpExpanded, setJpExpanded] = useState(false)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
   // 카드의 "✨ AI 에게 묻기" prefill — nonce 로 매번 새 이벤트 처리
   const [chatPrefill, setChatPrefill] = useState<
@@ -226,6 +228,16 @@ export function CoverletterDocPage() {
         loading={researchLoading}
         expanded={bannerExpanded}
         onToggle={() => setBannerExpanded((v) => !v)}
+      />
+
+      {/* 공고 요건 배너 — 회사 조사 아래. app.jobPosting (상세 whitelist) 사용 */}
+      <JobPostingBanner
+        applicationId={applicationId ?? ''}
+        jobPosting={app.jobPosting}
+        jobPostingStatus={app.jobPostingStatus}
+        readOnly={readOnly}
+        expanded={jpExpanded}
+        onToggle={() => setJpExpanded((v) => !v)}
       />
 
       {/* write-shell: 2-pane (Phase D 에서 채움) */}
