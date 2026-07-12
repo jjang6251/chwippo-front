@@ -11,7 +11,7 @@ import type {
   QuotaTier,
 } from '@/types/aiQuota'
 import { formatKstDateTime } from '@/utils/datetime'
-import { featureLabel } from '@/utils/featureLabel'
+import { featureCategory, featureLabel, FEATURE_CATEGORY_ORDER } from '@/utils/featureLabel'
 import { TierConfigMatrix } from '@/components/admin/TierConfigMatrix'
 import { FeatureCoinMetaMatrix } from '@/components/admin/FeatureCoinMetaMatrix'
 
@@ -51,6 +51,20 @@ export function AiQuotas() {
     () => rows.filter((r) => r.tier === tier),
     [rows, tier],
   )
+  // 기능이 늘어 평면 목록으론 찾기 어려움 (2026-07-13 CEO) — 카테고리 섹션 그룹핑
+  const groupedRows = useMemo(() => {
+    const groups = new Map<string, typeof tierRows>()
+    for (const row of tierRows) {
+      const cat = featureCategory(row.feature)
+      const list = groups.get(cat) ?? []
+      list.push(row)
+      groups.set(cat, list)
+    }
+    return FEATURE_CATEGORY_ORDER.filter((c) => groups.has(c)).map((c) => ({
+      category: c,
+      rows: groups.get(c)!,
+    }))
+  }, [tierRows])
 
   return (
     <div>
@@ -111,13 +125,20 @@ export function AiQuotas() {
           </p>
         </AdminCard>
       ) : (
-        <AdminCard
-          title="Feature 매트릭스"
-          hint="모든 LLM 기능의 일/월 한도, 호출 간격, kill switch. 저장 시 즉시 적용."
-          flush
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+        <div className="space-y-5">
+          {groupedRows.map((group) => (
+            <AdminCard
+              key={group.category}
+              title={`${group.category} (${group.rows.length})`}
+              hint={
+                group.category === '기타'
+                  ? 'legacy / deprecated — kill switch 용도로만 유지'
+                  : undefined
+              }
+              flush
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
               <thead className="bg-card/40">
                 <tr>
                   <th className="text-left text-text-tertiary text-xs font-medium px-4 py-2.5">
@@ -147,14 +168,16 @@ export function AiQuotas() {
                   <th className="w-20 px-3 py-2.5"></th>
                 </tr>
               </thead>
-              <tbody>
-                {tierRows.map((row) => (
-                  <FeatureRow key={`${row.feature}-${row.tier}`} row={row} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </AdminCard>
+                  <tbody>
+                    {group.rows.map((row) => (
+                      <FeatureRow key={`${row.feature}-${row.tier}`} row={row} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </AdminCard>
+          ))}
+        </div>
       )}
 
       {/* PR_B2 Phase 3 — Tier Config 매트릭스 */}

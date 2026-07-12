@@ -9,6 +9,7 @@ import { useCompanyResearchCache } from '@/hooks/useCoverletterDoc'
 import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import { CoverLetterCard } from '@/components/card/CoverLetterCard'
 import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
+import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { toast } from '@/stores/toastStore'
 
 /**
@@ -37,14 +38,25 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
     active,
   )
   const [bannerExpanded, setBannerExpanded] = useState(false)
+  const [jpExpanded, setJpExpanded] = useState(false)
 
-  const researchBanner = (
-    <CompanyResearchBanner
-      research={research}
-      loading={researchLoading}
-      expanded={bannerExpanded}
-      onToggle={() => setBannerExpanded((v) => !v)}
-    />
+  const banners = (
+    <>
+      <CompanyResearchBanner
+        research={research}
+        loading={researchLoading}
+        expanded={bannerExpanded}
+        onToggle={() => setBannerExpanded((v) => !v)}
+      />
+      <JobPostingBanner
+        applicationId={applicationId}
+        jobPosting={application?.jobPosting}
+        jobPostingStatus={application?.jobPostingStatus}
+        readOnly={readOnly}
+        expanded={jpExpanded}
+        onToggle={() => setJpExpanded((v) => !v)}
+      />
+    </>
   )
 
   const handleAdd = (question = '', category?: string) =>
@@ -66,7 +78,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
     if (!application) return null
     return (
       <div className="space-y-3">
-        {researchBanner}
+        {banners}
         <div className="border border-line bg-surface-2 rounded-xl p-4">
           {readOnly ? (
             <p className="text-[11px] text-text-quaternary mb-2.5">
@@ -114,7 +126,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
 
   return (
     <div className="space-y-3">
-      {researchBanner}
+      {banners}
       {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
       {/* PR UI — list.length===0 dead branch 제거 (line 47 에서 early return) */}
       <>

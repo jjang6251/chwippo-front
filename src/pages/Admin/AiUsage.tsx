@@ -131,8 +131,10 @@ export function AiUsage() {
             <option value="">전체</option>
             <optgroup label="자소서">
               <option value="coverletter_draft_v2">자소서 AI 답변</option>
+              <option value="coverletter_chat">자소서 채팅</option>
               <option value="coverletter_feedback">자소서 피드백</option>
               <option value="coverletter_recommend">자소서 추천</option>
+              <option value="jobposting_parse">공고 요건 정리</option>
             </optgroup>
             <optgroup label="면접">
               <option value="interview_prep_session">면접 질문 생성</option>
@@ -144,14 +146,7 @@ export function AiUsage() {
             <optgroup label="노트">
               <option value="note_summary">노트 요약</option>
             </optgroup>
-            <optgroup label="Legacy / Deprecated">
-              <option value="coverletter">자소서 (legacy)</option>
-              <option value="interview">면접 (legacy)</option>
-              <option value="interview_followup">면접 꼬리 (legacy)</option>
-              <option value="score">점수 (deprecated)</option>
-              <option value="analysis">분석 (deprecated)</option>
-              <option value="auto_tag">자동 태그 (deprecated)</option>
-            </optgroup>
+            {/* legacy 6종 필터 옵션 제거 (2026-07-13) — 과거 이력 행은 라벨로 계속 표시됨 */}
           </select>
           <svg
             className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-quaternary"

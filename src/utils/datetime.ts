@@ -156,6 +156,21 @@ export function formatDateTime(
 /** @deprecated 동작 동일 — `formatDateTime` 권장 */
 export const formatKstDateTime = formatDateTime
 
+/**
+ * `Date` 또는 ISO 문자열 → "M/D" (기본 KST). 신선도 라벨 등 짧은 표시용.
+ * 브라우저 timezone 과 무관 (Intl 명시 timezone).
+ */
+export function formatMonthDay(d: Date | string, tz: Tz = APP_TIMEZONE): string {
+  const date = typeof d === 'string' ? new Date(d) : d
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(date)
+  const pick = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  return `${pick('month')}/${pick('day')}`
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // 유틸
 // ────────────────────────────────────────────────────────────────────────
