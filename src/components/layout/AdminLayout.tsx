@@ -35,7 +35,7 @@ const NAV: NavGroup[] = [
     items: [
       { to: '/ops/ai-quotas', label: 'AI 한도' },
       { to: '/ops/ai-usage', label: 'AI 사용량' },
-      { to: '/ops/company-research-metrics', label: '회사조사 metrics' },
+      { to: '/ops/company-research', label: '회사조사 현황' },
     ],
   },
   {
