@@ -93,18 +93,12 @@ describe('AiUsage page — date preset + area chart', () => {
     expect(screen.getAllByText('데이터 없음').length).toBeGreaterThan(0)
   })
 
-  it('4) feature 필터 그룹화 — optgroup 5개 (자소서 · 면접 · 회사 조사 · 노트 · Legacy)', async () => {
+  it('4) feature 필터 그룹화 — optgroup 4개 (자소서 · 면접 · 회사 조사 · 노트 — legacy 제거 2026-07-13)', async () => {
     render(<AiUsage />, { wrapper })
     await flush()
     const select = screen.getByRole('combobox') as HTMLSelectElement
     const groups = select.querySelectorAll('optgroup')
     const labels = Array.from(groups).map((g) => g.getAttribute('label'))
-    expect(labels).toEqual([
-      '자소서',
-      '면접',
-      '회사 조사',
-      '노트',
-      'Legacy / Deprecated',
-    ])
+    expect(labels).toEqual(['자소서', '면접', '회사 조사', '노트'])
   })
 })
