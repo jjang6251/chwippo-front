@@ -33,6 +33,8 @@ function resolveGet(url: string): unknown {
     case '/myinfo/exam-schedules': return S.DEMO_EXAM_SCHEDULES
     case '/myinfo/coverletter': return S.DEMO_COVERLETTER
     case '/myinfo/documents': return []
+    // A7 브리핑 배너·알림 벨이 캘린더에서 조회 — null 이면 pages[null].items 렌더 크래시
+    case '/notifications': return { items: [], nextCursor: null, unreadCount: 0 }
     default: return null
   }
 }
