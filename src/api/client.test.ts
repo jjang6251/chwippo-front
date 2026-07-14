@@ -107,6 +107,27 @@ describe('performRefresh', () => {
     expect(useAuthStore.getState().user).toEqual(existing)
   })
 
+  it('409 경합 → backoff 후 재시도 성공 (세션 유지·로그아웃 안 함)', async () => {
+    mockedAxiosPost
+      .mockRejectedValueOnce({ response: { status: 409, data: { code: 'RETRY' } } })
+      .mockResolvedValueOnce({
+        data: { data: { accessToken: 'retry-tok' }, message: 'ok' },
+      })
+    const result = await performRefresh()
+    expect(result.accessToken).toBe('retry-tok')
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(2) // 최초 409 + 재시도 성공
+    expect(useAuthStore.getState().accessToken).toBe('retry-tok')
+  })
+
+  it('409 재시도 3회 소진 → throw (단 window redirect·clearAuth 안 함)', async () => {
+    useAuthStore.setState({ accessToken: 'keep', user: null })
+    mockedAxiosPost.mockRejectedValue({ response: { status: 409 } })
+    await expect(performRefresh()).rejects.toBeDefined()
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(3)
+    // handleAuthFailure(409) 는 세션 유지 — clearAuth·redirect 금지
+    expect(window.location.href).toBe('')
+  })
+
   it('동시 5개 호출 → axios.post 1번만 (queue 동작) + 모두 같은 결과', async () => {
     mockedAxiosPost.mockResolvedValueOnce({
       data: { data: { accessToken: 'shared-token' } },
@@ -230,6 +251,13 @@ describe('handleAuthFailure', () => {
     expect(toast.error).toHaveBeenCalledWith(
       expect.stringContaining('잠시'),
     )
+  })
+
+  it('409 → 세션 유지 (clearAuth/redirect 안 함, refresh 경합)', () => {
+    useAuthStore.setState({ accessToken: 'keep-me', user: null })
+    handleAuthFailure({ response: { status: 409 } })
+    expect(useAuthStore.getState().accessToken).toBe('keep-me')
+    expect(window.location.href).toBe('')
   })
 
   it('429가 아닌 모든 status는 기존 로직 (401, 500 등) — clearAuth + redirect', () => {
