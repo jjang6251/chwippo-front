@@ -23,8 +23,9 @@ export function AuthGuard() {
       .catch((err: unknown) => {
         const status = (err as { response?: { status?: number } })?.response
           ?.status
-        // 429는 세션 유효 — 랜딩 redirect 대신 현재 URL 유지하며 재시도 안내
-        if (status === 429) setRateLimited(true)
+        // 429(rate limit)·409(refresh 경합 재시도 소진) 둘 다 세션 유효 —
+        // 랜딩 redirect 대신 현재 URL 유지하며 재시도 안내 (accessToken 없이 튕기는 것 방지)
+        if (status === 429 || status === 409) setRateLimited(true)
       })
       .finally(() => setChecking(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
