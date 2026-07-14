@@ -75,19 +75,37 @@ export async function performRefresh(): Promise<RefreshResult> {
 }
 
 async function doRefresh(): Promise<RefreshResult> {
-  const { data } = await axios.post<RefreshResponse>(
-    `${import.meta.env.VITE_API_URL}/auth/refresh`,
-    {},
-    { withCredentials: true },
-  )
-  const accessToken = data.data?.accessToken ?? data.accessToken
-  const user = data.data?.user ?? data.user ?? null
-  if (!accessToken) {
-    throw new Error('Refresh 응답에 accessToken이 없습니다.')
+  // 409 = 동시 refresh 경합 (세션 지속성 토큰 패밀리) — 새로고침 연타·멀티탭에서
+  // 승자가 방금 쿠키를 갱신했으나 이 요청이 옛 토큰으로 도착한 순간. 세션은 유효하므로
+  // 짧은 backoff 후 갱신된 쿠키로 재시도하면 성공한다 (로그아웃 아님).
+  let lastErr: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const { data } = await axios.post<RefreshResponse>(
+        `${import.meta.env.VITE_API_URL}/auth/refresh`,
+        {},
+        { withCredentials: true },
+      )
+      const accessToken = data.data?.accessToken ?? data.accessToken
+      const user = data.data?.user ?? data.user ?? null
+      if (!accessToken) {
+        throw new Error('Refresh 응답에 accessToken이 없습니다.')
+      }
+      useAuthStore.getState().setAccessToken(accessToken)
+      if (user) useAuthStore.getState().setUser(user)
+      return { accessToken, user }
+    } catch (err) {
+      lastErr = err
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status
+      if (status === 409 && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
+        continue // 갱신된 쿠키로 재시도
+      }
+      throw err // 401 등 인증 실패, 또는 409 재시도 소진 → caller 처리
+    }
   }
-  useAuthStore.getState().setAccessToken(accessToken)
-  if (user) useAuthStore.getState().setUser(user)
-  return { accessToken, user }
+  throw lastErr
 }
 
 /**
@@ -96,6 +114,7 @@ async function doRefresh(): Promise<RefreshResult> {
  *
  * 분기:
  * - 429 Too Many Requests: rate limit 도달 — 세션 유효, logout/redirect 금지. 토스트만.
+ * - 409 Conflict: 동시 refresh 경합 (재시도 소진) — 세션 유효, logout/redirect 금지.
  * - 401 등 인증 실패: 세션 만료 — clearAuth + 랜딩 redirect.
  */
 export function handleAuthFailure(err: unknown): void {
@@ -110,6 +129,9 @@ export function handleAuthFailure(err: unknown): void {
     )
     return
   }
+  // 409 = refresh 경합 재시도 소진 (극히 드묾) — 세션 유효하므로 로그아웃·랜딩 금지.
+  // 다음 사용자 액션·새로고침이 갱신된 쿠키로 복구한다.
+  if (status === 409) return
   useAuthStore.getState().clearAuth()
   const msg = ((err as { response?: { data?: { message?: string } } })
     ?.response?.data?.message ?? '') as string
