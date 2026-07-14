@@ -8,6 +8,7 @@ import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AiFeatureGuard, InterviewAiGuard } from '@/components/auth/AiFeatureGuard'
 import { AdminGuard } from '@/components/layout/AdminGuard'
 import { AppShell } from '@/components/layout/AppShell'
+import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary'
 import { DemoShell } from '@/components/demo/DemoShell'
 import { DemoRouteGuard } from '@/components/demo/DemoRouteGuard'
 import { Landing } from '@/pages/Landing'
@@ -69,7 +70,15 @@ export default function App() {
           <Route path="board" element={<Board />} />
           <Route path="board/:id" element={<BoardDetail />} />
           <Route path="board/:id/steps/:stepId" element={<StepPage />} />
+          {/* 자소서 문서 풀페이지 — AI 버튼은 demoAdapter 가 차단(가입 모달). 라우트만 데모 대응 */}
+          <Route
+            path="board/:applicationId/coverletter"
+            element={<CoverletterDocPage />}
+          />
           <Route path="calendar" element={<Calendar />} />
+          <Route path="activity" element={<ActivityTimelinePage />} />
+          <Route path="activity/manage" element={<ActivityPage />} />
+          <Route path="coverletters" element={<Coverletters />} />
           <Route path="myinfo" element={<MyInfo />} />
           <Route path="*" element={<Navigate to="/demo/dashboard" replace />} />
         </Route>
@@ -77,7 +86,7 @@ export default function App() {
           <Route path="/terms-agreement" element={<TermsAgreement />} />
           {/* W1 — signup 1 질문 (관심 직군). onboardedAt null 시 LoginCallback 가 redirect */}
           <Route path="/signup/question" element={<SignupQuestion />} />
-          <Route element={<AppShell />}>
+          <Route element={<RouteErrorBoundary><AppShell /></RouteErrorBoundary>}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/board" element={<Board />} />
             <Route path="/board/:id" element={<BoardDetail />} />

@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import { useDemoLink } from '@/hooks/useDemoLink'
+import { useDemoSignupStore } from '@/stores/demoSignupStore'
+import { useDemoMode } from '@/contexts/demoMode'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
@@ -35,6 +38,8 @@ type ViewMode = 'ongoing' | 'completed' | 'all' | 'archived'
 type SortMode = 'recent' | 'start' | 'name'
 
 export function ActivityPage() {
+  const demoLink = useDemoLink()
+  const isDemoMode = useDemoMode()
   const [view, setView] = useState<ViewMode>('ongoing')
   const [filterType, setFilterType] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -240,6 +245,11 @@ export function ActivityPage() {
 
   function handleOpenLog(logId: string, activityId: string) {
     // Phase C: 노트 풀스크린 페이지로. 메타 자세히 수정은 NotePage 안 "자세히 수정" 버튼.
+    if (isDemoMode) {
+      // 데모 — 노트 편집 페이지는 데모 라우트 밖. 가입 유도 모달 (탈출 → 가드 복귀 홉 방지)
+      useDemoSignupStore.getState().show()
+      return
+    }
     navigate(`/activity/${activityId}/logs/${logId}/note`)
   }
 
@@ -342,12 +352,12 @@ export function ActivityPage() {
             <h1>
               내 <span className="accent">활동</span>
             </h1>
-            <Link to="/activity/insights" className="head-link">
+            {!isDemoMode && <Link to="/activity/insights" className="head-link">
               📊 내 데이터 →
-            </Link>
+            </Link>}
           </div>
           <div className="sub">
-            <Link to="/activity" className="hover:underline">← 활동 기록(타임라인)으로</Link>
+            <Link to={demoLink('/activity')} className="hover:underline">← 활동 기록(타임라인)으로</Link>
             {' · '}활동 만들기·수정·총괄 회고는 여기서 관리해요.
           </div>
         </header>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
+import { useDemoLink } from '@/hooks/useDemoLink'
 import type { CalendarEvent } from '@/api/calendar'
 import {
   useDailyNotes,
@@ -50,6 +51,7 @@ function slotToLabel(slot: number): string {
 }
 
 function EventLink({ event }: { event: CalendarEvent }) {
+  const link = useDemoLink()
   const time = event.time?.slice(0, 5)
 
   // 이벤트 종류별 색·아이콘
@@ -102,7 +104,7 @@ function EventLink({ event }: { event: CalendarEvent }) {
   )
   if (to) {
     return (
-      <Link to={to} className="block">
+      <Link to={link(to)} className="block">
         {inner}
       </Link>
     )
@@ -111,6 +113,7 @@ function EventLink({ event }: { event: CalendarEvent }) {
 }
 
 export function CalendarDayPanel({ date, events, onClose }: Props) {
+  const link = useDemoLink()
   const d = dayjs(date)
   const isToday = date === dayjs().format('YYYY-MM-DD')
 
@@ -255,7 +258,7 @@ export function CalendarDayPanel({ date, events, onClose }: Props) {
                     {item.content}
                   </span>
                   <Link
-                    to={`/board/${item.applicationId}/steps/${item.stepId}`}
+                    to={link(`/board/${item.applicationId}/steps/${item.stepId}`)}
                     className="shrink-0 inline-flex items-center gap-1 text-[10px] text-text-quaternary hover:text-text-secondary bg-surface-3 border border-line px-1.5 py-0.5 rounded-full transition-colors"
                     title={`${item.companyName} ${item.stepName} 준비 체크리스트로 이동`}
                   >

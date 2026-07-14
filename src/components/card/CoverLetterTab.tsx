@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDemoLink } from '@/hooks/useDemoLink'
 import {
   useCoverletters,
   useCreateCoverletter,
@@ -28,6 +29,7 @@ const COMMON_QUESTIONS = [
 // A1 — AI 요소(조사)만 조건부
 export function CoverLetterTab({ applicationId, active }: { applicationId: string; active: boolean }) {
   const readOnly = useCoverletterReadOnly()
+  const link = useDemoLink()
   const { data: items, isLoading } = useCoverletters(applicationId, active)
   const { mutate: create, isPending: creating } = useCreateCoverletter(applicationId)
   // PR_B1c — application 의 generation status 별 UI 분기 (polling 자동)
@@ -71,7 +73,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
   }
 
   const list = items ?? []
-  const fullscreenHref = `/board/${applicationId}/coverletter`
+  const fullscreenHref = link(`/board/${applicationId}/coverletter`)
 
   // A1 — 빈 상태 = 3경로 시작점: ✍️ 직접 쓰기(상시) · 🔎 회사 조사(AI 켜짐 시)
   if (list.length === 0) {

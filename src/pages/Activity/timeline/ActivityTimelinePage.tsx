@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { isAxiosError } from 'axios'
+import { useDemoMode } from '@/contexts/demoMode'
+import { useDemoLink } from '@/hooks/useDemoLink'
 import { useActivities, useActivityTimeline, useQuickCreateLog, useRemoveLog } from '@/hooks/useActivities'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
 import { useCalendarEvents } from '@/hooks/useCalendar'
@@ -41,6 +43,9 @@ function dateHeading(date: string, today: string, yesterday: string): string {
 
 export function ActivityTimelinePage() {
   const isMobile = useIsMobile()
+  // 데모엔 대응 라우트가 없는 관리·인사이트 진입점 — 숨김 (catch-all 로 대시보드 덤프 방지)
+  const isDemo = useDemoMode()
+  const demoLink = useDemoLink()
   const today = dayjs().format('YYYY-MM-DD')
   const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
 
@@ -183,7 +188,7 @@ export function ActivityTimelinePage() {
               </span>
             )}
             <Link
-              to="/activity/manage"
+              to={demoLink('/activity/manage')}
               className="text-[11px] text-text-tertiary hover:text-text-primary border border-line rounded-md px-2 py-1 transition-colors"
             >
               내 활동 →
@@ -264,19 +269,21 @@ export function ActivityTimelinePage() {
                 </div>
               )}
               <Link
-                to="/activity/manage"
+                to={demoLink('/activity/manage')}
                 className="block mt-3 text-[11px] text-text-quaternary hover:text-text-secondary"
               >
                 관리 →
               </Link>
             </div>
 
-            <Link
-              to="/activity/insights"
-              className="block bg-surface border border-line rounded-2xl p-4 text-[11px] text-text-quaternary hover:text-text-secondary transition-colors"
-            >
-              인사이트 (강점·자소서 소재) →
-            </Link>
+            {!isDemo && (
+              <Link
+                to="/activity/insights"
+                className="block bg-surface border border-line rounded-2xl p-4 text-[11px] text-text-quaternary hover:text-text-secondary transition-colors"
+              >
+                인사이트 (강점·자소서 소재) →
+              </Link>
+            )}
           </aside>
         </div>
       )}
@@ -288,6 +295,8 @@ export function ActivityTimelinePage() {
  *  하단에 자동 태그 칩 상시 표시 + [태그] 로 그 자리에서 간단 보정. rest 는 링크 없음 */
 function TimelineRow({ log }: { log: TimelineLogItem }) {
   const isRest = log.cat === 'rest'
+  // 데모엔 노트 상세(/activity/:id/logs/:id/note) 라우트가 없어 드릴인 비활성 — 읽기 전용 미리보기
+  const isDemo = useDemoMode()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [editingTags, setEditingTags] = useState(false)
   const { mutate: removeLog, isPending: removing } = useRemoveLog('')
@@ -420,7 +429,7 @@ function TimelineRow({ log }: { log: TimelineLogItem }) {
           </button>
         )}
         {log.hasNote && <span className="text-[10px] text-text-tertiary">📝 노트</span>}
-        {!isRest && (
+        {!isRest && !isDemo && (
           <span className="text-[10px] text-text-quaternary ml-auto">자세히 쓰기 →</span>
         )}
       </div>
@@ -429,7 +438,7 @@ function TimelineRow({ log }: { log: TimelineLogItem }) {
 
   return (
     <div className="relative group/row">
-    {isRest ? (
+    {isRest || isDemo ? (
       <div className={rowClass}>{rowInner}</div>
     ) : (
       <Link to={`/activity/${log.activityId}/logs/${log.id}/note`} className={rowClass}>

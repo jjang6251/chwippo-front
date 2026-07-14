@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { DemoModeProvider } from '@/contexts/DemoModeProvider'
 import { AppShell } from '@/components/layout/AppShell'
+import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary'
 import { DemoSignupModal } from '@/components/demo/DemoSignupModal'
 import { LoginModal } from '@/components/demo/LoginModal'
 
@@ -15,7 +16,9 @@ export function DemoShell() {
   return (
     <QueryClientProvider client={demoQueryClient}>
       <DemoModeProvider>
-        <AppShell />
+        <RouteErrorBoundary>
+          <AppShell />
+        </RouteErrorBoundary>
         <DemoSignupModal />
         <LoginModal />
       </DemoModeProvider>

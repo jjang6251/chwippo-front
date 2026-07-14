@@ -23,7 +23,7 @@ export function DemoSignupModal() {
         onClick={goLogin}
         className="block w-full text-center py-3 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors mb-2"
       >
-        카카오로 시작하기
+        무료로 시작하기
       </button>
       <button
         onClick={hide}
