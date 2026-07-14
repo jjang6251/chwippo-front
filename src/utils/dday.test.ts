@@ -103,6 +103,11 @@ describe('formatDate', () => {
     expect(result).toMatch(/9월 10일/)
   })
 
+  it('요일이 한글로 표기됨 (dayjs ko locale — 영어 요일 회귀 방어)', () => {
+    // 2025-09-10 = 수요일 → "(수)" (locale 미설정 시 "(Wed)")
+    expect(formatDate('2025-09-10')).toContain('(수)')
+  })
+
   it('월/일 포맷에 선행 0 없음 (1월 5일, not 01월 05일)', () => {
     const result = formatDate('2025-01-05')
     expect(result).toMatch(/1월 5일/)
