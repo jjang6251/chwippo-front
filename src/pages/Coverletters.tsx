@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDemoLink } from '@/hooks/useDemoLink'
 import { useApplication, useApplications } from '@/hooks/useApplications'
 import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import {
@@ -51,6 +52,7 @@ function relativeTime(iso: string | null, now: number): string {
  */
 export function Coverletters() {
   const { data: applications = [], isLoading } = useApplications()
+  const link = useDemoLink()
 
   // PR UI C — 검색 + status 탭 + 정렬
   const [search, setSearch] = useState('')
@@ -132,7 +134,7 @@ export function Coverletters() {
             보드에서 회사 카드를 먼저 만든 뒤 자소서 문항을 추가할 수 있어요.
           </p>
           <Link
-            to="/board"
+            to={link('/board')}
             className="inline-block px-4 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
           >
             보드로 이동 →
@@ -297,6 +299,7 @@ function ApplicationGroup({
   jobCategory: string | null
 }) {
   const readOnly = useCoverletterReadOnly()
+  const link = useDemoLink()
   const { data: items = [], isLoading } = useCoverletters(applicationId, true)
   // PR_B1c — application 의 coverletterGenerationStatus 별 UI 분기 (polling 자동)
   const { data: application } = useApplication(applicationId)
@@ -413,7 +416,7 @@ function ApplicationGroup({
         {Header}
         <div className="p-3 flex-1 flex flex-col gap-2">
           <Link
-            to={`/board/${applicationId}/coverletter`}
+            to={link(`/board/${applicationId}/coverletter`)}
             className="block text-center text-xs font-semibold text-brand bg-brand/8 border border-brand/25 hover:bg-brand/15 px-3 py-2 rounded-md transition-colors"
           >
             {readOnly ? '자소서 보기 →' : '✍️ 바로 쓰기 — 문항 추가하고 작성 →'}
@@ -425,7 +428,7 @@ function ApplicationGroup({
 
   return (
     <Link
-      to={`/board/${applicationId}/coverletter`}
+      to={link(`/board/${applicationId}/coverletter`)}
       className="flex flex-col border border-line bg-surface-2 rounded-xl overflow-hidden hover:border-brand/40 transition-colors"
     >
       {Header}

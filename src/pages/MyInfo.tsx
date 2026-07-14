@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, createContext, useContext } from 'react'
 import { useAutoResize } from '@/hooks/useAutoResize'
+import { useDemoLink } from '@/hooks/useDemoLink'
 import { Link, useLocation } from 'react-router-dom'
 import dayjs from 'dayjs'
 import {
@@ -1365,6 +1366,7 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
 
 // ── 경험 (활동 일지로 이전됨 — mock #page-myinfo summary-card 1:1) ──
 function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+  const link = useDemoLink()
   const { data: activities = [] } = useActivities(false)
   const [showCompleted, setShowCompleted] = useState(false)
   const today = new Date().toISOString().slice(0, 10)
@@ -1411,7 +1413,7 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
             ongoing.map((a) => (
               <Link
                 key={a.id}
-                to="/activity"
+                to={link('/activity')}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-line bg-card hover:bg-card-hover active:bg-card-strong transition-colors"
               >
                 <span className={`type-badge ${a.type ?? 'other'} text-[9.5px] px-2 py-0.5 rounded shrink-0`}>
@@ -1456,7 +1458,7 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
                   return (
                     <Link
                       key={a.id}
-                      to="/activity"
+                      to={link('/activity')}
                       className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-line bg-card hover:bg-card-hover active:bg-card-strong transition-colors"
                     >
                       <span className={`type-badge ${a.type ?? 'other'} text-[9.5px] px-2 py-0.5 rounded shrink-0`}>
@@ -1483,7 +1485,7 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
 
         {/* 활동 일지로 이동 */}
         <Link
-          to="/activity"
+          to={link('/activity')}
           className="flex items-center justify-center gap-1 w-full bg-brand/10 hover:bg-brand/20 active:bg-brand/30 text-brand text-xs font-semibold py-2.5 rounded-lg transition-colors border border-brand/20"
         >
           → 활동 일지에서 자세히 보기

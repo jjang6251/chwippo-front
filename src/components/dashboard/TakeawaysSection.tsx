@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
+import { useDemoLink } from '@/hooks/useDemoLink'
 import { useApplications } from '@/hooks/useApplications'
 
 /**
@@ -10,6 +11,7 @@ import { useApplications } from '@/hooks/useApplications'
  */
 export function TakeawaysSection() {
   const { data: applications = [] } = useApplications()
+  const link = useDemoLink()
 
   const takeaways = applications
     .filter((a) => a.status === 'FAILED' && (a.failedTakeaway ?? '').trim())
@@ -33,7 +35,7 @@ export function TakeawaysSection() {
         {takeaways.map((a) => (
           <li key={a.id}>
             <Link
-              to={`/board/${a.id}`}
+              to={link(`/board/${a.id}`)}
               className="block group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded-md"
             >
               <p className="text-sm text-text-secondary leading-relaxed group-hover:text-text-primary transition-colors line-clamp-3">

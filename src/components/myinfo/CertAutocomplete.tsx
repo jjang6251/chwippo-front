@@ -1,4 +1,5 @@
 import { useId, useRef, useState, useEffect, type KeyboardEvent } from 'react'
+import { useDemoMode } from '@/contexts/demoMode'
 import { useCertAutocomplete } from '@/hooks/useSchoolAutocomplete'
 import { INPUT_BASE_SM } from '@/utils/inputStyles'
 import type { CertSuggestion } from '@/api/schools'
@@ -18,6 +19,7 @@ interface Props {
  * onSelect → issuer/hasNumber/validYears 등 metadata 전파 (Certs modal 에서 자동 채움).
  */
 export function CertAutocomplete({ value, onChange, onSelect, placeholder, disabled, inputClassName }: Props) {
+  const isDemo = useDemoMode()
   const inputId = useId()
   const listId = useId()
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -103,7 +105,9 @@ export function CertAutocomplete({ value, onChange, onSelect, placeholder, disab
             <div className="px-3 py-4 text-center text-xs text-text-tertiary">검색 중...</div>
           ) : items.length === 0 ? (
             <div className="px-3 py-4 text-center text-xs text-text-tertiary">
-              {value.trim() ? '검색 결과가 없어요 · 직접 입력해도 돼요' : '자격증명을 입력해주세요'}
+              {isDemo
+                ? '둘러보기에선 자동완성이 꺼져 있어요 — 가입하면 자격증 정보가 자동완성돼요'
+                : value.trim() ? '검색 결과가 없어요 · 직접 입력해도 돼요' : '자격증명을 입력해주세요'}
             </div>
           ) : (
             <>

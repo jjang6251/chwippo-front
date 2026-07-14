@@ -57,8 +57,8 @@ export function Sidebar() {
 
   const isActive = (path: string) => {
     const target = link(path)
-    // 자소서 문서는 URL 이 /board/:id/coverletter 지만 맥락은 자소서 — 보드 아닌 자소서 하이라이트
-    const isCoverletterDoc = /^\/board\/[^/]+\/coverletter/.test(location.pathname)
+    // 자소서 문서는 URL 이 /board/:id/coverletter 지만 맥락은 자소서 — 보드 아닌 자소서 하이라이트 (데모 접두어 포함)
+    const isCoverletterDoc = /^(\/demo)?\/board\/[^/]+\/coverletter/.test(location.pathname)
     if (path === '/coverletters') {
       return location.pathname.startsWith(target) || isCoverletterDoc
     }
@@ -104,6 +104,7 @@ export function Sidebar() {
                 to={link(path)}
                 {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
                 {...(path === '/activity' ? { 'data-tour': 'activity-nav' } : {})}
+                aria-current={isActive(path) ? 'page' : undefined}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive(path)
                     ? 'bg-brand/10 text-brand'

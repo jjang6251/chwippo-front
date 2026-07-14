@@ -99,6 +99,10 @@ async function doRefresh(): Promise<RefreshResult> {
  * - 401 등 인증 실패: 세션 만료 — clearAuth + 랜딩 redirect.
  */
 export function handleAuthFailure(err: unknown): void {
+  // 데모 세션 보호 — 데모 탈출 홉에서 잠깐 마운트된 AuthGuard 의 비동기 인증 실패가
+  // 뒤늦게 발사되며 데모 사용자를 랜딩으로 밀어내는 경합 실측 (2026-07-14).
+  // 데모 화면에 있는 동안엔 로그아웃/redirect/토스트 전부 무의미하므로 조용히 무시.
+  if (window.location?.pathname?.startsWith('/demo')) return
   const status = (err as { response?: { status?: number } })?.response?.status
   if (status === 429) {
     toast.error(

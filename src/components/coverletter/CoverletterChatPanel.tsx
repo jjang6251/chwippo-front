@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CoverletterDiffModal } from '@/components/coverletter/CoverletterDiffModal'
 import { CoverletterBulkApplyModal } from '@/components/coverletter/CoverletterBulkApplyModal'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
+import { useDemoMode } from '@/contexts/demoMode'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { Modal } from '@/components/common/Modal'
 import {
@@ -126,6 +127,7 @@ export function CoverletterChatPanel({
   // 자료 0개 + "전체 답변 생성" 시 안내 (대기 중인 prompt 보관)
   const [nudge, setNudge] = useState<{ prompt: string } | null>(null)
 
+  const isDemo = useDemoMode()
   const [input, setInput] = useState('')
   const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set())
   const [selectedMyinfoKeys, setSelectedMyinfoKeys] = useState<Set<MyinfoFieldKey>>(new Set())
@@ -510,6 +512,14 @@ export function CoverletterChatPanel({
                 그냥 진행
               </button>
             </div>
+          </div>
+        )}
+        {isDemo && (
+          <div className="mb-2 rounded-lg bg-brand/5 border border-brand/20 px-3 py-2.5 text-xs text-text-secondary leading-relaxed">
+            🔍 둘러보기에선 AI가 잠겨 있어요 — 실제 서비스에선 회원님이 쌓은{' '}
+            <span className="font-medium text-brand">활동 일지</span>와{' '}
+            <span className="font-medium text-brand">내 정보 창고</span> 기록을 근거로 AI가 자소서
+            초안 작성을 빠르게 도와드려요.
           </div>
         )}
         <div
