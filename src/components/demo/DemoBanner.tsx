@@ -12,6 +12,7 @@ export function DemoBanner() {
       <div className="flex items-center gap-1.5 flex-none">
         <Link
           to="/"
+          state={{ demoExit: true }}
           className="text-[11px] font-medium text-text-tertiary hover:text-text-secondary px-2 py-1.5 rounded-md transition-colors"
         >
           둘러보기 종료
@@ -20,7 +21,7 @@ export function DemoBanner() {
           onClick={showLogin}
           className="text-[11px] font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-2.5 py-1.5 rounded-md transition-colors"
         >
-          카카오로 시작하기
+          무료로 시작하기
         </button>
       </div>
     </div>

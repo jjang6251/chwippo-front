@@ -1,4 +1,5 @@
 import { useId, useRef, useState, useEffect, type KeyboardEvent } from 'react'
+import { useDemoMode } from '@/contexts/demoMode'
 import { useSchoolAutocomplete } from '@/hooks/useSchoolAutocomplete'
 import { INPUT_BASE_SM } from '@/utils/inputStyles'
 import type { SchoolKind, SchoolSuggestion } from '@/api/schools'
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function SchoolAutocomplete({ value, onChange, onSelect, kind, placeholder, disabled, inputClassName }: Props) {
+  const isDemo = useDemoMode()
   const inputId = useId()
   const listId = useId()
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -113,7 +115,9 @@ export function SchoolAutocomplete({ value, onChange, onSelect, kind, placeholde
             <div className="px-3 py-4 text-center text-xs text-text-tertiary">검색 중...</div>
           ) : items.length === 0 ? (
             <div className="px-3 py-4 text-center text-xs text-text-tertiary">
-              {value.trim() ? '검색 결과가 없어요 · 직접 입력해도 돼요' : '학교명을 입력해주세요'}
+              {isDemo
+                ? '둘러보기에선 자동완성이 꺼져 있어요 — 가입하면 학교 정보가 자동완성돼요'
+                : value.trim() ? '검색 결과가 없어요 · 직접 입력해도 돼요' : '학교명을 입력해주세요'}
             </div>
           ) : (
             <>

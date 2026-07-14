@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useDemoLink } from '@/hooks/useDemoLink'
 import { CopyButton } from '@/components/myinfo/CopyButton'
 import { useCoverletterSourceRefs } from '@/hooks/useCoverletterSourceRefs'
 import { countChars } from '@/utils/charCount'
@@ -24,6 +25,7 @@ interface CoverLetterCardProps {
 }
 
 export function CoverLetterCard({ cl, applicationId }: CoverLetterCardProps) {
+  const link = useDemoLink()
   const answer = cl.answer ?? ''
   const hasAnswer = answer.trim().length > 0
   const { data: sourceRefs = [] } = useCoverletterSourceRefs(cl.id, hasAnswer)
@@ -39,7 +41,7 @@ export function CoverLetterCard({ cl, applicationId }: CoverLetterCardProps) {
       ? `${total.toLocaleString()} / ${limit.toLocaleString()}자`
       : `${total.toLocaleString()}자 (공백 제외 ${withoutSpaces.toLocaleString()}자)`
 
-  const editHref = `/board/${applicationId}/coverletter`
+  const editHref = link(`/board/${applicationId}/coverletter`)
 
   return (
     <div className="px-4 sm:px-5 py-5">
