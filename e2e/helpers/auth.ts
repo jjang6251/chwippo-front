@@ -5,6 +5,10 @@ const TEST_USER = {
   nickname: '테스트유저',
   email: 'test@chwippo.com',
   role: 'user' as const,
+  // AuthGuard 가 termsAgreedAt falsy 시 /terms-agreement 로 리다이렉트 →
+  // 보호 페이지 E2E 가 전부 약관 화면으로 튕기던 원인. 동의 완료 유저로 세팅.
+  termsAgreedAt: '2026-01-01T00:00:00.000Z',
+  onboardedAt: '2026-01-01T00:00:00.000Z',
 }
 
 const TEST_TOKEN = 'mock-access-token'
