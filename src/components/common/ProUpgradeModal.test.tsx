@@ -50,6 +50,18 @@ function row(feature: MyAiQuotaRow['feature'], over: Partial<MyAiQuotaRow> = {})
 describe('ProUpgradeModal — AI 사용 한도', () => {
   beforeEach(() => mockedQuotas.mockReset())
 
+  it('cooldown 0 → 요청 간격 행 숨김 (쿼터 웨이브 — 쿨다운 제거)', () => {
+    mockData([row('coverletter_chat', { cooldownSeconds: 0 })])
+    render(<ProUpgradeModal {...baseProps} />)
+    expect(screen.queryByText(/요청 간격/)).not.toBeInTheDocument()
+  })
+
+  it('cooldown > 0 → 요청 간격 행 표시', () => {
+    mockData([row('coverletter_chat', { cooldownSeconds: 30 })])
+    render(<ProUpgradeModal {...baseProps} />)
+    expect(screen.getByText(/요청 간격/)).toBeInTheDocument()
+  })
+
   it('공개 feature 3개 행 렌더 (라벨·순서)', () => {
     mockData([row('coverletter_chat'), row('coverletter_feedback'), row('note_summary')])
     render(<ProUpgradeModal {...baseProps} />)
