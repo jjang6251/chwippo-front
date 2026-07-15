@@ -200,9 +200,11 @@ export function ProUpgradeModal({
                       </span>
                     </span>
                   </div>
-                  <p className="text-text-quaternary text-[10px] mt-1">
-                    요청 간격 {formatCooldown(quota.cooldownSeconds)}
-                  </p>
+                  {quota.cooldownSeconds > 0 && (
+                    <p className="text-text-quaternary text-[10px] mt-1">
+                      요청 간격 {formatCooldown(quota.cooldownSeconds)}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

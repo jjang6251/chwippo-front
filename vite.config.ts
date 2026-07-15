@@ -9,6 +9,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // dayjs 와 locale 을 함께 사전번들 — 따로 최적화되면 dayjs/locale/ko 가 dayjs 내부 export(`t`)를
+  // 못 찾는 Vite deps 이슈 방지 ("does not provide an export named 't'")
+  optimizeDeps: {
+    include: ['dayjs', 'dayjs/locale/ko'],
+  },
   test: {
     environment: 'jsdom',
     globals: true,

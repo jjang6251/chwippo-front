@@ -176,7 +176,7 @@ export function AiQuotaOverrideCard({ userId }: { userId: string }) {
             onClick={() => {
               if (
                 window.confirm(
-                  '이 유저의 오늘 AI 사용량(24h 카운터)을 리셋할까요? 한도는 그대로 유지됩니다.',
+                  '이 유저의 오늘 AI 사용량(KST 자정 리셋)을 지금 리셋할까요? 한도는 그대로 유지됩니다.',
                 )
               ) {
                 resetMutation.mutate()
