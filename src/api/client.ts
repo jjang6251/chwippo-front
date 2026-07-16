@@ -1,6 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { toast } from '@/stores/toastStore'
 import { useAuthStore } from '@/stores/authStore'
+import { postToNative } from '@/utils/nativeBridge'
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -132,6 +133,11 @@ export function handleAuthFailure(err: unknown): void {
   // 409 = refresh 경합 재시도 소진 (극히 드묾) — 세션 유효하므로 로그아웃·랜딩 금지.
   // 다음 사용자 액션·새로고침이 갱신된 쿠키로 복구한다.
   if (status === 409) return
+  // 네이티브(WebView) 세션만료 동기화 — 401 확정일 때만 전파.
+  // 이 아래는 401 전용이 아니라 네트워크 오류(response 없음)·5xx도 흘러드는 fallthrough라,
+  // 명시 가드 없이 전파하면 오프라인·백엔드 순단이 네이티브 로그아웃으로 새어나간다.
+  // 네트워크·5xx·409·429는 세션 유효 가능성이 있어 전파 금지(계정 교차·오프라인 로그아웃 방지).
+  if (status === 401) postToNative({ type: 'logout' })
   useAuthStore.getState().clearAuth()
   const msg = ((err as { response?: { data?: { message?: string } } })
     ?.response?.data?.message ?? '') as string
