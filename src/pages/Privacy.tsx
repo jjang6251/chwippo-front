@@ -93,6 +93,7 @@ export function Privacy() {
             headers={['수탁 업체', '위탁 내용', '국외 이전']}
             rows={[
               ['Kakao Corp.', '소셜 로그인 인증', '국내'],
+              ['Apple Inc.', '소셜 로그인 인증', '미국'],
               ['Railway Corp.', '데이터베이스·애플리케이션 호스팅', '미국'],
               ['Cloudflare, Inc.', '파일 저장(R2)·DNS·HTTPS·CDN', '미국·글로벌'],
               ['GitHub, Inc.', '서비스 가용성 모니터링 (헬스체크 cron)', '미국'],
