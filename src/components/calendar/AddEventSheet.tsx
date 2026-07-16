@@ -115,10 +115,16 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
             autoFocus
             value={memoText}
             onChange={(e) => setMemoText(e.target.value)}
-            maxLength={500}
+            maxLength={200}
             placeholder="예: 자소서 초안 다듬기"
             className="w-full h-24 bg-input border border-line rounded-xl p-3 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand/50 resize-none"
           />
+          {/* U19 — 백엔드 daily_notes.content varchar(200) 정합. 카운터는 150자+ 만 노출 */}
+          {memoText.length >= 150 && (
+            <p className="mt-1 text-right text-[11px] text-warning tabular-nums">
+              {memoText.length}/200
+            </p>
+          )}
           <div className="flex items-center justify-between mt-4 gap-2">
             <button
               onClick={() => setPendingType(null)}

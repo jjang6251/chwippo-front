@@ -221,10 +221,19 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
               : 'hover:bg-card active:bg-card-strong'
 
             return (
-              <button
+              // U9 — 셀은 div role=button (셀 안 "+N개" 를 중첩 button 없이 렌더하기 위함)
+              <div
                 key={dateStr}
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectDate?.(dateStr)}
-                className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-line transition-colors text-left w-full ${!isLastRow ? 'border-b' : ''} ${!isLastCol ? 'border-r' : ''} ${cellBg} ${isPast && !isToday ? 'opacity-50' : ''}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelectDate?.(dateStr)
+                  }
+                }}
+                className={`min-h-[64px] sm:min-h-[80px] flex flex-col items-start p-1.5 gap-1 border-line transition-colors text-left w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60 ${!isLastRow ? 'border-b' : ''} ${!isLastCol ? 'border-r' : ''} ${cellBg} ${isPast && !isToday ? 'opacity-50' : ''}`}
               >
                 <span className="flex items-center gap-0.5">
                   <span
@@ -262,9 +271,19 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
                   </div>
                 ))}
                 {presentation.overflow > 0 && (
-                  <span className="text-[9px] text-text-quaternary">+{presentation.overflow}개</span>
+                  <button
+                    type="button"
+                    aria-label={`이벤트 ${presentation.overflow}개 더 보기`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSelectDate?.(dateStr)
+                    }}
+                    className="text-[9px] text-text-quaternary hover:text-text-secondary rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+                  >
+                    +{presentation.overflow}개
+                  </button>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>

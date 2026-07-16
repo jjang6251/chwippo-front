@@ -14,9 +14,10 @@
  */
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import dayjs from 'dayjs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CalendarDayPanel } from './CalendarDayPanel'
+import { todayLocal, addDays } from '@/utils/datetime'
+import { calcDday, getDdayLabel } from '@/utils/dday'
 import type { UrgentChecklistItem } from '@/api/calendar'
 
 let urgentData: UrgentChecklistItem[] = []
@@ -27,6 +28,7 @@ vi.mock('@/hooks/useCalendar', () => ({
   useCreateDailyNote: () => ({ mutate: vi.fn() }),
   useUpdateDailyNote: () => ({ mutate: vi.fn() }),
   useDeleteDailyNote: () => ({ mutate: vi.fn() }),
+  useCarryOverDailyNote: () => ({ mutate: vi.fn() }),
   useUrgentChecklist: (enabled: boolean) => ({
     data: enabled ? urgentData : [],
   }),
@@ -36,8 +38,9 @@ vi.mock('@/hooks/useCalendar', () => ({
   }),
 }))
 
-const TODAY = dayjs().format('YYYY-MM-DD')
-const TOMORROW = dayjs().add(1, 'day').format('YYYY-MM-DD')
+// 컴포넌트의 isToday 판정이 todayLocal()(KST) 기준 — 테스트도 동일 유틸 사용 (UTC 러너에서 갈라짐 방지)
+const TODAY = todayLocal()
+const TOMORROW = addDays(TODAY, 1)
 
 const ITEM: UrgentChecklistItem = {
   itemId: 'c-1',
@@ -46,7 +49,7 @@ const ITEM: UrgentChecklistItem = {
   stepName: '면접',
   applicationId: 'app-1',
   companyName: '카카오',
-  date: dayjs().add(2, 'day').format('YYYY-MM-DD'),
+  date: addDays(TODAY, 2),
 }
 
 function renderPanel(date: string) {
@@ -69,7 +72,8 @@ describe('CalendarDayPanel — 마감 임박 준비 (A3)', () => {
     expect(screen.getByText('🔥 마감 임박 준비')).toBeInTheDocument()
     expect(screen.getByText('포트폴리오 출력')).toBeInTheDocument()
     expect(screen.getByText('카카오')).toBeInTheDocument()
-    expect(screen.getByText('D-2')).toBeInTheDocument()
+    // D-day 라벨은 컴포넌트와 같은 유틸로 계산 — calcDday 가 로컬 TZ 라 UTC 러너에서 KST 날짜와 하루 어긋날 수 있음
+    expect(screen.getByText(getDdayLabel(calcDday(ITEM.date)))).toBeInTheDocument()
     // 스텝 페이지 링크
     expect(screen.getByTitle(/면접 준비 체크리스트로 이동/)).toHaveAttribute(
       'href',

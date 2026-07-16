@@ -17,6 +17,11 @@ export interface CalendarEvent {
    * 아젠다 즐겨찾기 필터에서 사용.
    */
   isStarred?: boolean
+  /**
+   * U27 — note 타입 전용. DailyNote.isDone 값. 아젠다 인라인 완료 토글에서 사용.
+   * ⚠️ 백엔드 note 이벤트 매핑에 `isDone: n.isDone` 추가 필요 (현재 미전달 → undefined).
+   */
+  isDone?: boolean
 }
 
 export interface DailyNote {

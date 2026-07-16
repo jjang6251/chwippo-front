@@ -14,6 +14,7 @@ import { CalendarAgendaView } from '@/components/calendar/CalendarAgendaView'
 import { CalendarMonthlyGrid } from '@/components/calendar/CalendarMonthlyGrid'
 import { CalendarSideMinimap } from '@/components/calendar/CalendarSideMinimap'
 import { CalendarDayPanel } from '@/components/calendar/CalendarDayPanel'
+import { CalendarDaySheet } from '@/components/calendar/CalendarDaySheet'
 import { CountdownHeroLarge } from '@/components/calendar/CountdownHeroLarge'
 import { TodayBriefingBanner } from '@/components/calendar/TodayBriefingBanner'
 import { CountdownPillCard } from '@/components/calendar/CountdownPillCard'
@@ -50,6 +51,9 @@ export function Calendar() {
   const [starOnly, setStarOnly] = useState(false)
   const [addSheetOpen, setAddSheetOpen] = useState(false)
   const [addSheetDate, setAddSheetDate] = useState<string>(todayStr)
+  // U1 — 모바일 날짜 상세 바텀시트
+  const [daySheetOpen, setDaySheetOpen] = useState(false)
+  const [daySheetDate, setDaySheetDate] = useState<string | null>(null)
 
   // 이번 달 이벤트 (사이드 미니맵 + 월별 그리드 공유)
   const monthYear = today.year()
@@ -100,8 +104,19 @@ export function Calendar() {
   }
 
   function handleAddOnDate(date: string) {
+    // 날짜 시트가 열려 있으면 닫고 추가 시트로 전환 (드로어 중첩 방지)
+    setDaySheetOpen(false)
     setAddSheetDate(date)
     setAddSheetOpen(true)
+  }
+
+  // U8·U9·U28 — 날짜 선택: 모바일 = 상세 시트 열기 / 데스크탑 = 사이드 패널 선택일 변경
+  function handleSelectDate(date: string) {
+    setSelectedDate(date)
+    if (isMobile) {
+      setDaySheetDate(date)
+      setDaySheetOpen(true)
+    }
   }
 
   // Fantastical-style 헤더 날짜 표시
@@ -270,6 +285,7 @@ export function Calendar() {
               events={agendaEvents}
               starOnly={starOnly}
               onAddOnDate={handleAddOnDate}
+              onSelectDate={handleSelectDate}
             />
           </div>
 
@@ -299,7 +315,7 @@ export function Calendar() {
             <CalendarMonthlyGrid
               events={agendaEvents}
               selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
+              onSelectDate={handleSelectDate}
               onToday={() => setSelectedDate(todayStr)}
             />
           </div>
@@ -315,6 +331,15 @@ export function Calendar() {
           )}
         </div>
       )}
+
+      {/* U1 — 모바일 날짜 상세 시트 (isMobile 에서만 열림) */}
+      <CalendarDaySheet
+        open={daySheetOpen}
+        date={daySheetDate}
+        events={daySheetDate ? agendaEvents.filter((e) => e.date === daySheetDate) : []}
+        onClose={() => setDaySheetOpen(false)}
+        onAddOnDate={handleAddOnDate}
+      />
 
       <AddEventSheet
         open={addSheetOpen}

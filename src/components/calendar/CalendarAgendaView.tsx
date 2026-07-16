@@ -20,6 +20,8 @@ interface Props {
   events: CalendarEvent[]
   starOnly?: boolean
   onAddOnDate?: (date: string) => void
+  /** U28 — 날짜 헤더 탭: 모바일 시트 열기 / 데스크탑 선택일 변경 */
+  onSelectDate?: (date: string) => void
 }
 
 /** 주 시작 (월요일 00:00) 계산 · 한국 KST 기준 */
@@ -42,7 +44,7 @@ interface WeekGroup {
   dates: DateGroup[]
 }
 
-export function CalendarAgendaView({ events, starOnly = false, onAddOnDate }: Props) {
+export function CalendarAgendaView({ events, starOnly = false, onAddOnDate, onSelectDate }: Props) {
   const today = dayjs().startOf('day')
   const todayStr = today.format('YYYY-MM-DD')
   const thisWeekStart = weekStartMonday(today)
@@ -226,6 +228,7 @@ export function CalendarAgendaView({ events, starOnly = false, onAddOnDate }: Pr
                       date={dg.date}
                       isToday={dg.isToday}
                       onAdd={onAddOnDate ? () => onAddOnDate(dg.date) : undefined}
+                      onSelect={onSelectDate ? () => onSelectDate(dg.date) : undefined}
                     />
                     {dg.events.length === 0 ? (
                       <p className="text-[11px] text-text-quaternary pl-1">

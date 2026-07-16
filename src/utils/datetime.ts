@@ -87,6 +87,11 @@ export function todayLocal(tz: Tz = APP_TIMEZONE): string {
   return toLocalDateString(new Date(), tz)
 }
 
+/** 'YYYY-MM-DD' 에 일수 더한 결과 (음수 = 이전 날짜) — TZ 무관 (date-only math) */
+export function addDays(dateStr: string, days: number): string {
+  return ymdAddDays(dateStr, days)
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // 주 경계 — ISO 월요일 ~ 일요일
 // ────────────────────────────────────────────────────────────────────────
