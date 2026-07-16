@@ -19,6 +19,7 @@ import {
 } from './client'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
+import { postToNative } from '@/utils/nativeBridge'
 
 vi.mock('axios', async () => {
   const actual = await vi.importActual<typeof import('axios')>('axios')
@@ -41,7 +42,12 @@ vi.mock('@/stores/toastStore', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }))
 
+vi.mock('@/utils/nativeBridge', () => ({
+  postToNative: vi.fn(),
+}))
+
 const mockedAxiosPost = vi.mocked(axios.post)
+const mockedPostToNative = vi.mocked(postToNative)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -265,5 +271,44 @@ describe('handleAuthFailure', () => {
     handleAuthFailure({ response: { status: 401 } })
     expect(useAuthStore.getState().accessToken).toBeNull()
     expect(window.location.href).toBe('/')
+  })
+})
+
+// 네이티브(WebView) 세션만료 동기화 — 401 확정일 때만 postToNative({type:'logout'}) 전파.
+// 오탐 전파(네트워크·5xx·409·429·데모)를 못박아 계정 교차·오프라인 로그아웃을 차단한다.
+describe('handleAuthFailure — 네이티브 로그아웃 전파 (401 한정)', () => {
+  it('401 → postToNative({type:logout}) 호출됨', () => {
+    handleAuthFailure({ response: { status: 401 } })
+    expect(mockedPostToNative).toHaveBeenCalledTimes(1)
+    expect(mockedPostToNative).toHaveBeenCalledWith({ type: 'logout' })
+  })
+
+  it('409 → 전파 안 함 (refresh 경합, 세션 유효)', () => {
+    handleAuthFailure({ response: { status: 409 } })
+    expect(mockedPostToNative).not.toHaveBeenCalled()
+  })
+
+  it('429 → 전파 안 함 (rate limit, 세션 유효)', () => {
+    handleAuthFailure({ response: { status: 429 } })
+    expect(mockedPostToNative).not.toHaveBeenCalled()
+  })
+
+  it('네트워크 오류 (response 없음) → 전파 안 함 (오프라인 로그아웃 방지)', () => {
+    handleAuthFailure(new Error('Network Error'))
+    expect(mockedPostToNative).not.toHaveBeenCalled()
+  })
+
+  it('500 → 전파 안 함 (백엔드 순단, 세션 유효 가능)', () => {
+    handleAuthFailure({ response: { status: 500 } })
+    expect(mockedPostToNative).not.toHaveBeenCalled()
+  })
+
+  it('데모 경로 → 전파 안 함 (early-return 선행)', () => {
+    Object.defineProperty(window, 'location', {
+      value: { href: '', pathname: '/demo/calendar' },
+      writable: true,
+    })
+    handleAuthFailure({ response: { status: 401 } })
+    expect(mockedPostToNative).not.toHaveBeenCalled()
   })
 })
