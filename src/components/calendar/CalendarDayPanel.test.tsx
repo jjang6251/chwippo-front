@@ -27,6 +27,7 @@ vi.mock('@/hooks/useCalendar', () => ({
   useCreateDailyNote: () => ({ mutate: vi.fn() }),
   useUpdateDailyNote: () => ({ mutate: vi.fn() }),
   useDeleteDailyNote: () => ({ mutate: vi.fn() }),
+  useCarryOverDailyNote: () => ({ mutate: vi.fn() }),
   useUrgentChecklist: (enabled: boolean) => ({
     data: enabled ? urgentData : [],
   }),
