@@ -33,6 +33,10 @@ export function Landing() {
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/kakao`
   }
 
+  const handleAppleLogin = () => {
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/apple`
+  }
+
   return (
     <div className="min-h-screen bg-bg text-text-primary">
       {/* 헤더 */}
@@ -46,13 +50,12 @@ export function Landing() {
             >
               둘러보기
             </Link>
-            <button
-              type="button"
-              onClick={handleKakaoLogin}
-              className="text-sm font-medium bg-brand hover:bg-accent active:bg-accent-hover text-text-primary px-4 py-2 rounded-lg transition-colors"
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center text-sm font-medium bg-brand hover:bg-accent active:bg-accent-hover text-text-primary px-4 py-2 rounded-lg transition-colors"
             >
               시작하기
-            </button>
+            </Link>
           </nav>
         </div>
       </header>
@@ -84,6 +87,13 @@ export function Landing() {
             >
               <KakaoIcon />
               카카오로 무료 시작
+            </button>
+            <button
+              onClick={handleAppleLogin}
+              className="w-full sm:w-auto flex items-center justify-center gap-3 bg-black hover:bg-[#1a1a1a] text-white border border-line font-semibold text-sm rounded-xl px-8 py-3.5 transition-colors shadow-[0_4px_24px_rgba(0,0,0,0.25)]"
+            >
+              <AppleIcon />
+              Apple로 계속하기
             </button>
             <Link
               to="/demo"
@@ -292,12 +302,12 @@ export function Landing() {
             부족한 점, 원하는 기능을 언제든지 알려주세요. 빠르게 반영하겠습니다.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              onClick={handleKakaoLogin}
-              className="w-full sm:w-auto bg-brand hover:bg-accent active:bg-accent-hover text-text-primary font-semibold text-sm px-8 py-3.5 rounded-xl transition-colors shadow-[0_0_24px_rgba(107,156,127,0.25)]"
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center w-full sm:w-auto bg-brand hover:bg-accent active:bg-accent-hover text-text-primary font-semibold text-sm px-8 py-3.5 rounded-xl transition-colors shadow-[0_0_24px_rgba(107,156,127,0.25)]"
             >
               지금 무료로 시작하기
-            </button>
+            </Link>
             <Link
               to="/inquiry"
               className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-card hover:bg-card active:bg-card-strong border border-line text-text-secondary hover:text-text-primary font-medium text-sm rounded-xl px-8 py-3.5 transition-colors"
@@ -383,6 +393,14 @@ function KakaoIcon() {
         d="M9 0C4.029 0 0 3.168 0 7.08c0 2.52 1.611 4.734 4.05 6.003L3.06 17.1a.36.36 0 0 0 .54.378L8.37 14.1A10.43 10.43 0 0 0 9 14.16c4.971 0 9-3.168 9-7.08S13.971 0 9 0Z"
         fill="#191919"
       />
+    </svg>
+  )
+}
+
+function AppleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z" />
     </svg>
   )
 }
