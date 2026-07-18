@@ -15,7 +15,7 @@ import {
 import { calcDday, getDdayLabel } from '@/utils/dday'
 import { detectScheduleConflicts } from '@/utils/scheduleConflict'
 import { getHolidayName } from '@/utils/holidays'
-import { todayLocal, addDays } from '@/utils/datetime'
+import { todayLocal, addDays, DEADLINE_DISPLAY_TIME } from '@/utils/datetime'
 import { toast } from '@/stores/toastStore'
 
 const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -99,7 +99,7 @@ function EventLink({ event }: { event: CalendarEvent }) {
         </p>
       </div>
       {event.type === 'step' && time === undefined && (
-        <span className={`text-[11px] font-semibold ${textColor} shrink-0`}>23:59</span>
+        <span className={`text-[11px] font-semibold ${textColor} shrink-0`}>{DEADLINE_DISPLAY_TIME}</span>
       )}
     </div>
   )

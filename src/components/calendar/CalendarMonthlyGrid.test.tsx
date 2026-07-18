@@ -6,15 +6,15 @@
  */
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import dayjs from 'dayjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CalendarMonthlyGrid } from './CalendarMonthlyGrid'
 import { addDays, todayLocal } from '@/utils/datetime'
 import type { CalendarEvent } from '@/api/calendar'
 
-const today = dayjs().startOf('day')
-const TODAY = today.format('YYYY-MM-DD')
-const DAY_NUM = String(today.date())
+// U4 — '오늘'은 KST 기준(todayLocal). 컴포넌트가 todayLocal() 을 쓰므로 테스트 기준도
+// 동일하게 잡아 UTC·KST 러너에서 로컬 now 와 갈라지지 않게 한다.
+const TODAY = todayLocal()
+const DAY_NUM = String(Number(TODAY.slice(8, 10)))
 
 function ev(partial: Partial<CalendarEvent> & { type: CalendarEvent['type'] }): CalendarEvent {
   return {
@@ -72,7 +72,7 @@ describe('CalendarMonthlyGrid — 셀·+N개 탭 (U8/U9)', () => {
  * 4. pill 회사명 → 11px 클래스
  *
  * 날짜는 @/utils/datetime + 정오 KST 고정(fake timer) 으로 UTC·KST 러너 모두 동일 판정.
- * (컴포넌트 내부 dayjs() '오늘'과 todayLocal() 이 정오엔 갈라지지 않음 — CI TZ 안전)
+ * (컴포넌트가 todayLocal() = KST 로 '오늘'을 판정 — CI TZ 안전)
  */
 describe('CalendarMonthlyGrid — 마감 pill·"+N" 뱃지·링 (M8·U22)', () => {
   beforeEach(() => {
@@ -220,5 +220,36 @@ describe('CalendarMonthlyGrid — CTA 색·aria (U25·표기)', () => {
     render(<CalendarMonthlyGrid events={[]} onSelectDate={vi.fn()} />)
     expect(screen.getByRole('button', { name: '이전 달' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다음 달' })).toBeInTheDocument()
+  })
+})
+
+/**
+ * U4 — 로컬 TZ 의존 제거 회귀: '오늘' 판정·초기 월 커서가 브라우저/러너 TZ 가 아니라
+ * KST 기준이어야 한다.
+ *   KST 2026-08-01 00:30 = UTC 2026-07-31 15:30.
+ *   UTC 러너에서 로컬 now = 7/31 이지만 todayLocal() = 8/1.
+ *   구현이 dayjs()(로컬) 였다면 7월·7/31 로 판정돼 두 케이스 모두 실패 → 회귀 가드.
+ * 두 러너(UTC·KST) 모두에서 todayLocal() 은 8/1 로 고정 → 결정적.
+ */
+describe('CalendarMonthlyGrid — KST 경계 오늘·월 커서 (U4 TZ)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-31T15:30:00Z')) // = KST 2026-08-01 00:30
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('1) 오늘 판정 = KST 날짜(8/1) → 브랜드 오늘 배지 (로컬 7/31 아님)', () => {
+    render(<CalendarMonthlyGrid events={[]} onSelectDate={vi.fn()} />)
+    const todayBadge = screen.getByText('1')
+    expect(todayBadge.className).toContain('bg-brand')
+    expect(todayBadge.className).toContain('text-bg')
+  })
+
+  it('2) 초기 월 커서 = KST 현재 월 (2026년 8월, 7월 아님)', () => {
+    render(<CalendarMonthlyGrid events={[]} onSelectDate={vi.fn()} />)
+    expect(screen.getByText('2026년 8월')).toBeInTheDocument()
+    expect(screen.queryByText('2026년 7월')).toBeNull()
   })
 })

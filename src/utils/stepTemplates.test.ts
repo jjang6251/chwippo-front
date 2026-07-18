@@ -3,6 +3,7 @@ import {
   APPLICATION_TEMPLATES,
   getApplicationTemplate,
   recommendTemplate,
+  STEP_TYPE_CONFIG,
 } from './stepTemplates'
 
 describe('APPLICATION_TEMPLATES', () => {
@@ -25,6 +26,13 @@ describe('APPLICATION_TEMPLATES', () => {
     expect(getApplicationTemplate(null).id).toBe('general')
     expect(getApplicationTemplate(undefined).id).toBe('general')
     expect(getApplicationTemplate('nope').id).toBe('general')
+  })
+})
+
+describe('STEP_TYPE_CONFIG — 시맨틱 토큰 (U32)', () => {
+  it('document bgCls 는 raw blue 가 아닌 시맨틱 bg-info/5', () => {
+    expect(STEP_TYPE_CONFIG.document.bgCls).toBe('bg-info/5')
+    expect(STEP_TYPE_CONFIG.document.bgCls).not.toContain('blue')
   })
 })
 

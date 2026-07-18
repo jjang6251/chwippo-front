@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { todayLocal } from '@/utils/datetime'
 
 /**
  * 캘린더 UX 재구성 — 아젠다 날짜 그룹 헤더.
@@ -20,7 +21,8 @@ const KO_DAYS = ['일요일', '월요일', '화요일', '수요일', '목요일'
 
 export function AgendaDateHeader({ date, isToday, onAdd, onSelect, pulse = 0 }: Props) {
   const d = dayjs(date)
-  const today = dayjs().startOf('day')
+  // U4 — 로컬 TZ 의존 제거: D-day 계산의 '오늘'은 KST 기준 (date-only diff)
+  const today = dayjs(todayLocal())
   const dday = d.startOf('day').diff(today, 'day')
   const monthDay = `${d.month() + 1}월 ${d.date()}일`
   const dayLabel = KO_DAYS[d.day()]
