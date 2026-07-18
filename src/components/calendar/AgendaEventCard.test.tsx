@@ -98,6 +98,20 @@ describe('AgendaEventCard — 완료 체크박스 (U27)', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', '/myinfo#exam-schedules')
   })
 
+  it('7) 카드 구분감 v2 (U11+U29) — surface-2 승격 + 유형 스트라이프 + hover', () => {
+    renderCard(ev({ type: 'note', noteId: 'n1', content: '메모' }))
+    const card = screen.getByText('메모').closest('.rounded-lg')
+    // U29 v2 — 다크 저알파 틴트 지각 불가 → surface 승격 + 좌측 유형색 스트라이프
+    expect(card?.className).toContain('bg-card-solid')
+    expect(card?.className).toContain('border-l-[3px]')
+    expect(card?.className).toContain('border-l-info')
+    expect(card?.className).toContain('shadow-sm')
+    expect(card?.className).toContain('hover:bg-surface-3')
+    expect(card?.className).toContain('transition-colors')
+    // no-op bare 'card-hover' 클래스 잔존 금지
+    expect(card?.className.split(/\s+/)).not.toContain('card-hover')
+  })
+
   it('6) 외부 갱신 반영 — 서버값 일치 후 override 해제, 이후 외부 변경 반영', () => {
     const { rerender } = renderCard(ev({ type: 'note', noteId: 'n1', content: '인적성 문제집' }))
     fireEvent.click(screen.getByRole('button', { name: '완료 표시' }))

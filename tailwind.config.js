@@ -9,6 +9,11 @@ export default {
         mono: ["'DM Mono'", "'Berkeley Mono'", 'ui-monospace', 'monospace'],
         serif: ["'Nanum Myeongjo'", 'ui-serif', 'serif'],
       },
+      // index.css 의 그림자 토큰 배선 — 라이트 모드 카드 면 분리용 (다크에선 사실상 비가시)
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+      },
       colors: {
         // 색은 RGB triplet 변수 + tailwind opacity modifier 지원 (bg-warning/10 등)
         bg: 'rgb(var(--bg) / <alpha-value>)',
@@ -37,6 +42,7 @@ export default {
 
         // 의미 토큰 — `bg-white/N`·`text-white/N` 대체용. alpha 미리 박혀있는 완전한 값.
         card: 'var(--card)',
+        'card-solid': 'var(--card-solid)',
         'card-hover': 'var(--card-hover)',
         'card-strong': 'var(--card-strong)',
         'text-faint': 'var(--text-faint)',

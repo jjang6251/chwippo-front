@@ -305,7 +305,7 @@ export function AddCardModal({
           <button
             type="submit"
             disabled={!companyName.trim() || isPending}
-            className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-brand-hover active:bg-brand-hover rounded-lg transition-colors disabled:opacity-40"
+            className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-brand-hover active:bg-brand-hover rounded-lg transition-colors disabled:opacity-40"
           >
             {isPending ? '추가 중...' : '추가하기'}
           </button>
@@ -360,7 +360,7 @@ function GroupChips({ group, selected, preset, onToggle, disabled }: GroupChipsP
               {cat}
               {isPreset && (
                 <span
-                  className={`absolute -top-1.5 -right-1 text-[8px] px-1 py-px rounded font-mono tracking-wider text-white`}
+                  className={`absolute -top-1.5 -right-1 text-[8px] px-1 py-px rounded font-mono tracking-wider text-bg`}
                   style={{ background: `rgb(var(--${group.color === 'text-tertiary' ? 'text-tertiary' : group.color}))` }}
                   aria-hidden="true"
                 >

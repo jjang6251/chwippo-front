@@ -100,7 +100,7 @@ export function InfoModal({
         type="button"
         onClick={onSave}
         disabled={saving || saveDisabled}
-        className="flex-1 sm:flex-none sm:min-w-[7rem] h-12 px-4 sm:px-6 text-sm font-bold bg-brand hover:bg-accent active:bg-accent-hover text-text-primary rounded-xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-accent/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+        className="flex-1 sm:flex-none sm:min-w-[7rem] h-12 px-4 sm:px-6 text-sm font-bold bg-brand hover:bg-accent active:bg-accent-hover text-bg rounded-xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-accent/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
       >
         {saving ? '저장 중...' : saveLabel ?? '저장'}
       </button>

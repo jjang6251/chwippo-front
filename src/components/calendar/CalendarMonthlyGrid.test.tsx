@@ -5,6 +5,7 @@
  * 3. "+N개" 탭 → onSelectDate 1회만 (stopPropagation, 셀과 중복 호출 없음)
  */
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CalendarMonthlyGrid } from './CalendarMonthlyGrid'
@@ -119,5 +120,105 @@ describe('CalendarMonthlyGrid — 마감 pill·"+N" 뱃지·링 (M8·U22)', () =
     render(<CalendarMonthlyGrid events={deadlineEvents(1)} onSelectDate={vi.fn()} />)
     const pillLabel = screen.getByText('회사0')
     expect(pillLabel.className).toContain('text-[11px]')
+  })
+})
+
+/**
+ * U7 — 월 pill 개별 클릭 딥링크 시나리오:
+ * 1. pill 회사명 클릭 → 스텝 경로(/board/:appId/steps/:stepId) 이동 + 셀 onSelectDate 미호출 (stopPropagation)
+ * 2. stepId 없는 마감 → /board/:appId fallback
+ * 3. "+N" 뱃지 클릭 → 셀로 버블 = 기존 날짜 선택 동작 유지
+ *
+ * 정오 KST 고정으로 UTC·KST 러너 모두 동일 판정.
+ */
+describe('CalendarMonthlyGrid — pill 스텝 딥링크 (U7)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-15T03:00:00Z'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const DAY = todayLocal() // '2026-07-15'
+
+  it('1) pill 회사명 클릭 → 스텝 경로 이동 · 셀 onSelectDate 미호출', () => {
+    const onSelectDate = vi.fn()
+    const step = ev({
+      type: 'step',
+      stepName: '서류',
+      companyName: '카카오',
+      applicationId: 'a1',
+      stepId: 's1',
+      date: DAY,
+    })
+    render(
+      <MemoryRouter>
+        <CalendarMonthlyGrid events={[step]} onSelectDate={onSelectDate} />
+      </MemoryRouter>,
+    )
+    const pillLink = screen.getByRole('link', { name: '카카오' })
+    expect(pillLink).toHaveAttribute('href', '/board/a1/steps/s1')
+    fireEvent.click(pillLink)
+    expect(onSelectDate).not.toHaveBeenCalled()
+  })
+
+  it('2) stepId 없는 마감 → /board/:appId fallback', () => {
+    const step = ev({
+      type: 'step',
+      stepName: '서류',
+      companyName: '네이버',
+      applicationId: 'a2',
+      stepId: null,
+      date: DAY,
+    })
+    render(
+      <MemoryRouter>
+        <CalendarMonthlyGrid events={[step]} onSelectDate={vi.fn()} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: '네이버' })).toHaveAttribute('href', '/board/a2')
+  })
+
+  it('3) "+N" 뱃지 클릭 → 셀 날짜 선택 유지 (버블)', () => {
+    const onSelectDate = vi.fn()
+    const events = [
+      ev({ type: 'step', stepName: '서류', companyName: '회사A', applicationId: 'a1', stepId: 's1', date: DAY }),
+      ev({ type: 'step', stepName: '서류', companyName: '회사B', applicationId: 'a2', stepId: 's2', date: DAY }),
+    ]
+    render(
+      <MemoryRouter>
+        <CalendarMonthlyGrid events={events} onSelectDate={onSelectDate} />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByText('+1'))
+    expect(onSelectDate).toHaveBeenCalledWith(DAY)
+  })
+})
+
+/**
+ * U25·표기 통일 — 오늘 배지 text-bg + 월 네비 aria-label 시나리오.
+ */
+describe('CalendarMonthlyGrid — CTA 색·aria (U25·표기)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-15T03:00:00Z'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('1) 오늘 배지 → text-bg (브랜드 반전)', () => {
+    render(<CalendarMonthlyGrid events={[]} onSelectDate={vi.fn()} />)
+    const todayBadge = screen.getByText('15') // 오늘 = 7/15
+    expect(todayBadge.className).toContain('bg-brand')
+    expect(todayBadge.className).toContain('text-bg')
+    expect(todayBadge.className).not.toContain('text-text-primary')
+  })
+
+  it('2) 월 네비 aria-label "이전 달"/"다음 달"', () => {
+    render(<CalendarMonthlyGrid events={[]} onSelectDate={vi.fn()} />)
+    expect(screen.getByRole('button', { name: '이전 달' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다음 달' })).toBeInTheDocument()
   })
 })

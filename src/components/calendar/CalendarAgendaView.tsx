@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import type { CalendarEvent } from '@/api/calendar'
+import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { AgendaEventCard } from './AgendaEventCard'
 import { AgendaDateHeader } from './AgendaDateHeader'
 
@@ -22,6 +23,8 @@ interface Props {
   onAddOnDate?: (date: string) => void
   /** U28 — 날짜 헤더 탭: 모바일 시트 열기 / 데스크탑 선택일 변경 */
   onSelectDate?: (date: string) => void
+  /** U10+ — T 단축키: 값 변경 시 오늘 섹션 스크롤 + 오늘 배지 펄스 */
+  todayPulse?: number
 }
 
 /** 주 시작 (월요일 00:00) 계산 · 한국 KST 기준 */
@@ -44,7 +47,7 @@ interface WeekGroup {
   dates: DateGroup[]
 }
 
-export function CalendarAgendaView({ events, starOnly = false, onAddOnDate, onSelectDate }: Props) {
+export function CalendarAgendaView({ events, starOnly = false, onAddOnDate, onSelectDate, todayPulse = 0 }: Props) {
   const today = dayjs().startOf('day')
   const todayStr = today.format('YYYY-MM-DD')
   const thisWeekStart = weekStartMonday(today)
@@ -52,6 +55,16 @@ export function CalendarAgendaView({ events, starOnly = false, onAddOnDate, onSe
   const nextWeekStart = thisWeekStart.add(7, 'day')
   const nextWeekEnd = nextWeekStart.add(6, 'day')
   const [showPast, setShowPast] = useState(false)
+
+  // U10+ — T 단축키: 오늘 섹션으로 스크롤 (배지 펄스는 AgendaDateHeader 가 재생)
+  useEffect(() => {
+    if (todayPulse > 0) {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      document
+        .querySelector('[data-today-group]')
+        ?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
+    }
+  }, [todayPulse])
 
   // 지난 일정 (오늘 미포함 · 이번 달 및 다음 달 범위 내)
   const pastDates = useMemo<DateGroup[]>(() => {
@@ -160,7 +173,7 @@ export function CalendarAgendaView({ events, starOnly = false, onAddOnDate, onSe
             className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
           >
             <span>{showPast ? '지난 일정 접기' : `지난 일정 보기 (${pastDates.length}일)`}</span>
-            <span className="opacity-60">{showPast ? '↓' : '↑'}</span>
+            <CollapsibleChevron open={showPast} />
           </button>
           {showPast && (
             <div className="mt-3 relative pl-6 opacity-70">
@@ -218,7 +231,7 @@ export function CalendarAgendaView({ events, starOnly = false, onAddOnDate, onSe
 
               <div className="space-y-6">
                 {group.dates.map((dg) => (
-                  <div key={dg.date} className="relative">
+                  <div key={dg.date} className="relative" data-today-group={dg.isToday || undefined}>
                     <span
                       className={`absolute -left-6 top-1 w-3 h-3 rounded-full ring-2 ring-bg ${dotColorForGroup(
                         dg,
@@ -229,6 +242,7 @@ export function CalendarAgendaView({ events, starOnly = false, onAddOnDate, onSe
                       isToday={dg.isToday}
                       onAdd={onAddOnDate ? () => onAddOnDate(dg.date) : undefined}
                       onSelect={onSelectDate ? () => onSelectDate(dg.date) : undefined}
+                      pulse={dg.isToday ? todayPulse : 0}
                     />
                     {dg.events.length === 0 ? (
                       <p className="text-[11px] text-text-quaternary pl-1">

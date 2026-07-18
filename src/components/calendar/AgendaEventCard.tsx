@@ -19,21 +19,20 @@ interface Props {
   event: CalendarEvent
 }
 
+// U29 v2 — 카드 구분감: 다크에서 저알파 틴트는 지각 불가(시안 1 실패) →
+// 월 그리드와 같은 surface-2 승격 + 유형색 좌측 스트라이프로 전환 (구분감 보장 + 유형 식별 유지)
 const TYPE_META = {
   step: {
     icon: '📄',
-    bg: 'bg-warning/6',
-    border: 'border-warning/25',
+    stripe: 'border-l-warning',
   },
   exam: {
     icon: '📚',
-    bg: 'bg-violet/8',
-    border: 'border-violet/25',
+    stripe: 'border-l-violet',
   },
   note: {
     icon: '📝',
-    bg: 'bg-info/6',
-    border: 'border-info/20',
+    stripe: 'border-l-info',
   },
 } as const
 
@@ -98,7 +97,7 @@ export function AgendaEventCard({ event }: Props) {
     .join(' · ')
 
   const inner = (
-    <div className={`flex items-center gap-3 px-3.5 py-3 ${meta.bg} border ${meta.border} rounded-lg card-hover`}>
+    <div className={`flex items-center gap-3 px-3.5 py-3 bg-card-solid border border-line-strong border-l-[3px] ${meta.stripe} rounded-lg shadow-sm transition-colors hover:bg-surface-3`}>
       {isNote ? (
         <button
           onClick={toggleDone}
