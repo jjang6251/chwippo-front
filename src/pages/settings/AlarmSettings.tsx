@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useAlarmConfig, useUpdateAlarmConfig } from '@/hooks/useNotifications'
 import { useNativeMode } from '@/hooks/useNativeMode'
 import { BETA_FEATURES } from '@/config/betaFeatures'
@@ -18,15 +19,39 @@ export function AlarmSettings() {
   const update = useUpdateAlarmConfig()
   const isNative = useNativeMode()
 
+  // U24 — 저장 성공 피드백: "저장됨 ✓" 2초 노출 (자소서 자동저장 피드백과 동일 문법)
+  const [justSaved, setJustSaved] = useState(false)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (savedTimer.current) clearTimeout(savedTimer.current)
+    },
+    [],
+  )
+
+  // U24 — 저장 중 토글 disabled (연타 mutate 경쟁 방지)
+  const saving = update.isPending
+
   function patch(partial: Parameters<typeof update.mutate>[0]) {
     update.mutate(partial, {
+      onSuccess: () => {
+        setJustSaved(true)
+        if (savedTimer.current) clearTimeout(savedTimer.current)
+        savedTimer.current = setTimeout(() => setJustSaved(false), 2000)
+      },
       onError: () => toast.error('오류가 발생했습니다. 다시 시도해주세요.'),
     })
   }
 
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
-      <h1 className="text-xl font-bold mb-1">알림 설정</h1>
+      <div className="flex items-center gap-2 mb-1">
+        <h1 className="text-xl font-bold">알림 설정</h1>
+        {/* U24 — 저장 피드백 (aria-live 로 스크린리더 통지) */}
+        <span className="text-xs font-medium" aria-live="polite">
+          {justSaved && <span className="text-success">저장됨 ✓</span>}
+        </span>
+      </div>
       <p className="text-sm text-text-tertiary mb-6">
         마감·면접을 앱을 열지 않아도 챙겨드려요. 하루 최대 2번만 보내요.
       </p>
@@ -52,6 +77,7 @@ export function AlarmSettings() {
               <Toggle
                 checked={config.master}
                 onChange={(v) => patch({ master: v })}
+                disabled={saving}
                 label="전체 알림"
               />
             </div>
@@ -76,7 +102,7 @@ export function AlarmSettings() {
                 <Toggle
                   checked={config.briefingEnabled}
                   onChange={(v) => patch({ briefingEnabled: v })}
-                  disabled={!config.master}
+                  disabled={!config.master || saving}
                   label="아침 브리핑"
                 />
               </div>
@@ -95,7 +121,8 @@ export function AlarmSettings() {
                           key={opt.value}
                           type="button"
                           onClick={() => patch({ deadlinePoints: opt.value })}
-                          className={`rounded-lg border px-3 py-2.5 text-center transition-colors ${
+                          disabled={saving}
+                          className={`rounded-lg border px-3 py-2.5 text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                             active
                               ? 'border-brand bg-brand/10 text-brand'
                               : 'border-line bg-input text-text-secondary hover:border-line-strong'
@@ -127,7 +154,7 @@ export function AlarmSettings() {
                 <Toggle
                   checked={config.deadlineUrgentEnabled}
                   onChange={(v) => patch({ deadlineUrgentEnabled: v })}
-                  disabled={!config.master}
+                  disabled={!config.master || saving}
                   label="마감 임박 알림"
                 />
               </div>
@@ -175,6 +202,24 @@ export function AlarmSettings() {
               >
                 알림 권한 설정
               </button>
+            </section>
+          )}
+
+          {/* U3 — 웹 사용자 대상 안내 (푸시는 앱에서만 · 웹은 알림센터로 확인) */}
+          {!isNative && (
+            <section className="flex items-start gap-3 bg-info/8 border border-info/20 rounded-xl px-5 py-4">
+              <span className="text-base mt-0.5" aria-hidden>
+                💻
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text-primary">
+                  웹에서는 푸시 알림이 오지 않아요
+                </p>
+                <p className="text-xs text-text-tertiary leading-relaxed mt-0.5">
+                  마감·면접 푸시 알림은 앱에서 받아요. 웹에서는 상단 종
+                  아이콘의 알림센터에서 확인할 수 있어요.
+                </p>
+              </div>
             </section>
           )}
         </>
