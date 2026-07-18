@@ -53,7 +53,7 @@ export function CountdownPillCard({ event }: Props) {
   const to = isDemo ? '/demo' + rawTo : rawTo
 
   return (
-    <Link to={to} className="block rounded-2xl bg-surface border border-line p-4 card-hover">
+    <Link to={to} className="block rounded-2xl bg-surface border border-line p-4 transition-colors hover:bg-card-hover">
       <div className="flex items-center gap-3">
         <CompanyAvatar
           name={event.companyName}
@@ -83,7 +83,7 @@ export function CountdownPillCard({ event }: Props) {
             <p className={`text-lg font-bold leading-none ${textClass}`}>D-DAY</p>
           ) : (
             <p className={`text-2xl font-bold leading-none tabular-nums tracking-[-0.05em] ${textClass}`}>
-              D{event.dday > 0 ? '−' : '+'}{Math.abs(event.dday)}
+              D{event.dday > 0 ? '-' : '+'}{Math.abs(event.dday)}
             </p>
           )}
         </div>

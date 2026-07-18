@@ -29,4 +29,25 @@ describe('CountdownPillCard — 회사명 truncate (M6)', () => {
     const nameEl = screen.getByText(LONG_NAME)
     expect(nameEl.className).toContain('truncate')
   })
+
+  it('2) D-day 글리프 = 하이픈 (표기 통일)', () => {
+    render(
+      <MemoryRouter>
+        <CountdownPillCard event={event} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByText('D-5')).toBeInTheDocument()
+    expect(screen.queryByText(/−/)).toBeNull()
+  })
+
+  it('3) 카드 hover 스타일 (U11) — hover:bg-card-hover', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <CountdownPillCard event={event} />
+      </MemoryRouter>,
+    )
+    const link = container.querySelector('a')
+    expect(link?.className).toContain('hover:bg-card-hover')
+    expect(link?.className).toContain('transition-colors')
+  })
 })

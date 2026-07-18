@@ -12,11 +12,13 @@ interface Props {
   onAdd?: () => void
   /** U28 — 날짜 영역 탭: 모바일 시트 열기 / 데스크탑 선택일 변경 */
   onSelect?: () => void
+  /** U10+ — T 단축키 피드백: 값이 바뀔 때마다 오늘 배지 펄스 재생 (isToday 일 때만 사용) */
+  pulse?: number
 }
 
 const KO_DAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
 
-export function AgendaDateHeader({ date, isToday, onAdd, onSelect }: Props) {
+export function AgendaDateHeader({ date, isToday, onAdd, onSelect, pulse = 0 }: Props) {
   const d = dayjs(date)
   const today = dayjs().startOf('day')
   const dday = d.startOf('day').diff(today, 'day')
@@ -24,7 +26,11 @@ export function AgendaDateHeader({ date, isToday, onAdd, onSelect }: Props) {
   const dayLabel = KO_DAYS[d.day()]
 
   const ddayBadge = isToday ? (
-    <span className="text-[10px] font-semibold text-brand bg-brand/10 border border-brand/20 rounded-md px-1.5 py-0.5">
+    // key={pulse} — T 단축키마다 remount 로 펄스 애니메이션 재생
+    <span
+      key={pulse}
+      className={`text-[10px] font-semibold text-brand bg-brand/10 border border-brand/20 rounded-md px-1.5 py-0.5 ${pulse > 0 ? 'animate-today-pulse' : ''}`}
+    >
       오늘
     </span>
   ) : dday > 0 ? (

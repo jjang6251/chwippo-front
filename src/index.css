@@ -45,6 +45,8 @@
   --card: rgba(255, 255, 255, 0.04);
   --card-hover: rgba(255, 255, 255, 0.06);
   --card-strong: rgba(255, 255, 255, 0.08);
+  /* U29 — 리스트 카드 불투명 배경: 다크=surface-2 승격(면 분리), 라이트=흰색(Hero 문법) */
+  --card-solid: rgb(44, 42, 40);
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
   --divider: rgba(255, 255, 255, 0.08);
@@ -89,6 +91,7 @@
   --card: rgb(252, 248, 240);
   --card-hover: rgb(235, 230, 217);
   --card-strong: rgb(245, 240, 228);
+  --card-solid: rgb(255, 255, 255);
   --line: rgba(26, 24, 22, 0.10);
   --line-strong: rgba(26, 24, 22, 0.18);
   --divider: rgba(26, 24, 22, 0.10);
@@ -245,4 +248,19 @@ input[type='time']::-webkit-inner-spin-button {
 input[type='date']::-webkit-calendar-picker-indicator,
 input[type='time']::-webkit-calendar-picker-indicator {
   opacity: 0.6;
+}
+
+/* U10+ — T 단축키 시각 피드백: 오늘 배지·셀 펄스 (이미 오늘이어도 반응이 보이게) */
+@keyframes today-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(var(--brand) / 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgb(var(--brand) / 0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .animate-today-pulse {
+    animation: today-pulse 0.7s ease-out 2;
+  }
 }

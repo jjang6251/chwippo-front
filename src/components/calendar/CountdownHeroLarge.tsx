@@ -178,7 +178,8 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
             </div>
           )}
 
-          <div className="mt-5 flex items-center gap-5 text-xs">
+          {/* 남은 N일 행은 우측 대형 D-N 과 중복 → 제거 (표기 통일). 마감일만 유지 */}
+          <div className="mt-5 flex items-center text-xs">
             <div className="flex items-center gap-1.5">
               <span className="text-text-quaternary">
                 {isExam ? '시험' : '마감'}
@@ -186,12 +187,6 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
               <span className="text-text-secondary tabular-nums">
                 {event.date}
                 {event.scheduledTime && ` · ${event.scheduledTime}`}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-quaternary">남은</span>
-              <span className={`font-semibold tabular-nums ${textColor}`}>
-                {event.dday === 0 ? '오늘' : `${event.dday}일`}
               </span>
             </div>
           </div>
@@ -251,7 +246,7 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
             </p>
           ) : (
             <p className={`text-4xl font-bold leading-none tabular-nums tracking-[-0.05em] ${textColor}`}>
-              D{event.dday > 0 ? '−' : '+'}{Math.abs(event.dday)}
+              D{event.dday > 0 ? '-' : '+'}{Math.abs(event.dday)}
             </p>
           )}
           <p className="text-[11px] text-text-tertiary mt-2 tabular-nums">

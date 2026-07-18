@@ -58,20 +58,17 @@ function EventLink({ event }: { event: CalendarEvent }) {
   const link = useDemoLink()
   const time = event.time?.slice(0, 5)
 
-  // 이벤트 종류별 색·아이콘
+  // 이벤트 종류별 색·아이콘 — U29 v2: surface-2 승격 + 유형색 좌측 스트라이프 (아젠다 카드와 동일 문법)
   let icon = '📝'
-  let bg = 'bg-info/8'
-  let border = 'border-info/25'
+  let stripe = 'border-l-info'
   let textColor = 'text-info'
   if (event.type === 'exam') {
     icon = '📚'
-    bg = 'bg-violet/10'
-    border = 'border-violet/25'
+    stripe = 'border-l-violet'
     textColor = 'text-violet'
   } else if (event.type === 'step') {
     icon = '📄'
-    bg = 'bg-warning/8'
-    border = 'border-warning/25'
+    stripe = 'border-l-warning'
     textColor = 'text-warning'
   }
 
@@ -92,7 +89,7 @@ function EventLink({ event }: { event: CalendarEvent }) {
         : event.content ?? ''
 
   const inner = (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${bg} ${border}`}>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-card-solid border border-line-strong border-l-[3px] shadow-sm transition-colors ${stripe} ${to ? 'hover:bg-surface-3' : ''}`}>
       <span className="text-sm shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-text-primary truncate">{label}</p>
@@ -430,7 +427,7 @@ export function DayDetailContent({ date, events, onClose }: Props) {
               <EventLink key={`timed-${idx}`} event={e} />
             ))}
             {scheduledNotes.map((n) => (
-              <div key={n.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-info/6 border border-info/20 group/note">
+              <div key={n.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card-solid border border-line-strong border-l-[3px] border-l-info shadow-sm group/note">
                 <span className="text-[10px] text-text-quaternary tabular-nums shrink-0 w-10">
                   {slotToLabel(n.hourSlot ?? 0)}
                 </span>

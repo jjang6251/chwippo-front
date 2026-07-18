@@ -47,3 +47,22 @@ describe('CountdownHeroLarge — 밀림 해소 (M1·M7·U21)', () => {
     expect(cta.parentElement?.className).toContain('flex-wrap')
   })
 })
+
+/**
+ * 표기 통일 — D-day 글리프·"남은 N일" 중복 제거 시나리오:
+ * 1. 대형 D-day 글리프 = 하이픈 '-' (유니코드 마이너스 − 미사용)
+ * 2. "남은 N일" 행 제거 (우측 대형 D-N 과 중복)
+ */
+describe('CountdownHeroLarge — 표기 통일', () => {
+  it('1) D-day 글리프 = 하이픈', () => {
+    renderHero() // baseEvent dday 3
+    expect(screen.getByText('D-3')).toBeInTheDocument()
+    // 유니코드 마이너스(U+2212) 미사용
+    expect(screen.queryByText(/−/)).toBeNull()
+  })
+
+  it('2) "남은 N일" 행 제거', () => {
+    renderHero()
+    expect(screen.queryByText('남은')).toBeNull()
+  })
+})
