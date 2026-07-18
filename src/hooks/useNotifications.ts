@@ -12,13 +12,25 @@ import {
   markNotificationRead,
   updateAlarmConfig,
 } from '@/api/notifications'
-import type { AlarmConfig } from '@/types/notification'
+import type { AlarmConfig, NotificationType } from '@/types/notification'
 
-/** 인앱 알림 센터 — 무한 스크롤 목록 */
-export function useNotifications() {
+/**
+ * 인앱 알림 센터 — 무한 스크롤 목록 (U23 서버사이드 type 필터).
+ * type 이 쿼리 키에 포함 → 필터 변경 시 서버 재조회. "더 보기"도 필터 상태 유지.
+ *
+ * 목록 응답의 unreadCount 를 종 배지 캐시에 즉시 동기화 — 새 알림 직후 알림센터를
+ * 열면 목록엔 미읽음이 보이는데 종은 낡은 숫자(staleTime 60s)를 보여주던 불일치 제거.
+ * (unreadCount 는 type 필터와 무관한 전체값이라 어떤 필터에서도 동기화 안전)
+ */
+export function useNotifications(type?: NotificationType) {
+  const qc = useQueryClient()
   return useInfiniteQuery({
-    queryKey: ['notifications'],
-    queryFn: ({ pageParam }) => getNotifications(pageParam),
+    queryKey: ['notifications', 'list', type ?? 'all'],
+    queryFn: async ({ pageParam }) => {
+      const result = await getNotifications(pageParam, type)
+      qc.setQueryData(['notifications', 'unread-count'], result.unreadCount)
+      return result
+    },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     staleTime: 30_000,

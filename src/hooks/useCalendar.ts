@@ -112,12 +112,11 @@ export function useCompleteUrgentChecklistItem() {
 
 export function useCarryOverDailyNote() {
   const qc = useQueryClient()
-  const today = dayjs().format('YYYY-MM-DD')
   return useMutation({
     mutationFn: carryOverDailyNote,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['dailyNotes', 'range'] })
-      qc.invalidateQueries({ queryKey: ['dailyNotes', today] })
+      // 어제(이월 원본)·오늘·range 캐시 모두 무효화 — U12 이월 후 어제 서브섹션 즉시 갱신
+      qc.invalidateQueries({ queryKey: ['dailyNotes'] })
       invalidateCalendarAndDday(qc)
     },
     onError: () => toast.error('이동에 실패했습니다.'),

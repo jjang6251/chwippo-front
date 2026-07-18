@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
+import { todayLocal } from '@/utils/datetime'
 import { useAuthStore } from '@/stores/authStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useCalendarEvents } from '@/hooks/useCalendar'
+import { useApplications } from '@/hooks/useApplications'
 import { useDdayList } from '@/hooks/useDashboard'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
@@ -14,6 +16,7 @@ import { CalendarAgendaView } from '@/components/calendar/CalendarAgendaView'
 import { CalendarMonthlyGrid } from '@/components/calendar/CalendarMonthlyGrid'
 import { CalendarSideMinimap } from '@/components/calendar/CalendarSideMinimap'
 import { CalendarDayPanel } from '@/components/calendar/CalendarDayPanel'
+import { CalendarDaySheet } from '@/components/calendar/CalendarDaySheet'
 import { CountdownHeroLarge } from '@/components/calendar/CountdownHeroLarge'
 import { TodayBriefingBanner } from '@/components/calendar/TodayBriefingBanner'
 import { CountdownPillCard } from '@/components/calendar/CountdownPillCard'
@@ -44,39 +47,72 @@ export function Calendar() {
   const urlView = searchParams.get('view')
   const [view, setViewState] = useState<CalendarView>(() => resolveInitialView(urlView))
 
-  const today = dayjs().startOf('day')
-  const todayStr = today.format('YYYY-MM-DD')
+  // U4 — 로컬 TZ 의존 제거: '오늘'은 KST 기준 (todayLocal). date-only 로직이라
+  // KST 날짜 문자열을 dayjs 로 파싱해 시작점만 고정 (시간 성분 불필요).
+  const todayStr = todayLocal()
+  const today = dayjs(todayStr)
   const [selectedDate, setSelectedDate] = useState<string>(todayStr)
   const [starOnly, setStarOnly] = useState(false)
   const [addSheetOpen, setAddSheetOpen] = useState(false)
   const [addSheetDate, setAddSheetDate] = useState<string>(todayStr)
+  // U1 — 모바일 날짜 상세 바텀시트
+  const [daySheetOpen, setDaySheetOpen] = useState(false)
+  const [daySheetDate, setDaySheetDate] = useState<string | null>(null)
 
   // 이번 달 이벤트 (사이드 미니맵 + 월별 그리드 공유)
   const monthYear = today.year()
   const monthNum = today.month() + 1
-  const { data: monthlyEvents = [] } = useCalendarEvents(monthYear, monthNum)
+  const monthlyQuery = useCalendarEvents(monthYear, monthNum)
 
   // 아젠다: 오늘부터 D+30 커버 → 다음 달 겹칠 수 있으니 다음 달도 요청
   const nextCursor = today.add(1, 'month')
-  const { data: nextMonthEvents = [] } = useCalendarEvents(
-    nextCursor.year(),
-    nextCursor.month() + 1,
-  )
+  const nextMonthQuery = useCalendarEvents(nextCursor.year(), nextCursor.month() + 1)
 
   // 아젠다 이벤트 = 이번 달 + 다음 달 (중복 제거 필요 없음 · API 는 월별 분리)
   const agendaEvents = useMemo(
-    () => [...monthlyEvents, ...nextMonthEvents],
-    [monthlyEvents, nextMonthEvents],
+    () => [...(monthlyQuery.data ?? []), ...(nextMonthQuery.data ?? [])],
+    [monthlyQuery.data, nextMonthQuery.data],
   )
+  const monthlyEvents = monthlyQuery.data ?? []
 
   // Hero 데이터
-  const { data: ddayList = [] } = useDdayList()
-  const { data: streak } = useDashboardStreak()
-  const streakDays = streak?.streak.current
+  const ddayQuery = useDdayList()
+  const ddayList = ddayQuery.data ?? []
+  // streak 은 보조 데이터 — 실패해도 배지만 숨기고 페이지는 정상 (U2). 에러 게이트 제외.
+  const streakQuery = useDashboardStreak()
+  const streakDays = streakQuery.data?.streak.current
+
+  // F10 — hasCards 는 기존 지원 카드 목록(useApplications) 재사용 판정 (신규 endpoint 없음)
+  // 목록 조회 실패 시엔 true 로 폴백 — 기존 유저에게 온보딩 empty 를 오노출하지 않는 안전한 기본값
+  const applicationsQuery = useApplications()
+  const hasCards = applicationsQuery.isError
+    ? true
+    : (applicationsQuery.data?.length ?? 0) > 0
 
   const heroEvent = ddayList[0]
   const pillEvents = ddayList.slice(1, 3)
-  const hasCards = ddayList.length > 0 // TODO: card count endpoint 별도 필요할 수 있음
+
+  // U2 — false-empty flash 제거: 주 데이터(이벤트·D-day·카드 목록) 초기 로딩·에러 게이팅.
+  //  - 로딩 중엔 스켈레톤만 (EmptyDeadlineHero·"여유로워요"·아젠다 빈 문구 미노출)
+  //  - streak 은 보조 데이터라 로딩·에러 게이트에서 제외
+  const isInitialLoading =
+    monthlyQuery.isLoading ||
+    nextMonthQuery.isLoading ||
+    ddayQuery.isLoading ||
+    applicationsQuery.isLoading
+  const isPrimaryError =
+    monthlyQuery.isError || nextMonthQuery.isError || ddayQuery.isError
+
+  function retryPrimary() {
+    monthlyQuery.refetch()
+    nextMonthQuery.refetch()
+    ddayQuery.refetch()
+    applicationsQuery.refetch()
+    streakQuery.refetch()
+  }
+
+  // U10 — T 단축키: 월뷰 커서를 오늘 달로 되돌리는 신호 카운터
+  const [todayResetSignal, setTodayResetSignal] = useState(0)
 
   const pull = usePullToRefresh(async () => {
     await Promise.all([
@@ -100,9 +136,55 @@ export function Calendar() {
   }
 
   function handleAddOnDate(date: string) {
+    // 날짜 시트가 열려 있으면 닫고 추가 시트로 전환 (드로어 중첩 방지)
+    setDaySheetOpen(false)
     setAddSheetDate(date)
     setAddSheetOpen(true)
   }
+
+  // U8·U9·U28 — 날짜 선택: 모바일 = 상세 시트 열기 / 데스크탑 = 사이드 패널 선택일 변경
+  function handleSelectDate(date: string) {
+    setSelectedDate(date)
+    if (isMobile) {
+      setDaySheetDate(date)
+      setDaySheetOpen(true)
+    }
+  }
+
+  // U10 — 데스크탑 전용 단축키: T=오늘, N=새 일정.
+  //  input/textarea/select focus · IME 조합 · 모달(시트) 열림 · 조합키 중엔 무시.
+  useEffect(() => {
+    if (isMobile) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.isComposing) return
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        target?.isContentEditable
+      ) {
+        return
+      }
+      // 우리 시트/드로어 열림 중이면 무시 (모달 안 조작 우선)
+      if (addSheetOpen || daySheetOpen) return
+
+      // e.code(물리 키) 기준 — 한글 입력 소스에서 e.key 가 'ㅅ'/'ㅜ' 로 들어와도 동작
+      if (e.code === 'KeyT') {
+        e.preventDefault()
+        setSelectedDate(todayStr)
+        setTodayResetSignal((n) => n + 1) // 월뷰 커서도 오늘 달로
+      } else if (e.code === 'KeyN') {
+        e.preventDefault()
+        setAddSheetDate(todayStr)
+        setAddSheetOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isMobile, addSheetOpen, daySheetOpen, todayStr])
 
   // Fantastical-style 헤더 날짜 표시
   const dateHeader = (
@@ -167,10 +249,16 @@ export function Calendar() {
         </div>
       </header>
 
-      {/* Summary bar */}
-      <div className="flex items-center gap-3 px-4 py-2.5 mb-5 rounded-xl border border-line bg-surface">
-        <p className="text-xs text-text-secondary">
-          <span className="text-base font-bold text-brand tracking-tight">
+      {isPrimaryError ? (
+        <CalendarErrorCard onRetry={retryPrimary} />
+      ) : isInitialLoading ? (
+        <CalendarSkeleton />
+      ) : (
+        <>
+      {/* Summary bar — M3: 좁은 폭에서 wrap 허용 + 닉네임 truncate + "회고 보기" 항상 온전 노출 */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 mb-5 rounded-xl border border-line bg-surface">
+        <p className="min-w-0 text-xs text-text-secondary">
+          <span className="inline-block max-w-[8rem] truncate align-bottom text-base font-bold text-brand tracking-tight">
             {user?.nickname ?? '재원'}
           </span>
           님, 이번 주 마감{' '}
@@ -179,15 +267,15 @@ export function Calendar() {
         </p>
         {monthlyEvents.length > 0 && (
           <>
-            <span className="w-px h-3 bg-line-strong" />
-            <p className="text-[11px] text-text-tertiary">
+            <span className="w-px h-3 bg-line-strong shrink-0" />
+            <p className="text-[11px] text-text-tertiary shrink-0">
               이번 달 <span className="text-text-secondary tabular-nums">{monthlyEvents.length}건</span>
             </p>
           </>
         )}
         <a
           href={isDemo ? '/demo/dashboard' : '/dashboard'}
-          className="ml-auto text-[10px] text-brand hover:text-brand-hover"
+          className="ml-auto shrink-0 whitespace-nowrap text-[11px] text-brand hover:text-brand-hover"
         >
           회고 보기 →
         </a>
@@ -254,9 +342,9 @@ export function Calendar() {
                 <EmptyDeadlineHero />
               </div>
             ) : (
-              // 완전 empty state — 지원 카드도 없음
+              // F10 — 완전 empty state (지원 카드 0개) → 온보딩형 CTA
               <div className="mb-10">
-                <EmptyDeadlineHero />
+                <EmptyDeadlineHero variant="onboarding" />
               </div>
             )}
 
@@ -270,6 +358,8 @@ export function Calendar() {
               events={agendaEvents}
               starOnly={starOnly}
               onAddOnDate={handleAddOnDate}
+              onSelectDate={handleSelectDate}
+              todayPulse={todayResetSignal}
             />
           </div>
 
@@ -297,10 +387,13 @@ export function Calendar() {
             {/* A7 — 오늘 브리핑 진입점 (아젠다 뷰와 동일 — 뷰 상관없이 노출) */}
             <TodayBriefingBanner />
             <CalendarMonthlyGrid
+              // U10 — T 단축키 시 커서를 오늘 달로: 신호 증가 → 리마운트로 초기 오늘 달 복귀
+              key={todayResetSignal}
               events={agendaEvents}
               selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
+              onSelectDate={handleSelectDate}
               onToday={() => setSelectedDate(todayStr)}
+              todayPulse={todayResetSignal}
             />
           </div>
           {!isMobile && (
@@ -315,6 +408,17 @@ export function Calendar() {
           )}
         </div>
       )}
+        </>
+      )}
+
+      {/* U1 — 모바일 날짜 상세 시트 (isMobile 에서만 열림) */}
+      <CalendarDaySheet
+        open={daySheetOpen}
+        date={daySheetDate}
+        events={daySheetDate ? agendaEvents.filter((e) => e.date === daySheetDate) : []}
+        onClose={() => setDaySheetOpen(false)}
+        onAddOnDate={handleAddOnDate}
+      />
 
       <AddEventSheet
         open={addSheetOpen}
@@ -338,6 +442,53 @@ export function Calendar() {
           </span>
         </footer>
       )}
+    </div>
+  )
+}
+
+/** U2 — 초기 로딩 스켈레톤 (스피너 금지 규칙). 요약바·Hero·리스트 자리 표시 */
+function CalendarSkeleton() {
+  return (
+    <div className="animate-pulse" aria-hidden>
+      {/* 요약 바 */}
+      <div className="h-11 mb-5 rounded-xl border border-line bg-surface" />
+      {/* 탭 */}
+      <div className="h-9 w-40 mb-6 rounded-lg border border-line bg-surface" />
+      {/* Hero */}
+      <div className="mb-3 rounded-2xl border border-line bg-surface p-7">
+        <div className="mb-4 h-3 w-24 rounded bg-card" />
+        <div className="mb-5 flex items-center gap-3">
+          <div className="h-12 w-12 rounded-xl bg-card" />
+          <div className="flex-1">
+            <div className="mb-2 h-4 w-40 rounded bg-card" />
+            <div className="h-3 w-24 rounded bg-card" />
+          </div>
+        </div>
+        <div className="h-9 w-32 rounded-lg bg-card" />
+      </div>
+      {/* 리스트 */}
+      <div className="mt-8 space-y-2">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-14 rounded-lg border border-line bg-surface" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** U2 — 주 데이터 로딩 실패 카드 + 재시도 */
+function CalendarErrorCard({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="rounded-2xl border border-line bg-surface px-8 py-12 text-center">
+      <p className="mb-1 text-sm font-semibold text-text-primary">일정을 불러오지 못했어요</p>
+      <p className="mb-5 text-xs text-text-tertiary">잠시 후 다시 시도해주세요.</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="inline-flex h-9 items-center rounded-lg bg-brand px-5 text-xs font-bold text-bg transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+      >
+        다시 시도
+      </button>
     </div>
   )
 }

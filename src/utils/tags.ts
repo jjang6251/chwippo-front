@@ -25,7 +25,7 @@ export const parseTags = (raw: string | null): string[] =>
 export const serializeTags = (tags: string[]): string =>
   tags.join(',')
 
-// 회사명 해시 기반 아바타 컬러 (CompanyCard, DdayList 공유)
+// 회사명 해시 기반 아바타 컬러 (CompanyCard 등 공유)
 const AVATAR_COLORS = [
   // W2 — 다크/라이트 모두 식별 강한 패턴 (solid bg + white text).
   // 이전 alpha 15% + tinted text = 라이트 모드에서 배경에 묻힘.

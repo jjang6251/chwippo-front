@@ -16,6 +16,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { addDays, todayLocal } from '@/utils/datetime'
 
 const { createMutate, updateMutate } = vi.hoisted(() => ({
   createMutate: vi.fn(),
@@ -159,6 +160,45 @@ describe('AddExamScheduleModal', () => {
       fireEvent.click(screen.getByRole('button', { name: '수정' }))
       expect(updateMutate).toHaveBeenCalled()
       expect(createMutate).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('U20 — 인라인 검증', () => {
+    // 날짜는 컴포넌트와 동일 유틸(todayLocal/addDays, KST) 로 계산 → CI TZ 안전
+    function dateInput(container: HTMLElement): HTMLInputElement {
+      return container.querySelector('input[type="date"]') as HTMLInputElement
+    }
+
+    it('필수 라벨 3개(종류·시험명·시험일) 에 * 표시', () => {
+      render(<AddExamScheduleModal open={true} onClose={() => {}} />)
+      // 어학 기본 모드 → 종류·시험명·시험일 = 3개
+      expect(screen.getAllByText('*')).toHaveLength(3)
+    })
+
+    it('과거 시험일 → 경고 노출 + 저장 가능 (차단 아님)', () => {
+      const { container } = render(<AddExamScheduleModal open={true} onClose={() => {}} />)
+      fireEvent.change(dateInput(container), {
+        target: { value: addDays(todayLocal(), -5) },
+      })
+      expect(screen.getByText(/지난 날짜예요/)).toBeInTheDocument()
+      // 어학 기본(TOEIC) + 유효 날짜 → 추가 버튼 enabled
+      expect((screen.getByRole('button', { name: '추가' }) as HTMLButtonElement).disabled).toBe(false)
+    })
+
+    it('미래 시험일 → 경고 없음', () => {
+      const { container } = render(<AddExamScheduleModal open={true} onClose={() => {}} />)
+      fireEvent.change(dateInput(container), {
+        target: { value: addDays(todayLocal(), 5) },
+      })
+      expect(screen.queryByText(/지난 날짜예요/)).toBeNull()
+      expect(screen.queryByText('시험일을 입력해주세요')).toBeNull()
+    })
+
+    it('시험일 미입력 → 추가 버튼 disabled + 사유 메시지', () => {
+      const { container } = render(<AddExamScheduleModal open={true} onClose={() => {}} />)
+      fireEvent.change(dateInput(container), { target: { value: '' } })
+      expect((screen.getByRole('button', { name: '추가' }) as HTMLButtonElement).disabled).toBe(true)
+      expect(screen.getByText('시험일을 입력해주세요')).toBeInTheDocument()
     })
   })
 

@@ -55,7 +55,7 @@ export function getStepType(stepName: string): StepType {
 
 export const STEP_TYPE_CONFIG: Record<StepType, { icon: string; label: string; colorCls: string; borderCls: string; bgCls: string; hex: string }> = {
   interview: { icon: '🎤', label: '면접', colorCls: 'text-info', borderCls: 'border-info/30', bgCls: 'bg-info/5', hex: '#7170ff' },
-  document:  { icon: '📄', label: '서류', colorCls: 'text-blue-400', borderCls: 'border-blue-400/30', bgCls: 'bg-blue-400/5', hex: '#60a5fa' },
+  document:  { icon: '📄', label: '서류', colorCls: 'text-blue-400', borderCls: 'border-blue-400/30', bgCls: 'bg-info/5', hex: '#60a5fa' },
   wait:      { icon: '⏳', label: '대기', colorCls: 'text-text-tertiary', borderCls: 'border-line', bgCls: 'bg-card', hex: '#8a8f98' },
   result:    { icon: '🎯', label: '결과', colorCls: 'text-success', borderCls: 'border-success/30', bgCls: 'bg-success/5', hex: '#10b981' },
 }

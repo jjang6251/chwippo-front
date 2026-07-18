@@ -18,6 +18,13 @@
 export const APP_TIMEZONE = 'Asia/Seoul' as const
 export type Tz = string
 
+/**
+ * 종일(마감) 이벤트 표시 시각 상수 (F8).
+ * E안 표시 정책 — 시간 없는 마감은 "그날 23:59"로 노출. 여러 컴포넌트가 공유하는
+ * 표시 문자열을 한 곳에 고정 (정책 변경 시 단일 지점 수정). 표시 정책 자체는 무변경.
+ */
+export const DEADLINE_DISPLAY_TIME = '23:59' as const
+
 // ────────────────────────────────────────────────────────────────────────
 // 내부 — Intl formatter 캐시, YMD math
 // ────────────────────────────────────────────────────────────────────────
@@ -85,6 +92,11 @@ export function toLocalDateString(d: Date, tz: Tz = APP_TIMEZONE): string {
 /** 오늘 'YYYY-MM-DD' (기본 KST) */
 export function todayLocal(tz: Tz = APP_TIMEZONE): string {
   return toLocalDateString(new Date(), tz)
+}
+
+/** 'YYYY-MM-DD' 에 일수 더한 결과 (음수 = 이전 날짜) — TZ 무관 (date-only math) */
+export function addDays(dateStr: string, days: number): string {
+  return ymdAddDays(dateStr, days)
 }
 
 // ────────────────────────────────────────────────────────────────────────
