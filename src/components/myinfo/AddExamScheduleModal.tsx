@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import dayjs from 'dayjs'
+import { todayLocal } from '@/utils/datetime'
 import { useCreateExamSchedule, useUpdateExamSchedule } from '@/hooks/useExamSchedules'
 import { LANGUAGE_CERT_TYPES, type ExamSchedule, type ExamType } from '@/types/exam-schedule'
 import { InfoModal } from './InfoModal'
@@ -55,6 +56,12 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
   const finalName = examType === 'language' ? certType : name.trim()
   const canSubmit = finalName.length > 0 && date.length === 10
 
+  // U20 — 인라인 검증. 시험명은 자격증 모드에서만 비어있을 수 있음 (어학은 select 기본값)
+  const isNameMissing = examType !== 'language' && name.trim().length === 0
+  const isDateMissing = date.length !== 10
+  // 과거 시험일 = 경고만 (지난 시험 기록 허용 — 저장 차단 아님)
+  const isPastDate = date.length === 10 && date < todayLocal()
+
   function handleSubmit() {
     if (!canSubmit) return
     const exam_date = `${date}T${time}:00+09:00`
@@ -92,7 +99,9 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
       <div className="space-y-3">
           {/* 시험 종류 */}
           <div>
-            <label className="block text-text-tertiary text-[11px] mb-1.5">종류</label>
+            <label className="block text-text-tertiary text-[11px] mb-1.5">
+              종류 <span className="text-danger">*</span>
+            </label>
             <div className="flex gap-2">
               <button
                 onClick={() => setExamType('language')}
@@ -108,12 +117,14 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
           {/* 어학: 드롭다운 / 자격증: 자유 입력 */}
           {examType === 'language' ? (
             <div>
-              <label className="block text-text-tertiary text-[11px] mb-1.5">시험명</label>
+              <label className="block text-text-tertiary text-[11px] mb-1.5">
+                시험명 <span className="text-danger">*</span>
+              </label>
               <div className="relative">
                 <select
                   value={certType}
                   onChange={(e) => setCertType(e.target.value)}
-                  className="w-full appearance-none bg-input border border-line rounded-lg pl-3 pr-9 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
+                  className="w-full appearance-none bg-input border border-line rounded-lg pl-3 pr-9 py-2 text-base sm:text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
                 >
                   {LANGUAGE_CERT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -124,25 +135,44 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
             </div>
           ) : (
             <div>
-              <label className="block text-text-tertiary text-[11px] mb-1.5">시험명</label>
+              <label className="block text-text-tertiary text-[11px] mb-1.5">
+                시험명 <span className="text-danger">*</span>
+              </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="예: 정보처리기사 필기"
-                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                aria-invalid={isNameMissing}
+                aria-describedby={isNameMissing ? 'exam-name-error' : undefined}
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
               />
+              {isNameMissing && (
+                <p id="exam-name-error" role="alert" className="mt-1 text-[11px] text-danger">
+                  시험명을 입력해주세요
+                </p>
+              )}
             </div>
           )}
 
           {/* 날짜 + 시간 */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-text-tertiary text-[11px] mb-1.5">시험일</label>
+              <label className="block text-text-tertiary text-[11px] mb-1.5">
+                시험일 <span className="text-danger">*</span>
+              </label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                aria-invalid={isDateMissing}
+                aria-describedby={
+                  isDateMissing
+                    ? 'exam-date-error'
+                    : isPastDate
+                      ? 'exam-date-warning'
+                      : undefined
+                }
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
               />
             </div>
             <div>
@@ -151,10 +181,20 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
               />
             </div>
           </div>
+          {/* U20 — 시험일 미입력 사유 / 과거 날짜 경고(저장 차단 아님) */}
+          {isDateMissing ? (
+            <p id="exam-date-error" role="alert" className="-mt-1 text-[11px] text-danger">
+              시험일을 입력해주세요
+            </p>
+          ) : isPastDate ? (
+            <p id="exam-date-warning" role="alert" className="-mt-1 text-[11px] text-warning">
+              지난 날짜예요. 기록용으로 저장할 수 있어요.
+            </p>
+          ) : null}
 
           {/* 장소 */}
           <div>
@@ -163,7 +203,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="예: 홍익대학교 종합교육관"
-              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
           </div>
 
@@ -176,7 +216,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
               rows={2}
               maxLength={500}
               placeholder="준비물, 목표 점수 등"
-              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none"
             />
             <p className={`text-[10px] text-right mt-1 ${memo.length >= 500 ? 'text-danger' : memo.length >= 450 ? 'text-warning' : 'text-text-quaternary'}`}>
               {memo.length} / 500

@@ -115,7 +115,8 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
       className={`relative block rounded-2xl bg-surface p-7 border ${borderClass}`}
     >
       <div className="grid grid-cols-[1fr_auto] gap-6 items-end">
-        <div>
+        {/* M1 — 임의값 1fr 셀은 min=auto (DESIGN.md 규칙 3) → min-w-0 로 truncate 활성 */}
+        <div className="min-w-0">
           <div className="flex items-center gap-2 mb-4">
             <span className={`text-[10px] font-semibold uppercase tracking-widest ${textColor}`}>
               {isUrgent && !isExam ? '긴급 · ' : ''}
@@ -143,12 +144,13 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
                   : 'border border-warning/25'
               }
             />
-            <div>
-              <p className="text-xl font-bold tracking-tight text-text-primary leading-none">
+            {/* M1 — truncate 활성용 min-w-0 · M7 — 회사명 leading-none 제거(안전 행간) */}
+            <div className="min-w-0">
+              <p className="text-xl font-bold tracking-tight text-text-primary leading-tight truncate">
                 {event.companyName}
               </p>
               {event.stepName && (
-                <p className="text-xs text-text-tertiary mt-1.5">{event.stepName}</p>
+                <p className="text-xs text-text-tertiary mt-1.5 truncate">{event.stepName}</p>
               )}
             </div>
           </div>
@@ -194,7 +196,8 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
             </div>
           </div>
 
-          <div className="mt-5 flex items-center gap-2">
+          {/* U21 — CTA 버튼 행 flex-wrap (좁은 폭에서 카드 밖으로 밀지 않음) */}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
             <Link
               to={ctaTo}
               className={`h-9 px-4 rounded-lg ${ctaBg} text-bg text-[11px] font-bold transition-colors inline-flex items-center`}

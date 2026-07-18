@@ -10,6 +10,7 @@ import {
   recommendTemplate,
 } from '@/utils/stepTemplates'
 import { JOB_GROUPS, type JobCategory } from '@/utils/sampleData'
+import { todayLocal } from '@/utils/datetime'
 import { toast } from '@/stores/toastStore'
 import { useTourStore } from '@/stores/tourStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -137,6 +138,9 @@ export function AddCardModal({
     setShowMoreGroups(false)
     onClose()
   }
+
+  // U20 — 과거 서류 마감일 경고 (지난 공고 기록 허용 → 저장 차단 아님)
+  const isPastDeadline = deadline.length === 10 && deadline < todayLocal()
 
   // 처음 3 그룹 (A IT, B 디자인·기획, C 마케팅) + 더 보기로 나머지
   const primaryGroups = JOB_GROUPS.slice(0, 3)
@@ -279,8 +283,14 @@ export function AddCardModal({
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
+              aria-describedby={isPastDeadline ? 'deadline-warning' : undefined}
               className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
+            {isPastDeadline && (
+              <p id="deadline-warning" role="alert" className="mt-1 text-[11px] text-warning">
+                지난 마감일이에요. 지난 공고도 기록할 수 있어요.
+              </p>
+            )}
           </div>
         )}
 

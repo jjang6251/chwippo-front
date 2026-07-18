@@ -182,10 +182,10 @@ export function Calendar() {
         </div>
       </header>
 
-      {/* Summary bar */}
-      <div className="flex items-center gap-3 px-4 py-2.5 mb-5 rounded-xl border border-line bg-surface">
-        <p className="text-xs text-text-secondary">
-          <span className="text-base font-bold text-brand tracking-tight">
+      {/* Summary bar — M3: 좁은 폭에서 wrap 허용 + 닉네임 truncate + "회고 보기" 항상 온전 노출 */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 mb-5 rounded-xl border border-line bg-surface">
+        <p className="min-w-0 text-xs text-text-secondary">
+          <span className="inline-block max-w-[8rem] truncate align-bottom text-base font-bold text-brand tracking-tight">
             {user?.nickname ?? '재원'}
           </span>
           님, 이번 주 마감{' '}
@@ -194,15 +194,15 @@ export function Calendar() {
         </p>
         {monthlyEvents.length > 0 && (
           <>
-            <span className="w-px h-3 bg-line-strong" />
-            <p className="text-[11px] text-text-tertiary">
+            <span className="w-px h-3 bg-line-strong shrink-0" />
+            <p className="text-[11px] text-text-tertiary shrink-0">
               이번 달 <span className="text-text-secondary tabular-nums">{monthlyEvents.length}건</span>
             </p>
           </>
         )}
         <a
           href={isDemo ? '/demo/dashboard' : '/dashboard'}
-          className="ml-auto text-[10px] text-brand hover:text-brand-hover"
+          className="ml-auto shrink-0 whitespace-nowrap text-[11px] text-brand hover:text-brand-hover"
         >
           회고 보기 →
         </a>

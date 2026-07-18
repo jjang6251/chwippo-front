@@ -73,7 +73,7 @@ export function CountdownPillCard({ event }: Props) {
               </>
             )}
           </div>
-          <p className="text-sm font-bold text-text-primary tracking-tight">{event.companyName}</p>
+          <p className="text-sm font-bold text-text-primary tracking-tight truncate">{event.companyName}</p>
           {event.stepName && !label.includes(event.stepName) && (
             <p className="text-[10px] text-text-tertiary truncate mt-0.5">{event.stepName}</p>
           )}
