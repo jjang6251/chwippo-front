@@ -22,8 +22,9 @@
 
   --text-primary: 235 233 227;
   --text-secondary: 192 189 179;
-  --text-tertiary: 138 135 128;
-  --text-quaternary: 105 103 96;
+  /* 2026-07-18 묶음 2b — 대비 4.5:1 정책: tert 5.64·quat 4.52 (vs surface, 워스트) */
+  --text-tertiary: 156 153 146;
+  --text-quaternary: 138 136 129;
 
   --brand: 107 156 127;
   --brand-hover: 88 138 106;
@@ -66,8 +67,9 @@
 
   --text-primary: 26 24 22;
   --text-secondary: 74 70 64;
-  --text-tertiary: 110 106 98;
-  --text-quaternary: 142 138 130;
+  /* 2026-07-18 묶음 2b — 대비 4.5:1 정책: tert 5.64·quat 4.56 (vs 베이지 bg, 워스트) */
+  --text-tertiary: 95 91 83;
+  --text-quaternary: 109 105 97;
 
   --brand: 74 139 107;
   --brand-hover: 58 112 83;
@@ -106,10 +108,10 @@
   --input-bg: 80 75 70;
   --text-primary: 235 233 227;
   --text-secondary: 192 189 179;
-  --text-tertiary: #8a8780;
-  --text-quaternary: #696760;
-  --text-tertiary: 138 135 128;
-  --text-quaternary: 105 103 96;
+  --text-tertiary: #9c9992;
+  --text-quaternary: #8a8881;
+  --text-tertiary: 156 153 146;
+  --text-quaternary: 138 136 129;
   --brand: 107 156 127;
   --brand-hover: 88 138 106;
   --accent: 232 139 111;
