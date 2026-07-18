@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import type { CalendarEvent } from '@/api/calendar'
 import { getHolidayName } from '@/utils/holidays'
+import { todayLocal } from '@/utils/datetime'
 
 /**
  * 캘린더 UX 재구성 — 사이드 미니 월맵 (B안).
@@ -44,8 +45,9 @@ function dotForFirstEvent(events: CalendarEvent[]): string | null {
 }
 
 export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToday }: Props) {
-  const today = dayjs().startOf('day')
-  const todayStr = today.format('YYYY-MM-DD')
+  // U4 — 로컬 TZ 의존 제거: '오늘'·초기 월 커서는 KST 기준 (date-only)
+  const todayStr = todayLocal()
+  const today = dayjs(todayStr)
   const [cursor, setCursor] = useState(today.startOf('month'))
 
   const cells = useMemo(() => {

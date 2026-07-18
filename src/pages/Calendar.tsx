@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
+import { todayLocal } from '@/utils/datetime'
 import { useAuthStore } from '@/stores/authStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useCalendarEvents } from '@/hooks/useCalendar'
@@ -46,8 +47,10 @@ export function Calendar() {
   const urlView = searchParams.get('view')
   const [view, setViewState] = useState<CalendarView>(() => resolveInitialView(urlView))
 
-  const today = dayjs().startOf('day')
-  const todayStr = today.format('YYYY-MM-DD')
+  // U4 — 로컬 TZ 의존 제거: '오늘'은 KST 기준 (todayLocal). date-only 로직이라
+  // KST 날짜 문자열을 dayjs 로 파싱해 시작점만 고정 (시간 성분 불필요).
+  const todayStr = todayLocal()
+  const today = dayjs(todayStr)
   const [selectedDate, setSelectedDate] = useState<string>(todayStr)
   const [starOnly, setStarOnly] = useState(false)
   const [addSheetOpen, setAddSheetOpen] = useState(false)

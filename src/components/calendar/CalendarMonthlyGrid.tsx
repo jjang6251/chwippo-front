@@ -5,6 +5,7 @@ import type { CalendarEvent } from '@/api/calendar'
 import { useDemoLink } from '@/hooks/useDemoLink'
 import { detectScheduleConflicts } from '@/utils/scheduleConflict'
 import { getHolidayName } from '@/utils/holidays'
+import { todayLocal } from '@/utils/datetime'
 
 /**
  * 캘린더 UX 재구성 — 월별 뷰 그리드 (탭 활성 시).
@@ -79,8 +80,9 @@ function presentDayEvents(events: CalendarEvent[]): EventPresentation {
 }
 
 export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToday, todayPulse = 0 }: Props) {
-  const today = dayjs().startOf('day')
-  const todayStr = today.format('YYYY-MM-DD')
+  // U4 — 로컬 TZ 의존 제거: '오늘'·초기 월 커서는 KST 기준 (date-only)
+  const todayStr = todayLocal()
+  const today = dayjs(todayStr)
   const [cursor, setCursor] = useState(today.startOf('month'))
   const demoLink = useDemoLink()
 

@@ -12,6 +12,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AgendaEventCard } from './AgendaEventCard'
 import { useToastStore } from '@/stores/toastStore'
+import { DEADLINE_DISPLAY_TIME } from '@/utils/datetime'
 import type { CalendarEvent } from '@/api/calendar'
 
 const updateMutate = vi.fn()
@@ -96,6 +97,12 @@ describe('AgendaEventCard — 완료 체크박스 (U27)', () => {
     renderCard(ev({ type: 'exam', examId: 'e1', companyName: 'TOEIC' }))
     expect(screen.queryByRole('button', { name: /완료/ })).toBeNull()
     expect(screen.getByRole('link')).toHaveAttribute('href', '/myinfo#exam-schedules')
+  })
+
+  // F8 — 종일 마감(시간 없는 step)은 DEADLINE_DISPLAY_TIME 상수로 표시 (하드코딩 '23:59' 아님)
+  it('8) 시간 없는 step 마감 → DEADLINE_DISPLAY_TIME 상수 표시 (F8)', () => {
+    renderCard(ev({ type: 'step', applicationId: 'a1', stepId: 's1', companyName: '카카오', stepName: '서류' }))
+    expect(screen.getByText(DEADLINE_DISPLAY_TIME)).toBeInTheDocument()
   })
 
   it('7) 카드 구분감 v2 (U11+U29) — surface-2 승격 + 유형 스트라이프 + hover', () => {

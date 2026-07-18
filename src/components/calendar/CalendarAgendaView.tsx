@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import type { CalendarEvent } from '@/api/calendar'
+import { todayLocal } from '@/utils/datetime'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { AgendaEventCard } from './AgendaEventCard'
 import { AgendaDateHeader } from './AgendaDateHeader'
@@ -48,8 +49,9 @@ interface WeekGroup {
 }
 
 export function CalendarAgendaView({ events, starOnly = false, onAddOnDate, onSelectDate, todayPulse = 0 }: Props) {
-  const today = dayjs().startOf('day')
-  const todayStr = today.format('YYYY-MM-DD')
+  // U4 — 로컬 TZ 의존 제거: '오늘'은 KST 기준 (date-only 주 그룹핑)
+  const todayStr = todayLocal()
+  const today = dayjs(todayStr)
   const thisWeekStart = weekStartMonday(today)
   const thisWeekEnd = thisWeekStart.add(6, 'day')
   const nextWeekStart = thisWeekStart.add(7, 'day')

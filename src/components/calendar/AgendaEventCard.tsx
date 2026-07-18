@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { CalendarEvent } from '@/api/calendar'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useUpdateDailyNote } from '@/hooks/useCalendar'
+import { DEADLINE_DISPLAY_TIME } from '@/utils/datetime'
 import { toast } from '@/stores/toastStore'
 
 /**
@@ -90,7 +91,7 @@ export function AgendaEventCard({ event }: Props) {
     event.type === 'step' && !timeLabel // 종일 마감 = "23:59" 로 노출
 
   const subtitle = [
-    showAllDayMarker ? '23:59' : timeLabel,
+    showAllDayMarker ? DEADLINE_DISPLAY_TIME : timeLabel,
     event.location,
   ]
     .filter(Boolean)
