@@ -2,14 +2,23 @@ import { apiClient } from './client'
 import type {
   AlarmConfig,
   NotificationListResult,
+  NotificationType,
 } from '@/types/notification'
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
-/** 인앱 알림 센터 목록 (cursor 페이지네이션) */
-export const getNotifications = (cursor?: string) =>
+/**
+ * 인앱 알림 센터 목록 (cursor 페이지네이션 + 서버사이드 type 필터).
+ * type 미전달 = 전체. unreadCount 는 필터와 무관하게 항상 전체 미읽음.
+ */
+export const getNotifications = (cursor?: string, type?: NotificationType) =>
   apiClient
-    .get('/notifications', { params: cursor ? { cursor } : undefined })
+    .get('/notifications', {
+      params: {
+        ...(cursor ? { cursor } : {}),
+        ...(type ? { type } : {}),
+      },
+    })
     .then(unwrap<NotificationListResult>)
 
 /** 단건 읽음 처리 */

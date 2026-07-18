@@ -9,17 +9,12 @@ import type {
   NotificationType,
 } from '@/types/notification'
 
-const TYPE_META: Record<
-  NotificationType,
-  { icon: string; ring: string; tint: string }
-> = {
-  briefing: { icon: '📅', ring: 'border-brand/30', tint: 'bg-brand/10' },
-  deadline_urgent: {
-    icon: '⏰',
-    ring: 'border-warning/30',
-    tint: 'bg-warning/10',
-  },
-  admin: { icon: '🔔', ring: 'border-info/30', tint: 'bg-info/10' },
+// U30 — 미읽음 행 구분감: 저알파 틴트(다크에서 지각 불가) → card-solid + 유형색 좌측 스트라이프.
+// DESIGN.md 규칙 9(리스트 카드 구분감) 이식. 유형색은 stripe(border-l)로만 표현.
+const TYPE_META: Record<NotificationType, { icon: string; stripe: string }> = {
+  briefing: { icon: '📅', stripe: 'border-l-brand' },
+  deadline_urgent: { icon: '⏰', stripe: 'border-l-warning' },
+  admin: { icon: '🔔', stripe: 'border-l-info' },
 }
 
 /** A7 — 타입 필터 (브리핑 아카이브 겸용). '?type=briefing' 딥링크 = 캘린더 배너 진입 */
@@ -49,18 +44,8 @@ function relativeTime(iso: string, now: number = Date.now()): string {
 export function Notifications() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const {
-    data,
-    isLoading,
-    isError,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useNotifications()
-  const markRead = useMarkNotificationRead()
-  const markAll = useMarkAllRead()
 
-  // A7 — 타입 필터: 로드된 페이지에 대한 클라이언트 필터 ("더 보기"로 과거 아카이브 탐색)
+  // A7 — 타입 필터: URL(?type=) 이 소스. U23 — 서버사이드 필터로 재조회 (클라이언트 필터 제거)
   const typeParam = searchParams.get('type')
   const filter: NotificationType | 'all' = isNotificationType(typeParam)
     ? typeParam
@@ -68,9 +53,20 @@ export function Notifications() {
   const setFilter = (key: NotificationType | 'all') =>
     setSearchParams(key === 'all' ? {} : { type: key }, { replace: true })
 
-  const allItems = data?.pages.flatMap((p) => p.items) ?? []
-  const items =
-    filter === 'all' ? allItems : allItems.filter((n) => n.type === filter)
+  const {
+    data,
+    isLoading,
+    isError,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useNotifications(filter === 'all' ? undefined : filter)
+  const markRead = useMarkNotificationRead()
+  const markAll = useMarkAllRead()
+
+  // U23 — 서버가 이미 type 으로 필터링 → 페이지 병합만 (false-empty 해소: 깊은 페이지도 정확)
+  const items = data?.pages.flatMap((p) => p.items) ?? []
+  // unreadCount 는 서버에서 필터와 무관하게 전체 미읽음 (종 배지·전체읽음 버튼 의미 유지)
   const unread = data?.pages[0]?.unreadCount ?? 0
 
   function handleTap(n: NotificationItem) {
@@ -153,10 +149,10 @@ export function Notifications() {
                 <button
                   type="button"
                   onClick={() => handleTap(n)}
-                  className={`w-full text-left flex gap-3 rounded-xl border p-4 transition-colors ${
+                  className={`w-full text-left flex gap-3 rounded-xl border p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg ${
                     n.read
                       ? 'bg-surface-2 border-line hover:border-line-strong'
-                      : `${meta.tint} ${meta.ring} hover:brightness-105`
+                      : `bg-card-solid border-line-strong border-l-[3px] ${meta.stripe} shadow-sm hover:bg-surface-3`
                   }`}
                 >
                   <span

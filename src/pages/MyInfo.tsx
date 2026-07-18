@@ -136,7 +136,7 @@ function CertInfoCard({ issuer, category, categoryColor, validYears }: {
   issuer: string; category?: string; categoryColor?: string; validYears?: number | null
 }) {
   return (
-    <div className="bg-card/60 border border-line/50 rounded-xl px-4 py-3 space-y-1.5">
+    <div className="bg-surface-2 border border-line rounded-xl px-4 py-3 space-y-1.5">
       <div className="flex items-center gap-2">
         <p className="text-sm font-semibold text-text-primary flex-1 truncate">{issuer}</p>
         {category && (
