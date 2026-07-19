@@ -16,8 +16,12 @@ import { SampleCardBadge } from '@/components/board/SampleCardBadge'
 import { SampleCardGuideOverlay } from '@/components/board/SampleCardGuideOverlay'
 import { SampleCardDismissBar } from '@/components/board/SampleCardDismissBar'
 import { EmptyBoardState } from '@/components/board/EmptyBoardState'
+import { BoardViewToggle } from '@/components/board/BoardViewToggle'
+import { BoardListRow } from '@/components/board/BoardListRow'
+import { BoardGroupedView } from '@/components/board/BoardGroupedView'
 import type { ApplicationStatus } from '@/types/application'
 import { sortApplications } from '@/utils/sortApplications'
+import { loadBoardView, saveBoardView, type BoardView } from '@/utils/boardViewGroups'
 
 type FilterTab = 'all' | ApplicationStatus
 
@@ -50,6 +54,11 @@ export function Board() {
   const initialFilter = (searchParams.get('filter') as FilterTab) || 'all'
   const [filter, setFilter] = useState<FilterTab>(initialFilter)
   const [search, setSearch] = useState('')
+  const [view, setViewState] = useState<BoardView>(loadBoardView)
+  const setView = (next: BoardView) => {
+    setViewState(next)
+    saveBoardView(next)
+  }
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [addModalStatus, setAddModalStatus] = useState<'PLANNED' | 'IN_PROGRESS' | null>(null)
   const [startAppId, setStartAppId] = useState<string | null>(null)
@@ -164,8 +173,8 @@ export function Board() {
         </div>
       </div>
 
-      {/* 검색 + 필터 탭 */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      {/* 검색 + 필터 탭 + 뷰 토글 */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
         {/* W5 — 검색 (베타 D+1주 예정, 지금 hide) */}
         {BETA_FEATURES.search && (
           <div className="relative flex-1 sm:max-w-64">
@@ -182,13 +191,15 @@ export function Board() {
           </div>
         )}
 
-        {/* 필터 탭 — 모바일: 독립 칩 (가로 스크롤) / sm+: segmented control */}
-        <div
-          className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible sm:flex-none"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          <div role="tablist" aria-label="지원 상태 필터" className="flex items-center gap-1.5 sm:gap-1 whitespace-nowrap sm:bg-surface-2 sm:border sm:border-line sm:rounded-lg sm:p-1">
-            {FILTER_TABS.map((tab) => {
+        {/* 필터 탭 + 뷰 토글 한 줄 — sm+: 좌우 분리, 모바일: 토글이 아래 줄로 wrap */}
+        <div className="flex flex-wrap items-center gap-2 min-w-0 sm:flex-1 sm:flex-nowrap sm:justify-between">
+          {/* 필터 탭 — 모바일: 독립 칩 (가로 스크롤) / sm+: segmented control */}
+          <div
+            className="w-full sm:w-auto min-w-0 overflow-x-auto sm:overflow-visible"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            <div role="tablist" aria-label="지원 상태 필터" className="flex items-center gap-1.5 sm:gap-1 whitespace-nowrap sm:bg-surface-2 sm:border sm:border-line sm:rounded-lg sm:p-1">
+              {FILTER_TABS.map((tab) => {
               const count = tab.key === 'all'
                 ? applications.filter((a) => a.status !== 'FAILED').length
                 : tab.key === 'FAILED'
@@ -217,7 +228,11 @@ export function Board() {
                 </button>
               )
             })}
+            </div>
           </div>
+
+          {/* 뷰 토글 — 카드·리스트·그룹 */}
+          <BoardViewToggle value={view} onChange={setView} className="ml-auto sm:ml-0" />
         </div>
       </div>
 
@@ -236,8 +251,18 @@ export function Board() {
         ) : (
           <EmptyBoardState onAddFirst={() => setAddModalStatus('IN_PROGRESS')} />
         )
+      ) : view === 'list' ? (
+        // A11 — 리스트 뷰. 정렬·필터·검색 파이프라인(sorted)을 그대로 소비, 행만 다르게 렌더.
+        <div className="bg-card-solid border border-line rounded-xl overflow-hidden shadow-sm divide-y divide-line">
+          {sorted.map((app) => (
+            <BoardListRow key={app.id} application={app} />
+          ))}
+        </div>
+      ) : view === 'group' ? (
+        // A11 — 그룹 뷰. 같은 sorted 를 단계 그룹으로 묶어 렌더 (빈 그룹 숨김).
+        <BoardGroupedView applications={sorted} />
       ) : (
-        <div className={`grid gap-3 ${panelStep ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+        <div className={`grid gap-3 [grid-auto-rows:1fr] ${panelStep ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
           {realCards.map((app) => (
             <CompanyCard
               key={app.id}
@@ -304,7 +329,7 @@ export function Board() {
  */
 function SampleCardWrap({ index, children }: { index: number; children: React.ReactNode }) {
   return (
-    <div className="group/sample-card relative">
+    <div className="group/sample-card relative h-full">
       {/* dashed warning ring — pointer-events-none 으로 클릭 차단 X */}
       <div className="absolute inset-0 rounded-xl border border-dashed border-warning/40 pointer-events-none z-[1]" />
       <div className="absolute top-3 right-3 z-10 pointer-events-none">
