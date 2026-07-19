@@ -11,6 +11,7 @@ import {
 } from '@/utils/stepTemplates'
 import { JOB_GROUPS, type JobCategory } from '@/utils/sampleData'
 import { todayLocal } from '@/utils/datetime'
+import { postToNative } from '@/utils/nativeBridge'
 import { toast } from '@/stores/toastStore'
 import { useTourStore } from '@/stores/tourStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -103,6 +104,8 @@ export function AddCardModal({
       {
         onSuccess: (data) => {
           toast.success(`${companyName} 카드가 추가됐어요.`)
+          // ⑦ 마감일 포함 카드 생성 = 가치 순간 → native soft-ask 트리거 (WebView 밖 no-op)
+          if (deadline) postToNative({ type: 'deadline-saved' })
           if (tourActive && tourStep === 4) onCardCreated(data.id)
           // A5 — 첫 실 카드면 보상 연출 (계정당 1회 · 투어 중 생략은 판정 함수가 처리)
           if (

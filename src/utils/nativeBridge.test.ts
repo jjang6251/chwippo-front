@@ -51,6 +51,19 @@ describe('postToNative', () => {
     )
   })
 
+  it("deadline-saved (가치 순간) → stringify 후 postMessage", () => {
+    const postMessage = vi.fn()
+    ;(window as unknown as RNWindowMock).ReactNativeWebView = { postMessage }
+
+    postToNative({ type: 'deadline-saved' })
+
+    expect(postMessage).toHaveBeenCalledWith('{"type":"deadline-saved"}')
+  })
+
+  it('deadline-saved · ReactNativeWebView 없으면 no-op (WebView 밖)', () => {
+    expect(() => postToNative({ type: 'deadline-saved' })).not.toThrow()
+  })
+
   it('postMessage 내부에서 throw → caller 는 정상 (silent)', () => {
     ;(window as unknown as RNWindowMock).ReactNativeWebView = {
       postMessage: () => {
