@@ -5,6 +5,7 @@ import { useTourStore } from '@/stores/tourStore'
 import { useThemeStore, type Theme } from '@/stores/themeStore'
 import { apiClient } from '@/api/client'
 import { postToNative } from '@/utils/nativeBridge'
+import { AppLockSection } from '@/pages/settings/AppLockSection'
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
   { value: 'dark', label: '다크', icon: '🌙' },
@@ -98,6 +99,9 @@ export function Settings() {
           })}
         </div>
       </div>
+
+      {/* ① 앱 잠금 (Face ID/Touch ID) — 네이티브 + 지원 기기에서만 렌더 */}
+      <AppLockSection />
 
       <div className="bg-surface-2 border border-line rounded-xl mb-4">
         <button
