@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { AdminNotificationBell } from '@/components/admin/AdminNotificationBell'
+import { RouteFallback } from '@/components/common/RouteFallback'
 
 /**
  * F6 PR 2 Phase 5.6.3 — admin 페이지 통합 레이아웃 (Linear 패턴).
@@ -113,7 +115,10 @@ export function AdminLayout() {
           <div className="hidden lg:flex sticky top-0 z-30 justify-end py-2 -mt-2">
             <AdminNotificationBell />
           </div>
-          <Outlet />
+          {/* /ops/* 페이지 lazy 청크 로딩 중 admin nav 는 유지하고 본문만 스켈레톤 */}
+          <Suspense fallback={<RouteFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

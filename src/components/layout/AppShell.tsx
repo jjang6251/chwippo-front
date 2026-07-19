@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { RouteFallback } from '@/components/common/RouteFallback'
 import { Sidebar } from './Sidebar'
 import { MobileNav } from './MobileNav'
 import { MobileHeader } from './MobileHeader'
@@ -52,7 +53,11 @@ export function AppShell() {
             </div>
           )}
           <main className={`flex-1 ${isNative ? '' : 'pb-20 lg:pb-0'}`}>
-            <Outlet />
+            {/* 라우트 code-split — 페이지 청크 로딩 중 shell(사이드바·nav)은 유지하고
+                본문만 스켈레톤 표시. */}
+            <Suspense fallback={<RouteFallback />}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </div>
