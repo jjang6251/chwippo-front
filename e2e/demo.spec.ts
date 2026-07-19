@@ -46,6 +46,11 @@ const DEMO_PAGES: { path: string; expect: RegExp }[] = [
 ]
 
 test.describe('데모 모드', () => {
+  test('데모 진입(/demo) → 홈=캘린더로 리다이렉트 (본 서비스와 동일)', async ({ page }) => {
+    await page.goto('/demo')
+    await expect(page).toHaveURL(/\/demo\/calendar$/)
+  })
+
   test('10개 데모 페이지 순회 — 백지 아님 + 백엔드 요청 0 + console error 0', async ({ page }) => {
     const guard = await attachGuard(page)
 
