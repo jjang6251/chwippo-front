@@ -14,6 +14,8 @@ import type {
 const TYPE_META: Record<NotificationType, { icon: string; stripe: string }> = {
   briefing: { icon: '📅', stripe: 'border-l-brand' },
   deadline_urgent: { icon: '⏰', stripe: 'border-l-warning' },
+  // imminent(2시간 전) — warning(마감 긴급)과 구분되는 violet 스트라이프
+  imminent: { icon: '⏰', stripe: 'border-l-violet' },
   admin: { icon: '🔔', stripe: 'border-l-info' },
 }
 
@@ -21,12 +23,18 @@ const TYPE_META: Record<NotificationType, { icon: string; stripe: string }> = {
 const FILTER_TABS: Array<{ key: NotificationType | 'all'; label: string }> = [
   { key: 'all', label: '전체' },
   { key: 'briefing', label: '📅 브리핑' },
+  { key: 'imminent', label: '⏰ 임박' },
   { key: 'deadline_urgent', label: '⏰ 마감 긴급' },
   { key: 'admin', label: '🔔 운영' },
 ]
 
 function isNotificationType(v: string | null): v is NotificationType {
-  return v === 'briefing' || v === 'deadline_urgent' || v === 'admin'
+  return (
+    v === 'briefing' ||
+    v === 'deadline_urgent' ||
+    v === 'imminent' ||
+    v === 'admin'
+  )
 }
 
 function relativeTime(iso: string, now: number = Date.now()): string {

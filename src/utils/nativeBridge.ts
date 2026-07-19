@@ -10,6 +10,7 @@
  *   - request-notification-permission: soft-ask 허용 → native OS 권한 요청 트리거
  *   - open-notification-settings: OS 권한 거부 상태에서 "알림 받기" → 설정 앱 이동
  *   - notifications-read: 알림 읽음 처리 완료 → native 종 배지 즉시 갱신
+ *   - deadline-saved: 마감일 저장 성공 (가치 순간) → native soft-ask 트리거 후보
  */
 
 export type NativeMessage =
@@ -19,6 +20,7 @@ export type NativeMessage =
   | { type: 'request-notification-permission' }
   | { type: 'open-notification-settings' }
   | { type: 'notifications-read' }
+  | { type: 'deadline-saved' }
 
 interface RNWindow {
   ReactNativeWebView?: {

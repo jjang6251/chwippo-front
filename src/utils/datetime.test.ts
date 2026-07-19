@@ -17,6 +17,15 @@ import {
  * `new Date().toISOString().slice(0, 10)` 같은 UTC 패턴은 금지.
  */
 describe('utils/datetime — KST-fixed 헬퍼', () => {
+  describe('formatDateTime — 자정 h23 고정', () => {
+    it('KST 자정 정각 → "00:00:00" (구형 ICU 의 hour12:false h24 해석 "24:00:00" 회귀 방지)', async () => {
+      const { formatDateTime } = await import('./datetime')
+      expect(formatDateTime(new Date('2026-05-25T00:00:00+09:00'))).toBe(
+        '2026-05-25 00:00:00',
+      )
+    })
+  })
+
   it('APP_TIMEZONE 은 Asia/Seoul', () => {
     expect(APP_TIMEZONE).toBe('Asia/Seoul')
   })
