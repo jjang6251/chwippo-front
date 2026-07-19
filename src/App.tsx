@@ -145,7 +145,7 @@ export default function App() {
             </Suspense>
           }
         >
-          <Route index element={<Navigate to="/demo/dashboard" replace />} />
+          <Route index element={<Navigate to="/demo/calendar" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="board" element={<Board />} />
           <Route path="board/:id" element={<BoardDetail />} />
@@ -160,7 +160,7 @@ export default function App() {
           <Route path="activity/manage" element={<ActivityPage />} />
           <Route path="coverletters" element={<Coverletters />} />
           <Route path="myinfo" element={<MyInfo />} />
-          <Route path="*" element={<Navigate to="/demo/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/demo/calendar" replace />} />
         </Route>
         <Route element={<AuthGuard />}>
           <Route path="/terms-agreement" element={<TermsAgreement />} />
