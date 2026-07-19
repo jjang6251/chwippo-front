@@ -13,21 +13,10 @@ test.describe('랜딩 페이지', () => {
     await expect(page.getByText(/카카오로 무료 시작/).first()).toBeVisible()
   })
 
-  test('로그인 상태에서 / 접속 시 /dashboard로 이동', async ({ page }) => {
+  // 캘린더 UX 재구성 — 홈 = /calendar (대시보드는 회고 페이지로 강등). 로그인 상태 랜딩 진입 시 /calendar 로 이동.
+  test('로그인 상태에서 / 접속 시 /calendar로 이동', async ({ page }) => {
     await mockAuth(page)
-    await page.route('**/dashboard/stats', (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { total: 0, interviews: 0, passed: 0 } }) })
-    )
-    await page.route('**/dashboard/dday', (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-    )
-    await page.route('http://localhost:3000/todos**', (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-    )
-    await page.route('**/myinfo/profile', (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: null }) })
-    )
     await page.goto('/')
-    await expect(page).toHaveURL(/\/dashboard/)
+    await expect(page).toHaveURL(/\/calendar/)
   })
 })

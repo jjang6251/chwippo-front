@@ -101,12 +101,13 @@ test.describe('데모 모드', () => {
     const guard = await attachGuard(page)
     await page.goto('/demo/calendar')
 
-    // 선택된 날(기본 오늘) 패널에서 "할 일 추가" → 입력 노출 → 입력 후 Enter
-    await page.getByRole('button', { name: '할 일 추가' }).first().click()
-    const input = page.getByPlaceholder('할 일 입력 후 Enter')
+    // 선택된 날(기본 오늘) 패널의 상시 노출 고스트 입력행(placeholder "할 일 추가")에 입력 후 Enter
+    const input = page.getByPlaceholder('할 일 추가')
     await input.first().fill('E2E 데모 할 일')
     await input.first().press('Enter')
-    await expect(page.getByText('E2E 데모 할 일')).toBeVisible()
+    // 데모 store 의 getDailyNotes 는 날짜/범위 파라미터를 무시해 오늘/어제 조회에 함께 잡힘 →
+    // 오늘 할 일 + 이월 후보로 이중 렌더될 수 있어 first() 로 스코프 (인메모리 반영 확인이 목적)
+    await expect(page.getByText('E2E 데모 할 일').first()).toBeVisible()
 
     expect(guard.backendHits()).toBe(0)
     expect(guard.consoleErrors()).toEqual([])
