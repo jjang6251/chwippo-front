@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, createContext, useContext } from 'react'
 import { useAutoResize } from '@/hooks/useAutoResize'
+import { useNativeMode } from '@/hooks/useNativeMode'
 import { useDemoLink } from '@/hooks/useDemoLink'
 import { Link, useLocation } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -330,6 +331,9 @@ export function MyInfo() {
   const location = useLocation()
   const { sections: progressSections } = useMyinfoProgress()
   const collapse = useCollapsedSections()
+  // 네이티브 앱은 웹 모바일 헤더(h-12)가 숨겨지므로 sticky 오프셋을 0으로 —
+  // top-12 를 그대로 두면 칩 바가 상단에서 48px 떠서 스크롤됨 (CEO 실기 2026-07-19)
+  const isNative = useNativeMode()
 
   // 활성 탭이 화면 밖이면 가로 스크롤로 중앙으로 끌어옴 (모바일 sticky 칩)
   useEffect(() => {
@@ -426,7 +430,7 @@ export function MyInfo() {
       </div>
 
       {/* 모바일 섹션 점프 칩 — lg 이상에서는 좌측 사이드바로 대체 */}
-      <div className="lg:hidden sticky top-12 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 bg-bg/95 backdrop-blur-sm border-b border-line mb-4">
+      <nav aria-label="섹션 바로가기" className={`lg:hidden sticky ${isNative ? 'top-0' : 'top-12'} z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 bg-bg/95 backdrop-blur-sm border-b border-line mb-4`}>
         <div
           className="flex gap-1.5 overflow-x-auto py-2"
           style={{ scrollbarWidth: 'none' }}
@@ -458,7 +462,7 @@ export function MyInfo() {
             )
           })}
         </div>
-      </div>
+      </nav>
 
       <div className="flex gap-8">
         {/* 좌측 섹션 네비 */}
