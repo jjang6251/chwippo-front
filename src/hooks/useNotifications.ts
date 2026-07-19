@@ -12,7 +12,10 @@ import {
   markNotificationRead,
   updateAlarmConfig,
 } from '@/api/notifications'
-import type { AlarmConfig, NotificationType } from '@/types/notification'
+import type {
+  AlarmConfigUpdate,
+  NotificationType,
+} from '@/types/notification'
 
 /**
  * 인앱 알림 센터 — 무한 스크롤 목록 (U23 서버사이드 type 필터).
@@ -82,7 +85,7 @@ export function useAlarmConfig() {
 export function useUpdateAlarmConfig() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (partial: Partial<AlarmConfig>) => updateAlarmConfig(partial),
+    mutationFn: (partial: AlarmConfigUpdate) => updateAlarmConfig(partial),
     onSuccess: (config) => {
       qc.setQueryData(['alarm-config'], config)
     },

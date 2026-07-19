@@ -56,7 +56,9 @@ function datetimeFormatter(tz: Tz): Intl.DateTimeFormat {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: false,
+      // hour12:false 금지 — 구형 ICU(Node 20·일부 브라우저)는 h24 로 해석해
+      // 자정이 '24:00:00'. h23 은 명세상 00~23 고정.
+      hourCycle: 'h23',
     })
     dtFormatters.set(tz, f)
   }

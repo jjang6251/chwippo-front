@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 import type {
   AlarmConfig,
+  AlarmConfigUpdate,
   NotificationListResult,
   NotificationType,
 } from '@/types/notification'
@@ -33,8 +34,8 @@ export const markAllNotificationsRead = () =>
 export const getAlarmConfig = () =>
   apiClient.get('/me/alarm-config').then(unwrap<AlarmConfig>)
 
-/** 알림 설정 부분 update */
-export const updateAlarmConfig = (partial: Partial<AlarmConfig>) =>
+/** 알림 설정 부분 update (eventToggles 는 일부 유형만 보내도 됨) */
+export const updateAlarmConfig = (partial: AlarmConfigUpdate) =>
   apiClient.patch('/me/alarm-config', partial).then(unwrap<AlarmConfig>)
 
 /** soft-ask 응답 / OS 권한 상태 동기화 */

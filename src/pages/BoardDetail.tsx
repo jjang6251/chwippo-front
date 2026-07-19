@@ -29,6 +29,7 @@ import { FailedTakeawayBox } from '@/components/card/FailedTakeawayBox'
 import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
 import { toast } from '@/stores/toastStore'
+import { postToNative } from '@/utils/nativeBridge'
 import { celebrate } from '@/stores/celebrationStore'
 import { useTourStore } from '@/stores/tourStore'
 import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
@@ -417,10 +418,17 @@ export function BoardDetail() {
                   onChange={(e) => {
                     // date picker 선택 시 onBlur가 발생 안 함 → onChange로 즉시 저장
                     const oldDate = currentStep.scheduledDate ? dayjs(currentStep.scheduledDate).format('YYYY-MM-DD') : ''
-                    if (e.target.value !== oldDate) {
+                    const newDate = e.target.value
+                    if (newDate !== oldDate) {
                       updateStepDetail(
-                        { stepId: currentStep.id, scheduledDate: e.target.value ? `${e.target.value}T00:00:00+09:00` : null },
-                        { onSuccess: () => toast.show('저장됐어요.') },
+                        { stepId: currentStep.id, scheduledDate: newDate ? `${newDate}T00:00:00+09:00` : null },
+                        {
+                          onSuccess: () => {
+                            toast.show('저장됐어요.')
+                            // ⑦ 마감일(스텝 날짜) 저장 = 가치 순간 → native soft-ask 트리거 (WebView 밖 no-op)
+                            if (newDate) postToNative({ type: 'deadline-saved' })
+                          },
+                        },
                       )
                     }
                   }}

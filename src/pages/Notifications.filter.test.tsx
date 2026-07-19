@@ -89,6 +89,18 @@ describe('Notifications — 타입 필터 (U23 서버사이드)', () => {
     expect(screen.queryByText('운영 공지')).toBeNull()
   })
 
+  it("2b) 임박 chip('⏰ 임박') 클릭 → type=\"imminent\" 로 재조회", () => {
+    items = [
+      item({ type: 'imminent', title: '임박 알림' }),
+      item({ type: 'deadline_urgent', title: '마감 긴급' }),
+    ]
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: '⏰ 임박' }))
+    expect(useNotificationsSpy).toHaveBeenLastCalledWith('imminent')
+    expect(screen.getByText('임박 알림')).toBeInTheDocument()
+    expect(screen.queryByText('마감 긴급')).toBeNull()
+  })
+
   it("3) '?type=briefing' 딥링크 → 필터 초기 적용", () => {
     renderPage('/notifications?type=briefing')
     expect(useNotificationsSpy).toHaveBeenLastCalledWith('briefing')
@@ -134,5 +146,14 @@ describe('Notifications — 미읽음 행 구분감 (U30)', () => {
     expect(row!.className).toContain('bg-surface-2')
     expect(row!.className).not.toContain('border-l-[3px]')
     expect(row!.className).not.toContain('bg-card-solid')
+  })
+
+  it('미읽음 imminent 행 = violet 스트라이프 (warning 마감긴급과 구분)', () => {
+    items = [item({ type: 'imminent', title: '안읽음 임박', read: false })]
+    renderPage()
+    const row = screen.getByText('안읽음 임박').closest('button')
+    expect(row).not.toBeNull()
+    expect(row!.className).toContain('border-l-violet')
+    expect(row!.className).not.toContain('border-l-warning')
   })
 })
