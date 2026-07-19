@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastContainer } from '@/components/common/ToastContainer'
 import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
@@ -9,16 +10,18 @@ import { AiFeatureGuard, InterviewAiGuard } from '@/components/auth/AiFeatureGua
 import { AdminGuard } from '@/components/layout/AdminGuard'
 import { AppShell } from '@/components/layout/AppShell'
 import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary'
-import { DemoShell } from '@/components/demo/DemoShell'
+import { RouteFallback } from '@/components/common/RouteFallback'
 import { DemoRouteGuard } from '@/components/demo/DemoRouteGuard'
+import { lazyWithReload } from '@/utils/lazyWithReload'
+// ── 첫 진입 코어 (eager) ────────────────────────────────────────────────
+// 홈(캘린더)·보드·로그인·온보딩·설정·문의 등 로그인 직후 흔히 닿는 화면은 즉시 로드해
+// 첫 화면 체감 손해를 막는다.
 import { Landing } from '@/pages/Landing'
 import { Login } from '@/pages/Login'
 import { LoginCallback } from '@/pages/LoginCallback'
 import { SignupQuestion } from '@/pages/SignupQuestion'
-import { Dashboard } from '@/pages/Dashboard'
 import { Board } from '@/pages/Board'
 import { BoardDetail } from '@/pages/BoardDetail'
-import { StepPage } from '@/pages/StepPage'
 import { Calendar } from '@/pages/Calendar'
 import { MyInfo } from '@/pages/MyInfo'
 import { InquiryList } from '@/pages/inquiry/InquiryList'
@@ -32,26 +35,95 @@ import { AlarmSettings } from '@/pages/settings/AlarmSettings'
 import { Notifications } from '@/pages/Notifications'
 import { ProfileSettings } from '@/pages/settings/ProfileSettings'
 import { Help } from '@/pages/settings/Help'
-import { OpsPage } from '@/pages/ops/OpsPage'
-import { OpsInquiries } from '@/pages/ops/OpsInquiries'
-import { OpsAnnouncements } from '@/pages/ops/OpsAnnouncements'
-import { OpsUsers } from '@/pages/ops/OpsUsers'
-import { UserDetailPage } from '@/pages/ops/UserDetailPage'
-import { OpsCompanyResearchPage } from '@/pages/ops/OpsCompanyResearchPage'
 import { TermsAgreement } from '@/pages/TermsAgreement'
-import { ActivityPage } from '@/pages/Activity/ActivityPage'
-import { ActivityTimelinePage } from '@/pages/Activity/timeline/ActivityTimelinePage'
-import { NotePage } from '@/pages/Activity/NotePage'
-import { InsightsPage } from '@/pages/Activity/InsightsPage'
-import { Coverletters } from '@/pages/Coverletters'
-import { CoverletterDocPage } from '@/pages/Coverletter/CoverletterDocPage'
-import { Interviews } from '@/pages/Interviews'
-import { InterviewSessionPage } from '@/pages/InterviewSessionPage'
-import { AiUsage } from '@/pages/Admin/AiUsage'
-import { AiQuotas } from '@/pages/Admin/AiQuotas'
-import { AuditLogs } from '@/pages/Admin/AuditLogs'
-import { Monitoring } from '@/pages/Admin/Monitoring'
-import { AdminLayout } from '@/components/layout/AdminLayout'
+// ── code-split (lazy) ──────────────────────────────────────────────────
+// 일반 유저가 첫 로드에 절대 필요 없는 화면 + 무거운 라이브러리(recharts·tiptap) 사용처.
+// admin(/ops/*) 전체, 자소서·활동·회고(recharts)·면접·데모 모드.
+const Dashboard = lazyWithReload(() =>
+  import('@/pages/Dashboard').then((m) => ({ default: m.Dashboard })),
+)
+const StepPage = lazyWithReload(() =>
+  import('@/pages/StepPage').then((m) => ({ default: m.StepPage })),
+)
+const Coverletters = lazyWithReload(() =>
+  import('@/pages/Coverletters').then((m) => ({ default: m.Coverletters })),
+)
+const CoverletterDocPage = lazyWithReload(() =>
+  import('@/pages/Coverletter/CoverletterDocPage').then((m) => ({
+    default: m.CoverletterDocPage,
+  })),
+)
+const ActivityPage = lazyWithReload(() =>
+  import('@/pages/Activity/ActivityPage').then((m) => ({
+    default: m.ActivityPage,
+  })),
+)
+const ActivityTimelinePage = lazyWithReload(() =>
+  import('@/pages/Activity/timeline/ActivityTimelinePage').then((m) => ({
+    default: m.ActivityTimelinePage,
+  })),
+)
+const NotePage = lazyWithReload(() =>
+  import('@/pages/Activity/NotePage').then((m) => ({ default: m.NotePage })),
+)
+const InsightsPage = lazyWithReload(() =>
+  import('@/pages/Activity/InsightsPage').then((m) => ({
+    default: m.InsightsPage,
+  })),
+)
+const Interviews = lazyWithReload(() =>
+  import('@/pages/Interviews').then((m) => ({ default: m.Interviews })),
+)
+const InterviewSessionPage = lazyWithReload(() =>
+  import('@/pages/InterviewSessionPage').then((m) => ({
+    default: m.InterviewSessionPage,
+  })),
+)
+const DemoShell = lazyWithReload(() =>
+  import('@/components/demo/DemoShell').then((m) => ({ default: m.DemoShell })),
+)
+// admin(/ops/*) — 일반 유저 0% 사용
+const AdminLayout = lazyWithReload(() =>
+  import('@/components/layout/AdminLayout').then((m) => ({
+    default: m.AdminLayout,
+  })),
+)
+const OpsPage = lazyWithReload(() =>
+  import('@/pages/ops/OpsPage').then((m) => ({ default: m.OpsPage })),
+)
+const OpsInquiries = lazyWithReload(() =>
+  import('@/pages/ops/OpsInquiries').then((m) => ({ default: m.OpsInquiries })),
+)
+const OpsAnnouncements = lazyWithReload(() =>
+  import('@/pages/ops/OpsAnnouncements').then((m) => ({
+    default: m.OpsAnnouncements,
+  })),
+)
+const OpsUsers = lazyWithReload(() =>
+  import('@/pages/ops/OpsUsers').then((m) => ({ default: m.OpsUsers })),
+)
+const UserDetailPage = lazyWithReload(() =>
+  import('@/pages/ops/UserDetailPage').then((m) => ({
+    default: m.UserDetailPage,
+  })),
+)
+const OpsCompanyResearchPage = lazyWithReload(() =>
+  import('@/pages/ops/OpsCompanyResearchPage').then((m) => ({
+    default: m.OpsCompanyResearchPage,
+  })),
+)
+const AiUsage = lazyWithReload(() =>
+  import('@/pages/Admin/AiUsage').then((m) => ({ default: m.AiUsage })),
+)
+const AiQuotas = lazyWithReload(() =>
+  import('@/pages/Admin/AiQuotas').then((m) => ({ default: m.AiQuotas })),
+)
+const AuditLogs = lazyWithReload(() =>
+  import('@/pages/Admin/AuditLogs').then((m) => ({ default: m.AuditLogs })),
+)
+const Monitoring = lazyWithReload(() =>
+  import('@/pages/Admin/Monitoring').then((m) => ({ default: m.Monitoring })),
+)
 
 export default function App() {
   return (
@@ -63,8 +135,16 @@ export default function App() {
         <Route path="/login/callback" element={<LoginCallback />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
-        {/* 데모 모드 — 로그인 불필요, 샘플 데이터(읽기 전용) */}
-        <Route path="/demo" element={<DemoShell />}>
+        {/* 데모 모드 — 로그인 불필요, 샘플 데이터(읽기 전용). DemoShell 은 lazy →
+            상위 레이아웃이 없어 여기서 Suspense 로 감싼다. */}
+        <Route
+          path="/demo"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <DemoShell />
+            </Suspense>
+          }
+        >
           <Route index element={<Navigate to="/demo/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="board" element={<Board />} />
@@ -127,7 +207,14 @@ export default function App() {
             />
           </Route>
           <Route element={<AdminGuard />}>
-            <Route element={<AdminLayout />}>
+            {/* AdminLayout 은 lazy — 상위 shell 밖(AppShell 형제)이라 여기서 Suspense 로 감싼다. */}
+            <Route
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <AdminLayout />
+                </Suspense>
+              }
+            >
               <Route path="/ops" element={<OpsPage />} />
               <Route path="/ops/inquiries" element={<OpsInquiries />} />
               <Route path="/ops/announcements" element={<OpsAnnouncements />} />
