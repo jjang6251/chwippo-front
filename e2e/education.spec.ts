@@ -1,21 +1,38 @@
 /**
  * 학력 섹션 E2E
  *
+ * 내정보 개편 이후 학력은 인라인 자동저장 → **모달(EducationModal) 기반 CRUD** 로 전환됐다.
+ *  - 섹션은 첫 방문 시 접힘 → 대상 섹션만 펼친 상태로 진입 (localStorage preseed)
+ *  - 0건: "첫 학력 추가하기" → 학력 추가 모달
+ *  - 기존 항목: 행의 "편집" 아이콘 → 학력 편집 모달
+ *  - 저장 버튼: 추가(create) / 수정(edit) · 삭제는 모달 내 삭제 → 삭제 확인 모달
+ *  - 학교명 미입력 시 저장 차단(토스트)
+ *
  * 시나리오 케이스:
- * 1. /myinfo#education 진입 + 학력 0개 → 빈 row 1개 자동 생성 (POST 호출)
- * 2. 이미 학력 있는 상태로 진입 → 자동 생성 안 됨
- * 3. 학교명 입력 후 blur → 자동 저장 (PATCH 호출)
- * 4. 학교 단계 드롭다운 변경 → 즉시 저장 (PATCH)
- * 5. 복수전공/부전공 칩 추가 → PATCH minors 호출
- * 6. + 학력 추가 클릭 → 새 빈 row 생성 (POST 추가 호출)
- * 7. × 삭제 버튼 → 삭제 확인 모달 → 확인 시 DELETE 호출
- * 8. 학교 단계 옵션에 고졸이 아닌 "고등학교" 라벨 노출
+ * 1. 0건 진입 → "첫 학력 추가하기" → 학력 추가 모달
+ * 2. 학교 단계 select 옵션에 "고등학교" 존재 · "고졸" 없음
+ * 3. 학교명 입력 후 "추가" → POST 호출 (school_name 포함)
+ * 4. 학교명 미입력 시 "추가" → POST 미호출 (validation)
+ * 5. 기존 학력 "편집" → 학력 편집 모달 prefilled
+ * 6. 복수전공 칩 추가 → 저장 시 minors 포함 (PATCH)
+ * 7. 편집 모달 삭제 → 삭제 확인 → DELETE 호출
  */
 import { test, expect } from '@playwright/test'
 import { mockAuth, TEST_USER } from './helpers/auth'
 
+const ALL_SECTIONS = [
+  'profile', 'education', 'military', 'coverletter', 'experiences', 'awards',
+  'language-certs', 'certs', 'exam-schedules', 'goals', 'files',
+]
+const expandOnly = (id: string) => ALL_SECTIONS.filter((s) => s !== id)
+
 async function mockMyinfoBaseApis(page: Parameters<typeof mockAuth>[0]) {
   await mockAuth(page)
+  // 학력 섹션만 펼친 채 진입
+  await page.addInitScript((collapsed) => {
+    try { localStorage.setItem('myinfo:collapsed:v2', JSON.stringify(collapsed)) } catch { /* ignore */ }
+  }, expandOnly('education'))
+
   const empty = { body: JSON.stringify({ data: [] }), status: 200, contentType: 'application/json' }
   const nullData = { body: JSON.stringify({ data: null }), status: 200, contentType: 'application/json' }
   await page.route('**/myinfo/profile', (r) => r.fulfill(nullData))
@@ -29,48 +46,89 @@ async function mockMyinfoBaseApis(page: Parameters<typeof mockAuth>[0]) {
     status: 200, contentType: 'application/json',
     body: JSON.stringify({ data: { coverletter: {}, custom: [] } }),
   }))
+  // 학교 자동완성 GET 은 빈 결과로 (백엔드 히트·콘솔 노이즈 차단)
+  await page.route('**/schools/autocomplete**', (r) => r.fulfill(empty))
 }
 
-test.describe('학력 섹션', () => {
-  test('학력 0개 진입 → 빈 row 1개 자동 생성 (POST 호출)', async ({ page }) => {
-    await mockMyinfoBaseApis(page)
+const SCHOOL_PLACEHOLDER = '대학교명 입력...'
 
-    let postCalled = false
-    let postBody: any = null
-    let educationsState: any[] = []
+test.describe('학력 섹션', () => {
+  test('0건 진입 → "첫 학력 추가하기" → 학력 추가 모달', async ({ page }) => {
+    await mockMyinfoBaseApis(page)
     await page.route('**/myinfo/educations', (route) => {
-      const req = route.request()
-      if (req.method() === 'GET') {
-        route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ data: educationsState }) })
-      } else if (req.method() === 'POST') {
-        postCalled = true
-        postBody = JSON.parse(req.postData() ?? '{}')
-        const created = { id: 'e-new', user_id: TEST_USER.id, ...postBody }
-        educationsState = [created]
-        route.fulfill({ status: 201, contentType: 'application/json',
-          body: JSON.stringify({ data: created }) })
+      if (route.request().method() === 'GET') {
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
       } else {
         route.continue()
       }
     })
 
     await page.goto('/myinfo#education')
+    await page.getByRole('button', { name: /첫 학력 추가하기/ }).click()
 
-    await expect.poll(() => postCalled, { timeout: 5000 }).toBe(true)
-    expect(postBody.school_name).toBe('')
+    await expect(page.getByRole('dialog', { name: '학력 추가' })).toBeVisible()
   })
 
-  test('이미 학력 있는 상태로 진입 → 자동 생성 안 됨', async ({ page }) => {
+  test('학교 단계 select 옵션에 "고등학교" 존재 (고졸 단어 사용 안 함)', async ({ page }) => {
+    await mockMyinfoBaseApis(page)
+    await page.route('**/myinfo/educations', (route) => {
+      if (route.request().method() === 'GET') {
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
+      } else {
+        route.continue()
+      }
+    })
+
+    await page.goto('/myinfo#education')
+    await page.getByRole('button', { name: /첫 학력 추가하기/ }).click()
+
+    const dialog = page.getByRole('dialog', { name: '학력 추가' })
+    const degreeSelect = dialog.locator('select').first()
+    const options = await degreeSelect.locator('option').allTextContents()
+    expect(options).toContain('고등학교')
+    expect(options).toContain('대학교 (학사)')
+    expect(options).toContain('대학원 (석사)')
+    expect(options).toContain('대학원 (박사)')
+    expect(options).not.toContain('고졸')  // 거시기한 단어 사용 금지
+  })
+
+  test('학교명 입력 후 "추가" → POST 호출 (school_name 포함)', async ({ page }) => {
     await mockMyinfoBaseApis(page)
 
-    const existingEdu = { id: 'e-1', user_id: TEST_USER.id, school_name: '서울대학교', degree: '대학교 (학사)' }
+    let postBody: Record<string, unknown> | null = null
+    await page.route('**/myinfo/educations', (route) => {
+      const req = route.request()
+      if (req.method() === 'GET') {
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
+      } else if (req.method() === 'POST') {
+        postBody = JSON.parse(req.postData() ?? '{}')
+        route.fulfill({ status: 201, contentType: 'application/json',
+          body: JSON.stringify({ data: { id: 'e-new', user_id: TEST_USER.id, ...postBody } }) })
+      } else {
+        route.continue()
+      }
+    })
+
+    await page.goto('/myinfo#education')
+    await page.getByRole('button', { name: /첫 학력 추가하기/ }).click()
+
+    const dialog = page.getByRole('dialog', { name: '학력 추가' })
+    await dialog.getByPlaceholder(SCHOOL_PLACEHOLDER).fill('연세대학교')
+    // body 의 minor "추가" 칩과 구분 — footer 저장 버튼은 마지막 "추가"
+    await dialog.getByRole('button', { name: '추가', exact: true }).last().click()
+
+    await expect.poll(() => postBody, { timeout: 3000 }).not.toBeNull()
+    expect(postBody!.school_name).toBe('연세대학교')
+  })
+
+  test('학교명 미입력 시 "추가" → POST 미호출 (validation)', async ({ page }) => {
+    await mockMyinfoBaseApis(page)
+
     let postCalled = false
     await page.route('**/myinfo/educations', (route) => {
       const req = route.request()
       if (req.method() === 'GET') {
-        route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ data: [existingEdu] }) })
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
       } else if (req.method() === 'POST') {
         postCalled = true
         route.fulfill({ status: 201, contentType: 'application/json', body: '{}' })
@@ -80,137 +138,80 @@ test.describe('학력 섹션', () => {
     })
 
     await page.goto('/myinfo#education')
-    await page.waitForTimeout(1000)  // useEffect 실행 시간 보장
+    await page.getByRole('button', { name: /첫 학력 추가하기/ }).click()
+
+    const dialog = page.getByRole('dialog', { name: '학력 추가' })
+    await dialog.getByRole('button', { name: '추가', exact: true }).last().click()
+
+    // 학교명 미입력 → 저장 차단 (토스트) + 모달 유지 + POST 없음
+    await expect(page.getByText('학교명을 입력해주세요.')).toBeVisible()
+    await page.waitForTimeout(500)
     expect(postCalled).toBe(false)
   })
 
-  test('학교명 blur → PATCH 자동 저장', async ({ page }) => {
+  test('기존 학력 "편집" → 학력 편집 모달 prefilled', async ({ page }) => {
     await mockMyinfoBaseApis(page)
 
-    const existingEdu = { id: 'e-1', user_id: TEST_USER.id, school_name: '', degree: '대학교 (학사)', status: '재학중' }
-    let patchBody: any = null
-    await page.route('**/myinfo/educations**', (route) => {
-      const req = route.request()
-      const url = req.url()
-      if (req.method() === 'GET') {
-        route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ data: [existingEdu] }) })
-      } else if (req.method() === 'PATCH' && url.includes('/e-1')) {
-        patchBody = JSON.parse(req.postData() ?? '{}')
+    const existingEdu = { id: 'e-1', user_id: TEST_USER.id, school_name: '서울대학교', degree: '대학교 (학사)', status: '재학중' }
+    await page.route('**/myinfo/educations', (route) => {
+      if (route.request().method() === 'GET') {
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [existingEdu] }) })
+      } else {
+        route.continue()
+      }
+    })
+
+    await page.goto('/myinfo#education')
+    await page.getByRole('button', { name: '편집', exact: true }).click()
+
+    const dialog = page.getByRole('dialog', { name: '학력 편집' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByPlaceholder(SCHOOL_PLACEHOLDER)).toHaveValue('서울대학교')
+  })
+
+  test('복수전공 칩 추가 → 저장 시 minors 포함 (PATCH)', async ({ page }) => {
+    await mockMyinfoBaseApis(page)
+
+    const existingEdu = { id: 'e-1', user_id: TEST_USER.id, school_name: '서울대', degree: '대학교 (학사)', status: '재학중', minors: null }
+    let patchBody: Record<string, unknown> | null = null
+    await page.route('**/myinfo/educations/e-1', (route) => {
+      if (route.request().method() === 'PATCH') {
+        patchBody = JSON.parse(route.request().postData() ?? '{}')
         route.fulfill({ status: 200, contentType: 'application/json',
           body: JSON.stringify({ data: { ...existingEdu, ...patchBody } }) })
       } else {
         route.continue()
       }
     })
-
-    await page.goto('/myinfo#education')
-
-    const input = page.getByPlaceholder(/서울대학교/)
-    await input.fill('연세대학교')
-    await input.blur()
-
-    await expect.poll(() => patchBody, { timeout: 3000 }).not.toBeNull()
-    expect(patchBody.school_name).toBe('연세대학교')
-  })
-
-  test('학교 단계 드롭다운에 "고등학교" 옵션 존재 (고졸 단어 사용 안 함)', async ({ page }) => {
-    await mockMyinfoBaseApis(page)
-
-    const existingEdu = { id: 'e-1', user_id: TEST_USER.id, school_name: '', degree: '대학교 (학사)' }
-    await page.route('**/myinfo/educations**', (route) => {
+    await page.route('**/myinfo/educations', (route) => {
       if (route.request().method() === 'GET') {
-        route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ data: [existingEdu] }) })
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [existingEdu] }) })
       } else {
         route.continue()
       }
     })
 
     await page.goto('/myinfo#education')
+    await page.getByRole('button', { name: '편집', exact: true }).click()
 
-    const degreeSelect = page.locator('#education select').first()
-    const options = await degreeSelect.locator('option').allTextContents()
-    expect(options).toContain('고등학교')
-    expect(options).toContain('대학교 (학사)')
-    expect(options).toContain('대학원 (석사)')
-    expect(options).toContain('대학원 (박사)')
-    expect(options).not.toContain('고졸')  // 거시기한 단어 사용 금지
-  })
-
-  test('복수전공 칩 추가 → PATCH minors 호출', async ({ page }) => {
-    await mockMyinfoBaseApis(page)
-
-    const existingEdu = {
-      id: 'e-1', user_id: TEST_USER.id,
-      school_name: '서울대', degree: '대학교 (학사)', minors: null,
-    }
-    let minorsPatch: any = null
-    await page.route('**/myinfo/educations**', (route) => {
-      const req = route.request()
-      if (req.method() === 'GET') {
-        route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ data: [existingEdu] }) })
-      } else if (req.method() === 'PATCH') {
-        const body = JSON.parse(req.postData() ?? '{}')
-        if (body.minors !== undefined) minorsPatch = body
-        route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ data: { ...existingEdu, ...body } }) })
-      } else {
-        route.continue()
-      }
-    })
-
-    await page.goto('/myinfo#education')
-
-    // 복수·부전공 영역 scope — "복수·부전공" 헤더 부모 안에서
-    const minorSection = page.locator('text=복수·부전공').locator('..')
-    await minorSection.getByRole('button', { name: '추가', exact: true }).click()
-    // Enter 키로 submit (✓ 버튼도 동일 aria-label 사용해서 충돌 회피)
-    const nameInput = page.getByPlaceholder('전공명')
+    const dialog = page.getByRole('dialog', { name: '학력 편집' })
+    // 편집 모달의 저장 버튼은 "수정" → body 의 "추가"는 minor 칩 뿐 (명확)
+    await dialog.getByRole('button', { name: '추가', exact: true }).click()
+    const nameInput = dialog.getByPlaceholder('전공명')
     await nameInput.fill('경제학')
     await nameInput.press('Enter')
 
-    await expect.poll(() => minorsPatch, { timeout: 5000 }).not.toBeNull()
-    expect(Array.isArray(minorsPatch.minors)).toBe(true)
-    expect(minorsPatch.minors[0]).toMatchObject({ type: '복수전공', name: '경제학' })
+    await dialog.getByRole('button', { name: '수정', exact: true }).click()
+
+    await expect.poll(() => patchBody, { timeout: 3000 }).not.toBeNull()
+    expect(Array.isArray(patchBody!.minors)).toBe(true)
+    expect((patchBody!.minors as unknown[])[0]).toMatchObject({ type: '복수전공', name: '경제학' })
   })
 
-  test('+ 학력 추가 클릭 → POST 호출 (수동 추가)', async ({ page }) => {
+  test('편집 모달 삭제 → 삭제 확인 → DELETE 호출', async ({ page }) => {
     await mockMyinfoBaseApis(page)
 
-    const existingEdu = { id: 'e-1', user_id: TEST_USER.id, school_name: '서울대', degree: '대학교 (학사)' }
-    let postCalledCount = 0
-    let educationsState = [existingEdu]
-    await page.route('**/myinfo/educations', (route) => {
-      const req = route.request()
-      if (req.method() === 'GET') {
-        route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ data: educationsState }) })
-      } else if (req.method() === 'POST') {
-        postCalledCount++
-        const body = JSON.parse(req.postData() ?? '{}')
-        const created = { id: `e-${postCalledCount + 1}`, user_id: TEST_USER.id, ...body }
-        educationsState = [...educationsState, created]
-        route.fulfill({ status: 201, contentType: 'application/json',
-          body: JSON.stringify({ data: created }) })
-      } else {
-        route.continue()
-      }
-    })
-
-    await page.goto('/myinfo#education')
-    await page.waitForTimeout(500)  // 초기 fetch 완료
-    expect(postCalledCount).toBe(0)  // 자동 생성 X (이미 1개 있음)
-
-    await page.getByRole('button', { name: '학력 추가' }).click()
-    await expect.poll(() => postCalledCount).toBeGreaterThan(0)
-  })
-
-  test('× 버튼 클릭 → 삭제 확인 모달 → 확인 → DELETE 호출', async ({ page }) => {
-    await mockMyinfoBaseApis(page)
-
-    const existingEdu = { id: 'e-1', user_id: TEST_USER.id, school_name: '서울대', degree: '대학교 (학사)' }
+    const existingEdu = { id: 'e-1', user_id: TEST_USER.id, school_name: '서울대', degree: '대학교 (학사)', status: '재학중' }
     let deleteCalled = false
     await page.route('**/myinfo/educations/e-1', (route) => {
       if (route.request().method() === 'DELETE') {
@@ -222,18 +223,20 @@ test.describe('학력 섹션', () => {
     })
     await page.route('**/myinfo/educations', (route) => {
       if (route.request().method() === 'GET') {
-        route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ data: [existingEdu] }) })
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [existingEdu] }) })
       } else {
         route.continue()
       }
     })
 
     await page.goto('/myinfo#education')
+    await page.getByRole('button', { name: '편집', exact: true }).click()
 
-    await page.getByRole('button', { name: '학력 삭제' }).click()
-    // DeleteModal 확인 버튼 — 보통 "삭제" 또는 "확인"
-    await page.getByRole('button', { name: /^삭제$/ }).click()
+    const editDialog = page.getByRole('dialog', { name: '학력 편집' })
+    await editDialog.getByRole('button', { name: '삭제' }).click()
+
+    // 삭제 확인 모달의 "삭제" 확정 버튼
+    await page.getByRole('dialog', { name: /삭제 확인/ }).getByRole('button', { name: '삭제', exact: true }).click()
 
     await expect.poll(() => deleteCalled).toBe(true)
   })

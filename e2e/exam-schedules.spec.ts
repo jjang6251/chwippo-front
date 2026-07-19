@@ -1,25 +1,43 @@
 /**
  * 시험 일정 관리 E2E
  *
+ * 내정보 개편 이후 변경점:
+ *  - 섹션은 첫 방문 시 모두 접힘(localStorage 미존재) → 대상 섹션만 펼친 상태로 진입
+ *  - 빈 상태 추가 버튼 라벨: "첫 시험 일정 추가하기"
+ *  - 과거 시험 카드의 이관 진입 버튼 라벨: "결과 입력" (구 "결과 입력 → 자격증 이관")
+ *  - 추가/수정 모달은 InfoModal(dialog aria-label = 제목)
+ *
  * 시나리오 케이스:
- * 1. /myinfo#exam-schedules 진입 → "+ 시험 일정 추가" 버튼 노출
- * 2. 모달 — 어학 타입 → cert_type 드롭다운(TOEIC 등) + 자유 입력 폼 없음
- * 3. 모달 — 자격증 타입 → 자유 입력 폼
- * 4. 시험명·날짜 미입력 시 추가 버튼 disabled
- * 5. 정상 등록 → POST 호출 with 정확한 payload
- * 6. 과거 일정 카드 → "결과 입력 → 자격증 이관" 버튼 노출
- * 7. 미래 일정 카드 → 이관 버튼 없음
- * 8. 어학 이관 모달 → 점수 입력란 노출, 입력 후 convert API 호출
- * 9. 자격증 이관 모달 → 점수 입력란 없음, 바로 이관
+ * 1. 시험 일정 섹션 노출 + 추가 버튼
+ * 2. 어학 타입 → cert_type 드롭다운(TOEIC·OPIC 등)
+ * 3. 자격증 타입 → 시험명 자유 입력 폼
+ * 4. 자격증 시험명 미입력 시 추가 버튼 disabled
+ * 5. 어학 정상 등록 → POST with 정확한 payload
+ * 6. 과거 일정 카드 → "결과 입력" 버튼 노출
+ * 7. 미래 일정 카드 → 결과 입력 버튼 없음
+ * 8. 어학 이관 모달 → 점수 입력란 노출, 빈 점수일 때 이관 disabled
+ * 9. 자격증 이관 모달 → 점수 입력란 없이 바로 이관
  */
 import { test, expect } from '@playwright/test'
 import { mockAuth, TEST_USER } from './helpers/auth'
 
+const ALL_SECTIONS = [
+  'profile', 'education', 'military', 'coverletter', 'experiences', 'awards',
+  'language-certs', 'certs', 'exam-schedules', 'goals', 'files',
+]
+/** 대상 섹션만 펼친 collapse 상태 (나머지는 접음 — 렌더 표면 최소화) */
+const expandOnly = (id: string) => ALL_SECTIONS.filter((s) => s !== id)
+
 async function mockMyinfoApis(page: Parameters<typeof mockAuth>[0], opts: {
-  educations?: any[]
-  examSchedules?: any[]
+  educations?: unknown[]
+  examSchedules?: unknown[]
 } = {}) {
   await mockAuth(page)
+  // 시험 일정 섹션만 펼친 채 진입 (첫 방문 = 전 섹션 접힘 회피)
+  await page.addInitScript((collapsed) => {
+    try { localStorage.setItem('myinfo:collapsed:v2', JSON.stringify(collapsed)) } catch { /* ignore */ }
+  }, expandOnly('exam-schedules'))
+
   const empty = { body: JSON.stringify({ data: [] }), status: 200, contentType: 'application/json' }
   const nullData = { body: JSON.stringify({ data: null }), status: 200, contentType: 'application/json' }
   await page.route('**/myinfo/profile', (r) => r.fulfill(nullData))
@@ -56,14 +74,14 @@ test.describe('시험 일정 관리', () => {
 
     await page.goto('/myinfo#exam-schedules')
 
-    await expect(page.getByRole('button', { name: '시험 일정 추가' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /첫 시험 일정 추가하기/ })).toBeVisible()
   })
 
   test('어학 타입 선택 시 cert_type 드롭다운 노출 (TOEIC·OPIC 등)', async ({ page }) => {
     await mockMyinfoApis(page)
 
     await page.goto('/myinfo#exam-schedules')
-    await page.getByRole('button', { name: '시험 일정 추가' }).click()
+    await page.getByRole('button', { name: /첫 시험 일정 추가하기/ }).click()
 
     const dialog = page.getByRole('dialog', { name: '시험 일정 추가' })
     await expect(dialog).toBeVisible()
@@ -78,7 +96,7 @@ test.describe('시험 일정 관리', () => {
     await mockMyinfoApis(page)
 
     await page.goto('/myinfo#exam-schedules')
-    await page.getByRole('button', { name: '시험 일정 추가' }).click()
+    await page.getByRole('button', { name: /첫 시험 일정 추가하기/ }).click()
 
     const dialog = page.getByRole('dialog', { name: '시험 일정 추가' })
     await dialog.getByRole('button', { name: '자격증', exact: true }).click()
@@ -90,7 +108,7 @@ test.describe('시험 일정 관리', () => {
     await mockMyinfoApis(page)
 
     await page.goto('/myinfo#exam-schedules')
-    await page.getByRole('button', { name: '시험 일정 추가' }).click()
+    await page.getByRole('button', { name: /첫 시험 일정 추가하기/ }).click()
 
     const dialog = page.getByRole('dialog', { name: '시험 일정 추가' })
     await dialog.getByRole('button', { name: '자격증', exact: true }).click()
@@ -101,7 +119,7 @@ test.describe('시험 일정 관리', () => {
   test('어학 시험 정상 등록 → POST 호출 with 정확한 payload', async ({ page }) => {
     await mockMyinfoApis(page)
 
-    let postBody: any = null
+    let postBody: Record<string, unknown> | null = null
     await page.route('**/myinfo/exam-schedules', (route) => {
       if (route.request().method() === 'POST') {
         postBody = JSON.parse(route.request().postData() ?? '{}')
@@ -116,7 +134,7 @@ test.describe('시험 일정 관리', () => {
     })
 
     await page.goto('/myinfo#exam-schedules')
-    await page.getByRole('button', { name: '시험 일정 추가' }).click()
+    await page.getByRole('button', { name: /첫 시험 일정 추가하기/ }).click()
 
     const dialog = page.getByRole('dialog', { name: '시험 일정 추가' })
     const futureDate = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
@@ -124,12 +142,12 @@ test.describe('시험 일정 관리', () => {
     await dialog.getByRole('button', { name: '추가', exact: true }).click()
 
     await expect.poll(() => postBody).not.toBeNull()
-    expect(postBody.exam_type).toBe('language')
-    expect(postBody.cert_type).toBe('TOEIC')
-    expect(postBody.name).toBe('TOEIC')
+    expect(postBody!.exam_type).toBe('language')
+    expect(postBody!.cert_type).toBe('TOEIC')
+    expect(postBody!.name).toBe('TOEIC')
   })
 
-  test('과거 시험 카드 → "결과 입력 → 자격증 이관" 버튼 노출', async ({ page }) => {
+  test('과거 시험 카드 → "결과 입력" 버튼 노출', async ({ page }) => {
     const pastDate = new Date(Date.now() - 86400000).toISOString()
     await mockMyinfoApis(page, {
       examSchedules: [{
@@ -142,10 +160,10 @@ test.describe('시험 일정 관리', () => {
 
     await page.goto('/myinfo#exam-schedules')
 
-    await expect(page.getByRole('button', { name: /결과 입력.*자격증 이관/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: '결과 입력', exact: true })).toBeVisible()
   })
 
-  test('미래 시험 카드 → 이관 버튼 노출 안 됨', async ({ page }) => {
+  test('미래 시험 카드 → 결과 입력 버튼 노출 안 됨', async ({ page }) => {
     const futureDate = new Date(Date.now() + 7 * 86400000).toISOString()
     await mockMyinfoApis(page, {
       examSchedules: [{
@@ -174,7 +192,7 @@ test.describe('시험 일정 관리', () => {
     })
 
     await page.goto('/myinfo#exam-schedules')
-    await page.getByRole('button', { name: /결과 입력.*자격증 이관/ }).click()
+    await page.getByRole('button', { name: '결과 입력', exact: true }).click()
 
     const dialog = page.getByRole('dialog', { name: /TOEIC 결과 입력/ })
     await expect(dialog.getByPlaceholder(/850/)).toBeVisible()
@@ -199,7 +217,7 @@ test.describe('시험 일정 관리', () => {
     })
 
     await page.goto('/myinfo#exam-schedules')
-    await page.getByRole('button', { name: /결과 입력.*자격증 이관/ }).click()
+    await page.getByRole('button', { name: '결과 입력', exact: true }).click()
 
     const dialog = page.getByRole('dialog', { name: /정보처리기사 결과 입력/ })
     await expect(dialog.getByPlaceholder(/850/)).toHaveCount(0)
