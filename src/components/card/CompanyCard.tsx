@@ -127,7 +127,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   const swipingRight = shouldSwipeHint && swipeOffset > 0
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div className="relative overflow-hidden rounded-xl h-full">
       {/* W4 좌 swipe hint 배경 (danger 삭제) */}
       {swipingLeft && (
         <div aria-hidden="true" className="absolute inset-0 flex items-center justify-end pr-6 bg-danger/15 text-danger text-sm font-semibold pointer-events-none">
@@ -147,6 +147,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
         style={isMobile && swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)`, transition: 'none' } : undefined}
         className={`
           relative group border-l-2 rounded-xl p-4 cursor-pointer
+          flex flex-col h-full
           transition-all duration-200
           ${STATUS_ACCENT[application.status]}
           ${isFailed ? 'opacity-45 bg-surface-2 border border-line hover:opacity-60' : ''}
@@ -273,6 +274,8 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
         })}
       </div>
 
+      {/* 하단 액션 클러스터 — mt-auto 로 카드 바닥 고정 (상태별 콘텐츠 높이 차를 상단 여백으로 흡수해 카드 높이 통일) */}
+      <div className="mt-auto">
       {/* 스텝바 + 현재 단계명 */}
       {!isPlanned && application.steps.length > 0 && (
         <div className="mb-2">
@@ -323,6 +326,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           )}
         </div>
       )}
+      </div>
 
       {/* 불합격 확인 모달 */}
       {showFailConfirm && (

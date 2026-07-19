@@ -13,12 +13,14 @@ import { getAvatarColor } from '@/utils/tags'
 interface Props {
   name: string
   domain?: string | null
-  size?: 'sm' | 'md' | 'lg'
+  size?: '2xs' | 'xs' | 'sm' | 'md' | 'lg'
   /** 추가 override class (border·shadow 등) */
   className?: string
 }
 
 const SIZE_CLASS: Record<string, { box: string; favSize: 16 | 32 | 64 }> = {
+  '2xs': { box: 'w-5 h-5 text-[9px] rounded-md', favSize: 32 },
+  xs: { box: 'w-6 h-6 text-[10px] rounded-md', favSize: 32 },
   sm: { box: 'w-7 h-7 text-[11px] rounded-md', favSize: 32 },
   md: { box: 'w-9 h-9 text-sm rounded-lg', favSize: 64 },
   lg: { box: 'w-10 h-10 text-base rounded-lg', favSize: 64 },
