@@ -82,6 +82,14 @@ export function Login() {
           </button>
         </div>
 
+        {/* 로그인 없이 둘러보기 — 랜딩과 동일한 데모 진입(/demo → /demo/calendar) */}
+        <Link
+          to="/demo"
+          className="text-sm font-medium text-text-tertiary hover:text-text-primary px-3 py-2.5 rounded-lg transition-colors"
+        >
+          로그인 없이 둘러보기 →
+        </Link>
+
         <p className="text-text-tertiary text-xs text-center">
           로그인 시{' '}
           <Link to="/terms" className="underline hover:text-text-secondary">이용약관</Link>

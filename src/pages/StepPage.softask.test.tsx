@@ -6,6 +6,7 @@
  *   ① 날짜 저장(값 있음) → postToNative('deadline-saved') 발신
  *   ② 날짜 삭제(빈 값) → 미발신
  *   ③ WebView 밖(웹) → no-op  (postToNative 자체 계약 · nativeBridge.test.ts 커버)
+ *   ④ 데모(비로그인) → 값이 있어도 미발신 (native 푸시 soft-ask 는 로그인 사용자 전용)
  *
  * 🔴 시간 보존: 유일한 날짜 편집 경로(StepPage datetime-local)에서 날짜만 바꿔도
  *   시간(14:00)이 유지됨을 단언 (구 헤더 date-only 가 T00:00 로 덮어쓰던 결함 제거).
@@ -14,6 +15,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { DemoModeContextProvider } from '@/contexts/demoMode'
 import type { Application, ApplicationStep } from '@/types/application'
 
 const h = vi.hoisted(() => ({
@@ -63,16 +65,18 @@ function makeApp(over: Partial<Application> = {}): Application {
   }
 }
 
-function renderStep() {
+function renderStep(demo = false) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
-    <MemoryRouter initialEntries={['/board/app-1/steps/s0']}>
-      <QueryClientProvider client={qc}>
-        <Routes>
-          <Route path="/board/:id/steps/:stepId" element={<StepPage />} />
-        </Routes>
-      </QueryClientProvider>
-    </MemoryRouter>,
+    <DemoModeContextProvider value={demo}>
+      <MemoryRouter initialEntries={['/board/app-1/steps/s0']}>
+        <QueryClientProvider client={qc}>
+          <Routes>
+            <Route path="/board/:id/steps/:stepId" element={<StepPage />} />
+          </Routes>
+        </QueryClientProvider>
+      </MemoryRouter>
+    </DemoModeContextProvider>,
   )
 }
 
@@ -115,6 +119,20 @@ describe('StepPage — soft-ask 트리거 + 시간 보존', () => {
 
     expect(h.updateStep).toHaveBeenCalledWith(
       { stepId: 's0', scheduledDate: null },
+      expect.anything(),
+    )
+    expect(h.postToNative).not.toHaveBeenCalled()
+  })
+
+  it('④ 데모 모드 — 날짜 저장(값 있음)해도 soft-ask 미발신', () => {
+    renderStep(true)
+    const input = openDateInput()
+
+    fireEvent.change(input, { target: { value: '2026-07-23T14:00' } })
+
+    // 저장 자체는 동일하게 이뤄지되(인메모리 반영), native 발신만 억제
+    expect(h.updateStep).toHaveBeenCalledWith(
+      { stepId: 's0', scheduledDate: '2026-07-23T14:00:00+09:00' },
       expect.anything(),
     )
     expect(h.postToNative).not.toHaveBeenCalled()
