@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react'
+import { Coins } from 'lucide-react'
 import { useSetCoinOnboarded } from '@/hooks/useMyCoin'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -53,7 +54,7 @@ export function CoinOnboardingModal() {
           id="coin-onboarding-title"
           className="text-text-primary text-lg font-bold mb-1 flex items-center gap-2"
         >
-          <span aria-hidden>🪙</span>
+          <Coins size={18} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
           <span>치뽀 코인을 소개해요</span>
         </h2>
         <p className="text-text-tertiary text-xs mb-4">
@@ -84,7 +85,9 @@ export function CoinOnboardingModal() {
 
         {/* Pro 안내 */}
         <p className="text-text-tertiary text-xs leading-relaxed mb-4">
-          더 많이 쓰고 싶다면 우측 상단 🪙 chip 클릭 → Lite (월 800 코인) /
+          더 많이 쓰고 싶다면 우측 상단{' '}
+          <Coins size={13} strokeWidth={1.75} className="inline-block align-[-0.125em]" aria-hidden="true" />{' '}
+          chip 클릭 → Lite (월 800 코인) /
           Standard (월 1500 코인) 안내.
         </p>
 

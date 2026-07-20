@@ -2,21 +2,25 @@ import { useState } from 'react'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { toast } from '@/stores/toastStore'
 import { formatMonthDay } from '@/utils/datetime'
+import { useDemoMode } from '@/contexts/demoMode'
 import { useDeleteJobPosting } from '@/hooks/useJobPosting'
 import {
   JobPostingModal,
   type JobPostingModalMode,
 } from '@/components/coverletter/JobPostingModal'
-import type { JobPosting } from '@/api/jobPosting'
+import { hasJobPostingData, countJobPostingItems, type JobPosting } from '@/api/jobPosting'
 
 /**
- * 📋 공고 요건 배너 — 자소서 페이지, 회사 조사 배너 아래.
- * F안 (SectionTitle brand 틱 + 타이포 위계) 문법 재사용, 회사 조사 배너와 톤 일치.
+ * 📋 공고 요건 UI — 두 표면 공용 (자소서 페이지 · 카드 상세). 단일 구현.
+ * F안 (SectionTitle brand 틱 + 타이포 위계) 문법 재사용.
  *
- * - 데이터 있음: 접힘 배너 + 섹션별 표시 + "M/D 정리됨" 신선도 + 수정·다시 정리·삭제 액션
- * - 빈 상태: 값 어필 + CTA → 입력 모달
- * - 정리 중(parsing): CTA·기존 데이터 대신 진행 상태 + 스켈레톤. 상세 polling 이 완료 시 자동 전환.
- * - 모바일·RN(readOnly): 액션 미노출 (자소서 정책 일치). 빈 상태도 미노출.
+ * variant:
+ *  - 'banner' (기본, 자소서): 회사 조사 배너 아래 배너. 데이터=접힘 배너 / 빈=CTA 박스 / 정리중=스켈레톤.
+ *  - 'section' (카드 상세): DART 접힘 카드와 동일 패턴. 항상 접힘 헤더(요건 N개 정리됨 / 미정리 / 정리 중)
+ *    + 펼치면 요건 표시·파싱 유도. localStorage 기억은 소비 측(BoardDetail)이 expanded/onToggle 로 제어.
+ *
+ * 공통: 데이터 있음=섹션별 표시 + "M/D 정리됨" + 수정·다시 정리·삭제 · 빈=파싱 유도 CTA ·
+ *       정리 중=진행 스켈레톤 · 모바일·RN(readOnly)=액션 미노출·빈 상태 미노출 · 파싱/수정 = JobPostingModal.
  */
 
 interface Props {
@@ -27,6 +31,8 @@ interface Props {
   readOnly: boolean
   expanded: boolean
   onToggle: () => void
+  /** 'banner' = 자소서(기본) · 'section' = 카드 상세 DART 스타일 접힘 카드 */
+  variant?: 'banner' | 'section'
 }
 
 export function JobPostingBanner({
@@ -36,20 +42,16 @@ export function JobPostingBanner({
   readOnly,
   expanded,
   onToggle,
+  variant = 'banner',
 }: Props) {
   const [modalMode, setModalMode] = useState<JobPostingModalMode | null>(null)
   const [confirm, setConfirm] = useState<'delete' | 'reparse' | null>(null)
   const { mutate: remove, isPending: removing } =
     useDeleteJobPosting(applicationId)
+  // 데모 모드 전용 더미 고지 — 실서비스(useDemoMode=false)에선 절대 미노출
+  const isDemo = useDemoMode()
 
-  const hasData =
-    !!jobPosting &&
-    (!!jobPosting.responsibilities?.trim() ||
-      jobPosting.requirements.length > 0 ||
-      jobPosting.preferred.length > 0 ||
-      jobPosting.techStack.length > 0 ||
-      jobPosting.qualifications.length > 0 ||
-      jobPosting.keywords.length > 0)
+  const hasData = hasJobPostingData(jobPosting)
 
   const modal = modalMode && (
     <JobPostingModal
@@ -60,6 +62,180 @@ export function JobPostingBanner({
       initial={jobPosting ?? null}
     />
   )
+
+  // 요건 섹션 표시 (배너·섹션 공용) — 중복 구현 방지
+  const renderRequirements = (data: JobPosting) => (
+    <>
+      {data.responsibilities?.trim() && (
+        <TextItem title="담당업무" content={data.responsibilities} />
+      )}
+      {data.requirements.length > 0 && (
+        <ListItem title="자격요건 (필수)" items={data.requirements} />
+      )}
+      {data.preferred.length > 0 && (
+        <ListItem title="우대사항 ⭐" items={data.preferred} />
+      )}
+      {data.techStack.length > 0 && (
+        <ChipItem title="기술 스택" chips={data.techStack} />
+      )}
+      {data.qualifications.length > 0 && (
+        <ChipItem title="자격증·어학" chips={data.qualifications} />
+      )}
+      {data.keywords.length > 0 && (
+        <ChipItem title="키워드" chips={data.keywords} />
+      )}
+    </>
+  )
+
+  // 데모 더미 고지 (배너·섹션 공용) — 요건 표시 하단. 데모에서만.
+  const demoNotice = isDemo && (
+    <p className="text-text-quaternary text-[11px] leading-relaxed mt-2">
+      예시용 더미 공고 요건이에요 — 실제 채용 공고가 아닙니다
+    </p>
+  )
+
+  // 수정·다시 정리·삭제 액션 (배너·섹션 공용)
+  const actions = !readOnly && (
+    <div className="flex items-center gap-1">
+      <ActionBtn onClick={() => setModalMode('edit')}>수정</ActionBtn>
+      <ActionBtn onClick={() => setConfirm('reparse')}>다시 정리</ActionBtn>
+      <ActionBtn onClick={() => setConfirm('delete')} danger>
+        삭제
+      </ActionBtn>
+    </div>
+  )
+
+  // 확인 다이얼로그 (배너·섹션 공용)
+  const confirmDialogs = (
+    <>
+      {confirm === 'reparse' && (
+        <ConfirmDialog
+          label="공고 요건 다시 정리 확인"
+          title="새 내용으로 교체할까요?"
+          body="새로 입력한 공고로 정리하면 지금 요건은 교체돼요."
+          confirmText="새로 정리"
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            setConfirm(null)
+            setModalMode('reparse')
+          }}
+        />
+      )}
+      {confirm === 'delete' && (
+        <ConfirmDialog
+          label="공고 요건 삭제 확인"
+          title="공고 요건을 삭제할까요?"
+          body="정리된 요건이 삭제되고 AI 참고에서도 빠져요."
+          confirmText={removing ? '삭제 중…' : '삭제'}
+          danger
+          disabled={removing}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() =>
+            remove(undefined, {
+              onSuccess: () => {
+                toast.success('공고 요건을 삭제했어요')
+                setConfirm(null)
+              },
+              onError: () => toast.error('삭제에 실패했어요.'),
+            })
+          }
+        />
+      )}
+    </>
+  )
+
+  // ── variant 'section' — 카드 상세 DART 스타일 접힘 카드 ──
+  if (variant === 'section') {
+    // 빈 상태 + readOnly + 정리 중 아님 → 미노출 (자소서 정책 일치)
+    if (!hasData && readOnly && jobPostingStatus !== 'parsing') return null
+
+    const parsing = jobPostingStatus === 'parsing'
+    const data = hasData ? (jobPosting as JobPosting) : null
+    const hint = parsing
+      ? '정리 중…'
+      : data
+        ? `요건 ${countJobPostingItems(data)}개 정리됨`
+        : '미정리'
+
+    return (
+      <>
+        <section
+          aria-labelledby="job-posting-heading"
+          className="border border-line bg-surface-2 rounded-xl overflow-hidden"
+        >
+          <button
+            onClick={onToggle}
+            aria-expanded={expanded}
+            className="w-full flex items-center justify-between gap-2 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors text-left"
+          >
+            <span className="flex items-center gap-2 min-w-0">
+              <h2
+                id="job-posting-heading"
+                className="text-text-primary text-sm font-semibold shrink-0"
+              >
+                📋 공고 요건
+              </h2>
+              <span className="text-text-quaternary text-[11px] truncate">
+                {hint}
+              </span>
+            </span>
+            <CollapsibleChevron open={expanded} />
+          </button>
+
+          {expanded && (
+            <div className="px-5 pb-5 border-t border-line pt-4 text-xs">
+              {parsing ? (
+                <div
+                  className="space-y-1.5"
+                  aria-live="polite"
+                  aria-label="공고 요건 정리 중"
+                >
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="h-2.5 bg-surface-3 rounded animate-pulse"
+                      style={{ width: `${88 - i * 16}%` }}
+                    />
+                  ))}
+                </div>
+              ) : data ? (
+                <>
+                  {renderRequirements(data)}
+                  <div className="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-line">
+                    <p className="text-text-quaternary text-[10px]">
+                      {data.parsedAt
+                        ? `${formatMonthDay(data.parsedAt)} 정리됨 · 회원님의 지원 준비에만 활용돼요`
+                        : ''}
+                    </p>
+                    {actions}
+                  </div>
+                  {demoNotice}
+                </>
+              ) : (
+                <div>
+                  <p className="text-text-secondary text-xs font-medium mb-1">
+                    참고할 만한 공고 내용을 정리해두면 좋아요
+                  </p>
+                  <p className="text-text-quaternary text-[11px] leading-relaxed mb-2.5">
+                    담당업무·자격요건·우대사항을 붙여넣으면 AI가 항목별로 정리해드려요
+                  </p>
+                  <button
+                    onClick={() => setModalMode('create')}
+                    className="text-[11px] text-brand bg-brand/8 border border-brand/25 hover:bg-brand/15 px-2.5 py-1 rounded-full transition-colors"
+                  >
+                    + 공고 요건 정리하기
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {modal}
+        {confirmDialogs}
+      </>
+    )
+  }
 
   // ── 정리 중 (parsing) ── CTA·기존 데이터보다 우선. 상세 polling 이 완료 감지 시 자동 전환.
   if (jobPostingStatus === 'parsing') {
@@ -140,81 +316,21 @@ export function JobPostingBanner({
         </button>
         {expanded && (
           <div className="px-3 pb-2 text-xs">
-            {data.responsibilities?.trim() && (
-              <TextItem title="담당업무" content={data.responsibilities} />
-            )}
-            {data.requirements.length > 0 && (
-              <ListItem title="자격요건 (필수)" items={data.requirements} />
-            )}
-            {data.preferred.length > 0 && (
-              <ListItem title="우대사항 ⭐" items={data.preferred} />
-            )}
-            {data.techStack.length > 0 && (
-              <ChipItem title="기술 스택" chips={data.techStack} />
-            )}
-            {data.qualifications.length > 0 && (
-              <ChipItem title="자격증·어학" chips={data.qualifications} />
-            )}
-            {data.keywords.length > 0 && (
-              <ChipItem title="키워드" chips={data.keywords} />
-            )}
+            {renderRequirements(data)}
 
             <div className="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-line">
               <p className="text-text-quaternary text-[10px]">
                 {data.parsedAt ? `${formatMonthDay(data.parsedAt)} 정리됨` : ''}
               </p>
-              {!readOnly && (
-                <div className="flex items-center gap-1">
-                  <ActionBtn onClick={() => setModalMode('edit')}>수정</ActionBtn>
-                  <ActionBtn onClick={() => setConfirm('reparse')}>
-                    다시 정리
-                  </ActionBtn>
-                  <ActionBtn onClick={() => setConfirm('delete')} danger>
-                    삭제
-                  </ActionBtn>
-                </div>
-              )}
+              {actions}
             </div>
+            {demoNotice}
           </div>
         )}
       </div>
 
       {modal}
-
-      {confirm === 'reparse' && (
-        <ConfirmDialog
-          label="공고 요건 다시 정리 확인"
-          title="새 내용으로 교체할까요?"
-          body="새로 입력한 공고로 정리하면 지금 요건은 교체돼요."
-          confirmText="새로 정리"
-          onCancel={() => setConfirm(null)}
-          onConfirm={() => {
-            setConfirm(null)
-            setModalMode('reparse')
-          }}
-        />
-      )}
-
-      {confirm === 'delete' && (
-        <ConfirmDialog
-          label="공고 요건 삭제 확인"
-          title="공고 요건을 삭제할까요?"
-          body="정리된 요건이 삭제되고 AI 참고에서도 빠져요."
-          confirmText={removing ? '삭제 중…' : '삭제'}
-          danger
-          disabled={removing}
-          onCancel={() => setConfirm(null)}
-          onConfirm={() =>
-            remove(undefined, {
-              onSuccess: () => {
-                toast.success('공고 요건을 삭제했어요')
-                setConfirm(null)
-              },
-              onError: () => toast.error('삭제에 실패했어요.'),
-            })
-          }
-        />
-      )}
+      {confirmDialogs}
     </>
   )
 }

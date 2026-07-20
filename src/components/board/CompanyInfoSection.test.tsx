@@ -3,13 +3,14 @@
  *
  * 5축 — 정상 / 404 (비상장사 silent) / 503 (한도 초과 안내 박스) / stale 라벨 / 재무·공시 옵셔널
  */
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError, AxiosHeaders } from 'axios'
 import React, { type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CompanyInfoSection } from './CompanyInfoSection'
 import { getCompanyDetails } from '@/api/companies'
+import { DART_EXPANDED_STORAGE_KEY } from '@/utils/dartCollapse'
 import type { CompanyDetails } from '@/types/company'
 
 vi.mock('@/api/companies', () => ({
@@ -65,18 +66,58 @@ const makeDetails = (overrides: Partial<CompanyDetails> = {}): CompanyDetails =>
 
 beforeEach(() => {
   apiMock.mockReset()
+  localStorage.clear() // DART 접힘 상태 전역 localStorage 격리 (기본 접힘)
 })
 
+/** 정상 데이터 렌더 후 "회사 정보" 토글을 눌러 본문을 펼친다 (기본 접힘). */
+async function expandSection() {
+  const toggle = await screen.findByRole('button', { name: /회사 정보/ })
+  fireEvent.click(toggle)
+}
+
 describe('CompanyInfoSection', () => {
-  it('정상 데이터 — 프로필·재무·공시 모두 표시', async () => {
+  it('정상 데이터 — (펼치면) 프로필·재무·공시 모두 표시', async () => {
     apiMock.mockResolvedValue(makeDetails())
 
     render(<CompanyInfoSection companyName="네이버" />, { wrapper })
 
     await waitFor(() => expect(screen.getByText('회사 정보')).toBeInTheDocument())
+    await expandSection()
     expect(screen.getByText('최수연')).toBeInTheDocument()
     expect(screen.getByText('매출액')).toBeInTheDocument()
     expect(screen.getByText('분기보고서')).toBeInTheDocument()
+  })
+
+  it('DART 접힘 기본 — 헤더만 보이고 본문(프로필) 숨김', async () => {
+    apiMock.mockResolvedValue(makeDetails())
+
+    render(<CompanyInfoSection companyName="네이버" />, { wrapper })
+
+    await waitFor(() => expect(screen.getByText('회사 정보')).toBeInTheDocument())
+    // 접힘 기본 → 본문 필드 미렌더
+    expect(screen.queryByText('최수연')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /회사 정보/ })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('펼침 → localStorage 에 상태 저장', async () => {
+    apiMock.mockResolvedValue(makeDetails())
+
+    render(<CompanyInfoSection companyName="네이버" />, { wrapper })
+
+    await waitFor(() => expect(screen.getByText('회사 정보')).toBeInTheDocument())
+    await expandSection()
+    expect(localStorage.getItem(DART_EXPANDED_STORAGE_KEY)).toBe('1')
+    expect(screen.getByText('최수연')).toBeInTheDocument()
+  })
+
+  it('localStorage=1(펼침 기억) → 마운트 시 이미 펼쳐진 상태', async () => {
+    localStorage.setItem(DART_EXPANDED_STORAGE_KEY, '1')
+    apiMock.mockResolvedValue(makeDetails())
+
+    render(<CompanyInfoSection companyName="네이버" />, { wrapper })
+
+    // 클릭 없이 본문 노출
+    await waitFor(() => expect(screen.getByText('최수연')).toBeInTheDocument())
   })
 
   it('isStale=true → "N일 전 정보" 라벨 표시', async () => {
@@ -124,24 +165,27 @@ describe('CompanyInfoSection', () => {
     )
   })
 
-  it('재무 null — 재무 섹션 안 보이지만 프로필·공시는 보임', async () => {
+  it('재무 null — (펼치면) 재무 섹션 안 보이지만 프로필·공시는 보임', async () => {
     apiMock.mockResolvedValue(makeDetails({ financials: null }))
 
     render(<CompanyInfoSection companyName="네이버" />, { wrapper })
 
     await waitFor(() => expect(screen.getByText('회사 정보')).toBeInTheDocument())
+    await expandSection()
     expect(screen.queryByText('매출액')).not.toBeInTheDocument()
     expect(screen.queryByText('최근 재무')).not.toBeInTheDocument()
     expect(screen.getByText('분기보고서')).toBeInTheDocument()
   })
 
-  it('공시 빈 배열 — 공시 섹션 안 보이지만 프로필은 보임', async () => {
+  it('공시 빈 배열 — (펼치면) 공시 섹션 안 보이지만 프로필은 보임', async () => {
     apiMock.mockResolvedValue(makeDetails({ disclosures: [] }))
 
     render(<CompanyInfoSection companyName="네이버" />, { wrapper })
 
     await waitFor(() => expect(screen.getByText('회사 정보')).toBeInTheDocument())
+    await expandSection()
     expect(screen.queryByText('최근 공시')).not.toBeInTheDocument()
+    expect(screen.getByText('최수연')).toBeInTheDocument()
   })
 
   it('빈 회사명 → enabled=false, API 호출 안 함', () => {

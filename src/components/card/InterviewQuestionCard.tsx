@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Sparkles } from 'lucide-react'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import {
   useCreateInterviewFollowup,
@@ -128,7 +129,10 @@ export function InterviewQuestionCard({ question, sessionId }: Props) {
           {question.suggestedAnswer && (
             <div className="bg-surface border border-line rounded-lg p-3">
               <p className="text-text-tertiary text-xs font-semibold mb-1.5">
-                ✨ AI 모범 답안
+                <span className="inline-flex items-center gap-1">
+                  <Sparkles size={14} strokeWidth={1.75} aria-hidden="true" />
+                  AI 모범 답안
+                </span>
               </p>
               <p className="text-text-secondary text-[13px] leading-relaxed whitespace-pre-wrap">
                 {question.suggestedAnswer}
@@ -179,7 +183,14 @@ export function InterviewQuestionCard({ question, sessionId }: Props) {
               className="text-text-tertiary hover:text-brand text-xs font-medium disabled:opacity-50 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
               title={followupReason ?? undefined}
             >
-              {creatingFollowup ? '✨ 생성 중…' : '+ 꼬리질문 추가'}
+              {creatingFollowup ? (
+                <span className="inline-flex items-center gap-1">
+                  <Sparkles size={14} strokeWidth={1.75} aria-hidden="true" />
+                  생성 중…
+                </span>
+              ) : (
+                '+ 꼬리질문 추가'
+              )}
             </button>
           )}
         </div>

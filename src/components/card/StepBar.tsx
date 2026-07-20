@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import type { ApplicationStep, ApplicationStatus } from '@/types/application'
 
 interface StepBarProps {
@@ -72,7 +73,7 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                     <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
                       <div className="bg-surface-3 border border-line text-text-primary text-[10px] font-medium px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
                         {step.name}
-                        {isDone && <span className="ml-1.5 text-brand">✓</span>}
+                        {isDone && <Check size={12} strokeWidth={2.25} className="inline-block align-[-0.125em] ml-1.5 text-brand" aria-hidden="true" />}
                         {isCurrent && <span className="ml-1.5 text-brand">← 현재</span>}
                       </div>
                       <div className="w-1.5 h-1.5 bg-surface-3 border-r border-b border-line rotate-45 mx-auto -mt-1" />

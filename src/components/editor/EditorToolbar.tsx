@@ -58,6 +58,8 @@ export function EditorToolbar({ editor }: Props) {
           key={t.label}
           type="button"
           title={t.title}
+          aria-label={t.title}
+          aria-pressed={t.active()}
           onMouseDown={(e) => {
             e.preventDefault()
             t.action()

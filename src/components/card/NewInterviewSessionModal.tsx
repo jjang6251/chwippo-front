@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { FolderOpen, Lightbulb, Target } from 'lucide-react'
 import { Modal } from '@/components/common/Modal'
 import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { useActivities, useActivityLogs } from '@/hooks/useActivities'
@@ -120,8 +121,11 @@ export function NewInterviewSessionModal({
             </div>
             {!app?.jobCategory && (
               <p className="text-warning text-[10px] mt-1.5">
-                💡 직무가 없으면 일반론적 답변이 나옵니다. 카드 상세에서 직무를
-                먼저 입력하면 좋아요.
+                <span className="inline-flex items-center gap-1">
+                  <Lightbulb size={13} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
+                  직무가 없으면 일반론적 답변이 나옵니다. 카드 상세에서 직무를
+                  먼저 입력하면 좋아요.
+                </span>
               </p>
             )}
           </div>
@@ -222,8 +226,9 @@ export function NewInterviewSessionModal({
         {/* 3. 참고 자료 — 사용자가 가장 자주 손대는 영역이라 위로 */}
         <section>
           <div className="flex items-baseline justify-between mb-2">
-            <h3 className="text-text-secondary text-sm font-semibold">
-              📂 참고 자료
+            <h3 className="text-text-secondary text-sm font-semibold inline-flex items-center gap-1.5">
+              <FolderOpen size={15} strokeWidth={1.75} aria-hidden="true" />
+              참고 자료
             </h3>
             <span className="text-text-faint text-xs">자소서 기본 전체 선택</span>
           </div>
@@ -296,8 +301,9 @@ export function NewInterviewSessionModal({
         {/* 4. AI 질문 품질 강화 — 권장 */}
         <section>
           <div className="flex items-baseline justify-between mb-2">
-            <h3 className="text-text-secondary text-sm font-semibold">
-              🎯 AI 질문 품질 강화
+            <h3 className="text-text-secondary text-sm font-semibold inline-flex items-center gap-1.5">
+              <Target size={15} strokeWidth={1.75} aria-hidden="true" />
+              AI 질문 품질 강화
             </h3>
             <span className="text-text-faint text-xs">권장</span>
           </div>

@@ -1,3 +1,4 @@
+import { Target } from 'lucide-react'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 
 interface GoalsSectionProps {
@@ -10,7 +11,10 @@ export function GoalsSection({ goals }: GoalsSectionProps) {
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-text-primary text-base font-semibold">🎯 내 스펙 목표</h2>
+        <h2 className="text-text-primary text-base font-semibold inline-flex items-center gap-1.5">
+          <Target size={16} strokeWidth={1.75} aria-hidden="true" />
+          내 스펙 목표
+        </h2>
         <button
           onClick={() => navigate('/myinfo#goals')}
           className="text-[11px] text-text-quaternary hover:text-text-tertiary transition-colors"
@@ -20,7 +24,7 @@ export function GoalsSection({ goals }: GoalsSectionProps) {
       </div>
       {goals.length === 0 ? (
         <div className="flex flex-col items-center py-4 gap-2 text-center">
-          <p className="text-2xl">🎯</p>
+          <Target size={24} strokeWidth={1.75} aria-hidden="true" className="text-text-quaternary" />
           <p className="text-text-tertiary text-xs">아직 목표가 없어요</p>
           <button
             onClick={() => navigate('/myinfo#goals')}

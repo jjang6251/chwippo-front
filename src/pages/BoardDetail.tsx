@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
-import { useAutoResize } from '@/hooks/useAutoResize'
 import { useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
@@ -16,10 +15,9 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep, useUpdateSteps } from '@/hooks/useApplications'
-import type { UpdateApplicationDto } from '@/types/application'
-import { useUpdateStep } from '@/hooks/useStepDetail'
+import type { UpdateApplicationDto, ApplicationStep } from '@/types/application'
+import { useChecklist } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
-import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { CoverLetterTab } from '@/components/card/CoverLetterTab'
 import { InterviewPrepTab } from '@/components/card/InterviewPrepTab'
 import { DdayBadge } from '@/components/card/DdayBadge'
@@ -28,12 +26,19 @@ import { SetResultModal } from '@/components/card/SetResultModal'
 import { FailedTakeawayBox } from '@/components/card/FailedTakeawayBox'
 import { Modal } from '@/components/common/Modal'
 import { TagSelector } from '@/components/common/TagSelector'
+import { CompanyAvatar } from '@/components/board/CompanyAvatar'
+import { CompanyInfoSection } from '@/components/board/CompanyInfoSection'
+import { CompanyMemoCard } from '@/components/board/CompanyMemoCard'
+import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
+import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
+import { loadCollapseExpanded, saveCollapseExpanded, JOB_POSTING_EXPANDED_STORAGE_KEY } from '@/utils/collapsePref'
 import { toast } from '@/stores/toastStore'
-import { postToNative } from '@/utils/nativeBridge'
 import { celebrate } from '@/stores/celebrationStore'
 import { useTourStore } from '@/stores/tourStore'
-import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
-import { CompanyInfoSection } from '@/components/board/CompanyInfoSection'
+import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
+import { getStepType, STEP_TYPE_CONFIG } from '@/utils/stepTemplates'
+import { formatStepSchedule } from '@/utils/datetime'
+import { Calendar, MapPin, Pencil, GripVertical } from 'lucide-react'
 
 // --- 드래그 가능한 스텝 아이템 ---
 interface SortableStepItem {
@@ -65,19 +70,16 @@ function SortableStepRow({
           {...attributes}
           {...listeners}
           {...(index === 0 ? { 'data-tour': 'drag-handle' } : {})}
+          aria-label="드래그로 순서 변경"
           className="flex-none text-text-quaternary hover:text-text-tertiary cursor-grab active:cursor-grabbing p-1 touch-none"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-          </svg>
+          <GripVertical size={14} strokeWidth={1.75} aria-hidden="true" />
         </button>
         <span className="text-text-quaternary text-xs w-4 text-center">{index + 1}</span>
         <input
           value={item.name}
           onChange={(e) => onChange(item.id, e.target.value)}
-          className="flex-1 bg-input border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+          className="flex-1 bg-input border border-line rounded-lg px-2.5 py-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
         />
         <button
           onClick={() => onRemove(item.id)}
@@ -92,76 +94,75 @@ function SortableStepRow({
   )
 }
 
-// --- 인라인 편집 필드 ---
-function EditableField({
-  value, placeholder, onSave, className = '', multiline = false, maxLength,
+
+// --- 현재 스텝 카드 (진행 상황 섹션 안) ---
+function CurrentStepCard({
+  appId, step, needsResult, onOpen, onSetResult,
 }: {
-  value: string
-  placeholder: string
-  onSave: (v: string) => void
-  className?: string
-  multiline?: boolean
-  maxLength?: number
+  appId: string
+  step: ApplicationStep
+  needsResult: boolean
+  onOpen: () => void
+  onSetResult: () => void
 }) {
-  const [local, setLocal] = useState(value)
-  const [focused, setFocused] = useState(false)
-  // multiline = 메모 등 긴 글. 베타 피드백 패턴 auto-resize (min 120 / max 400)
-  const { ref: textareaRef, autoResize } = useAutoResize(local, { min: 80, max: 500 })
+  const { data: checklist = [] } = useChecklist(appId, step.id)
+  const type = getStepType(step.name)
+  const cfg = STEP_TYPE_CONFIG[type]
+  const StepIcon = cfg.Icon
+  const { dateLabel, timeLabel } = formatStepSchedule(step.scheduledDate)
+  const doneCount = checklist.filter((i) => i.isDone).length
+  // U29 card-solid 구분감 — 저알파 틴트(bg-card·warning/5) 금지, 불투명 배경+유형색 스트라이프
+  const accentCls = needsResult ? 'border-l-warning' : cfg.accentBorderCls
 
-  const handleBlur = () => {
-    setFocused(false)
-    if (local !== value) onSave(local)
-  }
-
-  const baseClassName = `w-full bg-transparent focus:outline-none transition-all rounded-md px-2 py-1 -mx-2 -my-1
-    ${focused ? 'bg-surface-3 ring-1 ring-brand/30' : 'hover:bg-card active:bg-card-strong'}
-    ${className}`
-
-  if (multiline) {
-    const counterColor = maxLength
-      ? local.length >= maxLength
-        ? 'text-danger'
-        : local.length >= maxLength * 0.9
-        ? 'text-warning'
-        : 'text-text-quaternary'
-      : ''
-    // multiline = 메모 등 자유 입력. inline edit 패턴 X — 명확한 입력 박스 (bg-input + border)
-    return (
-      <div>
-        <textarea
-          ref={textareaRef}
-          value={local}
-          onChange={(e) => {
-            setLocal(e.target.value)
-            autoResize()
-          }}
-          onFocus={() => setFocused(true)}
-          onBlur={handleBlur}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          style={{ minHeight: 80, lineHeight: 1.6 }}
-          className={`w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y ${className}`}
-        />
-        {maxLength && (
-          <p className={`text-[10px] text-right mt-1 ${counterColor}`}>
-            {local.length} / {maxLength}
-          </p>
+  return (
+    <div className={`mt-5 bg-card-solid shadow-sm border border-line-strong border-l-[3px] rounded-xl p-4 ${accentCls}`}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <StepIcon size={15} strokeWidth={1.75} className={`shrink-0 ${cfg.colorCls}`} aria-hidden="true" />
+            <span className="text-sm font-semibold text-text-primary truncate">{step.name}</span>
+          </div>
+          {needsResult ? (
+            <p className="text-xs text-warning font-medium">결과 대기 중 — 합격·불합격을 입력해 주세요</p>
+          ) : (
+            <div className="flex items-center gap-x-3 gap-y-1 text-xs text-text-secondary flex-wrap">
+              {dateLabel ? (
+                <span className="inline-flex items-center gap-1">
+                  <Calendar size={13} strokeWidth={1.75} className={`${cfg.colorCls} shrink-0`} aria-hidden="true" /> {dateLabel}
+                  {timeLabel && <b className="ml-1 font-mono text-brand">{timeLabel}</b>}
+                </span>
+              ) : (
+                <button
+                  onClick={onOpen}
+                  className="inline-flex items-center gap-1 text-text-quaternary hover:text-text-secondary transition-colors"
+                >
+                  <Calendar size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" /> 날짜 설정하기
+                </button>
+              )}
+              {step.location && <span className="inline-flex items-center gap-1 max-w-[180px]"><MapPin size={13} strokeWidth={1.75} className={`${cfg.colorCls} shrink-0`} aria-hidden="true" /> <span className="truncate">{step.location}</span></span>}
+              {checklist.length > 0 && (
+                <span className="text-text-quaternary">체크리스트 {doneCount}/{checklist.length}</span>
+              )}
+            </div>
+          )}
+        </div>
+        {needsResult ? (
+          <button
+            onClick={onSetResult}
+            className="flex-none text-xs font-medium px-3.5 py-2 rounded-lg text-text-primary bg-brand hover:bg-accent active:bg-accent-hover transition-colors"
+          >
+            결과 입력
+          </button>
+        ) : (
+          <button
+            onClick={onOpen}
+            className="flex-none text-xs font-medium px-3.5 py-2 rounded-lg text-text-primary bg-brand hover:bg-accent active:bg-accent-hover transition-colors"
+          >
+            스텝 열기 →
+          </button>
         )}
       </div>
-    )
-  }
-  return (
-    <input
-      value={local}
-      onChange={(e) => setLocal(e.target.value)}
-      onFocus={() => setFocused(true)}
-      onBlur={handleBlur}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLElement).blur()
-      }}
-      placeholder={placeholder}
-      className={baseClassName}
-    />
+    </div>
   )
 }
 
@@ -173,21 +174,30 @@ export function BoardDetail() {
   const { mutate: update } = useUpdateApplication(id!)
   const { mutate: updateStep } = useUpdateCurrentStep()
   const { mutate: updateSteps, isPending: isSavingSteps } = useUpdateSteps(id!)
-  const { mutate: updateStepDetail } = useUpdateStep(id!)
 
   const [showResultModal, setShowResultModal] = useState(false)
   const [showStepEditor, setShowStepEditor] = useState(false)
-  const [showTagEditor, setShowTagEditor] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [showPassConfirm, setShowPassConfirm] = useState(false)
   const [pendingStepIndex, setPendingStepIndex] = useState<number | null>(null)
   const [editSteps, setEditSteps] = useState<SortableStepItem[]>([])
   const [editTags, setEditTags] = useState<string[]>([])
-  const [openStepId, setOpenStepId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ companyName: '', jobTitle: '', jobUrl: '' })
   const [activeTab, setActiveTab] = useState<
     'steps' | 'coverletter' | 'interview'
   >('steps')
   const aiEnabled = useAiEnabled()
   const interviewAiEnabled = useInterviewAiEnabled()
+
+  // 공고 요건 — 자소서와 동일 정책(모바일·RN 보기 전용) + DART 처럼 접힘 localStorage 기억
+  const jpReadOnly = useCoverletterReadOnly()
+  const [jpExpanded, setJpExpanded] = useState(() => loadCollapseExpanded(JOB_POSTING_EXPANDED_STORAGE_KEY))
+  const toggleJp = () =>
+    setJpExpanded((prev) => {
+      const next = !prev
+      saveCollapseExpanded(JOB_POSTING_EXPANDED_STORAGE_KEY, next)
+      return next
+    })
 
   const tourActive = useTourStore((s) => s.active)
   const tourStep = useTourStore((s) => s.step)
@@ -219,11 +229,16 @@ export function BoardDetail() {
   const ddayTarget = currentStep?.scheduledDate ?? null
 
   const currentTags = parseTags(app.jobCategory)
-  const openStep = openStepId ? sortedSteps.find((s) => s.id === openStepId) ?? null : null
+  const isResolved = app.status === 'PASSED' || app.status === 'FAILED'
 
+  // 빈 값 정책 — `value || undefined` 는 빈 값이 PATCH 에서 빠져 "지웠는데 저장 토스트만 뜨고
+  // 새로고침하면 복귀"하는 거짓 저장이 된다 (CEO 실기 2026-07-20). 삭제 의도는 '' 로 전송.
+  // 단 companyName(필수)·jobUrl(@IsUrl 이라 '' = 400)은 빈 값 저장 불가 → 요청 자체 스킵.
   const save = (field: keyof UpdateApplicationDto) => (value: string) => {
+    const isEmpty = value.trim() === ''
+    if (isEmpty && (field === 'companyName' || field === 'jobUrl')) return
     update(
-      { [field]: value || undefined } as UpdateApplicationDto,
+      { [field]: isEmpty ? '' : value } as UpdateApplicationDto,
       {
         onSuccess: () => toast.show('저장됐어요.'),
         onError: () => toast.error('저장에 실패했습니다.'),
@@ -232,8 +247,8 @@ export function BoardDetail() {
   }
 
   const handleStepClick = (index: number) => {
-    const isLastStep = index === sortedSteps.length - 1
-    if (isLastStep) {
+    const clickedLast = index === sortedSteps.length - 1
+    if (clickedLast) {
       setPendingStepIndex(index)
       setShowPassConfirm(true)
     } else {
@@ -241,6 +256,8 @@ export function BoardDetail() {
       if (tourActive && tourStep === 7) tourNext()
     }
   }
+
+  const openStep = (stepId: string) => navigate(`/board/${app.id}/steps/${stepId}`)
 
   const openStepEditor = () => {
     setEditSteps(sortedSteps.map((s) => ({
@@ -254,9 +271,14 @@ export function BoardDetail() {
     if (tourActive && tourStep === 8) setTimeout(() => tourNext(), 280)
   }
 
-  const openTagEditor = () => {
+  const openEditModal = () => {
+    setEditForm({
+      companyName: app.companyName,
+      jobTitle: app.jobTitle ?? '',
+      jobUrl: app.jobUrl ?? '',
+    })
     setEditTags(currentTags)
-    setShowTagEditor(true)
+    setShowEditModal(true)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -294,14 +316,18 @@ export function BoardDetail() {
     )
   }
 
-  const handleSaveTags = () => {
-    update(
-      { jobCategory: serializeTags(editTags) || undefined },
-      {
-        onSuccess: () => { setShowTagEditor(false); toast.show('태그가 저장됐어요.') },
-        onError: () => toast.error('저장에 실패했습니다.'),
-      },
-    )
+  const handleSaveEdit = () => {
+    const dto: UpdateApplicationDto = {
+      jobTitle: editForm.jobTitle.trim() || undefined,
+      jobCategory: serializeTags(editTags) || undefined,
+      jobUrl: editForm.jobUrl.trim() || undefined,
+    }
+    const name = editForm.companyName.trim()
+    if (name) dto.companyName = name
+    update(dto, {
+      onSuccess: () => { setShowEditModal(false); toast.show('저장됐어요.') },
+      onError: () => toast.error('저장에 실패했습니다.'),
+    })
   }
 
   return (
@@ -317,45 +343,47 @@ export function BoardDetail() {
         뒤로
       </button>
 
-      {/* 기본 정보 카드 */}
-      <div className={`border rounded-xl p-6 mb-4 ${app.status === 'PASSED' ? 'border-success/35 bg-gradient-to-br from-success/15 to-surface-2' : 'border-line bg-surface-2'}`}>
-        <div className="flex items-start gap-4 mb-5">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold flex-none ${app.status === 'PASSED' ? 'bg-success/15 text-success' : 'bg-brand/12 text-brand'}`}>
-            {app.companyName.charAt(0)}
-          </div>
+      {/* 기본 정보 헤더 — 보기형 + ✎ 편집 진입 */}
+      <div className={`border rounded-xl px-5 py-4 mb-4 bg-surface-2 ${app.status === 'PASSED' ? 'border-success/40' : 'border-line'}`}>
+        <div className="flex items-center gap-3.5">
+          <CompanyAvatar name={app.companyName} domain={app.domain} size="md" className="flex-none" />
 
           <div className="flex-1 min-w-0">
-            {/* 회사명 — 편집 가능 힌트 포함 */}
-            <div className="group/field flex items-center gap-1.5 mb-0.5">
-              <EditableField
-                value={app.companyName}
-                placeholder="회사명"
-                onSave={save('companyName')}
-                className="text-text-primary text-lg font-bold"
-              />
-              <svg className="text-text-quaternary opacity-0 group-hover/field:opacity-100 transition-opacity flex-none" width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <path d="M11.5 2.5l2 2-9 9H2.5v-2l9-9z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h1 className="text-lg font-bold text-text-primary truncate">{app.companyName}</h1>
+              {currentTags.map((tag) => {
+                const colorClass = JOB_CATEGORY_COLOR[tag] ?? JOB_CATEGORY_COLOR['기타']
+                const TagIcon = JOB_CATEGORY_ICON[tag] ?? JOB_CATEGORY_ICON['기타']
+                return (
+                  <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${colorClass}`}>
+                    <TagIcon size={11} strokeWidth={2} aria-hidden="true" /> {tag}
+                  </span>
+                )
+              })}
             </div>
-            {/* 직무명 */}
-            <div className="group/field flex items-center gap-1.5">
-              <EditableField
-                value={app.jobTitle ?? ''}
-                placeholder="직무명 클릭하여 입력"
-                onSave={save('jobTitle')}
-                className="text-text-tertiary text-sm"
-              />
-              <svg className="text-text-quaternary opacity-0 group-hover/field:opacity-100 transition-opacity flex-none" width="11" height="11" viewBox="0 0 16 16" fill="none">
-                <path d="M11.5 2.5l2 2-9 9H2.5v-2l9-9z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            {(app.jobTitle || app.jobUrl) && (
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-text-tertiary min-w-0">
+                {app.jobTitle && <span className="truncate">{app.jobTitle}</span>}
+                {app.jobTitle && app.jobUrl && <span className="text-text-quaternary shrink-0">·</span>}
+                {app.jobUrl && (
+                  <a
+                    href={app.jobUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand hover:underline shrink-0 inline-flex items-baseline gap-0.5"
+                  >
+                    공고 보기 <span aria-hidden="true" className="text-[9px]">↗</span>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-1 flex-none flex-wrap justify-end max-w-[40%] sm:max-w-none">
+          <div className="flex items-center gap-1.5 flex-none">
             <StarToggle
               starred={app.isStarred}
               onToggle={() => update({ isStarred: !app.isStarred })}
-              size="md"
+              size="sm"
             />
             {app.status === 'PASSED' && (
               <span className="text-xs text-success font-medium bg-success/10 px-2 py-1 rounded-full border border-success/20 whitespace-nowrap">🎉 최종 합격</span>
@@ -363,103 +391,37 @@ export function BoardDetail() {
             {app.status === 'FAILED' && (
               <span className="text-xs text-text-tertiary font-medium bg-surface-3 px-2 py-1 rounded-full border border-line whitespace-nowrap">불합격</span>
             )}
-            {/* A9 — 결과 되돌리기 (잘못 처리 롤백 · 합격/불합격 공통) */}
-            {(app.status === 'PASSED' || app.status === 'FAILED') && (
-              <button
-                onClick={() =>
-                  update({
-                    status: (app.steps?.length ?? 0) > 0 ? 'IN_PROGRESS' : 'PLANNED',
-                  })
-                }
-                className="text-[11px] text-text-quaternary hover:text-text-secondary underline underline-offset-2 whitespace-nowrap transition-colors"
-                title="결과 입력을 취소하고 진행 중으로 되돌려요"
-              >
-                결과 되돌리기
-              </button>
-            )}
-            {ddayTarget && app.status !== 'PASSED' && app.status !== 'FAILED' && <DdayBadge deadline={ddayTarget} />}
+            {ddayTarget && !isResolved && <DdayBadge deadline={ddayTarget} />}
+            <button
+              onClick={openEditModal}
+              aria-label="기본 정보 편집"
+              title="기본 정보 편집"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
+            >
+              <Pencil size={14} strokeWidth={1.75} aria-hidden="true" />
+            </button>
           </div>
         </div>
 
-        {/* 태그 */}
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          {currentTags.length > 0
-            ? currentTags.map((tag) => {
-                const colorClass = JOB_CATEGORY_COLOR[tag] ?? JOB_CATEGORY_COLOR['기타']
-                return (
-                  <span key={tag} className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border ${colorClass}`}>
-                    {JOB_CATEGORY_EMOJI[tag]} {tag}
-                  </span>
-                )
-              })
-            : null
-          }
-          <button
-            onClick={openTagEditor}
-            className="text-xs text-text-quaternary hover:text-text-secondary border border-dashed border-line hover:border-line-strong px-2.5 py-1 rounded-full transition-all"
-          >
-            {currentTags.length > 0 ? '+ 태그 수정' : '+ 태그 추가'}
-          </button>
-        </div>
+        {/* A9 — 결과 되돌리기 (잘못 처리 롤백 · 합격/불합격 공통) */}
+        {isResolved && (
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={() =>
+                update({
+                  status: (app.steps?.length ?? 0) > 0 ? 'IN_PROGRESS' : 'PLANNED',
+                })
+              }
+              className="text-[11px] text-text-quaternary hover:text-text-secondary underline underline-offset-2 whitespace-nowrap transition-colors"
+              title="결과 입력을 취소하고 진행 중으로 되돌려요"
+            >
+              결과 되돌리기
+            </button>
+          </div>
+        )}
 
         {/* A9 — 탈락 회고 (FAILED 카드만 · 컴포넌트 내부에서 가드) */}
         <FailedTakeawayBox application={app} />
-
-        {/* 마감일 + URL */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            {currentStep ? (
-              <>
-                <label className="block text-[10px] text-text-quaternary mb-1 truncate">{currentStep.name} 날짜</label>
-                <input
-                  key={`${currentStep.id}-${currentStep.scheduledDate ?? ''}`}
-                  type="date"
-                  defaultValue={currentStep.scheduledDate ? dayjs(currentStep.scheduledDate).format('YYYY-MM-DD') : ''}
-                  onChange={(e) => {
-                    // date picker 선택 시 onBlur가 발생 안 함 → onChange로 즉시 저장
-                    const oldDate = currentStep.scheduledDate ? dayjs(currentStep.scheduledDate).format('YYYY-MM-DD') : ''
-                    const newDate = e.target.value
-                    if (newDate !== oldDate) {
-                      updateStepDetail(
-                        { stepId: currentStep.id, scheduledDate: newDate ? `${newDate}T00:00:00+09:00` : null },
-                        {
-                          onSuccess: () => {
-                            toast.show('저장됐어요.')
-                            // ⑦ 마감일(스텝 날짜) 저장 = 가치 순간 → native soft-ask 트리거 (WebView 밖 no-op)
-                            if (newDate) postToNative({ type: 'deadline-saved' })
-                          },
-                        },
-                      )
-                    }
-                  }}
-                  className="w-full bg-input border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all hover:border-line-strong"
-                />
-              </>
-            ) : (
-              <>
-                <label className="block text-[10px] text-text-quaternary mb-1">진행 일정</label>
-                <div className="text-xs text-text-quaternary px-2.5 py-2">스텝을 추가하면 일정을 설정할 수 있어요</div>
-              </>
-            )}
-          </div>
-          <div>
-            <label className="block text-[10px] text-text-quaternary mb-1">채용공고 URL</label>
-            <div className="flex gap-1.5">
-              <input
-                defaultValue={app.jobUrl ?? ''}
-                onBlur={(e) => { if (e.target.value !== (app.jobUrl ?? '')) save('jobUrl')(e.target.value) }}
-                placeholder="https://"
-                className="flex-1 min-w-0 bg-input border border-line rounded-lg px-2.5 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all hover:border-line-strong"
-              />
-              {app.jobUrl && (
-                <a href={app.jobUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex-none px-2 py-2 bg-surface-3 border border-line rounded-lg text-text-quaternary hover:text-text-secondary text-xs transition-colors">
-                  ↗
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* 탭: 전형 단계 / 자소서 / 면접 준비 — 기능별 flag 로 노출 (useAiEnabled.ts) */}
@@ -490,14 +452,16 @@ export function BoardDetail() {
 
       {activeTab === 'steps' && (
         <>
-          {/* 스텝바 */}
+          {/* 진행 상황 — 스텝바 + 현재 스텝 카드 */}
           {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
             <div data-tour="step-bar" className="border border-line bg-surface-2 rounded-xl p-5 mb-4">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h2 className="text-text-primary text-sm font-semibold">진행 상황</h2>
-                  <p className="text-text-quaternary text-[10px] mt-0.5">스텝 이름을 클릭하면 상세 정보를 입력할 수 있어요</p>
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-text-primary text-sm font-semibold">
+                  진행 상황{' '}
+                  <span className="font-mono text-text-quaternary font-normal text-xs">
+                    {Math.min(app.currentStepIndex + 1, sortedSteps.length)}/{sortedSteps.length}
+                  </span>
+                </h2>
                 {app.status !== 'PASSED' && (
                   <button
                     data-tour="step-edit-btn"
@@ -512,41 +476,39 @@ export function BoardDetail() {
                 steps={app.steps}
                 currentStepIndex={app.currentStepIndex}
                 status={app.status}
-                onStepClick={app.status !== 'PASSED' && app.status !== 'FAILED' ? handleStepClick : undefined}
-                onStepNameClick={setOpenStepId}
+                onStepClick={!isResolved ? handleStepClick : undefined}
+                onStepNameClick={openStep}
                 size="md"
               />
+              {app.status === 'IN_PROGRESS' && currentStep && (
+                <CurrentStepCard
+                  appId={app.id}
+                  step={currentStep}
+                  needsResult={needsResult}
+                  onOpen={() => openStep(currentStep.id)}
+                  onSetResult={() => setShowResultModal(true)}
+                />
+              )}
             </div>
           )}
 
-          {/* 결과 처리 */}
-          {needsResult && (
-            <div className="border border-warning/25 bg-warning/5 rounded-xl p-4 mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-warning text-xs font-medium">⚠️ 결과 대기 중이에요</p>
-                <p className="text-text-tertiary text-xs mt-0.5">합격·불합격 결과를 입력하면 다음 단계로 진행할 수 있어요.</p>
-              </div>
-              <button
-                onClick={() => setShowResultModal(true)}
-                className="text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-3 py-2 rounded-lg transition-colors"
-              >결과 입력</button>
-            </div>
-          )}
+          {/* 공고 요건 — 자소서와 동일 UI·데이터(app.jobPosting 단일 소스). 회사 메모 위 (CEO 2026-07-20) */}
+          <JobPostingBanner
+            variant="section"
+            applicationId={app.id}
+            jobPosting={app.jobPosting}
+            jobPostingStatus={app.jobPostingStatus}
+            readOnly={jpReadOnly}
+            expanded={jpExpanded}
+            onToggle={toggleJp}
+          />
 
-          {/* 메모 */}
-          <div className="border border-line bg-surface-2 rounded-xl p-5">
-            <h2 className="text-text-primary text-sm font-semibold mb-3">메모</h2>
-            <EditableField
-              value={app.memo ?? ''}
-              placeholder="면접관 3명, 복장 자유, 기술 면접 위주... (자동 저장)"
-              onSave={save('memo')}
-              className="text-sm text-text-primary placeholder:text-text-tertiary"
-              multiline
-              maxLength={2000}
-            />
+          {/* 회사 메모 — 이 회사 전반에 대한 기록 (전형별 메모는 각 스텝 안). 시작 칩으로 섹션 유도 */}
+          <div className="mt-4">
+            <CompanyMemoCard value={app.memo ?? ''} onSave={save('memo')} />
           </div>
 
-          {/* 회사 정보 (DART) — 상장사이거나 매핑된 회사만 자동 노출 */}
+          {/* 회사 정보 (DART) — 상장사이거나 매핑된 회사만 자동 노출 · 접힘 기본 */}
           <div className="mt-4">
             <CompanyInfoSection companyName={app.companyName} />
           </div>
@@ -566,21 +528,54 @@ export function BoardDetail() {
         companyName={app.companyName}
       />
 
-      {/* 태그 편집 모달 */}
-      <Modal open={showTagEditor} onClose={() => setShowTagEditor(false)} title="직군 태그 편집">
-        <TagSelector selected={editTags} onChange={setEditTags} />
+      {/* 기본 정보 편집 모달 — 회사명·직무·태그·공고 URL (입력 16px = iOS 확대 방지) */}
+      <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="기본 정보 편집">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs text-text-tertiary mb-1.5">회사명</label>
+            <input
+              value={editForm.companyName}
+              onChange={(e) => setEditForm((f) => ({ ...f, companyName: e.target.value }))}
+              placeholder="회사명"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-text-tertiary mb-1.5">직무</label>
+            <input
+              value={editForm.jobTitle}
+              onChange={(e) => setEditForm((f) => ({ ...f, jobTitle: e.target.value }))}
+              placeholder="예: 서버 개발자"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-text-tertiary mb-2">직군 태그</label>
+            <TagSelector selected={editTags} onChange={setEditTags} />
+          </div>
+          <div>
+            <label className="block text-xs text-text-tertiary mb-1.5">채용공고 URL</label>
+            <input
+              value={editForm.jobUrl}
+              onChange={(e) => setEditForm((f) => ({ ...f, jobUrl: e.target.value }))}
+              inputMode="url"
+              placeholder="https://"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            />
+          </div>
+        </div>
         <div className="flex gap-2 mt-5">
-          <button onClick={() => setShowTagEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
-          <button onClick={handleSaveTags} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors">저장</button>
+          <button onClick={() => setShowEditModal(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
+          <button onClick={handleSaveEdit} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors">저장</button>
         </div>
       </Modal>
 
       {/* 스텝 편집 모달 (드래그 가능) */}
       <Modal open={showStepEditor} onClose={() => setShowStepEditor(false)} title="스텝 편집">
-        <p className="text-text-quaternary text-xs mb-3">☰ 드래그로 순서를 변경할 수 있어요</p>
+        <p className="inline-flex items-center gap-1 text-text-quaternary text-xs mb-3"><GripVertical size={13} strokeWidth={1.75} aria-hidden="true" /> 드래그로 순서를 변경할 수 있어요</p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={editSteps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1 mb-3">
+            <div className="space-y-1.5 max-h-72 overflow-y-auto overscroll-contain pr-1 mb-3">
               {editSteps.map((step, i) => (
                 <SortableStepRow
                   key={step.id}
@@ -610,16 +605,6 @@ export function BoardDetail() {
           </button>
         </div>
       </Modal>
-
-      {/* 스텝 상세 패널 */}
-      {openStep && (
-        <StepDetailPanel
-          key={openStep.id}
-          appId={app.id}
-          step={openStep}
-          onClose={() => setOpenStepId(null)}
-        />
-      )}
 
       {/* 최종 합격 확인 모달 */}
       {showPassConfirm && pendingStepIndex !== null && (
@@ -664,13 +649,14 @@ function DetailSkeleton() {
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 animate-pulse">
       <div className="h-3 bg-card rounded w-24 mb-6" />
-      <div className="border border-line bg-surface-2 rounded-xl p-6 mb-4">
-        <div className="flex gap-4 mb-5">
-          <div className="w-12 h-12 bg-card rounded-xl" />
-          <div className="flex-1"><div className="h-5 bg-card-strong rounded w-32 mb-2" /><div className="h-3 bg-card rounded w-24" /></div>
+      <div className="border border-line bg-surface-2 rounded-xl px-5 py-4 mb-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-9 h-9 bg-card rounded-lg flex-none" />
+          <div className="flex-1"><div className="h-4 bg-card-strong rounded w-32 mb-2" /><div className="h-3 bg-card rounded w-24" /></div>
         </div>
-        <div className="grid grid-cols-2 gap-3"><div className="h-9 bg-card rounded-lg" /><div className="h-9 bg-card rounded-lg" /></div>
       </div>
+      <div className="h-10 bg-card rounded-lg mb-4" />
+      <div className="h-40 bg-card rounded-xl" />
     </div>
   )
 }

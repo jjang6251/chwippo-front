@@ -2,13 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useApplications } from '@/hooks/useApplications'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
 import { BETA_FEATURES } from '@/config/betaFeatures'
 import { useTourStore } from '@/stores/tourStore'
 import { useAuthStore } from '@/stores/authStore'
 import { CompanyCard } from '@/components/card/CompanyCard'
-import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -22,6 +22,8 @@ import { BoardGroupedView } from '@/components/board/BoardGroupedView'
 import type { ApplicationStatus } from '@/types/application'
 import { sortApplications } from '@/utils/sortApplications'
 import { loadBoardView, saveBoardView, type BoardView } from '@/utils/boardViewGroups'
+import type { LucideIcon } from 'lucide-react'
+import { Search, ClipboardList, Pin } from 'lucide-react'
 
 type FilterTab = 'all' | ApplicationStatus
 
@@ -63,8 +65,8 @@ export function Board() {
   const [addModalStatus, setAddModalStatus] = useState<'PLANNED' | 'IN_PROGRESS' | null>(null)
   const [startAppId, setStartAppId] = useState<string | null>(null)
   const [resultAppId, setResultAppId] = useState<string | null>(null)
-  const [panelStep, setPanelStep] = useState<{ appId: string; stepId: string } | null>(null)
   const addMenuRef = useRef<HTMLDivElement>(null)
+  const navigate = useDemoNavigate()
 
   const { data: applications = [], isLoading } = useApplications()
   const qc = useQueryClient()
@@ -110,16 +112,13 @@ export function Board() {
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
 
-  const panelApp = panelStep ? applications.find((a) => a.id === panelStep.appId) : null
-  const panelStepData = panelApp
-    ? [...panelApp.steps].sort((a, b) => a.orderIndex - b.orderIndex).find((s) => s.id === panelStep!.stepId) ?? null
-    : null
+  const openStep = (appId: string, stepId: string) => navigate(`/board/${appId}/steps/${stepId}`)
 
   const countByStatus = (status: ApplicationStatus) => applications.filter((a) => a.status === status).length
   const failedCount = countByStatus('FAILED')
 
   return (
-    <div className={`w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 ${panelStep ? 'lg:pr-96' : ''}`}>
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <PullToRefreshIndicator {...pull} />
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
@@ -262,14 +261,14 @@ export function Board() {
         // A11 — 그룹 뷰. 같은 sorted 를 단계 그룹으로 묶어 렌더 (빈 그룹 숨김).
         <BoardGroupedView applications={sorted} />
       ) : (
-        <div className={`grid gap-3 [grid-auto-rows:1fr] ${panelStep ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+        <div className="grid gap-3 [grid-auto-rows:1fr] grid-cols-1 sm:grid-cols-2">
           {realCards.map((app) => (
             <CompanyCard
               key={app.id}
               application={app}
               onStartApplication={setStartAppId}
               onSetResult={setResultAppId}
-              onCurrentStepClick={(appId, stepId) => setPanelStep({ appId, stepId })}
+              onCurrentStepClick={openStep}
             />
           ))}
           {sampleCards.map((app, i) => (
@@ -278,7 +277,7 @@ export function Board() {
                 application={app}
                 onStartApplication={setStartAppId}
                 onSetResult={setResultAppId}
-                onCurrentStepClick={(appId, stepId) => setPanelStep({ appId, stepId })}
+                onCurrentStepClick={openStep}
               />
             </SampleCardWrap>
           ))}
@@ -310,14 +309,6 @@ export function Board() {
           companyName={resultApp.companyName}
         />
       )}
-
-      {panelApp && panelStepData && (
-        <StepDetailPanel
-          appId={panelApp.id}
-          step={panelStepData}
-          onClose={() => setPanelStep(null)}
-        />
-      )}
     </div>
   )
 }
@@ -345,25 +336,29 @@ function EmptyState({ filter, search, onAdd }: { filter: FilterTab; search: stri
   if (search) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="text-3xl mb-3">🔍</div>
+        <Search size={40} strokeWidth={1.5} className="text-text-quaternary mb-3" aria-hidden="true" />
         <p className="text-text-secondary text-sm font-medium">검색 결과가 없어요</p>
         <p className="text-text-quaternary text-xs mt-1">다른 회사명이나 직무명으로 검색해보세요</p>
       </div>
     )
   }
 
-  const messages: Record<FilterTab, { emoji: string; title: string; desc: string }> = {
-    all: { emoji: '📋', title: '아직 지원한 회사가 없어요', desc: '첫 지원 카드를 추가해보세요!' },
-    PLANNED: { emoji: '📌', title: '지원 예정 카드가 없어요', desc: '관심 기업을 미리 등록해두세요.' },
+  // 기능 아이콘(빈 상태 안내) = lucide · 감정 순간(응원)은 이모지 유지 (아이콘 정책 · DESIGN.md)
+  const messages: Record<FilterTab, { Icon?: LucideIcon; emoji?: string; title: string; desc: string }> = {
+    all: { Icon: ClipboardList, title: '아직 지원한 회사가 없어요', desc: '첫 지원 카드를 추가해보세요!' },
+    PLANNED: { Icon: Pin, title: '지원 예정 카드가 없어요', desc: '관심 기업을 미리 등록해두세요.' },
     IN_PROGRESS: { emoji: '🚀', title: '진행 중인 지원이 없어요', desc: '지원을 시작해보세요!' },
     PASSED: { emoji: '🎉', title: '아직 합격한 곳이 없어요', desc: '곧 좋은 소식이 올 거예요!' },
     FAILED: { emoji: '💪', title: '불합격 내역이 없어요', desc: '' },
   }
 
   const msg = messages[filter]
+  const EmptyIcon = msg.Icon
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="text-4xl mb-4">{msg.emoji}</div>
+      {EmptyIcon
+        ? <EmptyIcon size={44} strokeWidth={1.5} className="text-text-quaternary mb-4" aria-hidden="true" />
+        : <div className="text-4xl mb-4" aria-hidden="true">{msg.emoji}</div>}
       <p className="text-text-secondary text-sm font-medium mb-1">{msg.title}</p>
       {msg.desc && <p className="text-text-quaternary text-xs mb-6">{msg.desc}</p>}
       {filter === 'all' && (

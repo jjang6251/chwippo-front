@@ -1,3 +1,4 @@
+import { ClipboardList, Mic, PenLine, NotebookPen, type LucideIcon } from 'lucide-react'
 import { useGrowthMetrics } from '@/hooks/useGrowthMetrics'
 import type { GrowthMetricsResponse } from '@/api/dashboard'
 
@@ -12,7 +13,8 @@ import type { GrowthMetricsResponse } from '@/api/dashboard'
 
 interface MilestoneDef {
   id: string
-  icon: string
+  /** 기능 아이콘은 lucide 컴포넌트, 감정 아이콘(🌱💪🎉🔥)은 이모지 문자열 유지 */
+  icon: LucideIcon | string
   label: string
   /** 이 값 도달 시 달성 */
   threshold: number
@@ -21,14 +23,14 @@ interface MilestoneDef {
 }
 
 const MILESTONES: MilestoneDef[] = [
-  { id: 'first_application', icon: '🌱', label: '첫 지원 완료',       threshold: 1,  countField: 'applications' },
-  { id: 'apps_5',            icon: '📋', label: '5개 지원 달성',       threshold: 5,  countField: 'applications' },
-  { id: 'apps_10',           icon: '💪', label: '10개 지원 달성',      threshold: 10, countField: 'applications' },
-  { id: 'first_interview',   icon: '🎤', label: '첫 면접 도달',        threshold: 1,  countField: 'reachedInterview' },
-  { id: 'first_pass',        icon: '🎉', label: '첫 합격!',            threshold: 1,  countField: 'passed' },
-  { id: 'logs_10',           icon: '📝', label: '활동일지 10개 작성',  threshold: 10, countField: 'activityLogs' },
-  { id: 'logs_30',           icon: '🔥', label: '활동일지 30개 작성',  threshold: 30, countField: 'activityLogs' },
-  { id: 'reflections_5',     icon: '🪞', label: '회고 5개 작성',       threshold: 5,  countField: 'reflections' },
+  { id: 'first_application', icon: '🌱',           label: '첫 지원 완료',       threshold: 1,  countField: 'applications' },
+  { id: 'apps_5',            icon: ClipboardList,  label: '5개 지원 달성',       threshold: 5,  countField: 'applications' },
+  { id: 'apps_10',           icon: '💪',           label: '10개 지원 달성',      threshold: 10, countField: 'applications' },
+  { id: 'first_interview',   icon: Mic,            label: '첫 면접 도달',        threshold: 1,  countField: 'reachedInterview' },
+  { id: 'first_pass',        icon: '🎉',           label: '첫 합격!',            threshold: 1,  countField: 'passed' },
+  { id: 'logs_10',           icon: PenLine,        label: '활동일지 10개 작성',  threshold: 10, countField: 'activityLogs' },
+  { id: 'logs_30',           icon: '🔥',           label: '활동일지 30개 작성',  threshold: 30, countField: 'activityLogs' },
+  { id: 'reflections_5',     icon: NotebookPen,    label: '회고 5개 작성',       threshold: 5,  countField: 'reflections' },
 ]
 
 export function MilestonesSection() {
@@ -66,7 +68,11 @@ export function MilestonesSection() {
       {!allDone && (
         <div className="mb-4 rounded-lg bg-brand/6 border border-brand/25 px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-lg" aria-hidden="true">{nextTarget.icon}</span>
+            {typeof nextTarget.icon === 'string' ? (
+              <span className="text-lg" aria-hidden="true">{nextTarget.icon}</span>
+            ) : (
+              <nextTarget.icon size={18} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-brand text-[10px] font-medium uppercase tracking-wider mb-0.5">
                 다음 목표
@@ -85,18 +91,25 @@ export function MilestonesSection() {
       {/* 달성 배지 그리드 */}
       {achieved.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {achieved.map((m) => (
-            <div
-              key={m.id}
-              className="bg-card border border-line rounded-lg p-2.5 flex flex-col items-center text-center"
-              title={m.label}
-            >
-              <span className="text-xl mb-1" aria-hidden="true">{m.icon}</span>
-              <p className="text-text-secondary text-[10px] font-medium leading-tight">
-                {m.label}
-              </p>
-            </div>
-          ))}
+          {achieved.map((m) => {
+            const Icon = m.icon
+            return (
+              <div
+                key={m.id}
+                className="bg-card border border-line rounded-lg p-2.5 flex flex-col items-center text-center"
+                title={m.label}
+              >
+                {typeof Icon === 'string' ? (
+                  <span className="text-xl mb-1" aria-hidden="true">{Icon}</span>
+                ) : (
+                  <Icon size={20} strokeWidth={1.75} aria-hidden="true" className="mb-1" />
+                )}
+                <p className="text-text-secondary text-[10px] font-medium leading-tight">
+                  {m.label}
+                </p>
+              </div>
+            )
+          })}
         </div>
       ) : (
         <p className="text-text-tertiary text-xs text-center py-3">

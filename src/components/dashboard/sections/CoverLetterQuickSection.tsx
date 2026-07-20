@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ClipboardList, PenLine, Copy } from 'lucide-react'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useCoverletter } from '@/hooks/useMyinfo'
 import { toast } from '@/stores/toastStore'
@@ -31,7 +32,10 @@ export function CoverLetterQuickSection() {
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-text-primary text-base font-semibold">📋 자소서 소재</h2>
+        <h2 className="text-text-primary text-base font-semibold inline-flex items-center gap-1.5">
+          <ClipboardList size={16} strokeWidth={1.75} aria-hidden="true" />
+          자소서 소재
+        </h2>
         <button
           onClick={() => navigate('/myinfo#coverletter')}
           className="text-[11px] text-text-quaternary hover:text-text-tertiary transition-colors"
@@ -48,7 +52,7 @@ export function CoverLetterQuickSection() {
         </div>
       ) : filledCount === 0 ? (
         <div className="flex flex-col items-center py-6 text-center gap-2">
-          <p className="text-2xl">📝</p>
+          <PenLine size={24} strokeWidth={1.75} aria-hidden="true" className="text-text-quaternary" />
           <p className="text-text-tertiary text-xs">자소서 소재가 비어있어요</p>
           <button
             onClick={() => navigate('/myinfo#coverletter')}
@@ -94,7 +98,10 @@ export function CoverLetterQuickSection() {
                       onClick={() => handleCopy(content)}
                       className="text-[10px] text-brand hover:text-accent transition-colors"
                     >
-                      📋 복사
+                      <span className="inline-flex items-center gap-1">
+                        <Copy size={13} strokeWidth={1.75} aria-hidden="true" />
+                        복사
+                      </span>
                     </button>
                   </div>
                 )}

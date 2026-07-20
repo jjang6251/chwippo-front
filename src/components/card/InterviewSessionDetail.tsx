@@ -1,3 +1,4 @@
+import { Bot, Sparkles } from 'lucide-react'
 import {
   useGenerateInterviewSession,
   useInterviewPrepQuestions,
@@ -59,7 +60,10 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
       <div className="border border-dashed border-brand/40 bg-brand/5 rounded-lg px-4 py-10 text-center">
         <Spinner size={32} className="mx-auto text-brand mb-3" />
         <p className="text-text-secondary text-xs mb-1 font-medium">
-          🤖 AI 면접관이 질문을 만들고 있어요
+          <span className="inline-flex items-center gap-1">
+            <Bot size={14} strokeWidth={1.75} aria-hidden="true" />
+            AI 면접관이 질문을 만들고 있어요
+          </span>
         </p>
         <p className="text-text-quaternary text-[11px] leading-relaxed">
           자소서·활동을 꼼꼼히 읽고 있어요. 1~2분쯤 걸려요.
@@ -78,7 +82,7 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
   if (tree.length === 0) {
     return (
       <div className="border border-dashed border-line bg-surface-2/30 rounded-lg px-4 py-8 text-center">
-        <div className="text-xl mb-2">✨</div>
+        <div className="mb-2"><Sparkles size={20} strokeWidth={1.75} aria-hidden="true" className="inline-block" /></div>
         <p className="text-text-secondary text-xs mb-3">
           이 세션에 아직 질문이 없어요.
           <br />
@@ -89,7 +93,10 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
           disabled={generating}
           className="bg-brand hover:bg-brand-hover text-text-primary text-xs font-semibold px-4 py-2 rounded-md transition-colors disabled:opacity-50"
         >
-          ✨ AI 질문 생성 (메인 20개)
+          <span className="inline-flex items-center gap-1">
+            <Sparkles size={14} strokeWidth={1.75} aria-hidden="true" />
+            AI 질문 생성 (메인 20개)
+          </span>
         </button>
       </div>
     )

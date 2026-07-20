@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   JOB_CATEGORIES,
-  JOB_CATEGORY_EMOJI,
+  JOB_CATEGORY_ICON,
   JOB_CATEGORY_COLOR,
   parseTags,
   serializeTags,
@@ -23,10 +23,13 @@ describe('tags utils', () => {
     })
   })
 
-  describe('JOB_CATEGORY_EMOJI / COLOR', () => {
-    it('모든 JOB_CATEGORIES에 대한 이모지 정의', () => {
+  describe('JOB_CATEGORY_ICON / COLOR', () => {
+    it('모든 JOB_CATEGORIES에 대한 lucide 아이콘 정의 (기능 아이콘 정책)', () => {
       JOB_CATEGORIES.forEach((cat) => {
-        expect(JOB_CATEGORY_EMOJI[cat]).toBeDefined()
+        expect(JOB_CATEGORY_ICON[cat]).toBeDefined()
+        // 이모지 문자열이 아니라 lucide 컴포넌트여야 함 (아이콘 정책 회귀 방지)
+        expect(typeof JOB_CATEGORY_ICON[cat]).not.toBe('string')
+        expect(JOB_CATEGORY_ICON[cat]).toHaveProperty('render')
       })
     })
 

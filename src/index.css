@@ -264,3 +264,51 @@ input[type='time']::-webkit-calendar-picker-indicator {
     animation: today-pulse 0.7s ease-out 2;
   }
 }
+
+/* card-detail-remodel — 리치 에디터(tiptap) 본문 위계·placeholder.
+   typography 플러그인 미사용이라 preflight 가 heading 을 평평하게 만든 것을 H2/H3 위계로 복원.
+   (CEO 2026-07-20 — 글자별 폰트 조절 대신 H2/H3 위계). 소비 측: .chw-prose */
+.chw-prose h2 {
+  font-size: 1.15em;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0.7em 0 0.3em;
+}
+.chw-prose h3 {
+  font-size: 1.02em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0.6em 0 0.25em;
+}
+.chw-prose h2:first-child,
+.chw-prose h3:first-child {
+  margin-top: 0;
+}
+.chw-prose p {
+  margin: 0.3em 0;
+}
+.chw-prose ul,
+.chw-prose ol {
+  padding-left: 1.25em;
+  margin: 0.3em 0;
+  list-style: revert;
+}
+.chw-prose hr {
+  margin: 0.8em 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+/* extension-placeholder 는 CSS 를 주입하지 않음 — 빈 첫 문단에 placeholder 표시 */
+.chw-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: rgb(var(--text-tertiary));
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+/* iOS 포커스 줌 방지 — 모바일 본문 16px 보장 (데스크탑은 상속 크기 유지) */
+@media (max-width: 1023.98px) {
+  .chw-prose {
+    font-size: 16px;
+  }
+}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Sparkle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Modal } from './Modal'
 import { useAiConsentStore } from '@/stores/aiConsentStore'
@@ -58,21 +59,21 @@ export function AiConsentRequiredModal() {
 
         <div className="bg-card border border-line rounded-lg p-3.5 space-y-2 text-xs text-text-tertiary">
           <div className="flex gap-2">
-            <span className="text-brand shrink-0">✦</span>
+            <Sparkle size={14} strokeWidth={1.75} className="text-brand shrink-0" aria-hidden="true" />
             <span>
               <b className="text-text-secondary">처리 위탁:</b> OpenAI · Anthropic
               (모델 호출 목적)
             </span>
           </div>
           <div className="flex gap-2">
-            <span className="text-brand shrink-0">✦</span>
+            <Sparkle size={14} strokeWidth={1.75} className="text-brand shrink-0" aria-hidden="true" />
             <span>
               <b className="text-text-secondary">자동 마스킹:</b> 전화번호·이메일·주민번호
               등 PII 는 전송 전 자동 치환
             </span>
           </div>
           <div className="flex gap-2">
-            <span className="text-brand shrink-0">✦</span>
+            <Sparkle size={14} strokeWidth={1.75} className="text-brand shrink-0" aria-hidden="true" />
             <span>
               <b className="text-text-secondary">철회 가능:</b> 언제든
               <Link

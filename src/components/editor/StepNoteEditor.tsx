@@ -1,13 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
-import Highlight from '@tiptap/extension-highlight'
-import Placeholder from '@tiptap/extension-placeholder'
-import { EditorToolbar } from './EditorToolbar'
+import { RichTextEditor } from './RichTextEditor'
 import { getDefaultTemplate } from '@/utils/stepTemplates'
-
-type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 interface Props {
   stepName: string
@@ -15,97 +7,22 @@ interface Props {
   onSave: (json: string) => Promise<void>
 }
 
-const SAVE_STATE_LABEL: Record<SaveState, string> = {
-  idle: '',
-  saving: '저장 중...',
-  saved: '저장됨',
-  error: '저장 실패',
-}
-
+/**
+ * 준비 노트 에디터 — 공용 RichTextEditor 래퍼.
+ * 스텝명 기반 기본 포맷·1.5s 자동 저장·저장 상태 라벨은 RichTextEditor 가 담당(동작 무변경).
+ * min-height 360 (CEO 2026-07-20). 카운터·글자 제한 없음(스코프 밖).
+ */
 export function StepNoteEditor({ stepName, initialContent, onSave }: Props) {
-  const [saveState, setSaveState] = useState<SaveState>('idle')
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      Highlight,
-      Placeholder.configure({ placeholder: '이 단계에서 준비한 것들을 자유롭게 기록해 보세요...' }),
-    ],
-    content: parseContent(initialContent),
-    editorProps: {
-      attributes: {
-        class: 'prose prose-invert prose-sm max-w-none focus:outline-none min-h-[120px] px-4 py-3 text-text-primary',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(async () => {
-        setSaveState('saving')
-        try {
-          await onSave(JSON.stringify(editor.getJSON()))
-          setSaveState('saved')
-          setTimeout(() => setSaveState('idle'), 2000)
-        } catch {
-          setSaveState('error')
-        }
-      }, 1500)
-    },
-  })
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [])
-
-  function applyTemplate() {
-    if (!editor) return
-    const tmpl = getDefaultTemplate(stepName)
-    if (tmpl) {
-      editor.commands.setContent(tmpl)
-    }
-  }
-
-  const template = getDefaultTemplate(stepName)
-  const isEmpty = editor ? editor.isEmpty : true
-
   return (
-    <div className="border border-line bg-surface-2 rounded-xl overflow-hidden">
-      {editor && <EditorToolbar editor={editor} />}
-
-      <EditorContent editor={editor} />
-
-      <div className="flex items-center justify-between px-4 py-2 border-t border-line">
-        <div className="flex items-center gap-2">
-          {template && isEmpty && (
-            <button
-              type="button"
-              onClick={applyTemplate}
-              className="text-[11px] text-brand hover:text-accent transition-colors"
-            >
-              기본 포맷 적용 →
-            </button>
-          )}
-        </div>
-        <span
-          className={`text-[10px] font-medium transition-opacity ${
-            saveState === 'idle' ? 'opacity-0' : 'opacity-100'
-          } ${saveState === 'error' ? 'text-danger' : 'text-text-quaternary'}`}
-        >
-          {SAVE_STATE_LABEL[saveState]}
-        </span>
-      </div>
+    // card-solid 승격 — 준비 체크리스트 카드와 동급 시인성
+    <div className="border border-line-strong bg-card-solid shadow-sm rounded-xl overflow-hidden">
+      <RichTextEditor
+        initialContent={initialContent}
+        onSave={onSave}
+        placeholder="이 단계에서 준비한 것들을 자유롭게 기록해 보세요..."
+        minHeightClass="min-h-[360px]"
+        template={getDefaultTemplate(stepName)}
+      />
     </div>
   )
-}
-
-function parseContent(raw: string | null): object | string | null {
-  if (!raw) return null
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return raw
-  }
 }

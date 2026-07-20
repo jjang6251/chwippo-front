@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Mic } from 'lucide-react'
 import {
   useInterviewPrepSessions,
   useRemoveInterviewPrepSession,
@@ -65,7 +66,7 @@ export function InterviewPrepTab({
     <div className="space-y-3">
       {list.length === 0 ? (
         <div className="border border-dashed border-line bg-surface-2/40 rounded-xl px-6 py-10 text-center">
-          <div className="text-2xl mb-2">🎤</div>
+          <div className="mb-2"><Mic size={24} strokeWidth={1.75} aria-hidden="true" className="inline-block" /></div>
           <p className="text-text-secondary text-sm font-medium mb-1">
             면접 준비 세션을 만들어 보세요
           </p>
