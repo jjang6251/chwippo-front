@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { ClipboardList, PenLine, Sparkle, Sparkles } from 'lucide-react'
 import { useDemoLink } from '@/hooks/useDemoLink'
 import { CopyButton } from '@/components/myinfo/CopyButton'
 import { useCoverletterSourceRefs } from '@/hooks/useCoverletterSourceRefs'
@@ -55,7 +56,8 @@ export function CoverLetterCard({ cl, applicationId }: CoverLetterCardProps) {
           to={editHref}
           className="flex items-center gap-1 text-[11px] text-text-tertiary hover:text-brand border border-line hover:border-brand/40 px-2 py-1 rounded-md transition-colors"
         >
-          📝 작성하러 가기
+          <PenLine size={13} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
+          작성하러 가기
         </Link>
       </div>
 
@@ -86,20 +88,30 @@ export function CoverLetterCard({ cl, applicationId }: CoverLetterCardProps) {
       {hasAnswer && sourceRefs.length > 0 && (
         <div className="mt-3 pt-3 border-t border-line/60">
           <div className="text-[10px] text-text-quaternary mb-1.5">
-            ✦ 이 답변이 참조한 경험 ({sourceRefs.length}개)
+            <span className="inline-flex items-center gap-1">
+              <Sparkle size={13} strokeWidth={1.75} aria-hidden="true" />
+              이 답변이 참조한 경험 ({sourceRefs.length}개)
+            </span>
           </div>
           <div className="flex flex-wrap gap-1">
             {sourceRefs.map((ref) => (
               <span
                 key={ref.id}
-                className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border ${
                   ref.aiRecommended
                     ? 'text-brand bg-brand/8 border-brand/20'
                     : 'text-text-tertiary bg-surface-3 border-line'
                 }`}
                 title={ref.aiRecommended ? 'AI 자동 추천' : '사용자 선택'}
               >
-                {ref.sourceLogId ? '📋' : '📝'} {ref.aiRecommended ? '✨' : ''}
+                {ref.sourceLogId ? (
+                  <ClipboardList size={13} strokeWidth={1.75} aria-hidden="true" />
+                ) : (
+                  <PenLine size={13} strokeWidth={1.75} aria-hidden="true" />
+                )}
+                {ref.aiRecommended && (
+                  <Sparkles size={13} strokeWidth={1.75} aria-hidden="true" />
+                )}
                 {ref.sourceLogId ? 'log' : 'reflection'}
               </span>
             ))}

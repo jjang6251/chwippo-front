@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
 import {
@@ -67,7 +68,7 @@ export function CompanyMemoCard({ value, onSave }: Props) {
                     : 'border-line bg-card text-text-tertiary hover:border-line-strong hover:text-text-secondary'
                 }`}
               >
-                {added && <span aria-hidden="true">✓</span>}
+                {added && <Check size={13} strokeWidth={2.25} aria-hidden="true" />}
                 {title}
               </button>
             )

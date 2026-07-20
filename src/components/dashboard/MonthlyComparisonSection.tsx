@@ -1,3 +1,4 @@
+import { ClipboardList, PenLine, NotebookPen, type LucideIcon } from 'lucide-react'
 import { useGrowthMetrics } from '@/hooks/useGrowthMetrics'
 import type { MetricDelta } from '@/api/dashboard'
 
@@ -16,13 +17,13 @@ import type { MetricDelta } from '@/api/dashboard'
 interface MetricRow {
   key: 'applications' | 'activityLogs' | 'reflections'
   label: string
-  icon: string
+  icon: LucideIcon
 }
 
 const METRICS: MetricRow[] = [
-  { key: 'applications', label: '지원 카드 신규', icon: '📋' },
-  { key: 'activityLogs', label: '활동일지 작성', icon: '📝' },
-  { key: 'reflections', label: '활동 회고 작성', icon: '🪞' },
+  { key: 'applications', label: '지원 카드 신규', icon: ClipboardList },
+  { key: 'activityLogs', label: '활동일지 작성', icon: PenLine },
+  { key: 'reflections', label: '활동 회고 작성', icon: NotebookPen },
 ]
 
 export function MonthlyComparisonSection() {
@@ -74,11 +75,11 @@ export function MonthlyComparisonSection() {
 
 function MetricCard({
   label,
-  icon,
+  icon: Icon,
   data,
 }: {
   label: string
-  icon: string
+  icon: LucideIcon
   data: MetricDelta
 }) {
   // 격려 톤 — 증가만 강조, 하락·유지는 중립. 취준생 심리 상 하락에 danger 붉은색 X.
@@ -90,7 +91,7 @@ function MetricCard({
   return (
     <div className="bg-card border border-line rounded-lg p-3">
       <div className="flex items-center gap-1.5 mb-2">
-        <span aria-hidden="true">{icon}</span>
+        <Icon size={14} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
         <span className="text-text-tertiary text-[11px]">{label}</span>
       </div>
       <div className="flex items-baseline gap-2">

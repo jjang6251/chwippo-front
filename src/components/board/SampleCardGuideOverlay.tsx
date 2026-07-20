@@ -8,10 +8,12 @@
  * CompanyCard 의 wrapper relative + group/sample-card hover 가 이 컴포넌트 표시.
  */
 
+import { MousePointerClick } from 'lucide-react'
+
 const GUIDE_TEXTS = [
   '단계를 클릭해서 진행 상황을 바꿔보세요',
   '카드를 클릭해서 회사 정보를 채워보세요',
-  '📌 핀 / 메모 / 자소서 모두 한 곳에',
+  '핀 / 메모 / 자소서 모두 한 곳에',
 ]
 
 interface Props {
@@ -34,7 +36,7 @@ export function SampleCardGuideOverlay({ index }: Props) {
       "
       aria-hidden="true"
     >
-      <span className="inline-block animate-bounce">👆</span> {text}
+      <MousePointerClick size={13} strokeWidth={1.75} className="inline-block align-[-0.125em] animate-bounce" aria-hidden="true" /> {text}
     </div>
   )
 }

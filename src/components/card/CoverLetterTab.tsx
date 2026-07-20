@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PenTool, Sparkles } from 'lucide-react'
 import { useDemoLink } from '@/hooks/useDemoLink'
 import {
   useCoverletters,
@@ -89,7 +90,10 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
           ) : (
             <>
               <p className="text-text-primary text-sm font-semibold mb-1">
-                ✍️ 바로 쓰기 — 문항을 추가하고 자유롭게 작성하세요
+                <span className="inline-flex items-center gap-1">
+                  <PenTool size={15} strokeWidth={1.75} aria-hidden="true" />
+                  바로 쓰기 — 문항을 추가하고 자유롭게 작성하세요
+                </span>
               </p>
               <p className="text-[11px] text-text-quaternary mb-2.5">
                 다른 곳에 써둔 자소서가 있다면 문항 추가 후 붙여넣으면 돼요
@@ -136,7 +140,10 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
           <div className="flex items-center justify-between gap-2 bg-brand/5 border border-brand/20 rounded-xl px-4 py-3">
             <div className="min-w-0">
               <p className="text-text-primary text-sm font-semibold">
-                ✨ 자소서 풀페이지에서 AI 와 함께 작성하세요
+                <span className="inline-flex items-center gap-1">
+                  <Sparkles size={15} strokeWidth={1.75} aria-hidden="true" />
+                  자소서 풀페이지에서 AI 와 함께 작성하세요
+                </span>
               </p>
               <p className="text-text-quaternary text-[11px] mt-0.5">
                 회사·직무 조사 + 활동일지 + 채팅으로 답변 작성·검토 가능

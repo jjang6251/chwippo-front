@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 
 interface StatCardProps {
   label: string
   value: number | undefined
-  icon: string
+  icon: ReactNode
   description: string
   filterKey?: string
   accent?: 'brand' | 'success' | 'warning' | 'info' | 'neutral'

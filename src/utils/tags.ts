@@ -1,10 +1,14 @@
+import type { LucideIcon } from 'lucide-react'
+import { Code2, ClipboardList, Palette, Megaphone, Handshake, Building2, Wallet, Tag } from 'lucide-react'
+
 export const JOB_CATEGORIES = [
   'IT개발', '기획·PM', '디자인', '마케팅', '영업', '경영지원', '금융', '기타',
 ]
 
-export const JOB_CATEGORY_EMOJI: Record<string, string> = {
-  'IT개발': '💻', '기획·PM': '📋', '디자인': '🎨', '마케팅': '📣',
-  '영업': '🤝', '경영지원': '🏢', '금융': '💰', '기타': '🏷️',
+// 직군 태그 아이콘 — 기능 아이콘 = lucide (아이콘 정책 · DESIGN.md). 색은 태그 chip 텍스트색 상속.
+export const JOB_CATEGORY_ICON: Record<string, LucideIcon> = {
+  'IT개발': Code2, '기획·PM': ClipboardList, '디자인': Palette, '마케팅': Megaphone,
+  '영업': Handshake, '경영지원': Building2, '금융': Wallet, '기타': Tag,
 }
 
 export const JOB_CATEGORY_COLOR: Record<string, string> = {

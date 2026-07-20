@@ -1,4 +1,14 @@
 import { useEffect, useState } from 'react'
+import {
+  Building2,
+  Calendar,
+  MapPin,
+  PenLine,
+  Pencil,
+  TriangleAlert,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import {
@@ -49,8 +59,9 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
         >
           <div className="flex items-center gap-2">
             <CollapsibleChevron open={cardExpanded} />
-            <h3 className="text-text-primary text-xs font-bold uppercase tracking-wider">
-              🏢 회사 정보
+            <h3 className="text-text-primary text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
+              <Building2 size={14} strokeWidth={1.75} aria-hidden="true" />
+              회사 정보
             </h3>
           </div>
           {research?.status === 'ok' && (
@@ -82,8 +93,11 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
             ) : research.status === 'opt_out' ? (
               <div className="bg-warning/5 border border-warning/20 rounded-md p-2.5">
                 <p className="text-warning text-xs leading-relaxed">
-                  ⚠️ 이 회사는 정보 수집 동의가 철회됐어요. 직접 회사 홈페이지를
-                  확인해 주세요.
+                  <span className="inline-flex items-center gap-1">
+                    <TriangleAlert size={14} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
+                    이 회사는 정보 수집 동의가 철회됐어요. 직접 회사 홈페이지를
+                    확인해 주세요.
+                  </span>
                 </p>
               </div>
             ) : research.status === 'blocked' ? (
@@ -102,7 +116,10 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
                 {/* ⚠️ AI 경고 alert */}
                 <div className="bg-danger/5 border border-danger/20 rounded-md p-2.5 mb-3">
                   <p className="text-danger text-[11px] leading-relaxed">
-                    ⚠️ AI 가 잘못된 정보를 안내할 수 있어요.
+                    <span className="inline-flex items-center gap-1">
+                      <TriangleAlert size={13} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
+                      AI 가 잘못된 정보를 안내할 수 있어요.
+                    </span>
                     <br />
                     <strong>면접 전 공식 출처로 반드시 확인하세요.</strong>
                   </p>
@@ -233,14 +250,18 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
       {/* 📝 내가 알아본 추가 정보 — secondary 위계 */}
       <div className="border border-line bg-surface-2 rounded-lg overflow-hidden">
         <div className="flex items-center justify-between px-3.5 py-3 border-b border-line/50">
-          <h3 className="text-text-primary text-xs font-bold uppercase tracking-wider">
-            📝 내가 알아본 정보
+          <h3 className="text-text-primary text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
+            <PenLine size={14} strokeWidth={1.75} aria-hidden="true" />
+            내가 알아본 정보
           </h3>
           <button
             onClick={() => setEditingNotes(true)}
             className="text-[11px] text-text-tertiary hover:text-brand"
           >
-            ✎ 편집
+            <span className="inline-flex items-center gap-1">
+              <Pencil size={13} strokeWidth={1.75} aria-hidden="true" />
+              편집
+            </span>
           </button>
         </div>
         <div className="px-3.5 py-3">
@@ -277,24 +298,27 @@ function ResearchHeroHeader({
   profile?: { founded?: string; hq?: string; industry?: string; size?: string }
 }) {
   if (!profile) return null
-  const fields: { label: string; value?: string }[] = [
-    { label: '🏢', value: profile.industry },
-    { label: '📍', value: profile.hq },
-    { label: '📅', value: profile.founded },
-    { label: '👥', value: profile.size },
+  const fields: { icon: LucideIcon; value?: string }[] = [
+    { icon: Building2, value: profile.industry },
+    { icon: MapPin, value: profile.hq },
+    { icon: Calendar, value: profile.founded },
+    { icon: Users, value: profile.size },
   ].filter((f) => f.value?.trim())
   if (fields.length === 0) return null
   return (
     <div className="bg-surface-2 border border-line rounded-md px-3 py-2 mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
-      {fields.map((f) => (
-        <div
-          key={f.label}
-          className="flex items-center gap-1 text-[11px] text-text-secondary"
-        >
-          <span aria-hidden>{f.label}</span>
-          <span className="font-medium">{f.value}</span>
-        </div>
-      ))}
+      {fields.map((f, i) => {
+        const Icon = f.icon
+        return (
+          <div
+            key={i}
+            className="flex items-center gap-1 text-[11px] text-text-secondary"
+          >
+            <Icon size={13} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
+            <span className="font-medium">{f.value}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -578,14 +602,18 @@ function EditUserNotesModal({
       >
         <h2
           id="user-notes-modal-title"
-          className="text-text-primary text-base font-semibold mb-2"
+          className="text-text-primary text-base font-semibold mb-2 inline-flex items-center gap-1.5"
         >
-          📝 내가 알아본 추가 정보
+          <PenLine size={16} strokeWidth={1.75} aria-hidden="true" />
+          내가 알아본 추가 정보
         </h2>
 
         <div className="bg-danger/5 border border-danger/20 rounded-md p-3 mb-4">
           <p className="text-danger text-xs leading-relaxed">
-            ⚠️ <strong>AI 가 잘못된 정보를 안내할 수 있어요.</strong>
+            <span className="inline-flex items-center gap-1">
+              <TriangleAlert size={14} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
+              <strong>AI 가 잘못된 정보를 안내할 수 있어요.</strong>
+            </span>
             <br />
             AI 정보는 read-only — 잘못된 부분이 있으면 이 메모에 정정 내용을
             적어 주세요. 면접 전 회사 공식 홈페이지·공시·뉴스로 반드시

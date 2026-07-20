@@ -10,8 +10,9 @@ import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { toast } from '@/stores/toastStore'
 import { celebrate, showFailedCare } from '@/stores/celebrationStore'
-import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
+import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
 import { CompanyAvatar } from '@/components/board/CompanyAvatar'
+import { Trash2, Star, PenLine, TriangleAlert, Lightbulb } from 'lucide-react'
 
 interface CompanyCardProps {
   application: Application
@@ -130,14 +131,14 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
     <div className="relative overflow-hidden rounded-xl h-full">
       {/* W4 좌 swipe hint 배경 (danger 삭제) */}
       {swipingLeft && (
-        <div aria-hidden="true" className="absolute inset-0 flex items-center justify-end pr-6 bg-danger/15 text-danger text-sm font-semibold pointer-events-none">
-          🗑️ 삭제
+        <div aria-hidden="true" className="absolute inset-0 flex items-center justify-end gap-1.5 pr-6 bg-danger/15 text-danger text-sm font-semibold pointer-events-none">
+          <Trash2 size={15} strokeWidth={1.75} /> 삭제
         </div>
       )}
       {/* W4 우 swipe hint 배경 (brand 즐겨찾기) */}
       {swipingRight && (
-        <div aria-hidden="true" className="absolute inset-0 flex items-center pl-6 bg-brand/15 text-brand text-sm font-semibold pointer-events-none">
-          ⭐ {application.isStarred ? '즐겨찾기 해제' : '즐겨찾기'}
+        <div aria-hidden="true" className="absolute inset-0 flex items-center gap-1.5 pl-6 bg-brand/15 text-brand text-sm font-semibold pointer-events-none">
+          <Star size={15} strokeWidth={1.75} fill="currentColor" /> {application.isStarred ? '즐겨찾기 해제' : '즐겨찾기'}
         </div>
       )}
       <div
@@ -266,9 +267,10 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
       <div className="flex flex-wrap gap-1 mb-3 min-h-[22px]">
         {tags.map((tag) => {
           const colorClass = JOB_CATEGORY_COLOR[tag] ?? JOB_CATEGORY_COLOR['기타']
+          const TagIcon = JOB_CATEGORY_ICON[tag] ?? JOB_CATEGORY_ICON['기타']
           return (
-            <span key={tag} className={`inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-medium rounded-full border ${colorClass}`}>
-              {JOB_CATEGORY_EMOJI[tag]} {tag}
+            <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${colorClass}`}>
+              <TagIcon size={11} strokeWidth={2} aria-hidden="true" /> {tag}
             </span>
           )
         })}
@@ -311,17 +313,17 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
           {application.needsDetail && (
             <button
               onClick={(e) => { e.stopPropagation(); navigate(`/board/${application.id}`) }}
-              className="text-[10px] text-warning bg-warning/8 border border-warning/25 px-2 py-0.5 rounded-full hover:bg-warning/14 transition-colors font-medium"
+              className="inline-flex items-center gap-1 text-[10px] text-warning bg-warning/8 border border-warning/25 px-2 py-0.5 rounded-full hover:bg-warning/14 transition-colors font-medium"
             >
-              📝 상세 입력 필요
+              <PenLine size={12} strokeWidth={2} aria-hidden="true" /> 상세 입력 필요
             </button>
           )}
           {needsResult && (
             <button
               onClick={(e) => { e.stopPropagation(); onSetResult?.(application.id) }}
-              className="text-[10px] text-danger bg-danger/8 border border-danger/25 px-2 py-0.5 rounded-full hover:bg-danger/14 transition-colors font-medium"
+              className="inline-flex items-center gap-1 text-[10px] text-danger bg-danger/8 border border-danger/25 px-2 py-0.5 rounded-full hover:bg-danger/14 transition-colors font-medium"
             >
-              ⚠️ 결과 입력 필요
+              <TriangleAlert size={12} strokeWidth={2} aria-hidden="true" /> 결과 입력 필요
             </button>
           )}
         </div>
@@ -399,7 +401,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
             {application.status === 'IN_PROGRESS' && (
               <div className="bg-brand/8 border border-brand/25 rounded-lg px-3 py-2.5 mb-4">
                 <p className="text-[11px] text-text-secondary leading-relaxed mb-2">
-                  💡 탈락이라 지우시는 거라면 — <span className="font-semibold">불합격으로 기록</span>하면
+                  <Lightbulb size={13} strokeWidth={1.75} className="inline-block align-[-0.125em] mr-1 text-brand" aria-hidden="true" />탈락이라 지우시는 거라면 — <span className="font-semibold">불합격으로 기록</span>하면
                   자소서는 다음 지원에서 재사용되고, 나의 통과율 통계에도 남아요.
                 </p>
                 <button

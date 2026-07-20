@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Coins } from 'lucide-react'
 import { useMyCoinBalance } from '@/hooks/useMyCoin'
 import { TIER_LABEL } from '@/types/coinSystem'
 import { ProUpgradeModal } from './ProUpgradeModal'
@@ -49,7 +50,7 @@ export function CoinChip() {
             : `${TIER_LABEL[data.tier]} 플랜 — 갱신 ${new Date(data.nextResetAt).toLocaleDateString('ko-KR')}`
         }
       >
-        <span aria-hidden>🪙</span>
+        <Coins size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
         <span className="tabular-nums">{formatBalance(data.balance)}</span>
       </button>
       {open && (

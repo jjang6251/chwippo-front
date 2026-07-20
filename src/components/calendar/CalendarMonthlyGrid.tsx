@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
+import { TriangleAlert } from 'lucide-react'
 import type { CalendarEvent } from '@/api/calendar'
 import { useDemoLink } from '@/hooks/useDemoLink'
 import { detectScheduleConflicts } from '@/utils/scheduleConflict'
@@ -268,7 +269,7 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
                       title={conflicts.get(dateStr)!.level === 'overlap' ? '일정이 겹쳐요 — 시간 확인 필요' : '같은 날 시간 일정 2개 이상'}
                       aria-label="일정 충돌 주의"
                     >
-                      ⚠️
+                      <TriangleAlert size={12} strokeWidth={1.75} aria-hidden="true" />
                     </span>
                   )}
                   {holidayName && (

@@ -1,4 +1,4 @@
-import { JOB_CATEGORIES, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
+import { JOB_CATEGORIES, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
 
 interface TagSelectorProps {
   selected: string[]
@@ -19,16 +19,17 @@ export function TagSelector({ selected, onChange }: TagSelectorProps) {
       {JOB_CATEGORIES.map((cat) => {
         const isSelected = selected.includes(cat)
         const colorClass = JOB_CATEGORY_COLOR[cat] ?? JOB_CATEGORY_COLOR['기타']
+        const Icon = JOB_CATEGORY_ICON[cat] ?? JOB_CATEGORY_ICON['기타']
         return (
           <button
             key={cat}
             type="button"
             onClick={() => toggle(cat)}
-            className={`px-2.5 py-1 text-xs rounded-full border transition-all font-medium
+            className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full border transition-all font-medium
               ${isSelected ? colorClass : 'bg-card border-line text-text-quaternary hover:border-line-strong hover:text-text-tertiary'}
             `}
           >
-            {JOB_CATEGORY_EMOJI[cat]} {cat}
+            <Icon size={12} strokeWidth={2} aria-hidden="true" /> {cat}
           </button>
         )
       })}

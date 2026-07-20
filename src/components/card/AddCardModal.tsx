@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Lightbulb } from 'lucide-react'
 import { Modal } from '@/components/common/Modal'
 import { CompanyAutocomplete } from '@/components/board/CompanyAutocomplete'
 import { useCreateApplication } from '@/hooks/useApplications'
@@ -159,7 +160,7 @@ export function AddCardModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {tourActive && tourStep === 4 && (
           <div className="flex items-center gap-2 px-3 py-2.5 bg-brand/10 border border-brand/20 rounded-lg">
-            <span className="text-brand text-sm">💡</span>
+            <Lightbulb size={15} strokeWidth={1.75} className="text-brand shrink-0" aria-hidden="true" />
             <p className="text-xs text-brand/90">
               회사 이름만 입력해도 지원 단계가 자동 생성돼요
             </p>

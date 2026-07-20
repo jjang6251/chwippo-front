@@ -1,3 +1,4 @@
+import { ClipboardList, RefreshCw, Mic } from 'lucide-react'
 import { StatCard } from '@/components/dashboard/StatCard'
 import type { DashboardStats } from '@/api/dashboard'
 
@@ -12,7 +13,7 @@ export function StatsSection({ stats, isLoading }: StatsSectionProps) {
       <StatCard
         label="지원한 회사"
         value={stats?.total}
-        icon="📋"
+        icon={<ClipboardList size={16} strokeWidth={1.75} aria-hidden="true" />}
         description="서류부터 최종까지 — 지원한 모든 기업"
         filterKey="all"
         accent="brand"
@@ -21,7 +22,7 @@ export function StatsSection({ stats, isLoading }: StatsSectionProps) {
       <StatCard
         label="진행 중"
         value={stats?.inProgress}
-        icon="🔄"
+        icon={<RefreshCw size={16} strokeWidth={1.75} aria-hidden="true" />}
         description="아직 결과를 기다리는 기업"
         filterKey="IN_PROGRESS"
         accent="neutral"
@@ -30,7 +31,7 @@ export function StatsSection({ stats, isLoading }: StatsSectionProps) {
       <StatCard
         label="면접 본 횟수"
         value={stats?.interviewsAttended}
-        icon="🎤"
+        icon={<Mic size={16} strokeWidth={1.75} aria-hidden="true" />}
         description="지금까지 치른 면접 — 노력의 누적"
         accent="warning"
         isLoading={isLoading}
