@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
+import { useDemoMode } from '@/contexts/demoMode'
 import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/hooks/useApplications'
@@ -16,6 +17,7 @@ import { Calendar, MapPin } from 'lucide-react'
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
   const navigate = useDemoNavigate()
+  const isDemo = useDemoMode()
 
   const { data: app, isLoading } = useApplication(appId!)
   const sortedSteps = app ? [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex) : []
@@ -55,9 +57,10 @@ export function StepPage() {
   function saveScheduledDate(value: string) {
     // card-detail-remodel — 헤더 날짜 입력 삭제로 soft-ask 트리거를 스텝 날짜 저장으로 이전.
     // 정책 = 현행 유지: 날짜 저장 시 발신 / 날짜 삭제(null) 시 미발신 / WebView 밖 no-op.
+    // 데모(비로그인)에선 발신 금지 — native soft-ask(푸시 권한)는 로그인 사용자 전용.
     updateStep(
       { stepId: stepId!, scheduledDate: value ? `${value}:00+09:00` : null },
-      { onSuccess: () => { if (value) postToNative({ type: 'deadline-saved' }) } },
+      { onSuccess: () => { if (value && !isDemo) postToNative({ type: 'deadline-saved' }) } },
     )
   }
   function handleLocationBlur() {

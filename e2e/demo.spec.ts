@@ -51,6 +51,13 @@ test.describe('데모 모드', () => {
     await expect(page).toHaveURL(/\/demo\/calendar$/)
   })
 
+  test('로그인 페이지 → 둘러보기 링크 → 데모 캘린더 도달', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByRole('link', { name: /둘러보기/ }).click()
+    await expect(page).toHaveURL(/\/demo\/calendar$/)
+    await expect(page.getByText(/카카오|토스|삼성전자/).first()).toBeVisible()
+  })
+
   test('10개 데모 페이지 순회 — 백지 아님 + 백엔드 요청 0 + console error 0', async ({ page }) => {
     const guard = await attachGuard(page)
 
