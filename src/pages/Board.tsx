@@ -2,13 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useApplications } from '@/hooks/useApplications'
+import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
 import { BETA_FEATURES } from '@/config/betaFeatures'
 import { useTourStore } from '@/stores/tourStore'
 import { useAuthStore } from '@/stores/authStore'
 import { CompanyCard } from '@/components/card/CompanyCard'
-import { StepDetailPanel } from '@/components/card/StepDetailPanel'
 import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -63,8 +63,8 @@ export function Board() {
   const [addModalStatus, setAddModalStatus] = useState<'PLANNED' | 'IN_PROGRESS' | null>(null)
   const [startAppId, setStartAppId] = useState<string | null>(null)
   const [resultAppId, setResultAppId] = useState<string | null>(null)
-  const [panelStep, setPanelStep] = useState<{ appId: string; stepId: string } | null>(null)
   const addMenuRef = useRef<HTMLDivElement>(null)
+  const navigate = useDemoNavigate()
 
   const { data: applications = [], isLoading } = useApplications()
   const qc = useQueryClient()
@@ -110,16 +110,13 @@ export function Board() {
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
 
-  const panelApp = panelStep ? applications.find((a) => a.id === panelStep.appId) : null
-  const panelStepData = panelApp
-    ? [...panelApp.steps].sort((a, b) => a.orderIndex - b.orderIndex).find((s) => s.id === panelStep!.stepId) ?? null
-    : null
+  const openStep = (appId: string, stepId: string) => navigate(`/board/${appId}/steps/${stepId}`)
 
   const countByStatus = (status: ApplicationStatus) => applications.filter((a) => a.status === status).length
   const failedCount = countByStatus('FAILED')
 
   return (
-    <div className={`w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9 ${panelStep ? 'lg:pr-96' : ''}`}>
+    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <PullToRefreshIndicator {...pull} />
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
@@ -262,14 +259,14 @@ export function Board() {
         // A11 — 그룹 뷰. 같은 sorted 를 단계 그룹으로 묶어 렌더 (빈 그룹 숨김).
         <BoardGroupedView applications={sorted} />
       ) : (
-        <div className={`grid gap-3 [grid-auto-rows:1fr] ${panelStep ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+        <div className="grid gap-3 [grid-auto-rows:1fr] grid-cols-1 sm:grid-cols-2">
           {realCards.map((app) => (
             <CompanyCard
               key={app.id}
               application={app}
               onStartApplication={setStartAppId}
               onSetResult={setResultAppId}
-              onCurrentStepClick={(appId, stepId) => setPanelStep({ appId, stepId })}
+              onCurrentStepClick={openStep}
             />
           ))}
           {sampleCards.map((app, i) => (
@@ -278,7 +275,7 @@ export function Board() {
                 application={app}
                 onStartApplication={setStartAppId}
                 onSetResult={setResultAppId}
-                onCurrentStepClick={(appId, stepId) => setPanelStep({ appId, stepId })}
+                onCurrentStepClick={openStep}
               />
             </SampleCardWrap>
           ))}
@@ -308,14 +305,6 @@ export function Board() {
           onClose={() => setResultAppId(null)}
           applicationId={resultApp.id}
           companyName={resultApp.companyName}
-        />
-      )}
-
-      {panelApp && panelStepData && (
-        <StepDetailPanel
-          appId={panelApp.id}
-          step={panelStepData}
-          onClose={() => setPanelStep(null)}
         />
       )}
     </div>

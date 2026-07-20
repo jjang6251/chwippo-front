@@ -170,6 +170,35 @@ export function formatDateTime(
 /** @deprecated 동작 동일 — `formatDateTime` 권장 */
 export const formatKstDateTime = formatDateTime
 
+const DOW_KO = ['일', '월', '화', '수', '목', '금', '토'] as const
+
+/**
+ * 스텝 예정일 표시용 — KST 기준 "M월 D일 (요일)" + 시간.
+ * 브라우저 timezone 과 무관 (Intl 명시 timezone) → TZ=UTC 테스트에서도 KST 로 안정.
+ *
+ * - 날짜 없음/파싱 실패 → `{ dateLabel: null, timeLabel: null }`
+ * - 시간이 자정(00:00) → `timeLabel: null` ("시간 미정" 으로 간주, 표기 생략).
+ *   StepPage 의 표시 관례(hour>0 || minute>0)와 동일.
+ */
+export function formatStepSchedule(
+  iso: string | null | undefined,
+  tz: Tz = APP_TIMEZONE,
+): { dateLabel: string | null; timeLabel: string | null } {
+  if (!iso) return { dateLabel: null, timeLabel: null }
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return { dateLabel: null, timeLabel: null }
+  const parts = datetimeFormatter(tz).formatToParts(date)
+  const pick = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  const month = Number(pick('month'))
+  const day = Number(pick('day'))
+  const hour = pick('hour')
+  const minute = pick('minute')
+  const ymd = `${pick('year')}-${pick('month')}-${pick('day')}`
+  const dateLabel = `${month}월 ${day}일 (${DOW_KO[ymdDayOfWeek(ymd)]})`
+  const timeLabel = hour === '00' && minute === '00' ? null : `${hour}:${minute}`
+  return { dateLabel, timeLabel }
+}
+
 /**
  * `Date` 또는 ISO 문자열 → "M/D" (기본 KST). 신선도 라벨 등 짧은 표시용.
  * 브라우저 timezone 과 무관 (Intl 명시 timezone).

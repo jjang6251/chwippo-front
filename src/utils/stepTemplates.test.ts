@@ -29,10 +29,20 @@ describe('APPLICATION_TEMPLATES', () => {
   })
 })
 
-describe('STEP_TYPE_CONFIG — 시맨틱 토큰 (U32)', () => {
-  it('document bgCls 는 raw blue 가 아닌 시맨틱 bg-info/5', () => {
-    expect(STEP_TYPE_CONFIG.document.bgCls).toBe('bg-info/5')
-    expect(STEP_TYPE_CONFIG.document.bgCls).not.toContain('blue')
+describe('STEP_TYPE_CONFIG — 시맨틱 토큰 (U32 → 카드 상세 개편에서 warning 통일)', () => {
+  it('document 는 warning 계열로 통일 (스트라이프·라벨·보더 — 캘린더 정합, 파랑 라벨+노랑 스트라이프 모순 방지)', () => {
+    expect(STEP_TYPE_CONFIG.document.colorCls).toBe('text-warning')
+    expect(STEP_TYPE_CONFIG.document.borderCls).toBe('border-warning/30')
+    expect(STEP_TYPE_CONFIG.document.bgCls).toBe('bg-warning/5')
+    expect(STEP_TYPE_CONFIG.document.accentBorderCls).toBe('border-l-warning')
+  })
+
+  it('전 유형 클래스 필드에 raw 팔레트(blue- 등) 없음 — 의미 토큰만', () => {
+    for (const cfg of Object.values(STEP_TYPE_CONFIG)) {
+      for (const cls of [cfg.colorCls, cfg.borderCls, cfg.bgCls, cfg.accentBorderCls]) {
+        expect(cls).not.toMatch(/blue-|red-|green-|yellow-|indigo-|sky-/)
+      }
+    }
   })
 })
 

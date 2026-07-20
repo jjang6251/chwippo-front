@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { AxiosError } from 'axios'
 import { useCompanyDetails } from '@/hooks/useCompanyDetails'
+import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
+import { loadDartExpanded, saveDartExpanded } from '@/utils/dartCollapse'
 
 /**
  * W2 — BoardDetail "회사 정보" 섹션 (DART OpenAPI 기반).
@@ -9,8 +12,11 @@ import { useCompanyDetails } from '@/hooks/useCompanyDetails'
  *   - 503 (DART 한도 초과·일시 오류) → 작은 회색 안내 박스 (사용자 인식 = "잠시 후 다시")
  *   - 그 외 에러 → silent 미렌더
  *   - 로딩 → 스켈레톤
- *   - 정상 → 프로필 + 재무 + 공시
+ *   - 정상 → 접힘 가능한 헤더 + (펼침 시) 프로필 + 재무 + 공시
  *   - data.isStale=true → "OO시간 전 정보" 라벨 (stale-while-error)
+ *
+ * card-detail-remodel — 정상 데이터일 때 CollapsibleChevron 관례로 접힘/펼침.
+ *   기본 접힘 · 펼침 상태 localStorage 기억(전역 선호). 404/503 정책은 토글보다 앞에서 처리해 무변경.
  */
 interface Props {
   companyName: string
@@ -18,6 +24,7 @@ interface Props {
 
 export function CompanyInfoSection({ companyName }: Props) {
   const { data, isLoading, error } = useCompanyDetails(companyName)
+  const [expanded, setExpanded] = useState(loadDartExpanded)
 
   if (isLoading) return <Skeleton />
 
@@ -33,16 +40,29 @@ export function CompanyInfoSection({ companyName }: Props) {
 
   const { profile, financials, disclosures } = data
 
+  const toggle = () => {
+    setExpanded((prev) => {
+      const next = !prev
+      saveDartExpanded(next)
+      return next
+    })
+  }
+
   return (
     <section
       aria-labelledby="company-info-heading"
-      className="border border-line bg-surface-2 rounded-xl p-5"
+      className="border border-line bg-surface-2 rounded-xl overflow-hidden"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h2 id="company-info-heading" className="text-text-primary text-sm font-semibold">
-          회사 정보
-        </h2>
-        <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={expanded}
+        className="w-full flex items-center justify-between gap-2 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors text-left"
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          <h2 id="company-info-heading" className="text-text-primary text-sm font-semibold">
+            회사 정보
+          </h2>
           {data.isStale && (
             <span
               className="text-warning text-[10px] font-mono"
@@ -53,9 +73,12 @@ export function CompanyInfoSection({ companyName }: Props) {
             </span>
           )}
           <span className="text-text-quaternary text-[10px] font-mono">DART 공시</span>
-        </div>
-      </div>
+        </span>
+        <CollapsibleChevron open={expanded} />
+      </button>
 
+      {expanded && (
+      <div className="px-5 pb-5 border-t border-line pt-4">
       {/* 프로필 */}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs mb-4">
         {profile.ceoName && (
@@ -132,6 +155,8 @@ export function CompanyInfoSection({ companyName }: Props) {
             ))}
           </ul>
         </div>
+      )}
+      </div>
       )}
     </section>
   )

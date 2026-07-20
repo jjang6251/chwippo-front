@@ -9,6 +9,8 @@ import { StepNoteEditor } from '@/components/editor/StepNoteEditor'
 import { Modal } from '@/components/common/Modal'
 import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTemplates'
 import { getDdayLabel, getDdayVariant } from '@/utils/dday'
+import { postToNative } from '@/utils/nativeBridge'
+import { mergePinnedIntoNotes } from '@/utils/stepNotes'
 
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
@@ -25,7 +27,6 @@ export function StepPage() {
 
   const [scheduledDate, setScheduledDate] = useState('')
   const [location, setLocation] = useState('')
-  const [pinnedContent, setPinnedContent] = useState('')
   const [inputText, setInputText] = useState('')
   const [editingField, setEditingField] = useState<'date' | 'location' | null>(null)
   const [showPassedModal, setShowPassedModal] = useState(false)
@@ -36,7 +37,6 @@ export function StepPage() {
   if (step && !initialized) {
     setScheduledDate(step.scheduledDate ? dayjs(step.scheduledDate).format('YYYY-MM-DDTHH:mm') : '')
     setLocation(step.location ?? '')
-    setPinnedContent(step.pinnedContent ?? '')
     setInitialized(true)
   }
 
@@ -52,18 +52,26 @@ export function StepPage() {
     setEditingField(null)
   }
   function saveScheduledDate(value: string) {
-    updateStep({ stepId: stepId!, scheduledDate: value ? `${value}:00+09:00` : null })
+    // card-detail-remodel — 헤더 날짜 입력 삭제로 soft-ask 트리거를 스텝 날짜 저장으로 이전.
+    // 정책 = 현행 유지: 날짜 저장 시 발신 / 날짜 삭제(null) 시 미발신 / WebView 밖 no-op.
+    updateStep(
+      { stepId: stepId!, scheduledDate: value ? `${value}:00+09:00` : null },
+      { onSuccess: () => { if (value) postToNative({ type: 'deadline-saved' }) } },
+    )
   }
   function handleLocationBlur() {
     setEditingField(null)
     updateStep({ stepId: stepId!, location: location || null })
   }
-  function handlePinnedBlur() {
-    updateStep({ stepId: stepId!, pinnedContent: pinnedContent.trim() || null })
-  }
   async function handleSaveNotes(json: string) {
+    // card-detail-remodel — 핵심 메모 통합: 병합된 notes 저장 시 죽은 pinnedContent 를 1회 이관(null).
+    // step.pinnedContent 가 있을 때만 동봉 → 저장 성공 후 refetch 로 null 이 되면 이후 저장엔 미동봉.
+    const clearPinned = !!step?.pinnedContent
     await new Promise<void>((resolve, reject) =>
-      updateStep({ stepId: stepId!, notes: json }, { onSuccess: () => resolve(), onError: () => reject() }),
+      updateStep(
+        { stepId: stepId!, notes: json, ...(clearPinned ? { pinnedContent: null } : {}) },
+        { onSuccess: () => resolve(), onError: () => reject() },
+      ),
     )
   }
   function handleAddItem() {
@@ -139,6 +147,10 @@ export function StepPage() {
     dday === 0 ? 'bg-danger/5' :
     dday === 1 ? 'bg-warning/5' : ''
 
+  // 준비 노트 초기 콘텐츠 — 죽은 pinnedContent 가 있으면 맨 앞에 "📌 …" 문단으로 병합해 표시.
+  // 서버 이관은 저장 시(handleSaveNotes)에 1회. pinned 이관 후엔 null 이라 병합 없음(idempotent).
+  const initialNotes = mergePinnedIntoNotes(step.notes, step.pinnedContent)
+
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[160px] lg:max-w-[1100px] lg:px-9 lg:py-9 lg:pb-28">
       {/* 뒤로가기 */}
@@ -154,8 +166,10 @@ export function StepPage() {
         </button>
       </div>
 
-      {/* 헤더 */}
-      <div className={`rounded-xl border p-5 mb-1 ${typeConfig.borderCls} ${typeConfig.bgCls}`}>
+      {/* 헤더 + Properties 병합 카드 (CEO 2026-07-20 — 라이트 흰 card-solid 4→3장) · 스트라이프 유지 */}
+      <div className={`rounded-xl bg-card-solid shadow-sm border border-line-strong border-l-[3px] overflow-hidden mb-4 ${typeConfig.accentBorderCls}`}>
+        {/* 배너부 */}
+        <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2">
             <span className="text-lg leading-none">{typeConfig.icon}</span>
@@ -187,37 +201,9 @@ export function StepPage() {
             </>
           )}
         </div>
-      </div>
-
-      {/* 이전/다음 네비게이션 */}
-      <div className="flex items-center border border-line rounded-xl mb-6 overflow-hidden">
-        <button
-          onClick={() => prevStep && navigate(`/board/${appId}/steps/${prevStep.id}`)}
-          disabled={!prevStep}
-          aria-label={prevStep ? `이전 단계: ${prevStep.name}` : '처음 단계'}
-          className="flex-1 flex items-center gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card active:bg-card-strong transition-colors disabled:cursor-default"
-        >
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
-            <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span className="text-xs text-text-quaternary truncate">{prevStep ? prevStep.name : '처음 단계'}</span>
-        </button>
-        <div className="w-px h-5 bg-card" />
-        <button
-          onClick={() => nextStep && navigate(`/board/${appId}/steps/${nextStep.id}`)}
-          disabled={!nextStep}
-          aria-label={nextStep ? `다음 단계: ${nextStep.name}` : '마지막 단계'}
-          className="flex-1 flex items-center justify-end gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card active:bg-card-strong transition-colors disabled:cursor-default"
-        >
-          <span className="text-xs text-text-quaternary truncate">{nextStep ? nextStep.name : '마지막 단계'}</span>
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
-            <path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </div>
-
-      {/* ── Properties 바 ─────────────────────────────── */}
-      <div className="rounded-xl border border-line overflow-hidden mb-6">
+        </div>
+        {/* 배너 ↔ 날짜/장소 구분 (기존 문법 h-px bg-card-strong) */}
+        <div className="h-px bg-card-strong mx-3" />
         {/* 날짜 행 */}
         <div className={`transition-colors ${dateRowAccentCls}`}>
           {editingField === 'date' ? (
@@ -236,7 +222,7 @@ export function StepPage() {
                 onBlur={handleDateBlur}
                 autoFocus
                 aria-label="일정 날짜 및 시간"
-                className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none"
+                className="flex-1 bg-transparent text-base text-text-primary focus:outline-none"
               />
             </div>
           ) : (
@@ -263,7 +249,7 @@ export function StepPage() {
           )}
         </div>
 
-        <div className="h-px bg-card mx-3" />
+        <div className="h-px bg-card-strong mx-3" />
 
         {/* 장소 행 */}
         <div>
@@ -280,7 +266,7 @@ export function StepPage() {
                 autoFocus
                 placeholder="장소 입력"
                 aria-label="면접 장소"
-                className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                className="flex-1 bg-transparent text-base text-text-primary placeholder:text-text-tertiary focus:outline-none"
               />
             </div>
           ) : (
@@ -298,11 +284,38 @@ export function StepPage() {
         </div>
       </div>
 
+      {/* 이전/다음 네비게이션 — 병합 카드 아래 (CEO 2026-07-20) */}
+      <div className="flex items-center border border-line-strong rounded-xl mb-6 overflow-hidden">
+        <button
+          onClick={() => prevStep && navigate(`/board/${appId}/steps/${prevStep.id}`)}
+          disabled={!prevStep}
+          aria-label={prevStep ? `이전 단계: ${prevStep.name}` : '처음 단계'}
+          className="flex-1 flex items-center gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card active:bg-card-strong transition-colors disabled:cursor-default"
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
+            <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="text-xs text-text-quaternary truncate">{prevStep ? prevStep.name : '처음 단계'}</span>
+        </button>
+        <div className="w-px h-5 bg-card" />
+        <button
+          onClick={() => nextStep && navigate(`/board/${appId}/steps/${nextStep.id}`)}
+          disabled={!nextStep}
+          aria-label={nextStep ? `다음 단계: ${nextStep.name}` : '마지막 단계'}
+          className="flex-1 flex items-center justify-end gap-1.5 px-4 py-2.5 disabled:opacity-25 hover:bg-card active:bg-card-strong transition-colors disabled:cursor-default"
+        >
+          <span className="text-xs text-text-quaternary truncate">{nextStep ? nextStep.name : '마지막 단계'}</span>
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-quaternary">
+            <path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+
       {/* ── 준비 체크리스트 ────────────────────────────── */}
-      <div>
+      <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
           <span className="text-xs text-text-quaternary shrink-0">준비 체크리스트</span>
-          <div className="flex-1 h-px bg-card" />
+          <div className="flex-1 h-px bg-card-strong" />
           <div className="flex items-center gap-2 shrink-0">
             {checklist.length > 0 && (
               <span className="text-[10px] text-text-quaternary font-mono">{doneCount}/{checklist.length}</span>
@@ -318,13 +331,15 @@ export function StepPage() {
           </div>
         </div>
 
+        {/* card-solid 승격 — Properties 바와 동급 시인성 (CEO: "체크리스트 잘 안 보임") */}
+        <div className="bg-card-solid shadow-sm border border-line-strong rounded-xl p-5">
         {stepType === 'wait' && checklist.length === 0 && (
-          <p className="text-xs text-text-quaternary leading-relaxed mb-4 pl-1">
-            결과 발표일을 위 날짜 필드에 기록해두세요. 📌 핵심 메모에 예상 결과나 특이사항을 적으면 대시보드에 표시됩니다.
+          <p className="text-xs text-text-quaternary leading-relaxed mb-4">
+            결과 발표일을 위 날짜 필드에 기록해두세요. 준비 노트에 예상 결과나 특이사항을 적어두면 나중에 참고하기 좋아요.
           </p>
         )}
 
-        <div className="space-y-1 mb-6">
+        <div className="space-y-1">
           {checklist.map((item) => (
             <div key={item.id} className="flex items-center gap-3 group py-1 px-1 rounded-lg hover:bg-card active:bg-card-strong transition-colors">
               <button
@@ -362,48 +377,24 @@ export function StepPage() {
                 if (e.key === 'Escape') setInputText('')
               }}
               placeholder="항목 추가 후 Enter"
-              className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none"
+              className="flex-1 bg-transparent text-base text-text-primary placeholder:text-text-tertiary outline-none rounded focus-visible:ring-1 focus-visible:ring-brand/30"
             />
           </div>
         </div>
+        </div>
       </div>
 
-      {/* ── 핵심 메모 ──────────────────────────────────── */}
+      {/* ── 준비 노트 (핵심 메모 통합) ─────────────────── */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
-          <span className="text-xs text-text-quaternary shrink-0"><span className="text-text-primary">📌</span> 핵심 메모</span>
-          <div className="flex-1 h-px bg-card" />
-          <span className="text-[10px] text-brand/50 shrink-0">D-1·당일 대시보드 표시</span>
-        </div>
-        <div className="pl-1">
-          <textarea
-            value={pinnedContent}
-            onChange={(e) => setPinnedContent(e.target.value)}
-            onBlur={handlePinnedBlur}
-            placeholder="면접 당일 꼭 기억할 내용 (예상 질문 답변, 핵심 키워드, 준비물 등)"
-            rows={3}
-            maxLength={2000}
-            className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none resize-none leading-relaxed"
-          />
-          <p className={`text-[10px] text-right mt-1 ${pinnedContent.length >= 2000 ? 'text-danger' : pinnedContent.length >= 1800 ? 'text-warning' : 'text-text-quaternary'}`}>
-            {pinnedContent.length} / 2000
-          </p>
-        </div>
-      </div>
-
-      {/* ── 준비 노트 ──────────────────────────────────── */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
           <span className="text-xs text-text-quaternary shrink-0">준비 노트</span>
-          <div className="flex-1 h-px bg-card" />
+          <div className="flex-1 h-px bg-card-strong" />
         </div>
-        <div className="pl-1">
-          <StepNoteEditor
-            stepName={step.name}
-            initialContent={step.notes ?? null}
-            onSave={handleSaveNotes}
-          />
-        </div>
+        <StepNoteEditor
+          stepName={step.name}
+          initialContent={initialNotes}
+          onSave={handleSaveNotes}
+        />
       </div>
 
       {/* ── 이 단계 완료하기 버튼 (fixed bottom) ─────── */}

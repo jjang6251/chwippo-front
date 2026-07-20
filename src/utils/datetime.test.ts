@@ -8,6 +8,7 @@ import {
   isThisWeek,
   formatWeekLabel,
   formatDateTime,
+  formatStepSchedule,
   escapeHtml,
 } from './datetime'
 
@@ -225,6 +226,42 @@ describe('utils/datetime — KST-fixed 헬퍼', () => {
       ['no special', 'no special'],
     ])('escape: %s → %s', (input, expected) => {
       expect(escapeHtml(input)).toBe(expected)
+    })
+  })
+
+  // card-detail-remodel — 현재 스텝 카드 날짜+시간 표시. KST 고정 → TZ=UTC 실행에서도 동일.
+  describe('formatStepSchedule — 현재 스텝 카드 날짜/시간', () => {
+    it('날짜+시간 있음 → "M월 D일 (요일)" + KST 시간 (14:00 이 05:00 로 밀리지 않음)', () => {
+      const { dateLabel, timeLabel } = formatStepSchedule('2026-07-22T14:00:00+09:00')
+      expect(dateLabel).toBe('7월 22일 (수)')
+      expect(timeLabel).toBe('14:00')
+    })
+
+    it('시간이 자정(00:00) → timeLabel null ("시간 미정" 표기 생략)', () => {
+      const { dateLabel, timeLabel } = formatStepSchedule('2026-07-22T00:00:00+09:00')
+      expect(dateLabel).toBe('7월 22일 (수)')
+      expect(timeLabel).toBeNull()
+    })
+
+    it('UTC 자정 저장분도 KST 로 표시 (09:00, 날짜 밀림 없음)', () => {
+      const { dateLabel, timeLabel } = formatStepSchedule('2026-07-22T00:00:00Z')
+      expect(dateLabel).toBe('7월 22일 (수)')
+      expect(timeLabel).toBe('09:00')
+    })
+
+    it('null / 빈 값 → 둘 다 null', () => {
+      expect(formatStepSchedule(null)).toEqual({ dateLabel: null, timeLabel: null })
+      expect(formatStepSchedule(undefined)).toEqual({ dateLabel: null, timeLabel: null })
+      expect(formatStepSchedule('')).toEqual({ dateLabel: null, timeLabel: null })
+    })
+
+    it('잘못된 날짜 문자열 → 둘 다 null', () => {
+      expect(formatStepSchedule('not-a-date')).toEqual({ dateLabel: null, timeLabel: null })
+    })
+
+    it('tz override — UTC 로 보면 시간이 다르게 (확장 친화 시그니처)', () => {
+      const { timeLabel } = formatStepSchedule('2026-07-22T14:00:00+09:00', 'UTC')
+      expect(timeLabel).toBe('05:00')
     })
   })
 })

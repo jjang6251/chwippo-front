@@ -70,6 +70,31 @@ export function isNotPosting(
   return 'notPosting' in r && r.notPosting === true
 }
 
+/** 표시할 만한 공고 요건 데이터가 있는지 (한 섹션이라도 채워짐) */
+export function hasJobPostingData(jp: JobPosting | null | undefined): boolean {
+  return (
+    !!jp &&
+    (!!jp.responsibilities?.trim() ||
+      jp.requirements.length > 0 ||
+      jp.preferred.length > 0 ||
+      jp.techStack.length > 0 ||
+      jp.qualifications.length > 0 ||
+      jp.keywords.length > 0)
+  )
+}
+
+/** 정리된 요건 항목 총개수 (담당업무 1 + 각 리스트/칩 길이 합) — 접힘 힌트용 */
+export function countJobPostingItems(jp: JobPosting): number {
+  return (
+    (jp.responsibilities?.trim() ? 1 : 0) +
+    jp.requirements.length +
+    jp.preferred.length +
+    jp.techStack.length +
+    jp.qualifications.length +
+    jp.keywords.length
+  )
+}
+
 // ResponseTransformInterceptor 가 { data, message } 로 감쌈 → 두 단계 unwrap.
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
