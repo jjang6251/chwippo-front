@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Mic, FileText, Hourglass, Target } from 'lucide-react'
+import { Mic, FileText, Hourglass, Target, ClipboardCheck } from 'lucide-react'
 
 type TiptapDoc = { type: 'doc'; content: object[] }
 
@@ -47,12 +47,26 @@ export function getDefaultTemplate(stepName: string): TiptapDoc | null {
   return null
 }
 
-export type StepType = 'interview' | 'document' | 'wait' | 'result'
+export type StepType = 'interview' | 'document' | 'exam' | 'wait' | 'result'
+
+// 판정 순서 = 전형의 "본질" 우선순위. 위에서부터 먼저 매칭되며, 순서가 곧 분류 규칙이므로 변경 시 아래 spec 회귀 필수.
+//  1) interview — PT·토론·컬처핏·커피챗도 면접형 전형 (금융 '2차 PT·토론', IT '2차 컬처핏'). 'AI면접' 등 면접 우선.
+//  2) exam(시험·평가) — 코테·과제·필기·인적성·시험·평가·검사류. '과제 제출'은 document 보다 먼저라 exam (과제가 본질).
+//     영문 시험명(NCS·GSAT·HMAT…)은 대소문자 무관 + 단어경계(\b) — 'application' 의 CAT 등 오탐 방지.
+//  3) document — 서류·제출 (exam 키워드 없을 때).
+//  4) result — 합격·최종·발표 ('합격 발표'·'결과 발표'는 '발표'가 커버). interview 뒤라 'PT 발표'는 interview.
+//     * 단독 '결과' 키워드는 제외: '결과 발표'는 '발표'로 이미 잡히고, '결과 대기'(item 5)는 wait 여야 하므로.
+//  5) 그 외 → wait (결과 대기 등).
+const INTERVIEW_RE = /면접|인터뷰|PT|토론|컬처핏|컬쳐핏|커피챗/
+const EXAM_KO_RE = /코딩테스트|코테|테스트|과제|필기|인적성|인성|적성|시험|평가|논술|작문|실기|검사|역검/
+const EXAM_EN_RE = /\b(NCS|PSAT|GSAT|HMAT|SKCT|DCAT|PAT|CAT)\b/i
+const RESULT_RE = /합격|최종|발표/
 
 export function getStepType(stepName: string): StepType {
-  if (stepName.includes('면접')) return 'interview'
+  if (INTERVIEW_RE.test(stepName)) return 'interview'
+  if (EXAM_KO_RE.test(stepName) || EXAM_EN_RE.test(stepName)) return 'exam'
   if (stepName.includes('서류') || stepName.includes('제출')) return 'document'
-  if (stepName.includes('합격') || stepName.includes('최종')) return 'result'
+  if (RESULT_RE.test(stepName)) return 'result'
   return 'wait'
 }
 
@@ -62,13 +76,16 @@ export function getStepType(stepName: string): StepType {
 export const STEP_TYPE_CONFIG: Record<StepType, { Icon: LucideIcon; label: string; colorCls: string; borderCls: string; bgCls: string; accentBorderCls: string }> = {
   interview: { Icon: Mic, label: '면접', colorCls: 'text-info', borderCls: 'border-info/30', bgCls: 'bg-info/5', accentBorderCls: 'border-l-info' },
   document:  { Icon: FileText, label: '서류', colorCls: 'text-warning', borderCls: 'border-warning/30', bgCls: 'bg-warning/5', accentBorderCls: 'border-l-warning' },
-  wait:      { Icon: Hourglass, label: '대기', colorCls: 'text-text-tertiary', borderCls: 'border-line', bgCls: 'bg-card', accentBorderCls: 'border-l-text-quaternary' },
+  // exam=violet — 면접(청록 info)·서류(노랑 warning)·결과(초록 success)와 겹치지 않는 미사용 의미색. 캘린더 시험 이벤트(bg-violet)와도 정합.
+  exam:      { Icon: ClipboardCheck, label: '시험·평가', colorCls: 'text-violet', borderCls: 'border-violet/30', bgCls: 'bg-violet/5', accentBorderCls: 'border-l-violet' },
+  wait:      { Icon: Hourglass, label: '대기', colorCls: 'text-text-secondary', borderCls: 'border-line', bgCls: 'bg-card', accentBorderCls: 'border-l-text-quaternary' },
   result:    { Icon: Target, label: '결과', colorCls: 'text-success', borderCls: 'border-success/30', bgCls: 'bg-success/5', accentBorderCls: 'border-l-success' },
 }
 
 export const CHECKLIST_PRESETS: Partial<Record<StepType, string[]>> = {
   interview: ['지원서 재검토', '교통 경로 확인', '복장 준비', '면접관 인원 확인', '예상 질문 답변 복습'],
   document:  ['지원서 최종 확인', '첨부파일 체크', '제출 플랫폼 로그인 확인', '마감 시간 재확인'],
+  exam:      ['신분증 준비', '고사장·응시 링크 확인', '필기구·계산기 준비', '기출·유형 복습'],
 }
 
 // ── 전형 템플릿 (카드 생성 시 초기 스텝) ──────────────────────

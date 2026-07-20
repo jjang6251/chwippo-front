@@ -128,7 +128,7 @@ function CurrentStepCard({
             <div className="flex items-center gap-x-3 gap-y-1 text-xs text-text-secondary flex-wrap">
               {dateLabel ? (
                 <span className="inline-flex items-center gap-1">
-                  <Calendar size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" /> {dateLabel}
+                  <Calendar size={13} strokeWidth={1.75} className={`${cfg.colorCls} shrink-0`} aria-hidden="true" /> {dateLabel}
                   {timeLabel && <b className="ml-1 font-mono text-brand">{timeLabel}</b>}
                 </span>
               ) : (
@@ -139,7 +139,7 @@ function CurrentStepCard({
                   <Calendar size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" /> 날짜 설정하기
                 </button>
               )}
-              {step.location && <span className="inline-flex items-center gap-1 max-w-[180px]"><MapPin size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" /> <span className="truncate">{step.location}</span></span>}
+              {step.location && <span className="inline-flex items-center gap-1 max-w-[180px]"><MapPin size={13} strokeWidth={1.75} className={`${cfg.colorCls} shrink-0`} aria-hidden="true" /> <span className="truncate">{step.location}</span></span>}
               {checklist.length > 0 && (
                 <span className="text-text-quaternary">체크리스트 {doneCount}/{checklist.length}</span>
               )}
