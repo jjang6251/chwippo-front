@@ -160,6 +160,9 @@ export default function App() {
           <Route path="activity/manage" element={<ActivityPage />} />
           <Route path="coverletters" element={<Coverletters />} />
           <Route path="myinfo" element={<MyInfo />} />
+          {/* 설정 — 실서비스 Settings 골격 재사용. 데모 컨텍스트(useDemoMode)에서
+              변경 항목은 가입 모달로 잠금, 테마는 실동작(무백엔드). demoAdapter 로 API 0 유지. */}
+          <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/demo/calendar" replace />} />
         </Route>
         <Route element={<AuthGuard />}>

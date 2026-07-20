@@ -6,6 +6,8 @@ import { useThemeStore, type Theme } from '@/stores/themeStore'
 import { apiClient } from '@/api/client'
 import { postToNative } from '@/utils/nativeBridge'
 import { AppLockSection } from '@/pages/settings/AppLockSection'
+import { useDemoMode } from '@/contexts/demoMode'
+import { useDemoSignupStore } from '@/stores/demoSignupStore'
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
   { value: 'dark', label: '다크', icon: '🌙' },
@@ -28,6 +30,9 @@ export function Settings() {
   const setTheme = useThemeStore((s) => s.setTheme)
   const navigate = useNavigate()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  // 데모(비로그인 미러) — 실서비스 골격 그대로, 계정/이동 항목은 가입 모달로 잠금(테마는 실동작).
+  const isDemo = useDemoMode()
+  const showDemoSignup = useDemoSignupStore((s) => s.show)
 
   async function handleLogout() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
@@ -42,18 +47,15 @@ export function Settings() {
 
       <div className="bg-surface-2 border border-line rounded-xl divide-y divide-line mb-4">
         {MENU.map(({ label, sub, path, icon }) => (
-          <Link
+          <SettingsMenuRow
             key={path}
+            icon={icon}
+            label={label}
+            sub={sub}
             to={path}
-            className="flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
-          >
-            <span className="text-xl w-7 text-center">{icon}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{label}</p>
-              <p className="text-xs text-text-tertiary mt-0.5">{sub}</p>
-            </div>
-            <span className="text-text-tertiary text-sm">›</span>
-          </Link>
+            demo={isDemo}
+            onDemoTap={showDemoSignup}
+          />
         ))}
 
         {user?.role === 'admin' && (
@@ -100,12 +102,13 @@ export function Settings() {
         </div>
       </div>
 
-      {/* ① 앱 잠금 (Face ID/Touch ID) — 네이티브 + 지원 기기에서만 렌더 */}
-      <AppLockSection />
+      {/* ① 앱 잠금 (Face ID/Touch ID) — 네이티브 + 지원 기기에서만 렌더.
+          데모(비로그인)에선 숨김 — 기기 잠금은 로그인 사용자 데이터 보호용. */}
+      {!isDemo && <AppLockSection />}
 
       <div className="bg-surface-2 border border-line rounded-xl mb-4">
         <button
-          onClick={startTour}
+          onClick={isDemo ? showDemoSignup : startTour}
           className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
         >
           <span className="text-xl w-7 text-center">🚀</span>
@@ -119,7 +122,7 @@ export function Settings() {
 
       <div className="bg-surface-2 border border-line rounded-xl">
         <button
-          onClick={() => setShowLogoutModal(true)}
+          onClick={isDemo ? showDemoSignup : () => setShowLogoutModal(true)}
           className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
         >
           <span className="text-xl w-7 text-center">🚪</span>
@@ -160,5 +163,47 @@ export function Settings() {
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * 설정 메뉴 행 — 실서비스는 `<Link>`(내비게이션), 데모는 `<button>`(가입 모달 잠금).
+ * 데모에서 실서비스 하위 페이지(AuthGuard)로 나가면 랜딩으로 튕기므로, 이동 대신 가입 유도.
+ */
+function SettingsMenuRow({
+  icon,
+  label,
+  sub,
+  to,
+  demo,
+  onDemoTap,
+}: {
+  icon: string
+  label: string
+  sub: string
+  to: string
+  demo: boolean
+  onDemoTap: () => void
+}) {
+  const cls =
+    'flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors w-full text-left'
+  const body = (
+    <>
+      <span className="text-xl w-7 text-center">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-text-tertiary mt-0.5">{sub}</p>
+      </div>
+      <span className="text-text-tertiary text-sm">›</span>
+    </>
+  )
+  return demo ? (
+    <button type="button" onClick={onDemoTap} className={cls}>
+      {body}
+    </button>
+  ) : (
+    <Link to={to} className={cls}>
+      {body}
+    </Link>
   )
 }

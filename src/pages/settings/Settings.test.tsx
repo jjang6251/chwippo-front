@@ -13,6 +13,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { Settings } from './Settings'
 import { apiClient } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
+import { DemoModeContextProvider } from '@/contexts/demoMode'
+import { useDemoSignupStore } from '@/stores/demoSignupStore'
 
 vi.mock('@/api/client', () => ({
   apiClient: { post: vi.fn() },
@@ -33,8 +35,19 @@ function renderSettings() {
   )
 }
 
+function renderDemoSettings() {
+  return render(
+    <DemoModeContextProvider value={true}>
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>
+    </DemoModeContextProvider>,
+  )
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  useDemoSignupStore.setState({ open: false })
   useAuthStore.setState({
     accessToken: 'test-token',
     user: {
@@ -123,5 +136,23 @@ describe('Settings — 관리자 페이지 진입 링크', () => {
   it('일반 user role: "관리자 페이지" 링크 미노출', () => {
     renderSettings()
     expect(screen.queryByRole('link', { name: /관리자 페이지/ })).toBeNull()
+  })
+})
+
+describe('Settings — 데모 모드 (비로그인 미러)', () => {
+  it('메뉴 항목이 링크 대신 버튼 + 탭 시 가입 모달 오픈 (실서비스 라우트 이탈 방지)', () => {
+    renderDemoSettings()
+    // 실서비스에선 링크지만 데모에선 버튼 (AuthGuard 라우트로 안 나가게)
+    expect(screen.queryByRole('link', { name: /프로필 설정/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /프로필 설정/ }))
+    expect(useDemoSignupStore.getState().open).toBe(true)
+  })
+
+  it('로그아웃 탭 → 로그아웃 확인 모달 대신 가입 모달 (API 미호출)', () => {
+    renderDemoSettings()
+    fireEvent.click(screen.getByRole('button', { name: /로그아웃/ }))
+    expect(screen.queryByRole('dialog', { name: '로그아웃 확인' })).toBeNull()
+    expect(apiClient.post).not.toHaveBeenCalled()
+    expect(useDemoSignupStore.getState().open).toBe(true)
   })
 })
