@@ -43,6 +43,9 @@ const DEMO_PAGES: { path: string; expect: RegExp }[] = [
   // 자소서 문서 풀페이지 — 채팅 이력(messages) GET 이 미등록이면 console error 로 잡힌다
   { path: '/demo/board/demo-a1/coverletter', expect: /자소서/ },
   { path: '/demo/myinfo', expect: /내 정보 창고/ },
+  // 설정 — 실서비스 Settings 골격 재사용(데모: 항목 잠금 + 테마 실동작). GET 의존 없음 → API 0.
+  // expect 는 본문 고유 텍스트만 — "설정"은 모바일 뷰포트에서 hidden 인 사이드바 라벨에 .first() 가 걸림
+  { path: '/demo/settings', expect: /테마/ },
 ]
 
 test.describe('데모 모드', () => {
@@ -136,6 +139,20 @@ test.describe('데모 모드', () => {
     // 데모 store 의 getDailyNotes 는 날짜/범위 파라미터를 무시해 오늘/어제 조회에 함께 잡힘 →
     // 오늘 할 일 + 이월 후보로 이중 렌더될 수 있어 first() 로 스코프 (인메모리 반영 확인이 목적)
     await expect(page.getByText('E2E 데모 할 일').first()).toBeVisible()
+
+    expect(guard.backendHits()).toBe(0)
+    expect(guard.consoleErrors()).toEqual([])
+  })
+
+  test('설정 데모 — 잠긴 메뉴 항목(프로필 설정) 탭 → 가입 모달 (이탈·API 0)', async ({ page }) => {
+    const guard = await attachGuard(page)
+    await page.goto('/demo/settings')
+
+    // 실서비스에선 링크지만 데모에선 버튼 (AuthGuard 라우트로 안 나감)
+    await page.locator('main').getByRole('button', { name: /프로필 설정/ }).click()
+    await expect(page.getByText('데모에서는 저장되지 않아요')).toBeVisible()
+    // 데모 잔류 (랜딩·실서비스 라우트로 이탈 안 함)
+    await expect(page).toHaveURL(/\/demo\/settings/)
 
     expect(guard.backendHits()).toBe(0)
     expect(guard.consoleErrors()).toEqual([])
