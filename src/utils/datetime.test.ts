@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   APP_TIMEZONE,
+  addYears,
   toLocalDateString,
   todayLocal,
   getWeekMonday,
@@ -262,6 +263,18 @@ describe('utils/datetime — KST-fixed 헬퍼', () => {
     it('tz override — UTC 로 보면 시간이 다르게 (확장 친화 시그니처)', () => {
       const { timeLabel } = formatStepSchedule('2026-07-22T14:00:00+09:00', 'UTC')
       expect(timeLabel).toBe('05:00')
+    })
+  })
+
+  describe('addYears — 자격증 만료일 등 연 단위 (TZ 무관 date-only)', () => {
+    it('정상 +N년', () => {
+      expect(addYears('2026-07-20', 2)).toBe('2028-07-20')
+      expect(addYears('2024-01-31', 1)).toBe('2025-01-31')
+    })
+
+    it('2/29 + 비윤년 → 3/1 오버플로 (명시 동작)', () => {
+      expect(addYears('2024-02-29', 1)).toBe('2025-03-01')
+      expect(addYears('2024-02-29', 4)).toBe('2028-02-29')
     })
   })
 })

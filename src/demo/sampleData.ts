@@ -1,4 +1,5 @@
-// 데모 모드용 샘플 데이터. 모든 날짜는 "오늘" 기준 상대값으로 생성 — 데모를 언제 봐도 자연스럽게.
+// 데모 모드용 샘플 데이터. 모든 날짜는 "오늘(KST)" 기준 상대값으로 생성 — 데모를 언제 봐도 자연스럽게.
+import { addDays, todayLocal } from '@/utils/datetime'
 import type { Application, ApplicationStep } from '@/types/application'
 import type { ApplicationCoverletter } from '@/types/coverletter'
 import type {
@@ -16,11 +17,11 @@ import type { Activity, ActivityLog, TimelinePage } from '@/types/activity'
 import type { CompanyResearchResult } from '@/types/interviewPrep'
 import type { CoinBalance } from '@/types/coinSystem'
 
-const DAY = 86400000
-const d = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY).toISOString().split('T')[0]
-// scheduledDate(TIMESTAMPTZ) — 10:00 KST = 01:00 UTC
+// 상대 날짜 — 반드시 KST 오늘 기준 (UTC toISOString 기준이면 KST 00~09시에 전 날짜로 하루 밀림. 2026-07-20 실발견)
+const d = (offsetDays: number) => addDays(todayLocal(), offsetDays)
+// scheduledDate(TIMESTAMPTZ) — KST 벽시각으로 조립 후 ISO 변환 (동일 이유로 UTC 날짜 기준 금지)
 const dt = (offsetDays: number, hourKst = 10) =>
-  new Date(new Date(Date.now() + offsetDays * DAY).setUTCHours(hourKst - 9, 0, 0, 0)).toISOString()
+  new Date(`${addDays(todayLocal(), offsetDays)}T${String(hourKst).padStart(2, '0')}:00:00+09:00`).toISOString()
 
 const DEMO_USER = 'demo-user'
 

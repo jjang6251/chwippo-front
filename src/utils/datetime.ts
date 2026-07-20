@@ -101,6 +101,13 @@ export function addDays(dateStr: string, days: number): string {
   return ymdAddDays(dateStr, days)
 }
 
+/** 'YYYY-MM-DD' 에 연수 더한 결과 — TZ 무관 (UTC 왕복 date-only math, 2/29+비윤년은 3/1 오버플로) */
+export function addYears(dateStr: string, years: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCFullYear(d.getUTCFullYear() + years)
+  return d.toISOString().slice(0, 10)
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // 주 경계 — ISO 월요일 ~ 일요일
 // ────────────────────────────────────────────────────────────────────────
