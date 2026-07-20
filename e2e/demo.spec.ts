@@ -35,7 +35,7 @@ const DEMO_PAGES: { path: string; expect: RegExp }[] = [
   { path: '/demo/dashboard', expect: /회고/ },
   { path: '/demo/board', expect: /카카오/ },
   { path: '/demo/board/demo-a1', expect: /전형 단계/ },
-  { path: '/demo/board/demo-a1/steps/demo-a1-s2', expect: /핵심 메모/ },
+  { path: '/demo/board/demo-a1/steps/demo-a1-s2', expect: /준비 노트/ },
   { path: '/demo/calendar', expect: /카카오|토스|삼성전자/ },
   { path: '/demo/activity', expect: /캡스톤|인턴|기록/ },
   { path: '/demo/activity/manage', expect: /캡스톤|내 활동|활동/ },
@@ -84,6 +84,22 @@ test.describe('데모 모드', () => {
     await expect(
       page.getByRole('button', { name: '코딩테스트·과제 (현재)' }),
     ).toBeVisible()
+
+    expect(guard.backendHits()).toBe(0)
+    expect(guard.consoleErrors()).toEqual([])
+  })
+
+  test('카드 상세 — 공고 요건 카드 노출 + 펼치면 더미 고지', async ({ page }) => {
+    const guard = await attachGuard(page)
+    await page.goto('/demo/board/demo-a1')
+
+    // 접힘 헤더 (요건 N개 정리됨) — 회사 메모 아래 공고 요건 섹션
+    const toggle = page.getByRole('button', { name: /공고 요건/ })
+    await expect(toggle).toBeVisible()
+    await toggle.click()
+
+    // 펼치면 요건 표시 + 데모 전용 더미 고지
+    await expect(page.getByText('예시용 더미 공고 요건이에요 — 실제 채용 공고가 아닙니다')).toBeVisible()
 
     expect(guard.backendHits()).toBe(0)
     expect(guard.consoleErrors()).toEqual([])
@@ -151,6 +167,31 @@ test.describe('데모 모드', () => {
     await expect(page.getByRole('link', { name: /자소서/ }).first()).toHaveAttribute('aria-current', 'page')
     // AI 챗 영역 데모 안내 — 실서비스 가치 설명 문구
     await expect(page.getByText(/활동 일지.*내 정보 창고.*초안 작성/s).first()).toBeVisible()
+  })
+
+  test('자소서 모아보기 — 전 카드 노출 + 진행률 상태 다양성', async ({ page }) => {
+    const guard = await attachGuard(page)
+    await page.goto('/demo/coverletters')
+
+    // 진행중 탭 기본 — 여러 회사 카드 노출
+    await expect(page.locator('main').getByText('카카오').first()).toBeVisible()
+    // 완성 카드(🎉 모든 문항 작성 완료)와 진행 중 카드(다음 미작성)가 함께 = 상태 다양성
+    await expect(page.getByText('🎉 모든 문항 작성 완료').first()).toBeVisible()
+    await expect(page.getByText('다음 미작성').first()).toBeVisible()
+
+    expect(guard.backendHits()).toBe(0)
+    expect(guard.consoleErrors()).toEqual([])
+  })
+
+  test('자소서 doc 풀페이지 — 대표 카드(삼성전자) 렌더 (문항·답변)', async ({ page }) => {
+    const guard = await attachGuard(page)
+    await page.goto('/demo/board/demo-a3/coverletter')
+
+    await expect(page.getByText('화면을 불러오지 못했어요')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: /삼성전자/ }).first()).toBeVisible()
+
+    expect(guard.backendHits()).toBe(0)
+    expect(guard.consoleErrors()).toEqual([])
   })
 
   test('데모 이탈 금지 — 주요 내부 이동 후 URL 이 /demo/ 유지', async ({ page }) => {
