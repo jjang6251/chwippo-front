@@ -24,6 +24,20 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # KST 가드 — UTC 기준 날짜 문자열 패턴 금지 (KST 00~09시에 하루 밀림. 2026-07-20 데모·내정보 실발견)
+      # 날짜 문자열은 반드시 @/utils/datetime (todayLocal·toLocalDateString·addDays·addYears) 경유.
+      - name: KST date-string guard
+        run: |
+          HITS=$(grep -rnE "toISOString\(\)\.(slice\(0, ?10\)|split\('T'\)\[0\])" src \
+            --include='*.ts' --include='*.tsx' \
+            | grep -v 'src/utils/datetime.ts' | grep -v 'src/utils/datetime.test.ts' || true)
+          if [ -n "$HITS" ]; then
+            echo "❌ UTC 날짜 문자열 패턴 발견 — @/utils/datetime 헬퍼를 사용하세요:"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "✅ KST date-string guard clean"
+
       - name: Build (type-check + bundle)
         run: npm run build
 
