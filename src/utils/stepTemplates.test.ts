@@ -44,6 +44,22 @@ describe('STEP_TYPE_CONFIG — 시맨틱 토큰 (U32 → 카드 상세 개편에
       }
     }
   })
+
+  it('전 유형 Icon 은 lucide 컴포넌트 — 기능 아이콘 정책 (이모지 문자열 아님)', () => {
+    for (const cfg of Object.values(STEP_TYPE_CONFIG)) {
+      expect(cfg.Icon).toBeDefined()
+      // lucide 아이콘 = forwardRef(object). 과거 icon: string(이모지) 로의 회귀 방지.
+      expect(typeof cfg.Icon).not.toBe('string')
+      expect(cfg.Icon).toHaveProperty('render')
+    }
+  })
+
+  it('구 icon(이모지)·hex 필드 제거 — 아이콘 정책 전환 + 위생 ⑪ (죽은 hex 삭제)', () => {
+    for (const cfg of Object.values(STEP_TYPE_CONFIG) as Record<string, unknown>[]) {
+      expect('icon' in cfg).toBe(false)
+      expect('hex' in cfg).toBe(false)
+    }
+  })
 })
 
 describe('recommendTemplate', () => {

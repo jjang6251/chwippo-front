@@ -11,6 +11,7 @@ import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTe
 import { getDdayLabel, getDdayVariant } from '@/utils/dday'
 import { postToNative } from '@/utils/nativeBridge'
 import { mergePinnedIntoNotes } from '@/utils/stepNotes'
+import { Calendar, MapPin } from 'lucide-react'
 
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
@@ -110,6 +111,7 @@ export function StepPage() {
 
   const stepType = getStepType(step.name)
   const typeConfig = STEP_TYPE_CONFIG[stepType]
+  const TypeIcon = typeConfig.Icon
   const hasPreset = !!CHECKLIST_PRESETS[stepType]
   const doneCount = checklist.filter((i) => i.isDone).length
 
@@ -172,7 +174,7 @@ export function StepPage() {
         <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-lg leading-none">{typeConfig.icon}</span>
+            <TypeIcon size={18} strokeWidth={1.75} className={`shrink-0 ${typeConfig.colorCls}`} aria-hidden="true" />
             <span className={`text-[10px] font-semibold uppercase tracking-widest ${typeConfig.colorCls}`}>
               {typeConfig.label}
             </span>
@@ -208,7 +210,7 @@ export function StepPage() {
         <div className={`transition-colors ${dateRowAccentCls}`}>
           {editingField === 'date' ? (
             <div className="flex items-center gap-3 px-4 py-3">
-              <span className="text-sm shrink-0">📅</span>
+              <Calendar size={15} strokeWidth={1.75} className="text-text-quaternary shrink-0" aria-hidden="true" />
               <span className="text-xs text-text-quaternary w-10 shrink-0">날짜</span>
               <input
                 ref={dateInputRef}
@@ -230,7 +232,7 @@ export function StepPage() {
               onClick={() => { setEditingField('date'); setTimeout(() => dateInputRef.current?.focus(), 0) }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card active:bg-card-strong transition-colors text-left"
             >
-              <span className="text-sm shrink-0">📅</span>
+              <Calendar size={15} strokeWidth={1.75} className="text-text-quaternary shrink-0" aria-hidden="true" />
               <span className="text-xs text-text-quaternary w-10 shrink-0">날짜</span>
               {dateDisplayLabel ? (
                 <span className="flex-1 flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
@@ -255,7 +257,7 @@ export function StepPage() {
         <div>
           {editingField === 'location' ? (
             <div className="flex items-center gap-3 px-4 py-3">
-              <span className="text-sm shrink-0">📍</span>
+              <MapPin size={15} strokeWidth={1.75} className="text-text-quaternary shrink-0" aria-hidden="true" />
               <span className="text-xs text-text-quaternary w-10 shrink-0">장소</span>
               <input
                 ref={locationInputRef}
@@ -274,7 +276,7 @@ export function StepPage() {
               onClick={() => { setEditingField('location'); setTimeout(() => locationInputRef.current?.focus(), 0) }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card active:bg-card-strong transition-colors text-left"
             >
-              <span className="text-sm shrink-0">📍</span>
+              <MapPin size={15} strokeWidth={1.75} className="text-text-quaternary shrink-0" aria-hidden="true" />
               <span className="text-xs text-text-quaternary w-10 shrink-0">장소</span>
               <span className={`text-sm flex-1 ${location ? 'text-text-primary' : 'text-text-quaternary'}`}>
                 {location || '장소 설정'}

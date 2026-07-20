@@ -172,7 +172,7 @@ describe('BoardDetail — 진행 상황 + 현재 스텝 카드', () => {
     // KST 14:00 이 05:00 로 밀리지 않음 (TZ=UTC 실행 대비)
     expect(screen.getByText(/7월 22일 \(수\)/)).toBeInTheDocument()
     expect(screen.getByText('14:00')).toBeInTheDocument()
-    expect(screen.getByText('📍 판교 아지트')).toBeInTheDocument()
+    expect(screen.getByText('판교 아지트')).toBeInTheDocument()
     expect(screen.getByText('체크리스트 1/2')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /스텝 열기/ })).toBeInTheDocument()
   })

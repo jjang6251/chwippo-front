@@ -1,3 +1,6 @@
+import type { LucideIcon } from 'lucide-react'
+import { Mic, FileText, Hourglass, Target } from 'lucide-react'
+
 type TiptapDoc = { type: 'doc'; content: object[] }
 
 function heading(level: 2 | 3, text: string): object {
@@ -55,11 +58,12 @@ export function getStepType(stepName: string): StepType {
 
 // accentBorderCls: card-solid 구분감 패턴의 좌측 스트라이프 (U29 규칙 — 의미 토큰만.
 // document=warning 은 캘린더 아젠다의 마감·전형 계열 색과 정합)
-export const STEP_TYPE_CONFIG: Record<StepType, { icon: string; label: string; colorCls: string; borderCls: string; bgCls: string; hex: string; accentBorderCls: string }> = {
-  interview: { icon: '🎤', label: '면접', colorCls: 'text-info', borderCls: 'border-info/30', bgCls: 'bg-info/5', hex: '#7170ff', accentBorderCls: 'border-l-info' },
-  document:  { icon: '📄', label: '서류', colorCls: 'text-warning', borderCls: 'border-warning/30', bgCls: 'bg-warning/5', hex: '#60a5fa', accentBorderCls: 'border-l-warning' },
-  wait:      { icon: '⏳', label: '대기', colorCls: 'text-text-tertiary', borderCls: 'border-line', bgCls: 'bg-card', hex: '#8a8f98', accentBorderCls: 'border-l-text-quaternary' },
-  result:    { icon: '🎯', label: '결과', colorCls: 'text-success', borderCls: 'border-success/30', bgCls: 'bg-success/5', hex: '#10b981', accentBorderCls: 'border-l-success' },
+// Icon: 기능 아이콘 = lucide (아이콘 정책 — DESIGN.md). 색은 colorCls 를 상속(currentColor).
+export const STEP_TYPE_CONFIG: Record<StepType, { Icon: LucideIcon; label: string; colorCls: string; borderCls: string; bgCls: string; accentBorderCls: string }> = {
+  interview: { Icon: Mic, label: '면접', colorCls: 'text-info', borderCls: 'border-info/30', bgCls: 'bg-info/5', accentBorderCls: 'border-l-info' },
+  document:  { Icon: FileText, label: '서류', colorCls: 'text-warning', borderCls: 'border-warning/30', bgCls: 'bg-warning/5', accentBorderCls: 'border-l-warning' },
+  wait:      { Icon: Hourglass, label: '대기', colorCls: 'text-text-tertiary', borderCls: 'border-line', bgCls: 'bg-card', accentBorderCls: 'border-l-text-quaternary' },
+  result:    { Icon: Target, label: '결과', colorCls: 'text-success', borderCls: 'border-success/30', bgCls: 'bg-success/5', accentBorderCls: 'border-l-success' },
 }
 
 export const CHECKLIST_PRESETS: Partial<Record<StepType, string[]>> = {

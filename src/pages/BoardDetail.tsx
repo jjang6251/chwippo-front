@@ -35,9 +35,10 @@ import { loadCollapseExpanded, saveCollapseExpanded, JOB_POSTING_EXPANDED_STORAG
 import { toast } from '@/stores/toastStore'
 import { celebrate } from '@/stores/celebrationStore'
 import { useTourStore } from '@/stores/tourStore'
-import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_EMOJI } from '@/utils/tags'
+import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
 import { getStepType, STEP_TYPE_CONFIG } from '@/utils/stepTemplates'
 import { formatStepSchedule } from '@/utils/datetime'
+import { Calendar, MapPin, Pencil, GripVertical } from 'lucide-react'
 
 // --- 드래그 가능한 스텝 아이템 ---
 interface SortableStepItem {
@@ -69,13 +70,10 @@ function SortableStepRow({
           {...attributes}
           {...listeners}
           {...(index === 0 ? { 'data-tour': 'drag-handle' } : {})}
+          aria-label="드래그로 순서 변경"
           className="flex-none text-text-quaternary hover:text-text-tertiary cursor-grab active:cursor-grabbing p-1 touch-none"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-          </svg>
+          <GripVertical size={14} strokeWidth={1.75} aria-hidden="true" />
         </button>
         <span className="text-text-quaternary text-xs w-4 text-center">{index + 1}</span>
         <input
@@ -110,6 +108,7 @@ function CurrentStepCard({
   const { data: checklist = [] } = useChecklist(appId, step.id)
   const type = getStepType(step.name)
   const cfg = STEP_TYPE_CONFIG[type]
+  const StepIcon = cfg.Icon
   const { dateLabel, timeLabel } = formatStepSchedule(step.scheduledDate)
   const doneCount = checklist.filter((i) => i.isDone).length
   // U29 card-solid 구분감 — 저알파 틴트(bg-card·warning/5) 금지, 불투명 배경+유형색 스트라이프
@@ -120,7 +119,7 @@ function CurrentStepCard({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-sm shrink-0">{cfg.icon}</span>
+            <StepIcon size={15} strokeWidth={1.75} className={`shrink-0 ${cfg.colorCls}`} aria-hidden="true" />
             <span className="text-sm font-semibold text-text-primary truncate">{step.name}</span>
           </div>
           {needsResult ? (
@@ -128,19 +127,19 @@ function CurrentStepCard({
           ) : (
             <div className="flex items-center gap-x-3 gap-y-1 text-xs text-text-secondary flex-wrap">
               {dateLabel ? (
-                <span>
-                  📅 {dateLabel}
+                <span className="inline-flex items-center gap-1">
+                  <Calendar size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" /> {dateLabel}
                   {timeLabel && <b className="ml-1 font-mono text-brand">{timeLabel}</b>}
                 </span>
               ) : (
                 <button
                   onClick={onOpen}
-                  className="text-text-quaternary hover:text-text-secondary transition-colors"
+                  className="inline-flex items-center gap-1 text-text-quaternary hover:text-text-secondary transition-colors"
                 >
-                  📅 날짜 설정하기
+                  <Calendar size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" /> 날짜 설정하기
                 </button>
               )}
-              {step.location && <span className="truncate max-w-[180px]">📍 {step.location}</span>}
+              {step.location && <span className="inline-flex items-center gap-1 max-w-[180px]"><MapPin size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" /> <span className="truncate">{step.location}</span></span>}
               {checklist.length > 0 && (
                 <span className="text-text-quaternary">체크리스트 {doneCount}/{checklist.length}</span>
               )}
@@ -354,9 +353,10 @@ export function BoardDetail() {
               <h1 className="text-lg font-bold text-text-primary truncate">{app.companyName}</h1>
               {currentTags.map((tag) => {
                 const colorClass = JOB_CATEGORY_COLOR[tag] ?? JOB_CATEGORY_COLOR['기타']
+                const TagIcon = JOB_CATEGORY_ICON[tag] ?? JOB_CATEGORY_ICON['기타']
                 return (
-                  <span key={tag} className={`inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-medium rounded-full border ${colorClass}`}>
-                    {JOB_CATEGORY_EMOJI[tag]} {tag}
+                  <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${colorClass}`}>
+                    <TagIcon size={11} strokeWidth={2} aria-hidden="true" /> {tag}
                   </span>
                 )
               })}
@@ -398,9 +398,7 @@ export function BoardDetail() {
               title="기본 정보 편집"
               className="w-8 h-8 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors"
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M11.5 2.5l2 2-9 9H2.5v-2l9-9z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <Pencil size={14} strokeWidth={1.75} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -574,7 +572,7 @@ export function BoardDetail() {
 
       {/* 스텝 편집 모달 (드래그 가능) */}
       <Modal open={showStepEditor} onClose={() => setShowStepEditor(false)} title="스텝 편집">
-        <p className="text-text-quaternary text-xs mb-3">☰ 드래그로 순서를 변경할 수 있어요</p>
+        <p className="inline-flex items-center gap-1 text-text-quaternary text-xs mb-3"><GripVertical size={13} strokeWidth={1.75} aria-hidden="true" /> 드래그로 순서를 변경할 수 있어요</p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={editSteps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-1.5 max-h-72 overflow-y-auto overscroll-contain pr-1 mb-3">

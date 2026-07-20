@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
+import { PenLine, BookOpen, FileText, TriangleAlert } from 'lucide-react'
 import { useDemoLink } from '@/hooks/useDemoLink'
 import type { CalendarEvent, DailyNote } from '@/api/calendar'
 import {
@@ -59,15 +60,15 @@ function EventLink({ event }: { event: CalendarEvent }) {
   const time = event.time?.slice(0, 5)
 
   // 이벤트 종류별 색·아이콘 — U29 v2: surface-2 승격 + 유형색 좌측 스트라이프 (아젠다 카드와 동일 문법)
-  let icon = '📝'
+  let Icon = PenLine
   let stripe = 'border-l-info'
   let textColor = 'text-info'
   if (event.type === 'exam') {
-    icon = '📚'
+    Icon = BookOpen
     stripe = 'border-l-violet'
     textColor = 'text-violet'
   } else if (event.type === 'step') {
-    icon = '📄'
+    Icon = FileText
     stripe = 'border-l-warning'
     textColor = 'text-warning'
   }
@@ -90,7 +91,7 @@ function EventLink({ event }: { event: CalendarEvent }) {
 
   const inner = (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-card-solid border border-line-strong border-l-[3px] shadow-sm transition-colors ${stripe} ${to ? 'hover:bg-surface-3' : ''}`}>
-      <span className="text-sm shrink-0">{icon}</span>
+      <Icon size={15} strokeWidth={1.75} aria-hidden="true" className={`shrink-0 ${textColor}`} />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-text-primary truncate">{label}</p>
         <p className="text-[11px] text-text-tertiary tabular-nums mt-0.5">
@@ -214,9 +215,12 @@ export function DayDetailContent({ date, events, onClose }: Props) {
           }`}
         >
           <p className="font-semibold mb-0.5">
-            {dayConflict.level === 'overlap'
-              ? '⚠️ 일정이 겹쳐요 — 시간 확인이 필요해요'
-              : '⚠️ 이 날 시간 일정이 2개 이상이에요'}
+            <span className="inline-flex items-center gap-1">
+              <TriangleAlert size={13} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
+              {dayConflict.level === 'overlap'
+                ? '일정이 겹쳐요 — 시간 확인이 필요해요'
+                : '이 날 시간 일정이 2개 이상이에요'}
+            </span>
           </p>
           <p className="text-text-tertiary">
             {dayConflict.events

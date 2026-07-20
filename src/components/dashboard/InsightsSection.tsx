@@ -1,3 +1,4 @@
+import { Calendar, Target, type LucideIcon } from 'lucide-react'
 import { useGrowthMetrics } from '@/hooks/useGrowthMetrics'
 
 /**
@@ -16,11 +17,11 @@ export function InsightsSection() {
   if (!data) return null
 
   const { insights } = data
-  const items: { icon: string; label: string; value: string; hint?: string }[] = []
+  const items: { icon: LucideIcon; label: string; value: string; hint?: string }[] = []
 
   if (insights.mostActiveWeekday) {
     items.push({
-      icon: '📅',
+      icon: Calendar,
       label: '가장 활발한 요일',
       value: `${insights.mostActiveWeekday.weekday}요일`,
       hint: `전체 활동의 ${insights.mostActiveWeekday.sharePercent}%`,
@@ -28,7 +29,7 @@ export function InsightsSection() {
   }
   if (insights.topJobCategory) {
     items.push({
-      icon: '🎯',
+      icon: Target,
       label: '가장 많이 지원한 직군',
       value: insights.topJobCategory.category,
       hint: `${insights.topJobCategory.count}건`,
@@ -49,10 +50,12 @@ export function InsightsSection() {
         <span className="text-text-quaternary text-[10px]">패턴 분석</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {items.map((item) => (
+        {items.map((item) => {
+          const Icon = item.icon
+          return (
           <div key={item.label} className="bg-card border border-line rounded-lg p-3">
             <div className="flex items-center gap-1.5 mb-2">
-              <span aria-hidden="true">{item.icon}</span>
+              <Icon size={14} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
               <span className="text-text-tertiary text-[11px]">{item.label}</span>
             </div>
             <p className="text-text-primary text-lg font-bold tracking-tight">
@@ -64,7 +67,8 @@ export function InsightsSection() {
               </p>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
     </section>
   )

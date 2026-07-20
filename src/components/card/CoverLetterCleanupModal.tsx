@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
+import { Sparkles, TriangleAlert } from 'lucide-react'
 import { AiFeedbackSection } from '@/components/coverletter/AiFeedbackSection'
 import { Modal } from '@/components/common/Modal'
 import { cleanupCoverletter } from '@/utils/coverletterCleanup'
@@ -49,7 +50,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
 
       {nothingToFix ? (
         <div className="text-center py-6">
-          <div className="text-2xl mb-2">✨</div>
+          <div className="mb-2"><Sparkles size={24} strokeWidth={1.75} aria-hidden="true" className="inline-block" /></div>
           <p className="text-text-secondary text-sm">정리할 내용이 없어요. 깔끔합니다!</p>
           <button onClick={onClose} className="mt-5 px-4 py-2 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">
             닫기
@@ -87,7 +88,12 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
           )}
 
           {issues.some((i) => i.key === 'overLimit') && (
-            <p className="text-[11px] text-warning mb-3">⚠️ 글자수 초과는 자동으로 줄이지 않아요. 직접 다듬어 주세요.</p>
+            <p className="text-[11px] text-warning mb-3">
+              <span className="inline-flex items-center gap-1">
+                <TriangleAlert size={13} strokeWidth={1.75} aria-hidden="true" />
+                글자수 초과는 자동으로 줄이지 않아요. 직접 다듬어 주세요.
+              </span>
+            </p>
           )}
 
           <div className="flex gap-2">

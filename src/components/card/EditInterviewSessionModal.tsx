@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { FileText, FolderOpen, Lightbulb, Target } from 'lucide-react'
 import { Modal } from '@/components/common/Modal'
 import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { useActivities, useActivityLogs } from '@/hooks/useActivities'
@@ -90,8 +91,12 @@ export function EditInterviewSessionModal({
     <Modal open onClose={onClose} title="면접 세션 편집" width="max-w-2xl">
       <div className="space-y-5 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
         <p className="text-text-tertiary text-xs leading-relaxed bg-info/5 border border-info/20 rounded-lg p-3">
-          💡 자료를 바꾸고 저장한 뒤 <strong>"↻ 다시 생성"</strong> 을 누르면 새
-          자료 기반으로 질문이 재생성돼요. (기존 질문·내 메모는 사라집니다)
+          <span className="inline-flex items-center gap-1">
+            <Lightbulb size={14} strokeWidth={1.75} aria-hidden="true" />
+            자료를 바꾸고 저장한 뒤
+          </span>{' '}
+          <strong>"↻ 다시 생성"</strong> 을 누르면 새 자료 기반으로 질문이
+          재생성돼요. (기존 질문·내 메모는 사라집니다)
         </p>
 
         {/* 면접 종류 */}
@@ -122,8 +127,9 @@ export function EditInterviewSessionModal({
 
         {/* 모집 요강 + 강조 */}
         <section className="space-y-3">
-          <h3 className="text-sm text-text-secondary font-medium">
-            🎯 AI 강화 자료
+          <h3 className="text-sm text-text-secondary font-medium inline-flex items-center gap-1.5">
+            <Target size={15} strokeWidth={1.75} aria-hidden="true" />
+            AI 강화 자료
           </h3>
           <div>
             <label className="block text-xs text-text-tertiary mb-1.5">
@@ -162,7 +168,10 @@ export function EditInterviewSessionModal({
         {/* 자소서 */}
         <section>
           <label className="block text-sm text-text-secondary font-medium mb-2">
-            📄 자소서 문항{' '}
+            <span className="inline-flex items-center gap-1">
+              <FileText size={15} strokeWidth={1.75} aria-hidden="true" />
+              자소서 문항
+            </span>{' '}
             <span className="text-text-faint text-xs font-normal">
               ({selectedClIds.size}개 선택)
             </span>
@@ -201,7 +210,10 @@ export function EditInterviewSessionModal({
         {/* 활동 로그 */}
         <section>
           <label className="block text-sm text-text-secondary font-medium mb-2">
-            📂 추가 활동 로그{' '}
+            <span className="inline-flex items-center gap-1">
+              <FolderOpen size={15} strokeWidth={1.75} aria-hidden="true" />
+              추가 활동 로그
+            </span>{' '}
             <span className="text-text-faint text-xs font-normal">
               ({selectedLogIds.size}개 선택 · 활동 헤더 체크 = 전체)
             </span>

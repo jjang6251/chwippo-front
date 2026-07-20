@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Target, Lightbulb } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCelebrationStore } from '@/stores/celebrationStore'
 import { calcDday, getDdayLabel } from '@/utils/dday'
@@ -86,8 +87,8 @@ export function FirstCardCelebration() {
         onClick={(e) => e.stopPropagation()}
         className="relative text-center max-w-md w-full animate-celebrateUp motion-reduce:animate-none"
       >
-        <div className="text-5xl mb-5" aria-hidden>
-          🎯
+        <div className="mb-5 flex justify-center" aria-hidden="true">
+          <Target size={28} strokeWidth={1.75} />
         </div>
 
         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand bg-brand/10 border border-brand/25 px-2.5 py-1 rounded-full mb-4">
@@ -123,8 +124,8 @@ export function FirstCardCelebration() {
                   </svg>
                 </span>
               ) : (
-                <span className="shrink-0 w-5 h-5 mt-px flex items-center justify-center text-xs" aria-hidden>
-                  💡
+                <span className="shrink-0 w-5 h-5 mt-px flex items-center justify-center" aria-hidden>
+                  <Lightbulb size={14} strokeWidth={1.75} aria-hidden="true" />
                 </span>
               )}
               <p

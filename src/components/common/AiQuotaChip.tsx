@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { Construction, Timer } from 'lucide-react'
 import { useMyAiQuota } from '@/hooks/useMyAiQuotas'
 import type { LlmFeature } from '@/types/aiQuota'
 
@@ -9,6 +11,7 @@ interface Props {
 
 interface ChipState {
   variant: 'normal' | 'warn' | 'danger' | 'disabled'
+  Icon?: LucideIcon
   label: string
   tooltip: string
 }
@@ -56,9 +59,10 @@ export function AiQuotaChip({ feature, size = 'sm' }: Props) {
 
   return (
     <span
-      className={`inline-flex items-center ${pad} rounded-full border font-mono font-semibold ${colorClass[state.variant]}`}
+      className={`inline-flex items-center gap-1 ${pad} rounded-full border font-mono font-semibold ${colorClass[state.variant]}`}
       title={state.tooltip}
     >
+      {state.Icon && <state.Icon size={size === 'sm' ? 11 : 13} strokeWidth={2} aria-hidden="true" />}
       {state.label}
     </span>
   )
@@ -95,7 +99,8 @@ function computeState(quota: {
   if (!quota.enabled) {
     return {
       variant: 'disabled',
-      label: '🚧 일시 중단',
+      Icon: Construction,
+      label: '일시 중단',
       tooltip: '관리자가 일시적으로 비활성화한 기능입니다.',
     }
   }
@@ -106,7 +111,8 @@ function computeState(quota: {
     if (sec > 0) {
       return {
         variant: 'warn',
-        label: `⏳ ${formatSeconds(sec)}`,
+        Icon: Timer,
+        label: formatSeconds(sec),
         tooltip: `다음 호출까지 ${formatSeconds(sec)}. 너무 자주 호출하지 못하게 cooldown 이 걸려 있어요.`,
       }
     }

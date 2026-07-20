@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import { useUpdateApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
@@ -100,11 +101,11 @@ export function FailedCareContent({ applicationId, app, onDone }: FailedCareCont
       </p>
       <ul className="space-y-2 mb-5">
         <li className="flex items-start gap-2 text-xs text-text-tertiary leading-relaxed">
-          <span className="text-brand mt-px" aria-hidden>✓</span>
+          <Check size={14} strokeWidth={2} className="text-brand mt-px shrink-0" aria-hidden="true" />
           여기 쓴 자소서는 창고에 남아 다음 지원에서 가져올 수 있어요
         </li>
         <li className="flex items-start gap-2 text-xs text-text-tertiary leading-relaxed">
-          <span className="text-brand mt-px" aria-hidden>✓</span>
+          <Check size={14} strokeWidth={2} className="text-brand mt-px shrink-0" aria-hidden="true" />
           나의 통과율 통계에 반영돼요 — 성장 페이지에서 확인
         </li>
       </ul>

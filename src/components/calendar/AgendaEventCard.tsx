@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { FileText, BookOpen, PenLine } from 'lucide-react'
 import type { CalendarEvent } from '@/api/calendar'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useUpdateDailyNote } from '@/hooks/useCalendar'
@@ -24,15 +25,15 @@ interface Props {
 // 월 그리드와 같은 surface-2 승격 + 유형색 좌측 스트라이프로 전환 (구분감 보장 + 유형 식별 유지)
 const TYPE_META = {
   step: {
-    icon: '📄',
+    icon: FileText,
     stripe: 'border-l-warning',
   },
   exam: {
-    icon: '📚',
+    icon: BookOpen,
     stripe: 'border-l-violet',
   },
   note: {
-    icon: '📝',
+    icon: PenLine,
     stripe: 'border-l-info',
   },
 } as const
@@ -40,6 +41,7 @@ const TYPE_META = {
 export function AgendaEventCard({ event }: Props) {
   const isDemo = useDemoMode()
   const meta = TYPE_META[event.type]
+  const Icon = meta.icon
   const isNote = event.type === 'note'
 
   const { mutate: updateNote } = useUpdateDailyNote(event.date)
@@ -118,7 +120,7 @@ export function AgendaEventCard({ event }: Props) {
           </span>
         </button>
       ) : (
-        <span className="text-sm shrink-0">{meta.icon}</span>
+        <Icon size={15} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
       )}
       <div className="flex-1 min-w-0">
         <p

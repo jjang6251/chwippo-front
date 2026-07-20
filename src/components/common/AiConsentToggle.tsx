@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
   agreeAiConsent,
@@ -104,7 +105,10 @@ export function AiConsentToggle() {
     return (
       <div className="flex items-start justify-between gap-3">
         <div className="text-xs">
-          <p className="text-success font-medium mb-0.5">✓ AI 사용 동의 완료</p>
+          <p className="text-success font-medium mb-0.5 flex items-center gap-1">
+            <Check size={14} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
+            AI 사용 동의 완료
+          </p>
           {consentedAt && (
             <p className="text-text-quaternary">
               {consentedAt} 동의 (버전 {user.aiConsentVersion})

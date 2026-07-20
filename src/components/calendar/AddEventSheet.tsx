@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Drawer } from 'vaul'
+import { BookOpen, PenLine } from 'lucide-react'
 import { AddExamScheduleModal } from '@/components/myinfo/AddExamScheduleModal'
 import { useCreateDailyNote } from '@/hooks/useCalendar'
 import { useIsMobile } from '@/hooks/useMediaQuery'
@@ -79,7 +80,7 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
               onClick={() => setPendingType('exam')}
               className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-violet/8 border border-violet/25 hover:bg-violet/12 transition-colors text-left"
             >
-              <span className="text-2xl">📚</span>
+              <BookOpen size={22} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-text-primary">시험 일정</p>
                 <p className="text-[11px] text-text-tertiary mt-0.5">TOEIC · OPIc · 자격증 등</p>
@@ -91,7 +92,7 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
               onClick={() => setPendingType('memo')}
               className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-info/6 border border-info/20 hover:bg-info/10 transition-colors text-left"
             >
-              <span className="text-2xl">📝</span>
+              <PenLine size={22} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-text-primary">이 날 할 일 · 메모</p>
                 <p className="text-[11px] text-text-tertiary mt-0.5">간단한 메모 남기기</p>

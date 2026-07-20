@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pin } from 'lucide-react'
 import { useDismissAllSampleCards } from '@/hooks/useDismissSampleCards'
 import { ConfirmModal } from '@/pages/Activity/modals/ConfirmModal'
 import { toast } from '@/stores/toastStore'
@@ -33,7 +34,7 @@ export function SampleCardDismissBar({ count }: Props) {
     <>
       <div className="flex items-center justify-between gap-3 px-4 py-3 bg-warning/[0.06] border border-warning/[0.18] rounded-[10px] mb-4">
         <div className="flex items-center gap-2 text-xs text-text-secondary min-w-0">
-          <span className="text-sm shrink-0">📌</span>
+          <Pin size={15} strokeWidth={1.75} className="text-warning shrink-0" aria-hidden="true" />
           <span className="truncate">
             <strong className="text-warning font-semibold">샘플 카드 {count}개</strong>
             가 보이는 중이에요 · 익숙해지셨으면 정리하세요

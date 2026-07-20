@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Coins, Timer } from 'lucide-react'
 import type { CoinTier } from '@/types/coinSystem'
 import { TIER_LABEL, TIER_PRICE_KRW } from '@/types/coinSystem'
 import { useMyAiQuotas } from '@/hooks/useMyAiQuotas'
@@ -105,9 +106,10 @@ export function ProUpgradeModal({
       >
         <h2
           id="pro-upgrade-title"
-          className="text-text-primary text-lg font-bold mb-1"
+          className="text-text-primary text-lg font-bold mb-1 flex items-center gap-2"
         >
-          🪙 치뽀 코인
+          <Coins size={18} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
+          치뽀 코인
         </h2>
         <p className="text-text-tertiary text-xs mb-4">
           AI 기능 사용량 통합 매트릭스. 자소서·면접 등 모든 AI 호출에 사용돼요.
@@ -134,7 +136,10 @@ export function ProUpgradeModal({
           {/* PR_B2 Phase 3 — Plan 만료 예정 (lite/standard 만) */}
           {planExpiresAt && tier !== 'free' && (
             <div className="mt-2 pt-2 border-t border-line flex items-center justify-between">
-              <span className="text-warning text-xs">⏱ Plan 만료</span>
+              <span className="text-warning text-xs flex items-center gap-1">
+                <Timer size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
+                Plan 만료
+              </span>
               <span className="text-warning text-xs font-semibold">
                 {new Date(planExpiresAt).toLocaleDateString('ko-KR', {
                   year: 'numeric',
@@ -234,7 +239,8 @@ export function ProUpgradeModal({
                     </span>
                   </div>
                   <p className="text-text-tertiary text-xs">
-                    🪙 월 {limits[t]} 코인 · 자소서·면접 자유롭게
+                    <Coins size={13} strokeWidth={1.75} className="inline-block align-[-0.125em]" aria-hidden="true" />{' '}
+                    월 {limits[t]} 코인 · 자소서·면접 자유롭게
                   </p>
                 </div>
               )

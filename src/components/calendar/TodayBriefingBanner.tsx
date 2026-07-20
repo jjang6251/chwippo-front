@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Calendar } from 'lucide-react'
 import { useNotifications } from '@/hooks/useNotifications'
 import { toLocalDateString, todayLocal } from '@/utils/datetime'
 
@@ -37,7 +38,7 @@ export function TodayBriefingBanner() {
         className="shrink-0 w-8 h-8 rounded-lg bg-card flex items-center justify-center text-base"
         aria-hidden
       >
-        📅
+        <Calendar size={18} strokeWidth={1.75} aria-hidden="true" />
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-text-primary truncate">

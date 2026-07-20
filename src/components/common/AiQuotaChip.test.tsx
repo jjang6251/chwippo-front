@@ -4,8 +4,8 @@
  * 시나리오:
  * 1. quota 미로드 (hook undefined) → 렌더 X (silent fail — 부모 버튼 정상 동작)
  * 2. 정상 (잔여 5/5) → "잔여 5/5회" 표시, variant normal
- * 3. enabled=false → "🚧 일시 중단" badge + disabled variant
- * 4. nextAvailableAt 미래 (cooldown) → "⏳ N초" + warn variant
+ * 3. enabled=false → Construction 아이콘 + "일시 중단" badge + disabled variant
+ * 4. nextAvailableAt 미래 (cooldown) → Timer 아이콘 + "N초" + warn variant
  * 5. dayUsed >= dayLimit → "오늘 한도 소진" + danger variant
  * 6. dayLeft <= 20% → warn variant (잔여 부족 경고)
  */
@@ -75,7 +75,7 @@ describe('AiQuotaChip', () => {
     expect(screen.getByText('잔여 3/5회')).toBeInTheDocument()
   })
 
-  it('enabled=false → "🚧 일시 중단" badge (kill switch)', () => {
+  it('enabled=false → "일시 중단" badge (kill switch)', () => {
     mocked.mockReturnValue({
       feature: 'note_summary',
       enabled: false,
@@ -87,10 +87,10 @@ describe('AiQuotaChip', () => {
       nextAvailableAt: null,
     })
     render(<AiQuotaChip feature="note_summary" />)
-    expect(screen.getByText('🚧 일시 중단')).toBeInTheDocument()
+    expect(screen.getByText('일시 중단')).toBeInTheDocument()
   })
 
-  it('nextAvailableAt 미래 → "⏳ N초" 표시 (cooldown)', () => {
+  it('nextAvailableAt 미래 → "N초" 표시 (cooldown)', () => {
     const future = new Date(Date.now() + 25_000).toISOString()
     mocked.mockReturnValue({
       feature: 'note_summary',
@@ -103,7 +103,7 @@ describe('AiQuotaChip', () => {
       nextAvailableAt: future,
     })
     render(<AiQuotaChip feature="note_summary" />)
-    const chip = screen.getByText(/⏳/)
+    const chip = screen.getByText(/\d+초/)
     expect(chip).toBeInTheDocument()
     expect(chip.textContent).toMatch(/초|분/)
   })
@@ -138,11 +138,11 @@ describe('AiQuotaChip', () => {
       nextAvailableAt: new Date(now + 5000).toISOString(),
     })
     render(<AiQuotaChip feature="note_summary" />)
-    expect(screen.getByText('⏳ 5초')).toBeInTheDocument()
+    expect(screen.getByText('5초')).toBeInTheDocument()
     act(() => {
       vi.advanceTimersByTime(1000)
     })
-    expect(screen.getByText('⏳ 4초')).toBeInTheDocument()
+    expect(screen.getByText('4초')).toBeInTheDocument()
   })
 
   it('60초 이상 cooldown → "분 초" 병기', () => {
