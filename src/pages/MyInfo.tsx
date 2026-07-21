@@ -1526,23 +1526,31 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
     setLoaded(true)
   }
 
-  const persist = (list: string[]) => {
-    update({ goal_other: list.join('\n') } as Partial<UserProfile>, { onSuccess: show })
+  const persist = (list: string[], prev: string[]) => {
+    update({ goal_other: list.join('\n') } as Partial<UserProfile>, {
+      onSuccess: show,
+      onError: () => {
+        setGoals(prev)
+        toast.error('저장에 실패했어요. 다시 시도해주세요')
+      },
+    })
   }
 
   const addGoal = () => {
     if (!newGoal.trim()) return
+    const prev = goals
     const updated = [...goals, newGoal.trim()]
     setGoals(updated)
-    persist(updated)
+    persist(updated, prev)
     setNewGoal('')
     setAdding(false)
   }
 
   const removeGoal = (idx: number) => {
+    const prev = goals
     const updated = goals.filter((_, i) => i !== idx)
     setGoals(updated)
-    persist(updated)
+    persist(updated, prev)
   }
 
   return (
@@ -1567,10 +1575,11 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               value={newGoal}
               onChange={(e) => setNewGoal(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) addGoal(); if (e.key === 'Escape') setAdding(false) }}
-              placeholder="목표를 입력하세요 (예: TOEIC 900점 달성)"
+              placeholder="목표 입력 후 Enter (예: TOEIC 900점 달성)"
               className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-tertiary"
             />
-            <button onClick={() => setAdding(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
+            <button onClick={addGoal} disabled={!newGoal.trim()} className="shrink-0 whitespace-nowrap bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">추가</button>
+            <button onClick={() => setAdding(false)} className="shrink-0 whitespace-nowrap text-xs text-text-quaternary px-2 hover:text-text-secondary rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">취소</button>
           </div>
         ) : (
           <AddButton onClick={() => setAdding(true)} label="목표 추가" />
@@ -1670,10 +1679,11 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
                     value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAddCustom(); if (e.key === 'Escape') setAddingLabel(false) }}
-                    placeholder="항목명 입력 (예: 해외 경험)"
+                    placeholder="항목명 입력 후 Enter (예: 해외 경험)"
                     className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-tertiary"
                   />
-                  <button onClick={() => setAddingLabel(false)} className="text-xs text-text-quaternary px-2 hover:text-text-secondary">취소</button>
+                  <button onClick={handleAddCustom} disabled={!newLabel.trim()} className="shrink-0 whitespace-nowrap bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">추가</button>
+                  <button onClick={() => setAddingLabel(false)} className="shrink-0 whitespace-nowrap text-xs text-text-quaternary px-2 hover:text-text-secondary rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">취소</button>
                 </div>
               ) : (
                 <MyInfoEmptyAdd label="항목 직접 추가" compact onClick={() => setAddingLabel(true)} />
