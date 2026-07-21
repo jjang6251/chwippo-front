@@ -350,23 +350,29 @@ export function StepPage() {
           {checklist.map((item) => (
             <div key={item.id} className="flex items-center gap-3 group py-1 px-1 rounded-lg hover:bg-card active:bg-card-strong transition-colors">
               <button
+                aria-label={item.isDone ? '완료 취소' : '완료 표시'}
                 onClick={() => updateItem({ itemId: item.id, isDone: !item.isDone })}
-                className={`relative w-[17px] h-[17px] rounded border shrink-0 flex items-center justify-center transition-colors after:content-[''] after:absolute after:inset-[-8px] ${
-                  item.isDone ? 'bg-brand border-brand' : 'border-line hover:border-brand/60'
-                }`}
+                className="group/check w-11 h-11 -ml-2.5 sm:-my-3 flex items-center justify-center shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
               >
-                {item.isDone && (
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                    <path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
+                <span
+                  className={`w-[17px] h-[17px] rounded border flex items-center justify-center transition-colors ${
+                    item.isDone ? 'bg-brand border-brand' : 'border-line group-hover/check:border-brand/60'
+                  }`}
+                >
+                  {item.isDone && (
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
               </button>
               <span className={`flex-1 text-sm leading-relaxed ${item.isDone ? 'line-through text-text-quaternary' : 'text-text-primary'}`}>
                 {item.content}
               </span>
               <button
+                aria-label="삭제"
                 onClick={() => deleteItem(item.id)}
-                className="opacity-0 group-hover:opacity-100 text-text-quaternary hover:text-danger transition-all w-6 h-6 flex items-center justify-center rounded"
+                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-text-quaternary hover:text-danger w-11 h-11 -mr-2.5 sm:-my-3 flex items-center justify-center transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg rounded"
               >
                 <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <path d="M2 2l6 6M8 2L2 8" />
@@ -386,6 +392,11 @@ export function StepPage() {
               placeholder="항목 추가 후 Enter"
               className="flex-1 bg-transparent text-base text-text-primary placeholder:text-text-tertiary outline-none rounded focus-visible:ring-1 focus-visible:ring-brand/30"
             />
+            <button
+              onClick={handleAddItem}
+              disabled={!inputText.trim()}
+              className="shrink-0 whitespace-nowrap h-8 px-3 text-[13px] sm:h-7 sm:px-2.5 sm:text-[12px] rounded-lg bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary font-semibold flex items-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+            >추가</button>
           </div>
         </div>
         </div>
