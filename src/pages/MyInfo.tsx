@@ -19,6 +19,7 @@ import { useActivities } from '@/hooks/useActivities'
 import '@/pages/Activity/activity-mock.css'
 import { useMyinfoProgress } from '@/hooks/useMyinfoProgress'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
+import { addYears, todayLocal, getWeekMonday } from '@/utils/datetime'
 import type { UserProfile, LanguageCert, Cert, Award, Coverletter, CoverletterCustom, MyDocument, Education } from '@/api/myinfo'
 import { EducationModal } from '@/components/myinfo/EducationModal'
 import type { ExamSchedule } from '@/types/exam-schedule'
@@ -758,9 +759,9 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
       issuer: f.issuer.trim() ? f.issuer : c.issuer,
     }))
     if (c.validYears && form.acquired_at && !form.expires_at) {
-      const acq = new Date(form.acquired_at)
-      acq.setFullYear(acq.getFullYear() + c.validYears)
-      setForm((f) => ({ ...f, expires_at: acq.toISOString().slice(0, 10) }))
+      const years = c.validYears
+      const acquiredAt = form.acquired_at
+      setForm((f) => ({ ...f, expires_at: addYears(acquiredAt, years) }))
     }
   }
 
@@ -932,9 +933,9 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
     }))
     // validYears 있으면 취득일 있을 때 expires_at 자동 계산 프리셋 (덮어쓰기 아님, 빈 경우만)
     if (c.validYears && form.acquired_at && !form.expires_at) {
-      const acq = new Date(form.acquired_at)
-      acq.setFullYear(acq.getFullYear() + c.validYears)
-      setForm((f) => ({ ...f, expires_at: acq.toISOString().slice(0, 10) }))
+      const years = c.validYears
+      const acquiredAt = form.acquired_at
+      setForm((f) => ({ ...f, expires_at: addYears(acquiredAt, years) }))
     }
   }
 
@@ -1373,20 +1374,14 @@ function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
   const link = useDemoLink()
   const { data: activities = [] } = useActivities(false)
   const [showCompleted, setShowCompleted] = useState(false)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
   // 기본함(미분류) 은 활동이 아니라 퀵캡처 수신함 — 경험 카드에서 제외
   const visibleActs = activities.filter((a) => !a.isInbox)
   const ongoing = visibleActs.filter((a) => !a.archivedAt && (!a.endedAt || a.endedAt >= today))
   const completed = visibleActs.filter((a) => !a.archivedAt && a.endedAt && a.endedAt < today)
   const allLogs = activities.flatMap((a) => a.logs ?? [])
-  // 이번주 KST 월요일
-  const monday = (() => {
-    const d = new Date()
-    const day = d.getDay()
-    const diff = day === 0 ? -6 : 1 - day
-    d.setDate(d.getDate() + diff)
-    return d.toISOString().slice(0, 10)
-  })()
+  // 이번주 KST 월요일 (수기 계산은 로컬 TZ+UTC slice 혼합으로 KST 아침에 하루 밀림 — 헬퍼 사용)
+  const monday = getWeekMonday()
   const weekLogCount = (activityId: string) =>
     allLogs.filter((l) => l.activityId === activityId && l.occurredAt >= monday).length
 
