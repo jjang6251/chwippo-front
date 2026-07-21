@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useDemoMode } from '@/contexts/demoMode'
+import { useNativeMode } from '@/hooks/useNativeMode'
 import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/hooks/useApplications'
@@ -18,6 +19,7 @@ export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
   const navigate = useDemoNavigate()
   const isDemo = useDemoMode()
+  const isNative = useNativeMode()
 
   const { data: app, isLoading } = useApplication(appId!)
   const sortedSteps = app ? [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex) : []
@@ -402,10 +404,12 @@ export function StepPage() {
         />
       </div>
 
-      {/* ── 이 단계 완료하기 버튼 (fixed bottom) ─────── */}
+      {/* ── 이 단계 완료하기 버튼 (fixed bottom) ───────
+          웹 모바일은 MobileNav(실측 60px·z-50) 바로 위에 붙임: pb = 60 + 8(간격) + safe-area.
+          그라데이션이 탭바까지 이어져 버튼 아래 틈으로 콘텐츠가 비치지 않음. 네이티브는 탭바가 숨겨져 pb-4 로 바닥 밀착 */}
       {isCurrentStep && (
-        <div className="fixed bottom-20 lg:bottom-0 left-0 right-0 z-20 pointer-events-none">
-          <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-4 pt-8 bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-auto">
+        <div className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none">
+          <div className={`max-w-2xl mx-auto px-4 sm:px-6 pt-8 ${isNative ? 'pb-4' : 'pb-[calc(68px+env(safe-area-inset-bottom,0px))] lg:pb-4'} bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-auto`}>
             <button
               onClick={handleCompleteStep}
               className="w-full bg-brand hover:bg-accent active:bg-accent-hover text-text-primary font-semibold text-sm py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
