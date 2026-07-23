@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { FileText, BookOpen, PenLine } from 'lucide-react'
 import type { CalendarEvent } from '@/api/calendar'
 import { useDemoMode } from '@/contexts/demoMode'
-import { useUpdateDailyNote } from '@/hooks/useCalendar'
+import { useUpdateDailyNote, useDeleteNoteWithUndo } from '@/hooks/useCalendar'
 import { DEADLINE_DISPLAY_TIME } from '@/utils/datetime'
 import { toast } from '@/stores/toastStore'
+import { InlineNoteEditor } from './InlineNoteEditor'
 
 /**
  * 캘린더 UX 재구성 — 아젠다 이벤트 카드 (leaf).
@@ -38,6 +39,14 @@ const TYPE_META = {
   },
 } as const
 
+// 캘린더 슬롯 기준시(KST 06:00 = slot 0 · 30분 단위) — DayDetailContent slotToLabel 과 동일 기준.
+// 삭제 undo 재생성 시 원래 hourSlot 복원용 (아젠다 이벤트는 hourSlot 대신 time 만 보유).
+const BASE_HOUR = 6
+function timeToSlot(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return Math.round((h * 60 + m - BASE_HOUR * 60) / 30)
+}
+
 export function AgendaEventCard({ event }: Props) {
   const isDemo = useDemoMode()
   const meta = TYPE_META[event.type]
@@ -50,6 +59,23 @@ export function AgendaEventCard({ event }: Props) {
   const [pendingDone, setPendingDone] = useState<boolean | null>(null)
   if (pendingDone !== null && event.isDone === pendingDone) setPendingDone(null)
   const done = pendingDone ?? event.isDone ?? false
+
+  // 6b — note 카드 인라인 편집 · 삭제(즉시 + 되돌리기)
+  const [editing, setEditing] = useState(false)
+  const deleteNoteWithUndo = useDeleteNoteWithUndo(event.date)
+  const hourSlot = event.time ? timeToSlot(event.time) : null
+
+  function handleDelete(e: MouseEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!event.noteId) return
+    deleteNoteWithUndo({
+      id: event.noteId,
+      date: event.date,
+      hourSlot,
+      content: event.content ?? '',
+    })
+  }
 
   function toggleDone(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
@@ -100,7 +126,7 @@ export function AgendaEventCard({ event }: Props) {
     .join(' · ')
 
   const inner = (
-    <div className={`flex items-center gap-3 px-3.5 py-3 bg-card-solid border border-line-strong border-l-[3px] ${meta.stripe} rounded-lg shadow-sm transition-colors hover:bg-surface-3`}>
+    <div className={`group/agenda flex items-center gap-3 px-3.5 py-3 bg-card-solid border border-line-strong border-l-[3px] ${meta.stripe} rounded-lg shadow-sm transition-colors hover:bg-surface-3`}>
       {isNote ? (
         <button
           onClick={toggleDone}
@@ -122,18 +148,59 @@ export function AgendaEventCard({ event }: Props) {
       ) : (
         <Icon size={15} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
       )}
-      <div className="flex-1 min-w-0">
-        <p
-          className={`text-xs font-semibold truncate ${
-            done ? 'line-through text-text-quaternary' : 'text-text-primary'
-          }`}
-        >
-          {title}
-        </p>
-        {subtitle && (
-          <p className="text-[10px] text-text-tertiary tabular-nums mt-0.5">{subtitle}</p>
-        )}
-      </div>
+      {isNote && editing ? (
+        <InlineNoteEditor
+          note={{ id: event.noteId!, content: event.content ?? '', date: event.date, hourSlot }}
+          onDone={() => setEditing(false)}
+        />
+      ) : (
+        <>
+          <div
+            className={`flex-1 min-w-0 ${
+              isNote
+                ? 'cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg'
+                : ''
+            }`}
+            role={isNote ? 'button' : undefined}
+            tabIndex={isNote ? 0 : undefined}
+            aria-label={isNote ? '할 일 수정' : undefined}
+            onClick={isNote ? () => setEditing(true) : undefined}
+            onKeyDown={
+              isNote
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setEditing(true)
+                    }
+                  }
+                : undefined
+            }
+          >
+            <p
+              className={`text-xs font-semibold ${
+                isNote ? 'line-clamp-2 break-words' : 'truncate'
+              } ${done ? 'line-through text-text-quaternary' : 'text-text-primary'}`}
+            >
+              {title}
+            </p>
+            {subtitle && (
+              <p className="text-[10px] text-text-tertiary tabular-nums mt-0.5">{subtitle}</p>
+            )}
+          </div>
+          {isNote && (
+            <button
+              type="button"
+              aria-label="삭제"
+              onClick={handleDelete}
+              className="opacity-100 sm:opacity-0 sm:group-hover/agenda:opacity-100 text-text-quaternary hover:text-danger w-11 h-11 -mr-2.5 -my-3 flex items-center justify-center transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg rounded"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M2 2l6 6M8 2L2 8" />
+              </svg>
+            </button>
+          )}
+        </>
+      )}
     </div>
   )
 

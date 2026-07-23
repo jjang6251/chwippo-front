@@ -114,7 +114,7 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
     <div
       className={`relative block rounded-2xl bg-surface p-7 border ${borderClass}`}
     >
-      <div className="grid grid-cols-[1fr_auto] gap-6 items-end">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-6 items-end">
         {/* M1 — 임의값 1fr 셀은 min=auto (DESIGN.md 규칙 3) → min-w-0 로 truncate 활성 */}
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-4">

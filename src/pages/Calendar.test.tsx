@@ -25,7 +25,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Calendar } from './Calendar'
-import type { CalendarEvent } from '@/api/calendar'
+import { useToastStore } from '@/stores/toastStore'
+import type { CalendarEvent, DailyNote } from '@/api/calendar'
 import type { DdayItem } from '@/api/dashboard'
 
 interface MockQuery<T> {
@@ -40,9 +41,18 @@ let calendarState: MockQuery<CalendarEvent[]>
 let ddayState: MockQuery<DdayItem[]>
 let streakState: MockQuery<{ streak: { current: number } }>
 let applicationsState: MockQuery<unknown[]>
+// 6c — 모바일 월별 인라인 상세는 실제 DayDetailContent 를 렌더 → 그 훅들도 stub (날짜별 할 일 주입)
+let inlineNotesByDate: Record<string, DailyNote[]> = {}
 
 vi.mock('@/hooks/useCalendar', () => ({
   useCalendarEvents: () => calendarState,
+  useDailyNotes: (date: string | null) => ({ data: date ? (inlineNotesByDate[date] ?? []) : [] }),
+  useCreateDailyNote: () => ({ mutate: vi.fn() }),
+  useUpdateDailyNote: () => ({ mutate: vi.fn() }),
+  useDeleteNoteWithUndo: () => vi.fn(),
+  useCarryOverDailyNote: () => ({ mutate: vi.fn() }),
+  useUrgentChecklist: () => ({ data: [] }),
+  useCompleteUrgentChecklistItem: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 vi.mock('@/hooks/useDashboard', () => ({
   useDdayList: () => ddayState,
@@ -71,7 +81,19 @@ vi.mock('@/components/calendar/CalendarAgendaView', () => ({
   CalendarAgendaView: () => <div>agenda-view</div>,
 }))
 vi.mock('@/components/calendar/CalendarMonthlyGrid', () => ({
-  CalendarMonthlyGrid: () => <div>month-grid</div>,
+  CalendarMonthlyGrid: ({
+    selectedDate,
+    onSelectDate,
+  }: {
+    selectedDate?: string
+    onSelectDate?: (d: string) => void
+  }) => (
+    <div>
+      <span data-testid="grid-selected">{selectedDate}</span>
+      <button onClick={() => onSelectDate?.('2026-07-25')}>grid-pick-25</button>
+      <button onClick={() => onSelectDate?.('2026-07-10')}>grid-pick-10</button>
+    </div>
+  ),
 }))
 vi.mock('@/components/calendar/CalendarDayPanel', () => ({
   CalendarDayPanel: () => null,
@@ -133,6 +155,7 @@ beforeEach(() => {
   ddayState = { data: [], isLoading: false, isError: false, refetch: vi.fn() }
   streakState = { data: { streak: { current: 3 } }, isLoading: false, isError: false, refetch: vi.fn() }
   applicationsState = { data: [], isLoading: false, isError: false, refetch: vi.fn() }
+  inlineNotesByDate = {}
 })
 
 afterEach(() => {
@@ -250,5 +273,82 @@ describe('Calendar — 단축키 T/N (U10)', () => {
     renderCalendar()
     fireEvent.keyDown(window, { key: 'n', code: 'KeyN' })
     expect(screen.queryByText('add-sheet-open')).toBeNull()
+  })
+})
+
+/**
+ * 6c — 모바일 월별 뷰 하단 선택일 인라인 리스트 (실제 DayDetailContent 재사용).
+ *
+ * ① 날짜 탭 → 시트 미발동 + 그리드 아래 해당 날짜 상세 인라인 렌더
+ * ② 다른 날짜 탭 → 인라인 내용 교체
+ * ③ 기본 선택 = 오늘
+ * ④ "상세 열기 →" 탭 → CalendarDaySheet 오픈 (심화 통로)
+ * ⑤ 인라인 리스트 할 일 편집 진입 (6b 회귀 — DayDetailContent 재사용 증명)
+ * ⑥ 데스크탑 월별 → 인라인 상세 미렌더 (데스크탑 무변경)
+ *
+ * TODAY = 2026-07-15 (정오 KST fake timer).
+ */
+describe('Calendar — 모바일 월별 인라인 선택일 (6c)', () => {
+  function inlineNote(id: string, content: string, date: string): DailyNote {
+    return { id, content, date, hourSlot: null, isDone: false, createdAt: '2026-07-16T00:00:00Z' }
+  }
+
+  beforeEach(() => {
+    isMobile = true
+    useToastStore.setState({ toasts: [] })
+    inlineNotesByDate = {
+      '2026-07-15': [inlineNote('n-today', '오늘의 할일', '2026-07-15')],
+      '2026-07-25': [inlineNote('n-25', '25일 할일', '2026-07-25')],
+      '2026-07-10': [inlineNote('n-10', '10일 할일', '2026-07-10')],
+    }
+  })
+
+  function openMonth() {
+    renderCalendar()
+    fireEvent.click(screen.getByRole('button', { name: '월별' }))
+  }
+
+  it('③ 기본 선택 = 오늘 → 오늘 상세 인라인 렌더 (시트 미발동)', () => {
+    openMonth()
+    expect(screen.getByText('오늘의 할일')).toBeInTheDocument()
+    expect(screen.queryByText('day-sheet-open')).toBeNull()
+  })
+
+  it('① 날짜 탭 → 시트 안 뜨고 해당 날짜 상세 인라인 렌더', () => {
+    openMonth()
+    fireEvent.click(screen.getByRole('button', { name: 'grid-pick-25' }))
+    expect(screen.getByText('25일 할일')).toBeInTheDocument()
+    expect(screen.queryByText('오늘의 할일')).toBeNull()
+    expect(screen.queryByText('day-sheet-open')).toBeNull()
+  })
+
+  it('② 다른 날짜 탭 → 인라인 내용 교체', () => {
+    openMonth()
+    fireEvent.click(screen.getByRole('button', { name: 'grid-pick-25' }))
+    expect(screen.getByText('25일 할일')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'grid-pick-10' }))
+    expect(screen.getByText('10일 할일')).toBeInTheDocument()
+    expect(screen.queryByText('25일 할일')).toBeNull()
+  })
+
+  it('④ "상세 열기 →" 탭 → CalendarDaySheet 오픈', () => {
+    openMonth()
+    expect(screen.queryByText('day-sheet-open')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /상세 열기/ }))
+    expect(screen.getByText('day-sheet-open')).toBeInTheDocument()
+  })
+
+  it('⑤ 인라인 리스트 할 일 텍스트 탭 → 편집기 진입 (DayDetailContent 6b 재사용)', () => {
+    openMonth()
+    fireEvent.click(screen.getByRole('button', { name: '할 일 수정' }))
+    expect(screen.getByRole('textbox', { name: '할 일 수정' })).toHaveValue('오늘의 할일')
+  })
+
+  it('⑥ 데스크탑 월별 → 인라인 상세 미렌더 (데스크탑 무변경)', () => {
+    isMobile = false
+    renderCalendar()
+    fireEvent.click(screen.getByRole('button', { name: '월별' }))
+    // 데스크탑은 aside(CalendarDayPanel mock=null) 경로 — 그리드 아래 인라인 상세 없음
+    expect(screen.queryByText('오늘의 할일')).toBeNull()
   })
 })

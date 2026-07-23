@@ -6,6 +6,11 @@
  * 4. 실패 롤백 → onError 시 미완료로 복귀 + 에러 토스트
  * 5. step/exam → 체크박스 없음 · 상세 링크 렌더
  * 6. 외부 갱신 반영 — 서버값 일치 후 override 해제, 이후 외부(시트) 변경 반영
+ *
+ * 6b 인라인 편집 · 삭제:
+ * ⑧ note 카드 삭제 → useDeleteNoteWithUndo 호출(즉시 삭제 + 되돌리기) · 시간 note 는 hourSlot 복원
+ * ⑨ step 카드 → 편집 진입·삭제 버튼 없음 (무변경)
+ * ⑩ note 본문 탭 → 인라인 편집기(textarea) 진입
  */
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -16,9 +21,11 @@ import { DEADLINE_DISPLAY_TIME } from '@/utils/datetime'
 import type { CalendarEvent } from '@/api/calendar'
 
 const updateMutate = vi.fn()
+const deleteWithUndo = vi.fn()
 
 vi.mock('@/hooks/useCalendar', () => ({
   useUpdateDailyNote: () => ({ mutate: updateMutate }),
+  useDeleteNoteWithUndo: () => deleteWithUndo,
 }))
 
 function ev(partial: Partial<CalendarEvent> & { type: CalendarEvent['type'] }): CalendarEvent {
@@ -144,5 +151,51 @@ describe('AgendaEventCard — 완료 체크박스 (U27)', () => {
     )
     expect(screen.getByRole('button', { name: '완료 표시' })).toBeInTheDocument()
     expect(screen.getByText('인적성 문제집')).not.toHaveClass('line-through')
+  })
+
+  it('⑧ note 카드 삭제 → useDeleteNoteWithUndo(정확한 note) 호출', () => {
+    renderCard(ev({ type: 'note', noteId: 'n1', date: '2026-07-16', content: '메모 삭제 대상' }))
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }))
+    expect(deleteWithUndo).toHaveBeenCalledWith({
+      id: 'n1',
+      date: '2026-07-16',
+      hourSlot: null,
+      content: '메모 삭제 대상',
+    })
+  })
+
+  it('⑧-시간 note 삭제 → time 으로 hourSlot 복원 (undo 재생성용)', () => {
+    renderCard(
+      ev({ type: 'note', noteId: 'n2', date: '2026-07-16', content: '09시 메모', time: '09:00:00' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }))
+    expect(deleteWithUndo).toHaveBeenCalledWith({
+      id: 'n2',
+      date: '2026-07-16',
+      hourSlot: 6, // 06:00 = slot 0 · 30분 단위 → 09:00 = slot 6
+      content: '09시 메모',
+    })
+  })
+
+  it('⑨ step 카드 → 편집 진입·삭제 버튼 없음 (무변경)', () => {
+    renderCard(
+      ev({ type: 'step', applicationId: 'a1', stepId: 's1', companyName: '카카오', stepName: '면접' }),
+    )
+    expect(screen.queryByRole('button', { name: '할 일 수정' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '삭제' })).toBeNull()
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/board/a1/steps/s1')
+  })
+
+  it('⑩ note 본문 탭 → 인라인 편집기(textarea) 진입', () => {
+    renderCard(ev({ type: 'note', noteId: 'n1', content: '수정할 메모' }))
+    fireEvent.click(screen.getByRole('button', { name: '할 일 수정' }))
+    const textarea = screen.getByRole('textbox', { name: '할 일 수정' }) as HTMLTextAreaElement
+    expect(textarea).toHaveValue('수정할 메모')
+  })
+
+  it('⑩-Space 키보드 Space 로도 편집 진입 (role=button 관례)', () => {
+    renderCard(ev({ type: 'note', noteId: 'n1', content: '수정할 메모' }))
+    fireEvent.keyDown(screen.getByRole('button', { name: '할 일 수정' }), { key: ' ' })
+    expect(screen.getByRole('textbox', { name: '할 일 수정' })).toBeInTheDocument()
   })
 })

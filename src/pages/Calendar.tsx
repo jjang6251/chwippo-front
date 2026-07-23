@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
@@ -16,6 +16,7 @@ import { CalendarAgendaView } from '@/components/calendar/CalendarAgendaView'
 import { CalendarMonthlyGrid } from '@/components/calendar/CalendarMonthlyGrid'
 import { CalendarSideMinimap } from '@/components/calendar/CalendarSideMinimap'
 import { CalendarDayPanel } from '@/components/calendar/CalendarDayPanel'
+import { DayDetailContent } from '@/components/calendar/DayDetailContent'
 import { CalendarDaySheet } from '@/components/calendar/CalendarDaySheet'
 import { CountdownHeroLarge } from '@/components/calendar/CountdownHeroLarge'
 import { TodayBriefingBanner } from '@/components/calendar/TodayBriefingBanner'
@@ -52,6 +53,16 @@ export function Calendar() {
   const todayStr = todayLocal()
   const today = dayjs(todayStr)
   const [selectedDate, setSelectedDate] = useState<string>(todayStr)
+  // 6c — 모바일 월별: 날짜 탭 시 인라인 상세가 그리드 아래(화면 밖)라 사용자 탭에만 스크롤 유도 (초기 로드 제외)
+  const inlineDayRef = useRef<HTMLDivElement>(null)
+  const scrollInlineIntoView = () => {
+    requestAnimationFrame(() => {
+      inlineDayRef.current?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+      })
+    })
+  }
   const [starOnly, setStarOnly] = useState(false)
   const [addSheetOpen, setAddSheetOpen] = useState(false)
   const [addSheetDate, setAddSheetDate] = useState<string>(todayStr)
@@ -308,7 +319,7 @@ export function Calendar() {
       </div>
 
       {view === 'agenda' ? (
-        <div className={isMobile ? '' : 'grid grid-cols-[1fr_320px] gap-8'}>
+        <div className={isMobile ? '' : 'grid grid-cols-[minmax(0,1fr)_320px] gap-8'}>
           {/* Main — Agenda */}
           <div>
             {/* A7 — 오늘 브리핑 진입점 (오늘 브리핑 알림 있을 때만) */}
@@ -382,7 +393,7 @@ export function Calendar() {
           )}
         </div>
       ) : (
-        <div className={isMobile ? '' : 'grid grid-cols-[1fr_320px] gap-8'}>
+        <div className={isMobile ? '' : 'grid grid-cols-[minmax(0,1fr)_320px] gap-8'}>
           <div>
             {/* A7 — 오늘 브리핑 진입점 (아젠다 뷰와 동일 — 뷰 상관없이 노출) */}
             <TodayBriefingBanner />
@@ -391,10 +402,27 @@ export function Calendar() {
               key={todayResetSignal}
               events={agendaEvents}
               selectedDate={selectedDate}
-              onSelectDate={handleSelectDate}
+              // 6c — 월별 그리드 탭은 선택만 변경 (시트 미발동). 모바일은 아래 인라인 상세, 데스크탑은 사이드 패널로 반영.
+              onSelectDate={(d) => {
+                setSelectedDate(d)
+                if (isMobile) scrollInlineIntoView()
+              }}
               onToday={() => setSelectedDate(todayStr)}
               todayPulse={todayResetSignal}
             />
+            {/* 6c — 모바일 월별: 선택일 상세를 그리드 아래 인라인 렌더 (DayDetailContent 재사용). "상세 열기 →" = 기존 시트 통로 */}
+            {isMobile && (
+              <div ref={inlineDayRef} className="mt-4 scroll-mt-3 rounded-2xl bg-surface border border-line overflow-hidden">
+                <DayDetailContent
+                  date={selectedDate}
+                  events={agendaEvents.filter((e) => e.date === selectedDate)}
+                  onExpand={() => {
+                    setDaySheetDate(selectedDate)
+                    setDaySheetOpen(true)
+                  }}
+                />
+              </div>
+            )}
           </div>
           {!isMobile && (
             <aside className="sticky top-6 h-fit space-y-3">

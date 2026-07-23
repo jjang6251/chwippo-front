@@ -19,12 +19,21 @@
  *
  * 빈 상태:
  * 11. 빈 날짜 → 종일/시간 이벤트 "없음" + "아직 할 일이 없어요"
+ *
+ * 6b 인라인 편집:
+ * ① 텍스트 탭 → textarea 나타나고 원값 채워짐
+ * ② 수정 후 Enter → PATCH {content} + 편집 종료
+ * ③ 수정 후 저장 버튼 → 동일
+ * ④ ESC → PATCH 미호출 · 원값 표시
+ * ⑤ 빈 값 저장 → PATCH 미호출 · 원값 복원
+ * ⑥ PATCH 실패 → 토스트 + 편집 유지(입력값 보존)
+ * ⑦ 체크박스 토글 회귀 — updateNote(isDone) · 편집 미진입
  */
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DayDetailContent } from './DayDetailContent'
-import { useToastStore } from '@/stores/toastStore'
+import { useToastStore, toast } from '@/stores/toastStore'
 import type { DailyNote } from '@/api/calendar'
 import { todayLocal, addDays } from '@/utils/datetime'
 
@@ -43,7 +52,17 @@ vi.mock('@/hooks/useCalendar', () => ({
   useDailyNotes: (date: string | null) => ({ data: date ? (notesByDate[date] ?? []) : [] }),
   useCreateDailyNote: () => ({ mutate: createNote }),
   useUpdateDailyNote: () => ({ mutate: updateNote }),
-  useDeleteDailyNote: () => ({ mutate: deleteNote }),
+  // 6b — 삭제 undo 훅. 실제 로직(delete + 되돌리기 토스트 + undo 재생성)을 spy 로 재현해
+  //       기존 U13 시나리오(5·6·7)를 회귀 없이 검증한다.
+  useDeleteNoteWithUndo:
+    () =>
+    (n: { id: string; date: string; hourSlot: number | null; content: string }) => {
+      deleteNote(n.id)
+      toast.action('삭제됨', {
+        label: '되돌리기',
+        onAction: () => createNote({ date: n.date, hourSlot: n.hourSlot, content: n.content }),
+      })
+    },
   useCarryOverDailyNote: () => ({ mutate: carryOver }),
   useUrgentChecklist: () => ({ data: [] }),
   useCompleteUrgentChecklistItem: () => ({ mutate: vi.fn(), isPending: false }),
@@ -208,5 +227,114 @@ describe('DayDetailContent — 이월 (U12) · 빈 상태', () => {
     expect(screen.getByText('아직 할 일이 없어요')).toBeInTheDocument()
     // 입력 고스트 행은 존재
     expect(screen.getByRole('textbox', { name: '할 일 추가' })).toBeInTheDocument()
+  })
+})
+
+describe('DayDetailContent — 할 일 인라인 편집 (6b)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    updateNote.mockReset()
+    notesByDate = {}
+    useToastStore.setState({ toasts: [] })
+  })
+
+  function openEditor(content = '이력서 검토') {
+    notesByDate = { [TODAY]: [note({ id: 'n1', content, date: TODAY })] }
+    renderContent(TODAY)
+    fireEvent.click(screen.getByRole('button', { name: '할 일 수정' }))
+    return screen.getByRole('textbox', { name: '할 일 수정' }) as HTMLTextAreaElement
+  }
+
+  it('① 텍스트 탭 → textarea 나타나고 원값 채워짐', () => {
+    const textarea = openEditor()
+    expect(textarea).toBeInTheDocument()
+    expect(textarea).toHaveValue('이력서 검토')
+  })
+
+  it('①-Space 키보드 Space 로도 편집 진입 (role=button 관례)', () => {
+    notesByDate = { [TODAY]: [note({ id: 'n1', content: '이력서 검토', date: TODAY })] }
+    renderContent(TODAY)
+    fireEvent.keyDown(screen.getByRole('button', { name: '할 일 수정' }), { key: ' ' })
+    expect(screen.getByRole('textbox', { name: '할 일 수정' })).toBeInTheDocument()
+  })
+
+  it('② 수정 후 Enter → PATCH {content} + 편집 종료', () => {
+    updateNote.mockImplementation((_v, opts) => opts?.onSuccess?.())
+    const textarea = openEditor()
+    fireEvent.change(textarea, { target: { value: '이력서 최종 검토' } })
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+    expect(updateNote).toHaveBeenCalledWith(
+      { id: 'n1', content: '이력서 최종 검토' },
+      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    )
+    // 편집 종료 → textarea 사라지고 편집 진입(할 일 수정) 버튼 복귀
+    expect(screen.queryByRole('textbox', { name: '할 일 수정' })).toBeNull()
+    expect(screen.getByRole('button', { name: '할 일 수정' })).toBeInTheDocument()
+  })
+
+  it('②-IME 조합 확정 Enter 는 저장 안 함', () => {
+    const textarea = openEditor()
+    fireEvent.change(textarea, { target: { value: '조합 중 값' } })
+    fireEvent.keyDown(textarea, { key: 'Enter', isComposing: true })
+    expect(updateNote).not.toHaveBeenCalled()
+    // 편집 유지
+    expect(screen.getByRole('textbox', { name: '할 일 수정' })).toBeInTheDocument()
+  })
+
+  it('③ 수정 후 저장 버튼 클릭 → PATCH {content} + 편집 종료', () => {
+    updateNote.mockImplementation((_v, opts) => opts?.onSuccess?.())
+    const textarea = openEditor()
+    fireEvent.change(textarea, { target: { value: '  이력서 v2  ' } })
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+    expect(updateNote).toHaveBeenCalledWith(
+      { id: 'n1', content: '이력서 v2' },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
+    expect(screen.queryByRole('textbox', { name: '할 일 수정' })).toBeNull()
+  })
+
+  it('④ ESC → PATCH 미호출 · 원값 표시', () => {
+    const textarea = openEditor()
+    fireEvent.change(textarea, { target: { value: '바뀐 값' } })
+    fireEvent.keyDown(textarea, { key: 'Escape' })
+    expect(updateNote).not.toHaveBeenCalled()
+    expect(screen.queryByRole('textbox', { name: '할 일 수정' })).toBeNull()
+    expect(screen.getByText('이력서 검토')).toBeInTheDocument()
+  })
+
+  it('⑤ 빈 값 저장 시도 → PATCH 미호출 · 원값 복원', () => {
+    const textarea = openEditor()
+    fireEvent.change(textarea, { target: { value: '   ' } })
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+    expect(updateNote).not.toHaveBeenCalled()
+    expect(screen.queryByRole('textbox', { name: '할 일 수정' })).toBeNull()
+    expect(screen.getByText('이력서 검토')).toBeInTheDocument()
+  })
+
+  it('⑥ PATCH 실패 → 토스트 + 편집 유지(입력값 보존)', () => {
+    updateNote.mockImplementation((_v, opts) => opts?.onError?.())
+    const textarea = openEditor()
+    fireEvent.change(textarea, { target: { value: '실패할 값' } })
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+    expect(updateNote).toHaveBeenCalled()
+    // 편집 유지 + 입력값 보존
+    const stillThere = screen.getByRole('textbox', { name: '할 일 수정' })
+    expect(stillThere).toHaveValue('실패할 값')
+    // 실패 토스트
+    expect(
+      useToastStore
+        .getState()
+        .toasts.some((t) => t.type === 'error' && t.message.includes('저장에 실패')),
+    ).toBe(true)
+  })
+
+  it('⑦ 체크박스 토글 회귀 — updateNote(isDone) · 편집 미진입', () => {
+    notesByDate = {
+      [TODAY]: [note({ id: 'n1', content: '이력서 검토', date: TODAY, isDone: false })],
+    }
+    renderContent(TODAY)
+    fireEvent.click(screen.getByRole('button', { name: '완료 표시' }))
+    expect(updateNote).toHaveBeenCalledWith({ id: 'n1', isDone: true })
+    expect(screen.queryByRole('textbox', { name: '할 일 수정' })).toBeNull()
   })
 })
