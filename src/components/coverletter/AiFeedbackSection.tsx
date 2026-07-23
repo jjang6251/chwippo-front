@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
+import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { useAiFeedbackStore } from '@/stores/aiFeedbackStore'
 import type {
   CoverletterFeedback,
@@ -70,6 +71,12 @@ export function AiFeedbackSection({
   const entry = useAiFeedbackStore((s) => s.entries[clId])
   const requestFeedback = useAiFeedbackStore((s) => s.requestFeedback)
   const clear = useAiFeedbackStore((s) => s.clear)
+  const ensureAiConsent = useRequireAiConsent()
+
+  const runFeedback = async () => {
+    if (!(await ensureAiConsent())) return
+    requestFeedback(clId)
+  }
 
   const status = entry?.status
   const isRunning = status === 'running'
@@ -90,7 +97,8 @@ export function AiFeedbackSection({
     setAppliedIdx((prev) => new Set(prev).add(i))
   }
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
+    if (!(await ensureAiConsent())) return
     setAppliedIdx(new Set())
     setNotFoundIdx(new Set())
     clear(clId)
@@ -111,7 +119,7 @@ export function AiFeedbackSection({
           <div className="flex items-center gap-2 shrink-0">
             <AiQuotaChip feature="coverletter_feedback" />
             <button
-              onClick={() => requestFeedback(clId)}
+              onClick={() => runFeedback()}
               disabled={quotaBlocked}
               title={quotaReason ?? undefined}
               className="shrink-0 text-xs font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-3 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -143,7 +151,7 @@ export function AiFeedbackSection({
             {entry?.errorMsg ?? '점검에 실패했어요.'}
           </p>
           <button
-            onClick={() => requestFeedback(clId)}
+            onClick={() => runFeedback()}
             disabled={quotaBlocked}
             title={quotaReason ?? undefined}
             className="shrink-0 text-xs font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-3 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -235,7 +243,7 @@ export function AiFeedbackSection({
             <div className="flex items-center gap-2 shrink-0">
               <AiQuotaChip feature="coverletter_feedback" />
               <button
-                onClick={handleRetry}
+                onClick={() => handleRetry()}
                 disabled={quotaBlocked}
                 className="shrink-0 text-[11px] font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 title={quotaReason ?? '답변을 다시 점검해요 (약 10코인)'}
