@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
+import type { DailyNote } from '@/api/calendar'
 import { getCalendarEvents, getDailyNotes, createDailyNote, updateDailyNote, deleteDailyNote, carryOverDailyNote, getUrgentChecklist } from '@/api/calendar'
 import { updateChecklistItem } from '@/api/stepDetail'
 import { toast } from '@/stores/toastStore'
@@ -76,6 +77,23 @@ export function useDeleteDailyNote(date: string) {
     },
     onError: () => toast.error('삭제에 실패했습니다.'),
   })
+}
+
+/**
+ * U13 / 6b — 즉시 삭제 + "되돌리기" 토스트(5초). undo = 같은 content·date·hourSlot 재생성.
+ * DayDetailContent · AgendaEventCard 양쪽 공유 (handleDeleteNote 로직 추출).
+ */
+export function useDeleteNoteWithUndo(date: string) {
+  const { mutate: deleteNote } = useDeleteDailyNote(date)
+  const { mutate: createNote } = useCreateDailyNote(date)
+  return (note: Pick<DailyNote, 'id' | 'date' | 'hourSlot' | 'content'>) => {
+    deleteNote(note.id)
+    toast.action('삭제됨', {
+      label: '되돌리기',
+      onAction: () =>
+        createNote({ date: note.date, hourSlot: note.hourSlot, content: note.content }),
+    })
+  }
 }
 
 /** A3 — 오늘 할 일 자동 합류: D-3 이내 스텝의 미완 체크리스트 (오늘 패널에서만 사용) */
