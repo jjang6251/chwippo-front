@@ -46,7 +46,7 @@ export interface JobPostingParseBlocked {
    * QUOTA_EXCEEDED — 오늘 한도 소진 (200 + blocked 봉투).
    * ALREADY_PARSING — 이미 정리 중 (다른 요청/새로고침 재진입). LLM 미호출·차감 없음.
    */
-  code: 'QUOTA_EXCEEDED' | 'ALREADY_PARSING'
+  code: 'QUOTA_EXCEEDED' | 'ALREADY_PARSING' | 'CONSENT_REQUIRED'
   reason?: string
   quota: JobPostingQuota
 }

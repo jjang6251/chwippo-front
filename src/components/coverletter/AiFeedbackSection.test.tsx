@@ -33,6 +33,13 @@ vi.mock('@/hooks/useMyAiQuotas', () => ({
   useMyAiQuota: vi.fn(() => undefined),
   useAiQuotaBlocked: vi.fn(() => ({ blocked: false, reason: null })),
 }))
+// AI 사용 동의 사전 게이트 — 기본 동의(true). 미동의 시나리오는 개별 테스트에서 override.
+const { ensureConsentMock } = vi.hoisted(() => ({
+  ensureConsentMock: vi.fn(async () => true),
+}))
+vi.mock('@/hooks/useRequireAiConsent', () => ({
+  useRequireAiConsent: () => ensureConsentMock,
+}))
 
 const postMock = vi.mocked(apiClient.post)
 const blockedMock = vi.mocked(useAiQuotaBlocked)
@@ -56,6 +63,7 @@ describe('AiFeedbackSection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     blockedMock.mockReturnValue({ blocked: false, reason: null })
+    ensureConsentMock.mockResolvedValue(true)
     useAiFeedbackStore.setState({ entries: {} })
   })
 
@@ -179,8 +187,50 @@ describe('AiFeedbackSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '↻ 재검사' }))
 
-    expect(postMock).toHaveBeenCalledWith('/coverletters/cl-1/ai-feedback')
+    await waitFor(() =>
+      expect(postMock).toHaveBeenCalledWith('/coverletters/cl-1/ai-feedback'),
+    )
     // 새 결과가 store 를 통해 다시 렌더됨
     expect(await screen.findByText('AI 티 나는 표현')).toBeInTheDocument()
+  })
+
+  it('미동의 — 점검 받기 클릭 → 게이트 차단으로 API 미호출', async () => {
+    ensureConsentMock.mockResolvedValue(false)
+    postMock.mockResolvedValue(OK_RESPONSE as never)
+    render(<AiFeedbackSection clId="cl-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
+
+    await waitFor(() => expect(ensureConsentMock).toHaveBeenCalled())
+    expect(postMock).not.toHaveBeenCalled()
+  })
+
+  it('동의 — 점검 받기 클릭 → 게이트 통과 후 API 호출', async () => {
+    postMock.mockResolvedValue(OK_RESPONSE as never)
+    render(<AiFeedbackSection clId="cl-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
+
+    await waitFor(() =>
+      expect(postMock).toHaveBeenCalledWith('/coverletters/cl-1/ai-feedback'),
+    )
+    expect(ensureConsentMock).toHaveBeenCalled()
+  })
+
+  it('재검사 미동의 → clear·재호출 없음', async () => {
+    ensureConsentMock.mockResolvedValue(false)
+    postMock.mockResolvedValue(OK_RESPONSE as never)
+    render(
+      <AiFeedbackSection
+        clId="cl-1"
+        lastFeedback={FEEDBACK}
+        lastFeedbackAt={new Date().toISOString()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '↻ 재검사' }))
+
+    await waitFor(() => expect(ensureConsentMock).toHaveBeenCalled())
+    expect(postMock).not.toHaveBeenCalled()
   })
 })
