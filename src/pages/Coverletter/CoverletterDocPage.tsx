@@ -241,7 +241,7 @@ export function CoverletterDocPage() {
       />
 
       {/* write-shell: 2-pane (Phase D 에서 채움) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-[18px] lg:gap-[22px]">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-[18px] lg:gap-[22px]">
         <div className="space-y-3">
           {cls.length === 0 ? (
             readOnly ? (
