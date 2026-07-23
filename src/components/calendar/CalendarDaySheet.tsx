@@ -31,6 +31,11 @@ export function CalendarDaySheet({ open, date, events, onClose, onAddOnDate }: P
             const target = e.target as HTMLElement | null
             if (target?.closest('[data-toast-container]')) e.preventDefault()
           }}
+          onEscapeKeyDown={(e) => {
+            // 인라인 편집 중 ESC 는 편집 취소만 — 시트 닫기로 삼키지 않음 (캡처 단계라 에디터 stopPropagation 으론 못 막음)
+            const target = e.target as HTMLElement | null
+            if (target?.closest('[data-note-editor]')) e.preventDefault()
+          }}
           className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[90dvh] flex flex-col shadow-2xl outline-none"
         >
           <Drawer.Title className="sr-only">날짜 상세</Drawer.Title>

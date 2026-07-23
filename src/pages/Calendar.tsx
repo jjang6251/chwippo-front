@@ -308,7 +308,7 @@ export function Calendar() {
       </div>
 
       {view === 'agenda' ? (
-        <div className={isMobile ? '' : 'grid grid-cols-[1fr_320px] gap-8'}>
+        <div className={isMobile ? '' : 'grid grid-cols-[minmax(0,1fr)_320px] gap-8'}>
           {/* Main — Agenda */}
           <div>
             {/* A7 — 오늘 브리핑 진입점 (오늘 브리핑 알림 있을 때만) */}
@@ -382,7 +382,7 @@ export function Calendar() {
           )}
         </div>
       ) : (
-        <div className={isMobile ? '' : 'grid grid-cols-[1fr_320px] gap-8'}>
+        <div className={isMobile ? '' : 'grid grid-cols-[minmax(0,1fr)_320px] gap-8'}>
           <div>
             {/* A7 — 오늘 브리핑 진입점 (아젠다 뷰와 동일 — 뷰 상관없이 노출) */}
             <TodayBriefingBanner />

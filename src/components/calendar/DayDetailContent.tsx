@@ -3,25 +3,24 @@ import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { PenLine, BookOpen, FileText, TriangleAlert } from 'lucide-react'
 import { useDemoLink } from '@/hooks/useDemoLink'
-import type { CalendarEvent, DailyNote } from '@/api/calendar'
+import type { CalendarEvent } from '@/api/calendar'
 import {
   useDailyNotes,
   useCreateDailyNote,
   useUpdateDailyNote,
-  useDeleteDailyNote,
+  useDeleteNoteWithUndo,
   useUrgentChecklist,
   useCompleteUrgentChecklistItem,
   useCarryOverDailyNote,
 } from '@/hooks/useCalendar'
+import { InlineNoteEditor, NOTE_MAX } from './InlineNoteEditor'
 import { calcDday, getDdayLabel } from '@/utils/dday'
 import { detectScheduleConflicts } from '@/utils/scheduleConflict'
 import { getHolidayName } from '@/utils/holidays'
 import { todayLocal, addDays, DEADLINE_DISPLAY_TIME } from '@/utils/datetime'
-import { toast } from '@/stores/toastStore'
 
 const KO_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const BASE_HOUR = 6
-const NOTE_MAX = 200
 const NOTE_COUNTER_THRESHOLD = 150
 
 /**
@@ -124,13 +123,15 @@ export function DayDetailContent({ date, events, onClose }: Props) {
   const yesterday = isToday ? addDays(todayLocal(), -1) : null
 
   const [inputText, setInputText] = useState('')
+  // 6b — 한 번에 1행만 인라인 편집 (할 일 텍스트 탭 진입)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const { data: notes = [], isLoading: notesLoading = false } = useDailyNotes(date)
   // U12 — 어제 미완료 이월 후보 (오늘 볼 때만 조회)
   const { data: yesterdayNotes = [] } = useDailyNotes(yesterday)
   const { mutate: createNote } = useCreateDailyNote(date)
   const { mutate: updateNote } = useUpdateDailyNote(date)
-  const { mutate: deleteNote } = useDeleteDailyNote(date)
+  const deleteNoteWithUndo = useDeleteNoteWithUndo(date)
   const { mutate: carryOver } = useCarryOverDailyNote()
   // A3 — 오늘 패널에만 D-3 이내 스텝 미완 체크리스트 합류 (read-through)
   const { data: urgentItems = [] } = useUrgentChecklist(isToday)
@@ -159,16 +160,6 @@ export function DayDetailContent({ date, events, onClose }: Props) {
     if (!content) return
     createNote({ date, hourSlot: null, content })
     setInputText('')
-  }
-
-  // U13 — 즉시 삭제 + "되돌리기" 토스트(5초). undo = 같은 content·date·hourSlot 재생성
-  function handleDeleteNote(note: DailyNote) {
-    deleteNote(note.id)
-    toast.action('삭제됨', {
-      label: '되돌리기',
-      onAction: () =>
-        createNote({ date: note.date, hourSlot: note.hourSlot, content: note.content }),
-    })
   }
 
   const overThreshold = inputText.length >= NOTE_COUNTER_THRESHOLD
@@ -362,22 +353,38 @@ export function DayDetailContent({ date, events, onClose }: Props) {
                   )}
                 </span>
               </button>
-              <span
-                className={`text-[11px] flex-1 min-w-0 truncate ${
-                  n.isDone ? 'line-through text-text-quaternary' : 'text-text-secondary'
-                }`}
-              >
-                {n.content}
-              </span>
-              <button
-                aria-label="삭제"
-                onClick={() => handleDeleteNote(n)}
-                className="opacity-100 sm:opacity-0 sm:group-hover/note:opacity-100 text-text-quaternary hover:text-danger w-11 h-11 -mr-2.5 sm:-my-3 flex items-center justify-center transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg rounded"
-              >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M2 2l6 6M8 2L2 8" />
-                </svg>
-              </button>
+              {editingId === n.id ? (
+                <InlineNoteEditor note={n} onDone={() => setEditingId(null)} />
+              ) : (
+                <>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label="할 일 수정"
+                    onClick={() => setEditingId(n.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setEditingId(n.id)
+                      }
+                    }}
+                    className={`text-[11px] flex-1 min-w-0 line-clamp-2 break-words cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg ${
+                      n.isDone ? 'line-through text-text-quaternary' : 'text-text-secondary'
+                    }`}
+                  >
+                    {n.content}
+                  </span>
+                  <button
+                    aria-label="삭제"
+                    onClick={() => deleteNoteWithUndo(n)}
+                    className="opacity-100 sm:opacity-0 sm:group-hover/note:opacity-100 text-text-quaternary hover:text-danger w-11 h-11 -mr-2.5 sm:-my-3 flex items-center justify-center transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg rounded"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M2 2l6 6M8 2L2 8" />
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
           ))}
 
@@ -397,7 +404,7 @@ export function DayDetailContent({ date, events, onClose }: Props) {
               >
                 <span className="w-4 h-4 rounded-sm border border-line-strong shrink-0" aria-hidden="true" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] truncate text-text-tertiary">{n.content}</p>
+                  <p className="text-[11px] line-clamp-2 break-words text-text-tertiary">{n.content}</p>
                   <p className="text-[10px] text-text-quaternary mt-0.5">어제 못 끝낸 일</p>
                 </div>
                 <button
@@ -450,22 +457,38 @@ export function DayDetailContent({ date, events, onClose }: Props) {
                     </svg>
                   )}
                 </button>
-                <span
-                  className={`text-[11px] flex-1 min-w-0 truncate ${
-                    n.isDone ? 'line-through text-text-quaternary' : 'text-text-secondary'
-                  }`}
-                >
-                  {n.content}
-                </span>
-                <button
-                  aria-label="삭제"
-                  onClick={() => handleDeleteNote(n)}
-                  className="opacity-100 sm:opacity-0 sm:group-hover/note:opacity-100 text-text-quaternary hover:text-danger w-11 h-11 -mr-2.5 sm:-my-3 flex items-center justify-center transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg rounded"
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <path d="M2 2l6 6M8 2L2 8" />
-                  </svg>
-                </button>
+                {editingId === n.id ? (
+                  <InlineNoteEditor note={n} onDone={() => setEditingId(null)} />
+                ) : (
+                  <>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label="할 일 수정"
+                      onClick={() => setEditingId(n.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setEditingId(n.id)
+                        }
+                      }}
+                      className={`text-[11px] flex-1 min-w-0 truncate cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg ${
+                        n.isDone ? 'line-through text-text-quaternary' : 'text-text-secondary'
+                      }`}
+                    >
+                      {n.content}
+                    </span>
+                    <button
+                      aria-label="삭제"
+                      onClick={() => deleteNoteWithUndo(n)}
+                      className="opacity-100 sm:opacity-0 sm:group-hover/note:opacity-100 text-text-quaternary hover:text-danger w-11 h-11 -mr-2.5 sm:-my-3 flex items-center justify-center transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg rounded"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <path d="M2 2l6 6M8 2L2 8" />
+                      </svg>
+                    </button>
+                  </>
+                )}
               </div>
             ))}
           </div>
