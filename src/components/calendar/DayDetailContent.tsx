@@ -37,6 +37,8 @@ interface Props {
   date: string
   events: CalendarEvent[]
   onClose?: () => void
+  /** 6c — 인라인(모바일 월별) 헤더 우측 "상세 열기 →" 진입점. onClose 와 배타 (인라인=onExpand·시트=onClose). */
+  onExpand?: () => void
 }
 
 /** 시간 있는 이벤트 정렬 (없는 것은 뒤로) */
@@ -116,7 +118,7 @@ function EventLink({ event }: { event: CalendarEvent }) {
   return inner
 }
 
-export function DayDetailContent({ date, events, onClose }: Props) {
+export function DayDetailContent({ date, events, onClose, onExpand }: Props) {
   const link = useDemoLink()
   const d = dayjs(date)
   const isToday = date === todayLocal()
@@ -183,7 +185,14 @@ export function DayDetailContent({ date, events, onClose }: Props) {
             </span>
           )}
         </div>
-        {onClose && (
+        {onExpand ? (
+          <button
+            onClick={onExpand}
+            className="shrink-0 text-[11px] text-text-tertiary hover:text-text-secondary transition-colors rounded py-3.5 -my-3.5 px-2 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+          >
+            상세 열기 →
+          </button>
+        ) : onClose ? (
           <button
             onClick={onClose}
             aria-label="닫기"
@@ -193,7 +202,7 @@ export function DayDetailContent({ date, events, onClose }: Props) {
               <path d="M3 3l10 10M13 3L3 13" />
             </svg>
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* A4 — 일정 충돌 경고 */}
