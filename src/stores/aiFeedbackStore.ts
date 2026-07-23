@@ -70,19 +70,23 @@ export const useAiFeedbackStore = create<AiFeedbackState>((set, get) => ({
           }))
         }
       },
-      () => {
-        // 네트워크·서버 실패 — 인라인 에러 + 토스트
+      (err) => {
+        // 네트워크·서버 실패 — 서버 message(503 장애 문구 등) 우선, 없으면 고정 문구
+        const serverMsg = (
+          err as { response?: { data?: { message?: string } } }
+        )?.response?.data?.message
+        const msg = serverMsg ?? '점검 요청에 실패했어요. 잠시 후 다시 시도해 주세요.'
         set((s) => ({
           entries: {
             ...s.entries,
             [clId]: {
               status: 'error',
-              errorMsg: '점검 요청에 실패했어요. 잠시 후 다시 시도해 주세요.',
+              errorMsg: msg,
               startedAt,
             },
           },
         }))
-        toast.error('점검 요청에 실패했어요. 잠시 후 다시 시도해 주세요.')
+        toast.error(msg)
       },
     )
   },

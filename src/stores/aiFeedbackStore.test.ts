@@ -79,6 +79,21 @@ describe('aiFeedbackStore', () => {
     expect(toast.error).toHaveBeenCalled()
   })
 
+  it('start → error — 서버 message(503 장애 문구) 우선 사용', async () => {
+    const providerMsg = 'AI 제공사 일시 장애예요. 잠시 후 다시 시도해 주세요.'
+    await useAiFeedbackStore
+      .getState()
+      .start(
+        'cl-1',
+        Promise.reject({ response: { data: { message: providerMsg } } }),
+      )
+
+    const entry = useAiFeedbackStore.getState().entries['cl-1']
+    expect(entry.status).toBe('error')
+    expect(entry.errorMsg).toBe(providerMsg)
+    expect(toast.error).toHaveBeenCalledWith(providerMsg)
+  })
+
   it('clear — entry 제거', async () => {
     await useAiFeedbackStore
       .getState()

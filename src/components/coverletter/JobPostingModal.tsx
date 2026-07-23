@@ -3,6 +3,8 @@ import { Modal } from '@/components/common/Modal'
 import { toast } from '@/stores/toastStore'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
+import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
+import { useAiConsentStore } from '@/stores/aiConsentStore'
 import { useParseJobPosting, useUpdateJobPosting } from '@/hooks/useJobPosting'
 import { isNotPosting, isParseBlocked, type JobPosting } from '@/api/jobPosting'
 
@@ -51,6 +53,8 @@ export function JobPostingModal({
 }: Props) {
   const { mutate: parse, isPending: parsing } = useParseJobPosting(applicationId)
   const { mutate: save, isPending: saving } = useUpdateJobPosting(applicationId)
+  const ensureAiConsent = useRequireAiConsent()
+  const requestAiConsent = useAiConsentStore((s) => s.request)
 
   // 배너가 modalMode 로 매 열림마다 새로 mount → useState 초기화가 곧 리셋 (별도 effect 불필요)
   const editEntry = mode === 'edit' && !!initial
@@ -115,9 +119,10 @@ export function JobPostingModal({
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [parsing])
 
-  const handleParse = () => {
+  const handleParse = async () => {
     const text = rawText.trim()
     if (text.length < RAW_MIN || parsing || soldOut) return
+    if (!(await ensureAiConsent())) return
     setNotPosting(false)
     parse(text, {
       onSuccess: (res) => {
@@ -130,11 +135,15 @@ export function JobPostingModal({
         }
         // 200 + blocked 봉투 — 코드별 구분 (ERROR 를 소진으로 오표시하지 않기)
         if (isParseBlocked(res)) {
+          if (res.code === 'CONSENT_REQUIRED') {
+            void requestAiConsent()
+            return
+          }
           if (res.code === 'QUOTA_EXCEEDED') {
-            toast.error('오늘 횟수를 다 썼어요 — 내일 다시, 직접 입력·수정은 계속 가능해요')
+            toast.error(res.reason ?? '오늘 횟수를 다 썼어요 — 내일 다시, 직접 입력·수정은 계속 가능해요')
           } else {
             // ALREADY_PARSING 은 위 전용 분기가 선처리 — 여기 도달은 ERROR 류
-            toast.error('정리에 실패했어요. 잠시 후 다시 시도해주세요.')
+            toast.error(res.reason ?? '정리에 실패했어요. 잠시 후 다시 시도해주세요.')
           }
           return
         }
@@ -150,7 +159,11 @@ export function JobPostingModal({
         // 400(QUOTA_EXCEEDED 등)은 apiClient 인터셉터가 이미 토스트 — 중복 방지
         const shown = (err as { config?: { _toastShown?: boolean } })?.config
           ?._toastShown
-        if (!shown) toast.error('정리에 실패했어요. 잠시 후 다시 시도해주세요.')
+        if (shown) return
+        const serverMsg = (
+          err as { response?: { data?: { message?: string } } }
+        )?.response?.data?.message
+        toast.error(serverMsg ?? '정리에 실패했어요. 잠시 후 다시 시도해주세요.')
       },
     })
   }
@@ -247,7 +260,7 @@ export function JobPostingModal({
           )}
 
           <button
-            onClick={handleParse}
+            onClick={() => handleParse()}
             disabled={parsing || soldOut || rawText.trim().length < RAW_MIN}
             className="w-full mt-2 py-2.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-brand"
           >

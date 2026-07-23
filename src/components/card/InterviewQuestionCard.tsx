@@ -66,7 +66,12 @@ export function InterviewQuestionCard({ question, sessionId }: Props) {
             toast.error(result.reason ?? '생성에 실패했어요.')
           }
         },
-        onError: () => toast.error('AI 호출 중 오류가 발생했어요.'),
+        onError: (err) => {
+          const serverMsg = (
+            err as { response?: { data?: { message?: string } } }
+          )?.response?.data?.message
+          toast.error(serverMsg ?? 'AI 호출 중 오류가 발생했어요.')
+        },
       },
     )
   }
