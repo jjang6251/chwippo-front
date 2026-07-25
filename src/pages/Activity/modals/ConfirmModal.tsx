@@ -31,6 +31,19 @@ export function ConfirmModal({
     }
   }, [open])
 
+  // 묶음 6 — ESC 취소. 공용 Modal 과 동일 조율 계약: 이미 처리된 ESC 는 양보하고,
+  // 처리했으면 스스로 preventDefault (중첩 시 ESC 1번에 1개만 닫히게).
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || pending) return
+      e.preventDefault()
+      onCancel()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, pending, onCancel])
+
   if (!open) return null
 
   return (
@@ -40,7 +53,7 @@ export function ConfirmModal({
         if (e.target === e.currentTarget) onCancel()
       }}
     >
-      <div className="modal confirm-modal">
+      <div className="modal confirm-modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className="body">
           <div className="em">{emoji}</div>
           <div className="title">{title}</div>

@@ -5,7 +5,7 @@
  * - **데스크탑 = 기존 중앙 modal** — max-w-lg 중앙 정렬
  * - 사용처: LangCerts · Certs · Awards · ExamSchedules (교체) · Education (별도 파일)
  */
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Drawer } from 'vaul'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 
@@ -41,6 +41,21 @@ export function InfoModal({
 }: Props) {
   const tone = ACCENT_TONE[accent]
   const isMobile = useIsMobile()
+
+  // U14 — ESC 닫기. 모바일(vaul)은 기본 제공하므로 데스크탑 분기만 보완.
+  // 오버레이 클릭과 동일하게 저장 중에는 닫지 않고, 안쪽 요소(오토컴플리트 등)가
+  // preventDefault 로 ESC 를 먼저 쓰면 양보한다.
+  useEffect(() => {
+    if (isMobile) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      if (saving) return
+      e.preventDefault()
+      onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [isMobile, saving, onClose])
 
   const header = (
     <div className="relative px-8 pt-6 pb-5 shrink-0">

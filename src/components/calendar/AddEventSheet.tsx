@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Drawer } from 'vaul'
 import { BookOpen, PenLine } from 'lucide-react'
 import { AddExamScheduleModal } from '@/components/myinfo/AddExamScheduleModal'
+import { ConfirmModal } from '@/pages/Activity/modals/ConfirmModal'
 import { useCreateDailyNote } from '@/hooks/useCalendar'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { toast } from '@/stores/toastStore'
@@ -27,6 +28,8 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
   const isMobile = useIsMobile()
   const [pendingType, setPendingType] = useState<'exam' | 'memo' | null>(null)
   const [memoText, setMemoText] = useState('')
+  // U14 — 작성 중인 메모를 실수로 날리지 않게 닫기 확인
+  const [closeConfirm, setCloseConfirm] = useState(false)
 
   const { mutate: createNote, isPending: isSubmittingMemo } =
     useCreateDailyNote(defaultDate)
@@ -34,8 +37,30 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
   function handleClose() {
     setPendingType(null)
     setMemoText('')
+    setCloseConfirm(false)
     onClose()
   }
+
+  /** 사용자가 닫으려는 모든 경로(오버레이 클릭·ESC·시트 dismiss)의 단일 진입점 */
+  function attemptClose() {
+    if (pendingType === 'memo' && memoText.trim()) setCloseConfirm(true)
+    else handleClose()
+  }
+
+  // U14 — 데스크탑 모달 분기는 ESC 가 없었다 (모바일 vaul 은 기본 제공 → onOpenChange 로 합류).
+  // 시험 위임 중에는 AddExamScheduleModal(InfoModal)이 자기 ESC 를 처리하므로 비활성.
+  useEffect(() => {
+    if (!open || isMobile || pendingType === 'exam') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      e.preventDefault()
+      if (closeConfirm) setCloseConfirm(false)
+      else attemptClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isMobile, pendingType, closeConfirm, memoText])
 
   function handleSaveMemo() {
     const content = memoText.trim()
@@ -64,6 +89,19 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
   }
 
   if (!open) return null
+
+  const confirmLayer = (
+    <ConfirmModal
+      open={closeConfirm}
+      emoji="📝"
+      title="작성 중인 메모가 있어요"
+      desc="저장하지 않고 닫을까요?"
+      confirmLabel="닫기"
+      danger
+      onCancel={() => setCloseConfirm(false)}
+      onConfirm={handleClose}
+    />
+  )
 
   const body = (
     <div className="p-5">
@@ -113,7 +151,10 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
             할 일 · 메모
           </h2>
           <textarea
-            autoFocus
+            // 모바일 autoFocus 금지 — 바텀시트 마운트 중 키보드가 올라오면 iOS 가 입력창을
+            // 보이려 화면 전체를 밀어 올려 fixed 시트가 위로 튀고 내용이 잘린다 (2026-07-25 실기 발견).
+            // 데스크탑은 가운데 모달이라 무해 → 편의 유지. 형제 시트(CalendarDaySheet)도 autoFocus 없음.
+            autoFocus={!isMobile}
             value={memoText}
             onChange={(e) => setMemoText(e.target.value)}
             maxLength={200}
@@ -148,7 +189,7 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
 
   if (isMobile) {
     return (
-      <Drawer.Root open onOpenChange={(o) => { if (!o) handleClose() }} shouldScaleBackground={false}>
+      <Drawer.Root open onOpenChange={(o) => { if (!o) attemptClose() }} shouldScaleBackground={false}>
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
           <Drawer.Content
@@ -158,6 +199,9 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
             <Drawer.Title className="sr-only">이 날에 추가</Drawer.Title>
             <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line shrink-0" aria-hidden="true" />
             <div className="overscroll-contain overflow-y-auto">{body}</div>
+            {/* 확인 레이어는 Drawer.Content 안에 — 밖에 두면 Radix 의 body pointer-events:none 에
+                막혀 버튼이 안 눌린다. data-vaul-no-drag 로 시트 드래그 오인만 차단. */}
+            <div data-vaul-no-drag>{confirmLayer}</div>
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
@@ -165,19 +209,23 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={handleClose}
-    >
+    <>
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="이 날에 추가"
-        className="bg-surface border border-line rounded-2xl w-full max-w-md shadow-2xl overscroll-contain overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+        onClick={attemptClose}
       >
-        {body}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="이 날에 추가"
+          className="bg-surface border border-line rounded-2xl w-full max-w-md shadow-2xl overscroll-contain overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {body}
+        </div>
       </div>
-    </div>
+      {/* 오버레이 형제로 — 안에 두면 확인 버튼 클릭이 오버레이 onClick 으로 버블해 확인이 다시 열린다 */}
+      {confirmLayer}
+    </>
   )
 }
