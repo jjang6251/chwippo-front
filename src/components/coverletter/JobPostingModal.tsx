@@ -94,16 +94,19 @@ export function JobPostingModal({
     else onClose()
   }
 
-  // 공통 Modal 은 ESC 미지원 — 로컬 리스너로 닫기 확인 흐름 연결
+  // 공통 Modal 의 ESC 닫기를 선점 — capture 단계(= Modal 의 document bubble 리스너보다 먼저)에서
+  // preventDefault 하면 Modal 은 defaultPrevented 를 보고 양보한다. 그래야 dirty 확인 레이어를
+  // 건너뛰고 바로 닫히는 일이 없다.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      e.preventDefault()
       if (closeConfirm) setCloseConfirm(false)
       else attemptClose()
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, closeConfirm, dirty, parsing, saving])
 
