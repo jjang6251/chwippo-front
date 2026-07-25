@@ -259,6 +259,18 @@ function SelectField({ label, value, onChange, options, required }: {
 
 
 function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: string; onClose: () => void; onConfirm: () => void }) {
+  // 이 확인창은 InfoModal 위에 겹쳐 열린다 — capture 단계에서 ESC 를 선점하고 preventDefault 해야
+  // 뒤에 있는 InfoModal 의 ESC 닫기(U14)가 먼저 먹어 편집 모달만 사라지는 일이 없다.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      e.preventDefault()
+      onClose()
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
+  }, [onClose])
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label={`${label} 삭제 확인`} className="bg-surface border border-line rounded-xl w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>

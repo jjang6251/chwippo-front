@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Modal } from '@/components/common/Modal'
 import { countChars } from '@/utils/charCount'
 import { countFillPlaceholders } from '@/utils/coverletterPlaceholder'
@@ -27,16 +26,6 @@ interface Props {
 }
 
 export function CoverletterBulkApplyModal({ open, onClose, onConfirm, items }: Props) {
-  // 공통 Modal 은 ESC 미지원 — 컴포넌트 로컬 리스너로 보완 (공유 컴포넌트 미변경)
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
-
   return (
     <Modal open={open} onClose={onClose} title={`${items.length}개 문항에 한 번에 적용`}>
       <p className="text-text-tertiary text-xs leading-relaxed mb-3">
