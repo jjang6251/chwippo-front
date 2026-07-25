@@ -392,11 +392,17 @@ export function StepPage() {
               placeholder="항목 추가 후 Enter"
               className="flex-1 bg-transparent text-base text-text-primary placeholder:text-text-tertiary outline-none rounded focus-visible:ring-1 focus-visible:ring-brand/30"
             />
-            <button
-              onClick={handleAddItem}
-              disabled={!inputText.trim()}
-              className="shrink-0 whitespace-nowrap h-8 px-3 text-[13px] sm:h-7 sm:px-2.5 sm:text-[12px] rounded-lg bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary font-semibold flex items-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
-            >추가</button>
+            {/* 입력이 있을 때만 노출 — 빈 상태에선 비활성 버튼이 우측에 떠 삭제(×) 열 정렬을
+                깨뜨리고 죽은 무게로 보였다 (2026-07-25 실기 발견). 형제(DayDetailContent)는
+                고스트 행이라 버튼 없음 → 입력 시에만 등장시켜 어포던스와 정돈을 동시 충족 */}
+            {inputText.trim() && (
+              <button
+                onClick={handleAddItem}
+                className="shrink-0 whitespace-nowrap h-8 px-3 text-[13px] sm:h-7 sm:px-2.5 sm:text-[12px] rounded-lg bg-brand hover:bg-accent active:bg-accent-hover text-text-primary font-semibold flex items-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+              >
+                추가
+              </button>
+            )}
           </div>
         </div>
         </div>
