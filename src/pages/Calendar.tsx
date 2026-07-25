@@ -233,6 +233,9 @@ export function Calendar() {
         <div className="flex items-center gap-2">
           <button
             aria-pressed={starOnly}
+            // 라벨 텍스트가 sm 미만에서 hidden → 모바일은 아이콘 only 로 이름이 사라진다.
+            // 가시 텍스트와 같은 문구로 맞춰 중복 없이 이름만 보강 (U17).
+            aria-label="즐겨찾기만"
             onClick={() => setStarOnly((v) => !v)}
             className={`flex items-center gap-1.5 h-9 px-3 rounded-lg border text-xs font-medium transition-colors ${
               starOnly

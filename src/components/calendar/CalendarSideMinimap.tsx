@@ -84,7 +84,7 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
           <button
             aria-label="이전 달"
             onClick={() => setCursor((c) => c.subtract(1, 'month'))}
-            className="w-6 h-6 flex items-center justify-center rounded text-text-quaternary hover:text-text-secondary"
+            className="w-6 h-6 flex items-center justify-center rounded text-text-quaternary hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
           >
             <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M10 12L6 8l4-4" />
@@ -93,7 +93,7 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
           <button
             aria-label="다음 달"
             onClick={() => setCursor((c) => c.add(1, 'month'))}
-            className="w-6 h-6 flex items-center justify-center rounded text-text-quaternary hover:text-text-secondary"
+            className="w-6 h-6 flex items-center justify-center rounded text-text-quaternary hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
           >
             <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M6 4l4 4-4 4" />
@@ -142,7 +142,8 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
                 key={dateStr}
                 onClick={() => onSelectDate?.(dateStr)}
                 title={holidayName ?? undefined}
-                className={`h-8 flex flex-col items-center justify-center rounded ${
+                // 셀은 x 간격이 없어 offset ring 이 옆 칸을 침범 → MonthlyGrid 셀과 같은 inset ring
+                className={`h-8 flex flex-col items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60 ${
                   isSelected
                     ? 'bg-accent/10 ring-1 ring-accent/40'
                     : isToday
@@ -183,7 +184,7 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
         {onToday && (
           <button
             onClick={onToday}
-            className="hover:text-text-tertiary"
+            className="rounded hover:text-text-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
           >
             오늘
           </button>

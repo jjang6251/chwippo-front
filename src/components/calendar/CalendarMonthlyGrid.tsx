@@ -135,7 +135,7 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
             <button
               aria-label="이전 달"
               onClick={() => setCursor((c) => c.subtract(1, 'month'))}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-line text-text-tertiary hover:text-text-secondary"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-line text-text-tertiary hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
             >
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M10 12L6 8l4-4" />
@@ -147,7 +147,7 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
             <button
               aria-label="다음 달"
               onClick={() => setCursor((c) => c.add(1, 'month'))}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-line text-text-tertiary hover:text-text-secondary"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-line text-text-tertiary hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
             >
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M6 4l4 4-4 4" />
@@ -160,7 +160,7 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
                 setCursor(today.startOf('month'))
                 onToday()
               }}
-              className="h-8 px-3 rounded-lg border border-line bg-surface text-text-secondary text-[11px] font-medium hover:border-line-strong"
+              className="h-8 px-3 rounded-lg border border-line bg-surface text-text-secondary text-[11px] font-medium hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
             >
               오늘
             </button>
@@ -241,12 +241,27 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
               ? 'bg-brand/8'
               : 'hover:bg-card active:bg-card-strong'
 
+            // U18 — 셀 읽기 라벨: "7월 16일, 오늘, 광복절, 일정 2건" (해당 없는 조각은 생략).
+            // 이미 계산된 isToday·holidayName·dayEvents 만 재사용.
+            const cellLabel = [
+              `${day.month() + 1}월 ${day.date()}일`,
+              isToday ? '오늘' : null,
+              holidayName,
+              dayEvents.length > 0 ? `일정 ${dayEvents.length}건` : null,
+            ]
+              .filter(Boolean)
+              .join(', ')
+
             return (
               // U9 — 셀은 div role=button (셀 안 "+N개" 를 중첩 button 없이 렌더하기 위함)
               <div
                 key={dateStr}
                 role="button"
                 tabIndex={0}
+                aria-label={cellLabel}
+                // 선택 = 사용자 토글 상태이므로 aria-pressed. aria-current="date" 는 스펙상
+                // "오늘"을 뜻해 선택 표시로 쓰면 오독된다 (오늘은 aria-label 로 이미 전달).
+                aria-pressed={isSelected}
                 onClick={() => onSelectDate?.(dateStr)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {

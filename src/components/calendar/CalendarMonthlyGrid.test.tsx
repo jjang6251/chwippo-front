@@ -224,6 +224,65 @@ describe('CalendarMonthlyGrid — CTA 색·aria (U25·표기)', () => {
 })
 
 /**
+ * U18 — 날짜 셀 aria 시나리오 (2026-07-15 정오 KST 고정 → 7월 그리드):
+ * 1. 일정 없는 날 → "7월 16일"
+ * 2. 일정 2건 → "7월 16일, 일정 2건"
+ * 3. 오늘 → "7월 15일, 오늘"
+ * 4. 공휴일(7/17 제헌절) + 일정 1건 → "7월 17일, 제헌절, 일정 1건"
+ * 5. selectedDate 셀 → aria-pressed=true, 나머지 false
+ */
+describe('CalendarMonthlyGrid — 날짜 셀 aria (U18)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-15T03:00:00Z')) // = KST 2026-07-15 12:00
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('1) 일정 없는 날 → "7월 16일"', () => {
+    render(<CalendarMonthlyGrid events={[]} onSelectDate={vi.fn()} />)
+    expect(screen.getByRole('button', { name: '7월 16일' })).toBeInTheDocument()
+  })
+
+  it('2) 일정 2건 → "7월 16일, 일정 2건"', () => {
+    const events = [
+      ev({ type: 'exam', examId: 'e1', date: '2026-07-16' }),
+      ev({ type: 'note', noteId: 'n1', date: '2026-07-16' }),
+    ]
+    render(<CalendarMonthlyGrid events={events} onSelectDate={vi.fn()} />)
+    expect(screen.getByRole('button', { name: '7월 16일, 일정 2건' })).toBeInTheDocument()
+  })
+
+  it('3) 오늘 → "7월 15일, 오늘"', () => {
+    render(<CalendarMonthlyGrid events={[]} onSelectDate={vi.fn()} />)
+    expect(screen.getByRole('button', { name: '7월 15일, 오늘' })).toBeInTheDocument()
+  })
+
+  it('4) 공휴일 + 일정 1건 → "7월 17일, 제헌절, 일정 1건"', () => {
+    const events = [ev({ type: 'exam', examId: 'e1', date: '2026-07-17' })]
+    render(<CalendarMonthlyGrid events={events} onSelectDate={vi.fn()} />)
+    expect(
+      screen.getByRole('button', { name: '7월 17일, 제헌절, 일정 1건' }),
+    ).toBeInTheDocument()
+  })
+
+  it('5) 선택 셀만 aria-pressed=true', () => {
+    render(
+      <CalendarMonthlyGrid events={[]} selectedDate="2026-07-16" onSelectDate={vi.fn()} />,
+    )
+    expect(screen.getByRole('button', { name: '7월 16일' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: '7월 15일, 오늘' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+})
+
+/**
  * U4 — 로컬 TZ 의존 제거 회귀: '오늘' 판정·초기 월 커서가 브라우저/러너 TZ 가 아니라
  * KST 기준이어야 한다.
  *   KST 2026-08-01 00:30 = UTC 2026-07-31 15:30.
