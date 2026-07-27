@@ -2,6 +2,9 @@
 // TODO: 유료 결제 도입 시 → 결제 수탁업체(PG사) 추가, §3 보유 기간에 전자상거래법 5년 명시
 // TODO: 사업자 등록 시 → §8 개인정보 보호책임자에 사업자 정보 추가
 // 갱신 이력:
+// - 2026-07-27 공고 / 2026-08-03 시행: §1에 서비스 오류 진단 정보 + §5 수탁업체에 Sentry 추가.
+//   출시(7/26) 후 첫 개정이라 §10 "시행일 7일 전 공지" 조항을 준수 — 공고와 시행 사이 7일.
+//   ⚠️ Sentry DSN 은 **시행일(8/3)에 주입**한다. 방침보다 먼저 켜면 고지 없는 수집이 된다.
 // - 2026-05-18 (PR DD, LRR Phase 5-B): §1에 user_profiles 8필드(실명·전화·이메일·생년월일·병역) 명시 + §5 수탁업체 정합 (AWS S3 → R2, Railway·Cloudflare·GitHub Actions 추가)
 // - 2026-05-14: 초안
 
@@ -20,7 +23,12 @@ export function Privacy() {
           ← 뒤로
         </button>
         <h1 className="text-2xl font-bold mb-2">개인정보처리방침</h1>
-        <p className="text-text-quaternary text-sm mb-12">시행일: 2026년 5월 18일</p>
+        <p className="text-text-quaternary text-sm mb-2">시행일: 2026년 8월 3일</p>
+        <p className="text-text-tertiary text-xs mb-12 leading-relaxed">
+          이 방침은 2026년 7월 27일 공고되어 2026년 8월 3일부터 시행됩니다. 시행일 전까지는
+          이전 방침(2026년 5월 18일 시행)이 적용됩니다. 변경 내용은 아래 페이지 하단에
+          정리되어 있습니다.
+        </p>
 
         <DocSection title="1. 수집하는 개인정보 항목">
           <p className="mb-3">치뽀는 다음과 같은 개인정보를 수집합니다.</p>
@@ -47,6 +55,11 @@ export function Privacy() {
               ['일정·메모', '캘린더 일정·할 일 메모', '서비스 이용 중'],
               ['고객 응대', '문의 내용·댓글', '문의 작성 시'],
               ['계정 관리', '계정 정지 일시 (운영 정책 위반 시에만 기록)', '계정 제한 조치 시'],
+              [
+                '서비스 오류 진단 (자동)',
+                '오류 메시지·오류가 발생한 화면 주소·브라우저 및 운영체제 정보·IP 주소·회원 고유 식별자',
+                '서비스 오류 발생 시에만',
+              ],
             ]}
           />
           <p className="mt-3 text-text-quaternary text-xs">
@@ -54,6 +67,11 @@ export function Privacy() {
           </p>
           <p className="mt-2 text-text-quaternary text-xs">
             * 서비스 특성상 PIPA 시행령 18조 민감정보(건강·신념·성적 지향·노조 가입·정치적 견해 등)는 수집하지 않습니다.
+          </p>
+          <p className="mt-2 text-text-quaternary text-xs">
+            * 서비스 오류 진단 정보에는 <strong>회원이 작성한 내용(자소서 답변·메모·내 정보 창고 입력값)이
+            포함되지 않습니다.</strong> 오류 원인 파악에 필요한 최소 정보만 전송되며, 이메일·닉네임·인증
+            토큰은 전송 전에 제거됩니다.
           </p>
         </DocSection>
 
@@ -97,6 +115,11 @@ export function Privacy() {
               ['Railway Corp.', '데이터베이스·애플리케이션 호스팅', '미국'],
               ['Cloudflare, Inc.', '파일 저장(R2)·DNS·HTTPS·CDN', '미국·글로벌'],
               ['GitHub, Inc.', '서비스 가용성 모니터링 (헬스체크 cron)', '미국'],
+              [
+                'Functional Software, Inc. (Sentry)',
+                '서비스 오류 로그 수집·분석 (오류 발생 시에만)',
+                '미국',
+              ],
             ]}
           />
           <p className="mt-3 text-text-quaternary text-xs">
@@ -208,10 +231,20 @@ export function Privacy() {
           </p>
         </DocSection>
 
-        <div className="mt-12 pt-6 border-t border-line text-text-quaternary text-xs">
-          공고일: 2026년 5월 18일 · 시행일: 2026년 5월 18일 (베타 서비스로 사용자 적어 즉시 시행, 사전 공지는 변경 후 첫 로그인 시 안내)
-          <br />
-          이전 시행일(2026년 5월 14일)의 방침에 비해 §1 수집 항목·§5 위탁 업체 명시를 정합화했으며, 실 처리 범위 변경은 없습니다.
+        <div className="mt-12 pt-6 border-t border-line text-text-quaternary text-xs space-y-2">
+          <p>
+            <span className="text-text-tertiary font-medium">공고일: 2026년 7월 27일 · 시행일: 2026년 8월 3일</span>
+            <br />
+            이전 방침(2026년 5월 18일 시행) 대비 변경 사항 — ① §1 수집 항목에 <strong>서비스 오류 진단
+            정보</strong>(오류 메시지·발생 화면·브라우저 정보·IP·회원 고유 식별자) 추가 ② §5 수탁 업체에
+            <strong> Sentry(미국)</strong> 추가. 오류가 발생했을 때만 전송되며, 회원이 작성한 내용(자소서
+            답변·메모·내 정보 창고 입력값)과 이메일·닉네임·인증 토큰은 전송 대상에서 제외됩니다.
+          </p>
+          <p>
+            공고일: 2026년 5월 18일 · 시행일: 2026년 5월 18일 (베타 서비스로 사용자 적어 즉시 시행, 사전 공지는 변경 후 첫 로그인 시 안내)
+            <br />
+            이전 시행일(2026년 5월 14일)의 방침에 비해 §1 수집 항목·§5 위탁 업체 명시를 정합화했으며, 실 처리 범위 변경은 없습니다.
+          </p>
         </div>
       </main>
     </div>
