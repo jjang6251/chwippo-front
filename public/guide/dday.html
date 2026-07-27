@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>D-day 계산기 — 서류 마감·면접까지 며칠 남았나 | 치뽀</title>
+    <meta
+      name="description"
+      content="서류 마감일·면접일까지 며칠 남았는지 바로 계산합니다. 한국 시간(KST) 기준 D-day와 남은 날짜를 확인하세요. 설치 없이 무료."
+    />
+    <link rel="canonical" href="https://chwippo.com/guide/dday.html" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="치뽀" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:title" content="D-day 계산기 — 마감까지 며칠 남았나" />
+    <meta
+      property="og:description"
+      content="서류 마감일·면접일까지 남은 날짜를 한국 시간 기준으로 계산합니다."
+    />
+    <meta property="og:url" content="https://chwippo.com/guide/dday.html" />
+    <meta property="og:image" content="https://chwippo.com/og-image.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/guide/style.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "D-day 계산기",
+        "url": "https://chwippo.com/guide/dday.html",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "ko-KR",
+        "description": "서류 마감일·면접일까지 남은 날짜를 한국 시간 기준으로 계산하는 무료 도구.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+        "publisher": { "@type": "Organization", "name": "치뽀", "url": "https://chwippo.com" }
+      }
+    </script>
+    <script type="application/ld+json">
+{
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "마감일이 주말이면 월요일까지 지원할 수 있나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "온라인 접수는 주말과 공휴일에도 그대로 마감되는 것이 일반적입니다. 주말에는 오류가 나도 문의할 곳이 없어 금요일까지 끝내는 편이 안전합니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "면접은 며칠 전부터 준비하면 되나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "서류 합격 통보와 면접 사이가 일주일 안쪽인 경우가 흔합니다. 통보를 받고 시작하면 빠듯하므로 서류를 넣은 시점부터 예상 질문을 정리해두면 여유가 생깁니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "D-3은 마감 3일 전을 뜻하나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "네. 마감 당일을 D-day(0)로 놓고 세기 때문에 D-3은 마감 3일 전, D-1은 하루 전날입니다."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site-head">
+        <a class="logo" href="/">치뽀</a>
+        <a class="cta" href="/login">일정 관리 시작하기</a>
+      </header>
+
+      <h1>D-day 계산기</h1>
+      <p class="lead">
+        서류 마감일이나 면접 날짜를 고르면 며칠 남았는지 계산합니다. 한국 시간(KST) 기준이에요.
+      </p>
+
+      <div class="tool">
+        <label for="target" style="display: block; font-size: 13px; margin-bottom: 8px">
+          마감일 · 면접일
+        </label>
+        <input type="date" id="target" aria-describedby="result" style="cursor: pointer" />
+        <p style="font-size: 12px; color: rgb(var(--text-tertiary)); margin: 8px 0 0">
+          입력칸을 누르면 달력이 열립니다.
+        </p>
+        <div class="counts" id="result">
+          <div class="count-item" style="flex: 1 1 100%">
+            <span class="num" id="dday">날짜를 선택하세요</span>
+            <span class="label" id="ddaySub">오늘 기준</span>
+          </div>
+        </div>
+      </div>
+
+      <h2>D-day는 어떻게 세나</h2>
+      <p>
+        채용에서 <strong>D-3은 "마감 3일 전"</strong>, <strong>D-day는 마감 당일</strong>을
+        뜻합니다. 당일을 0으로 놓고 세는 방식이라, D-1은 하루 전날입니다. 이 계산기도 같은 기준을
+        씁니다.
+      </p>
+
+      <div class="box">
+        <p><strong>마감 시각을 꼭 확인하세요</strong></p>
+        <p>
+          서류 마감은 보통 <strong>마감일 오후 6시나 밤 11시 59분</strong>에 끝납니다. "D-day니까
+          오늘 밤에 내면 되겠지" 하고 접속했다가 이미 닫혀 있는 경우가 자주 생깁니다. 날짜만 보지
+          말고 시각까지 메모해두세요.
+        </p>
+      </div>
+
+      <h2>지원이 여러 개면 D-day를 세는 것만으로는 부족합니다</h2>
+      <p>
+        한두 곳이면 머릿속으로도 됩니다. 그런데 지원이 열 곳을 넘어가면 문제가 달라집니다. 회사마다
+        마감일이 다르고, 서류를 통과하면 코딩테스트·면접 일정이 또 붙습니다. 어떤 회사가 어느
+        단계에 있는지, 다음에 뭘 해야 하는지가 뒤섞이기 시작해요.
+      </p>
+      <p>
+        이때부터는 <strong>날짜를 세는 것</strong>보다 <strong>일정이 알아서 보이게 만드는 것</strong>이
+        중요해집니다.
+      </p>
+
+      <h2>자주 묻는 질문</h2>
+      <h3>마감일이 주말이면 월요일까지 되나요?</h3>
+      <p>
+        온라인 접수는 <strong>주말·공휴일에도 그대로 마감되는 게 일반적</strong>입니다. 미루면
+        안 됩니다. 게다가 주말에는 오류가 나도 문의할 곳이 없어서, 주말 마감이면 금요일까지
+        끝내는 편이 안전합니다.
+      </p>
+      <h3>면접은 며칠 전부터 준비하면 되나요?</h3>
+      <p>
+        정답은 없지만, 서류 합격 통보와 면접 사이가 <strong>일주일 안쪽인 경우가 흔합니다</strong>.
+        통보를 받고 시작하면 빠듯하다는 뜻이라, 서류를 넣은 시점부터 예상 질문 정도는 정리해두면
+        여유가 생깁니다.
+      </p>
+      <h3>결과 발표일도 D-day로 관리하나요?</h3>
+      <p>
+        관리하는 게 좋습니다. 발표는 밀리는 일이 흔한데, 적어두지 않으면 결과가 나왔는지도 모르고
+        지나갑니다. 메일이 스팸함에 들어가는 경우도 있어서 <strong>발표 예정일 즈음 한 번 확인</strong>하는
+        게 안전합니다.
+      </p>
+
+      <p style="font-size: 14px; margin-top: 32px">
+        함께 보면 좋은 글 —
+        <a href="/guide/gongchae-magam.html">공채 마감 놓치지 않는 법</a>,
+        <a href="/guide/jiwon-hyeonhwang-gwanri.html">지원 현황 관리하는 법</a>
+      </p>
+
+      <div class="promo">
+        <h2>마감을 세지 말고, 알림을 받으세요</h2>
+        <p>
+          치뽀에 지원 카드를 만들어두면 서류 마감·면접 일정이 캘린더에 자동으로 올라가고, 마감 전
+          알림을 보내드립니다. 전형 단계별 진행 상황도 한눈에 볼 수 있어요.
+        </p>
+        <a class="btn" href="/login">무료로 시작하기</a>
+        <a class="sub" href="/demo/calendar">로그인 없이 둘러보기 →</a>
+      </div>
+
+      <footer class="site-foot">
+        <a href="/">치뽀 홈</a>·<a href="/guide/jasoseo-glja.html">자소서 글자수 세기</a>·<a
+          href="/privacy"
+          >개인정보처리방침</a
+        >·<a href="/terms">이용약관</a>
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        var input = document.getElementById('target');
+        var out = document.getElementById('dday');
+        var sub = document.getElementById('ddaySub');
+
+        /** 한국 시간(KST) 기준 오늘 날짜 문자열 — 사용자 기기 TZ 와 무관하게 고정 */
+        function todayKst() {
+          var f = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Seoul',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          });
+          return f.format(new Date()); // YYYY-MM-DD
+        }
+
+        function diffDays(fromStr, toStr) {
+          // 날짜만 비교 — UTC 자정 기준으로 파싱해 DST·TZ 영향 제거
+          var a = Date.UTC.apply(null, fromStr.split('-').map(Number).map(function (v, i) {
+            return i === 1 ? v - 1 : v;
+          }));
+          var b = Date.UTC.apply(null, toStr.split('-').map(Number).map(function (v, i) {
+            return i === 1 ? v - 1 : v;
+          }));
+          return Math.round((b - a) / 86400000);
+        }
+
+        function update() {
+          var v = input.value;
+          if (!v) {
+            out.textContent = '날짜를 선택하세요';
+            sub.textContent = '오늘 기준';
+            return;
+          }
+          var today = todayKst();
+          var d = diffDays(today, v);
+          if (d === 0) {
+            out.textContent = 'D-day';
+            sub.textContent = '오늘이 마감이에요';
+          } else if (d > 0) {
+            out.textContent = 'D-' + d;
+            sub.textContent = d + '일 남았어요 (오늘 ' + today + ' 기준)';
+          } else {
+            out.textContent = 'D+' + Math.abs(d);
+            sub.textContent = Math.abs(d) + '일 지났어요 (오늘 ' + today + ' 기준)';
+          }
+        }
+
+        input.addEventListener('change', update);
+        input.addEventListener('input', update);
+
+        // 입력칸 아무 곳이나 누르면 달력이 열리게 — 데스크탑 브라우저는 기본적으로
+        // 우측 작은 아이콘을 정확히 눌러야만 열려서 "타이핑만 되는" 것처럼 보인다.
+        // showPicker 는 최신 브라우저만 지원 · 사용자 제스처 밖에서 호출하면 throw → try/catch.
+        function openPicker() {
+          try {
+            if (typeof input.showPicker === 'function') input.showPicker();
+          } catch (_) {
+            /* 미지원·차단 시 기본 동작(타이핑·아이콘 클릭) 유지 */
+          }
+        }
+        input.addEventListener('click', openPicker);
+        input.addEventListener('focus', openPicker);
+
+        update();
+      })();
+    </script>
+  </body>
+</html>
