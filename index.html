@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="치뽀 — 취준생을 위한 취업 일정·자소서·면접 올인원 관리 웹앱" />
     <link rel="canonical" href="https://chwippo.com/" />
+    <!-- 검색엔진 소유확인 (2026-07-26) — 구글은 자동 인증 완료라 태그 불필요 -->
+    <meta name="naver-site-verification" content="ec51c5edd6c3596844cb20c44658c9384b7355be" />
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="치뽀" />
@@ -30,7 +32,12 @@
             params.get('native') === '1' ||
             /chwippo-mobile-webview/i.test(navigator.userAgent) ||
             window.sessionStorage.getItem('chwippo:native-mode') === '1';
-          if (isNative) return;
+          if (isNative) {
+            // 네이티브(앱 WebView)는 로그인 상태로 바로 진입 — SEO 정적 본문이 스치면 어색하므로 숨김.
+            // 크롤러는 네이티브가 아니므로 SEO 영향 0 (cloaking 아님 — 앱 전용 로딩 최적화).
+            document.documentElement.setAttribute('data-native', '1');
+            return;
+          }
           var s = document.createElement('script');
           s.async = true;
           s.crossOrigin = 'anonymous';
@@ -41,7 +48,55 @@
         }
       })();
     </script>
-    <title>치뽀 — 취업 일정 관리</title>
+    <title>치뽀 — 취업 일정 관리 | 취준생 지원현황·자소서·면접 준비</title>
+    <!-- 네이티브 앱에서 SEO 정적 본문 숨김 (번들 CSS 의존 없이 head 인라인으로 보장) -->
+    <style>
+      html[data-native='1'] #seo-static { display: none; }
+    </style>
+    <!-- 구조화 데이터 (JSON-LD) — 검색 결과 리치 표시. 값은 index.html 메타·스토어 등록 정보와 동일 소스 유지 -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "https://chwippo.com/#app",
+            "name": "치뽀",
+            "alternateName": "Chwippo",
+            "url": "https://chwippo.com",
+            "description": "취준생을 위한 올인원 취업 일정 관리 서비스. 지원 현황 보드·마감 캘린더·자소서 관리·면접 준비 체크리스트를 한곳에서.",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web, iOS",
+            "inLanguage": "ko-KR",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+            "featureList": [
+              "지원 현황 보드",
+              "마감·면접 일정 캘린더",
+              "자기소개서 관리",
+              "면접·시험 준비 체크리스트",
+              "내 정보 창고",
+              "취업 준비 회고 통계"
+            ]
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://chwippo.com/#org",
+            "name": "치뽀",
+            "url": "https://chwippo.com",
+            "logo": "https://chwippo.com/og-image.png",
+            "email": "support@chwippo.com"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://chwippo.com/#website",
+            "url": "https://chwippo.com",
+            "name": "치뽀",
+            "inLanguage": "ko-KR",
+            "publisher": { "@id": "https://chwippo.com/#org" }
+          }
+        ]
+      }
+    </script>
     <script>
       // FOUC 방지 — React mount 전에 테마 적용 · chwippo-mobile 브릿지로 즉시 postMessage.
       // localStorage 우선 · 미설정 시 system (OS 설정 따름) · matchMedia change 실시간 감지.
@@ -86,7 +141,44 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      SEO 정적 본문 + 초기 로딩 화면 (2026-07-26).
+      CSR(SPA) 이라 크롤러가 JS 실행 전 빈 문서를 보던 문제 해결 — 구글은 JS 를 실행하지만 느리고,
+      네이버는 사실상 못 읽는다. ReactDOM.createRoot(...).render 가 마운트 시 이 내용을 교체하므로
+      사용자에겐 잠깐의 브랜드 로딩 화면으로 보인다 (기존엔 흰/검은 빈 화면).
+      ⚠️ 크롤러와 사용자에게 같은 내용을 보인다 (cloaking 아님). 링크는 SPA 에서 크롤러가 따라갈
+      경로가 없던 문제도 함께 해소 — sitemap.xml 과 동일 대상.
+    -->
+    <div id="root">
+      <div id="seo-static" style="max-width: 640px; margin: 0 auto; padding: 15vh 24px 24px; text-align: center; font-family: 'Noto Sans KR', system-ui, sans-serif; color: rgb(var(--text-secondary, 192 189 179));">
+        <p style="font-size: 22px; font-weight: 700; color: rgb(var(--brand, 107 156 127)); margin: 0 0 20px;">치뽀</p>
+        <h1 style="font-size: 20px; font-weight: 700; line-height: 1.5; color: rgb(var(--text-primary, 235 233 227)); margin: 0 0 12px;">
+          취준생을 위한 취업 일정 관리 — 지원 현황·자소서·면접 준비를 한곳에서
+        </h1>
+        <p style="font-size: 14px; line-height: 1.7; margin: 0 0 16px;">
+          회사별 지원 카드로 서류·코딩테스트·면접 단계를 한눈에 보고, 마감일과 면접 일정을 캘린더에서
+          놓치지 않게 관리하세요. 자기소개서 문항과 답변, 면접 준비 체크리스트, 학력·자격증 같은 내 정보까지
+          한곳에 모읍니다.
+        </p>
+        <ul style="list-style: none; padding: 0; margin: 0 0 20px; font-size: 13px; line-height: 2;">
+          <li>지원 현황 보드 — 전형 단계별 진행 상황</li>
+          <li>캘린더 — 서류 마감·면접·시험 일정과 마감 알림</li>
+          <li>자기소개서 관리 — 회사별 문항·답변 정리와 재사용</li>
+          <li>면접·시험 준비 — 전형별 체크리스트와 준비 노트</li>
+          <li>내 정보 창고 — 학력·자격증·어학·활동 기록</li>
+        </ul>
+        <p style="font-size: 13px;">
+          <a href="/demo/calendar" style="color: rgb(var(--brand, 107 156 127));">로그인 없이 둘러보기</a>
+          <span style="margin: 0 8px;">·</span>
+          <a href="/login" style="color: rgb(var(--brand, 107 156 127));">시작하기</a>
+        </p>
+        <p style="font-size: 12px; margin-top: 24px;">
+          <a href="/privacy" style="color: rgb(var(--text-quaternary, 138 136 129));">개인정보처리방침</a>
+          <span style="margin: 0 8px;">·</span>
+          <a href="/terms" style="color: rgb(var(--text-quaternary, 138 136 129));">이용약관</a>
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
