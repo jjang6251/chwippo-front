@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>자소서 글자수 세기 — 공백 포함·제외 실시간 계산 | 치뽀</title>
+    <meta
+      name="description"
+      content="자기소개서 글자수를 공백 포함·공백 제외로 실시간 계산합니다. 500자·1000자 같은 제한에 맞춰 쓰고 있는지 바로 확인하세요. 설치 없이 무료."
+    />
+    <link rel="canonical" href="https://chwippo.com/guide/jasoseo-glja.html" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="치뽀" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:title" content="자소서 글자수 세기 — 공백 포함·제외 실시간 계산" />
+    <meta
+      property="og:description"
+      content="자기소개서 글자수를 공백 포함·제외로 실시간 계산. 설치 없이 무료."
+    />
+    <meta property="og:url" content="https://chwippo.com/guide/jasoseo-glja.html" />
+    <meta property="og:image" content="https://chwippo.com/og-image.png" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/guide/style.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "자소서 글자수 세기",
+        "url": "https://chwippo.com/guide/jasoseo-glja.html",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "ko-KR",
+        "description": "자기소개서 글자수를 공백 포함·공백 제외로 실시간 계산하는 무료 도구.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+        "publisher": { "@type": "Organization", "name": "치뽀", "url": "https://chwippo.com" }
+      }
+    </script>
+    <script type="application/ld+json">
+{
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "자소서 글자수는 공백 포함인가요 제외인가요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "기업마다 기준이 다릅니다. 공고나 입력 폼에 적힌 기준을 따르는 것이 원칙이고, 명시가 없으면 대개 공백 포함으로 봅니다. 애매할 때는 공백 포함 기준으로 맞추면 안전합니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "줄바꿈도 글자수에 포함되나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "세는 곳도 있고 아닌 곳도 있습니다. 문단을 많이 나눈 글은 차이가 커질 수 있으므로 제한보다 10~20자 여유를 두는 것이 안전합니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "글자수 제한을 채우지 못할 때는 어떻게 하나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "형용사를 덧붙여 늘리면 티가 납니다. 대신 빠진 요소를 채우세요. 대부분 상황 설명, 구체적 행동, 결과 중 하나가 비어 있습니다."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site-head">
+        <a class="logo" href="/">치뽀</a>
+        <a class="cta" href="/login">자소서 관리 시작하기</a>
+      </header>
+
+      <h1>자소서 글자수 세기</h1>
+      <p class="lead">
+        아래에 자기소개서를 붙여넣으면 공백 포함·제외 글자수를 바로 계산합니다. 입력한 내용은
+        어디에도 저장되지 않고 브라우저에서만 계산돼요.
+      </p>
+
+      <div class="tool">
+        <label for="ta" style="display: block; font-size: 13px; margin-bottom: 8px">
+          자기소개서 내용
+        </label>
+        <textarea
+          id="ta"
+          rows="12"
+          placeholder="여기에 자기소개서를 붙여넣으세요."
+          aria-describedby="counts"
+        ></textarea>
+        <div class="counts" id="counts">
+          <div class="count-item">
+            <span class="num" id="withSpace">0</span>
+            <span class="label">공백 포함</span>
+          </div>
+          <div class="count-item">
+            <span class="num" id="noSpace">0</span>
+            <span class="label">공백 제외</span>
+          </div>
+          <div class="count-item">
+            <span class="num" id="bytes">0</span>
+            <span class="label">바이트</span>
+          </div>
+          <div class="count-item">
+            <span class="num" id="lines">0</span>
+            <span class="label">줄</span>
+          </div>
+        </div>
+      </div>
+
+      <h2>공백 포함? 제외? 어느 쪽으로 세야 하나</h2>
+      <p>
+        기업마다 기준이 다릅니다. <strong>공고나 입력 폼에 적힌 기준을 그대로 따르는 게 원칙</strong>이고,
+        명시가 없으면 대개 공백 포함으로 봅니다. 애매할 때는 <strong>공백 포함 기준으로 맞춰두면
+        안전</strong>합니다 — 공백 포함이 항상 더 큰 숫자라, 그 기준으로 통과하면 다른 기준에서도
+        넘치지 않습니다.
+      </p>
+
+      <div class="box">
+        <p><strong>자주 쓰이는 제한</strong></p>
+        <ul>
+          <li>500자 — 짧은 문항(지원 동기 등). 한 가지 사례만 담는 게 적당합니다</li>
+          <li>1,000자 — 가장 흔한 분량. 상황·행동·결과를 넣기 좋습니다</li>
+          <li>1,500자 이상 — 경험 2개 또는 한 경험을 깊게</li>
+        </ul>
+      </div>
+
+      <h2>글자수 때문에 흔히 겪는 문제</h2>
+      <h3>다 쓰고 나서 400자를 잘라내야 할 때</h3>
+      <p>
+        가장 아까운 상황입니다. 처음부터 제한의 <strong>90% 안쪽</strong>을 목표로 쓰면 퇴고 여유가
+        생깁니다. 이미 넘쳤다면 접속사·부사·중복 설명부터 지우세요. 사례와 수치는 마지막까지
+        남기는 게 좋습니다.
+      </p>
+      <h3>글자수가 모자랄 때</h3>
+      <p>
+        500자 제한인데 300자밖에 안 나오는 경우입니다. 이때 형용사를 덧붙여 늘리면 바로 티가
+        납니다. 대신 <strong>빠진 요소를 채우세요</strong> — 대부분 셋 중 하나가 비어 있습니다.
+      </p>
+      <ul>
+        <li><strong>상황이 없다</strong> — 무슨 문제였는지, 왜 어려웠는지가 빠짐</li>
+        <li><strong>구체적 행동이 없다</strong> — "노력했다"로 뭉개고 무엇을 했는지가 없음</li>
+        <li><strong>결과가 없다</strong> — 얼마나 나아졌는지, 무엇을 배웠는지가 없음</li>
+      </ul>
+      <p>
+        분량을 채우려고 새 경험을 추가하는 것보다, <strong>하나를 끝까지 쓰는 편</strong>이 거의
+        항상 낫습니다.
+      </p>
+
+      <h2>자주 묻는 질문</h2>
+      <h3>줄바꿈도 글자수에 들어가나요?</h3>
+      <p>
+        세는 곳도 있고 아닌 곳도 있습니다. 이 계산기의 "공백 포함"에는 줄바꿈이 포함되고, "공백
+        제외"에서는 빠집니다. 문단을 많이 나눈 글은 이 차이가 커질 수 있어서, 딱 맞춰 쓰면 제출
+        폼에서 초과가 날 수 있습니다. <strong>제한보다 10~20자 여유</strong>를 두는 편이
+        안전합니다.
+      </p>
+      <h3>붙여넣었더니 글자수가 이상하게 나와요</h3>
+      <p>
+        한글 파일이나 웹에서 복사하면 <strong>보이지 않는 공백·특수문자</strong>가 딸려오는 경우가
+        있습니다. 숫자가 예상과 다르면 메모장 같은 곳에 한 번 붙여넣어 서식을 없앤 뒤 다시
+        복사해보세요.
+      </p>
+      <h3>바이트는 왜 표시되나요?</h3>
+      <p>
+        일부 입력 폼이 글자수가 아니라 바이트로 제한합니다. 한글은 UTF-8에서 한 글자가 보통 3바이트라
+        같은 글이라도 숫자가 훨씬 크게 나옵니다. 공고나 입력창에 "바이트"라고 적혀 있으면 이 값을
+        보세요.
+      </p>
+
+      <p style="font-size: 14px; margin-top: 32px">
+        함께 보면 좋은 글 —
+        <a href="/guide/jasoseo-sojae.html">자소서 소재 정리하는 법</a>,
+        <a href="/guide/dday.html">D-day 계산기</a>
+      </p>
+
+      <div class="promo">
+        <h2>자소서를 회사마다 다시 쓰고 계신가요?</h2>
+        <p>
+          치뽀는 회사별 자소서 문항과 답변을 한곳에 정리해, 다음 지원에서 예전에 쓴 답변을 꺼내
+          쓸 수 있게 해줍니다. 지원 현황·마감 일정도 함께 관리해요.
+        </p>
+        <a class="btn" href="/login">무료로 시작하기</a>
+        <a class="sub" href="/demo/coverletters">로그인 없이 둘러보기 →</a>
+      </div>
+
+      <footer class="site-foot">
+        <a href="/">치뽀 홈</a>·<a href="/guide/dday.html">D-day 계산기</a>·<a
+          href="/privacy"
+          >개인정보처리방침</a
+        >·<a href="/terms">이용약관</a>
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        var ta = document.getElementById('ta');
+        var withSpace = document.getElementById('withSpace');
+        var noSpace = document.getElementById('noSpace');
+        var bytes = document.getElementById('bytes');
+        var lines = document.getElementById('lines');
+
+        function fmt(n) {
+          return n.toLocaleString('ko-KR');
+        }
+
+        function update() {
+          var v = ta.value;
+          withSpace.textContent = fmt(Array.from(v).length);
+          noSpace.textContent = fmt(Array.from(v.replace(/\s/g, '')).length);
+          // 한글 등 멀티바이트 문자를 UTF-8 기준으로 계산 (일부 입력 폼이 바이트 제한을 씀)
+          bytes.textContent = fmt(new TextEncoder().encode(v).length);
+          lines.textContent = fmt(v === '' ? 0 : v.split('\n').length);
+        }
+
+        ta.addEventListener('input', update);
+        update();
+      })();
+    </script>
+  </body>
+</html>
