@@ -46,4 +46,35 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
+  <!-- 가이드·도구 (SEO 3단계 · 2026-07-26) — 라우트별 고유 HTML (SPA 중복 문제 없음) -->
+  <url>
+    <loc>https://chwippo.com/guide/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://chwippo.com/guide/jasoseo-glja.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://chwippo.com/guide/dday.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://chwippo.com/guide/jiwon-hyeonhwang-gwanri.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://chwippo.com/guide/jasoseo-sojae.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://chwippo.com/guide/gongchae-magam.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>

@@ -1,0 +1,242 @@
+/*
+ * 가이드·도구 정적 페이지 공용 스타일 (SEO 3단계 · 2026-07-26).
+ *
+ * React 밖 순수 정적 페이지 — 앱 번들·라우팅과 완전히 분리 (빌드 파이프라인 무영향).
+ * 토큰 값은 src/index.css 와 동일하게 유지 (여기가 사본 — 토큰 변경 시 함께 갱신).
+ * 다크가 기본, prefers-color-scheme: light 에서 라이트.
+ */
+
+:root {
+  --bg: 26 24 22;
+  --surface: 35 33 31;
+  --text-primary: 235 233 227;
+  --text-secondary: 192 189 179;
+  --text-tertiary: 156 153 146;
+  --brand: 107 156 127;
+  --line: rgba(255, 255, 255, 0.08);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: 240 234 222;
+    --surface: 255 255 255;
+    --text-primary: 26 24 22;
+    --text-secondary: 74 70 64;
+    --text-tertiary: 95 91 83;
+    --brand: 74 139 107;
+    --line: rgba(26, 24, 22, 0.1);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--bg));
+  color: rgb(var(--text-secondary));
+  font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+  word-break: keep-all; /* 한글 단어 중간 줄바꿈 방지 */
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+/* ── 헤더 ─────────────────────────────── */
+.site-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0 32px;
+  flex-wrap: wrap;
+}
+.site-head a.logo {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgb(var(--brand));
+  text-decoration: none;
+}
+.site-head .cta {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--bg));
+  background: rgb(var(--brand));
+  padding: 9px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+/* ── 본문 타이포 ───────────────────────── */
+h1 {
+  font-size: 28px;
+  line-height: 1.45;
+  font-weight: 700;
+  color: rgb(var(--text-primary));
+  margin: 0 0 12px;
+}
+.lead {
+  font-size: 16px;
+  color: rgb(var(--text-tertiary));
+  margin: 0 0 40px;
+}
+h2 {
+  font-size: 20px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: rgb(var(--text-primary));
+  margin: 44px 0 14px;
+}
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgb(var(--text-primary));
+  margin: 28px 0 10px;
+}
+p {
+  margin: 0 0 16px;
+}
+ul,
+ol {
+  margin: 0 0 16px;
+  padding-left: 22px;
+}
+li {
+  margin-bottom: 8px;
+}
+strong {
+  color: rgb(var(--text-primary));
+  font-weight: 600;
+}
+a {
+  color: rgb(var(--brand));
+}
+
+/* ── 강조 박스 ────────────────────────── */
+.box {
+  background: rgb(var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 0 0 20px;
+}
+.box p:last-child,
+.box ul:last-child {
+  margin-bottom: 0;
+}
+
+/* ── 하단 제품 연결 ───────────────────── */
+.promo {
+  background: rgb(var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px 22px;
+  margin: 48px 0 32px;
+  text-align: center;
+}
+.promo h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.promo p {
+  font-size: 14px;
+  color: rgb(var(--text-tertiary));
+  margin: 0 0 18px;
+}
+.promo .btn {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--bg));
+  background: rgb(var(--brand));
+  padding: 11px 22px;
+  border-radius: 10px;
+  text-decoration: none;
+}
+.promo .sub {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+/* ── 푸터 ─────────────────────────────── */
+.site-foot {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  font-size: 13px;
+  color: rgb(var(--text-tertiary));
+  text-align: center;
+}
+.site-foot a {
+  color: rgb(var(--text-tertiary));
+  margin: 0 6px;
+}
+
+/* ── 도구(계산기) 공용 ─────────────────── */
+.tool {
+  background: rgb(var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  margin: 0 0 28px;
+}
+.tool textarea,
+.tool input[type='date'],
+.tool input[type='text'] {
+  width: 100%;
+  background: rgb(var(--bg));
+  color: rgb(var(--text-primary));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 16px; /* iOS 포커스 줌 방지 */
+  line-height: 1.7;
+  resize: vertical;
+}
+.tool textarea:focus,
+.tool input:focus {
+  outline: none;
+  border-color: rgb(var(--brand) / 0.5);
+}
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.count-item {
+  flex: 1 1 120px;
+  background: rgb(var(--bg));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.count-item .num {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: rgb(var(--text-primary));
+  font-variant-numeric: tabular-nums;
+}
+.count-item .label {
+  font-size: 12px;
+  color: rgb(var(--text-tertiary));
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 24px;
+  }
+  h2 {
+    font-size: 18px;
+  }
+}

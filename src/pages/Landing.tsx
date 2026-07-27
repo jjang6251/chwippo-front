@@ -325,6 +325,8 @@ export function Landing() {
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-text-quaternary text-xs">
           <span className="font-semibold text-text-tertiary">치뽀</span>
           <div className="flex items-center gap-6 flex-wrap justify-center">
+            {/* 정적 가이드·도구 페이지 (public/guide) — React 라우트가 아니라 a 태그 */}
+            <a href="/guide/" className="hover:text-text-tertiary transition-colors">가이드 · 도구</a>
             <Link to="/terms" className="hover:text-text-tertiary transition-colors">이용약관</Link>
             <Link to="/privacy" className="hover:text-text-tertiary transition-colors">개인정보처리방침</Link>
             <a
