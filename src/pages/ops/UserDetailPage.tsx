@@ -8,11 +8,20 @@ import { RevokeCoinModal } from '@/components/admin/RevokeCoinModal'
 import { SuspendUserModal } from '@/components/admin/SuspendUserModal'
 import { ForcePlanChangeModal } from '@/components/admin/ForcePlanChangeModal'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { formatDateTime } from '@/utils/datetime'
+import { toast } from '@/stores/toastStore'
+import { exportAdminUser } from '@/api/adminUsers'
+import { ConfirmModal } from '@/pages/Activity/modals/ConfirmModal'
+import {
+  cardChip,
+  type AdminApplicationStatus,
+  type AdminChipTone,
+} from '@/utils/adminApplicationChip'
 
 /**
  * PR_B2 Phase 1 — 사용자 상세 페이지 (Q6 — 모든 항목 + 보기 편한 UI).
  *
- * 탭 4: 기본정보 / 활동·코인 / 문의 / Audit.
+ * 탭 5: 기본정보 / 지원 카드 / 활동·코인 / 문의 / Audit.
  */
 
 interface UserDetail {
@@ -43,6 +52,21 @@ interface UserDetail {
     userAgent: string | null
     createdAt: string
   }>
+  /**
+   * 운영 조회용 지원 카드 — 회사·직무·진행 상태만.
+   * 메모·자소서 답변 등 사용자가 쓴 본문은 의도적으로 없다
+   * (그건 방침 §7 "데이터 이동 요청" 경로인 export 로만 열람).
+   */
+  applications: Array<{
+    id: string
+    companyName: string
+    jobTitle: string | null
+    status: AdminApplicationStatus
+    isSample: boolean
+    createdAt: string
+    currentStepName: string | null
+    currentStepDate: string | null
+  }>
   activityStats: {
     applicationCount: number
     coverletterQuestionTotal: number
@@ -53,10 +77,11 @@ interface UserDetail {
   }
 }
 
-type Tab = 'basic' | 'coin' | 'inquiry' | 'audit'
+type Tab = 'basic' | 'cards' | 'coin' | 'inquiry' | 'audit'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'basic', label: '기본정보' },
+  { key: 'cards', label: '지원 카드' },
   { key: 'coin', label: '활동·코인' },
   { key: 'inquiry', label: '문의' },
   { key: 'audit', label: 'Audit' },
@@ -70,6 +95,7 @@ export function UserDetailPage() {
   const [showRevoke, setShowRevoke] = useState(false)
   const [showSuspend, setShowSuspend] = useState(false)
   const [showPlanChange, setShowPlanChange] = useState(false)
+  const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [auditFilter, setAuditFilter] = useState<
     'all' | 'coin' | 'suspend' | 'tier' | 'other'
   >('all')
@@ -92,6 +118,28 @@ export function UserDetailPage() {
       qc.invalidateQueries({ queryKey: ['admin', 'user-detail', id] }),
   })
 
+  /** 방침 §7 개인정보 이동 요청 — 전체 데이터를 .json 파일로 내려받는다 */
+  const exportUser = useMutation({
+    mutationFn: () => exportAdminUser(id!),
+    onSuccess: (payload) => {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `chwippo-user-${id}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      setShowExportConfirm(false)
+      toast.show('데이터를 내려받았어요.')
+    },
+    onError: () => {
+      setShowExportConfirm(false)
+      toast.show('내보내기에 실패했어요. 잠시 후 다시 시도해주세요.')
+    },
+  })
+
   if (isLoading) {
     return <div className="p-9 text-text-tertiary text-sm">로딩 중...</div>
   }
@@ -100,6 +148,8 @@ export function UserDetailPage() {
   }
 
   const { basic, coinBalance, inquiries, auditLogs, activityStats } = data
+  // 배포 순서 무관 — 백엔드가 먼저 나가지 않아도 빈 배열로 안전하게 렌더
+  const applications = data.applications ?? []
   const isSuspended = basic.suspendedAt !== null
 
   return (
@@ -232,6 +282,21 @@ export function UserDetailPage() {
         >
           ⬆️ Plan 변경
         </button>
+        {/*
+          개인정보처리방침 §7 "개인정보 이동 요청" 이행 수단.
+          상세 모달 → 페이지 개편 때 이 버튼이 함께 사라져 **방침에 적어둔 권리를
+          행사해줄 UI 가 없는 상태**였다 (2026-07-28 복구). 백엔드
+          POST /admin/users/:id/export 는 계속 살아 있었음. 실행 시 admin_audit_logs 기록.
+        */}
+        <button
+          type="button"
+          onClick={() => setShowExportConfirm(true)}
+          disabled={exportUser.isPending}
+          className="ml-auto bg-card-strong hover:bg-surface-2 border border-line text-text-tertiary text-xs font-medium px-3 py-1.5 rounded-md disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+          title="개인정보 이동 요청 처리용 — 전체 데이터를 .json 으로 내려받습니다 (audit 기록됨)"
+        >
+          {exportUser.isPending ? '내보내는 중…' : '📦 데이터 내보내기'}
+        </button>
       </div>
 
       {/* 정지 정보 (정지 시만) */}
@@ -251,8 +316,9 @@ export function UserDetailPage() {
           <button
             key={t.key}
             type="button"
+            aria-current={tab === t.key ? 'page' : undefined}
             onClick={() => setTab(t.key)}
-            className={`text-xs font-medium px-3 py-2 transition-colors ${
+            className={`text-xs font-medium px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg ${
               tab === t.key
                 ? 'text-brand border-b-2 border-brand -mb-px'
                 : 'text-text-tertiary hover:text-text-secondary'
@@ -299,6 +365,8 @@ export function UserDetailPage() {
           </div>
         </div>
       )}
+
+      {tab === 'cards' && <ApplicationsTab applications={applications} />}
 
       {tab === 'coin' && (
         <div className="space-y-4">
@@ -447,6 +515,24 @@ export function UserDetailPage() {
           onClose={() => setShowPlanChange(false)}
         />
       )}
+
+      {/*
+        내보내기는 되돌릴 수 없는 액션은 아니지만 **타인의 실명·전화·자소서 전문을
+        통째로 파일로 꺼내는** 행위다. 실수 클릭 방지 + "지금 무슨 일을 하는지" 자각을
+        위해 확인 단계를 둔다. 파괴적 액션이 아니므로 danger 톤은 쓰지 않는다.
+        ESC=취소는 공용 ConfirmModal 이 ADR-053 조율 계약대로 처리한다.
+      */}
+      <ConfirmModal
+        open={showExportConfirm}
+        emoji="📦"
+        title="회원 데이터를 내려받을까요?"
+        desc={`${basic.nickname} 님의 실명·연락처·자소서 답변을 포함한 전체 데이터가 .json 파일로 저장됩니다. 개인정보 이동·열람 요청 처리 목적으로만 사용하세요. 이 작업은 관리자 기록(audit)에 남습니다.`}
+        confirmLabel="내려받기"
+        danger={false}
+        pending={exportUser.isPending}
+        onCancel={() => setShowExportConfirm(false)}
+        onConfirm={() => exportUser.mutate()}
+      />
     </div>
   )
 }
@@ -558,6 +644,112 @@ interface AuditLog {
   ip: string | null
   userAgent: string | null
   createdAt: string
+}
+
+// ─── 지원 카드 탭 ─────────────────────────────────────────────────────────────
+
+type AdminApplication = UserDetail['applications'][number]
+
+/** 보드 리스트 뷰(BoardListRow)와 동일한 tone 체계 — 운영 화면도 같은 색을 읽게 */
+const CARD_TONE: Record<AdminChipTone, string> = {
+  warning: 'text-warning bg-warning/10 border border-warning/25',
+  success: 'text-success bg-success/10 border border-success/25',
+  neutral: 'text-text-secondary bg-surface-3 border border-transparent',
+}
+
+const STATUS_FILTERS: { key: 'all' | AdminApplicationStatus; label: string }[] = [
+  { key: 'all', label: '전체' },
+  { key: 'IN_PROGRESS', label: '진행 중' },
+  { key: 'PLANNED', label: '지원 예정' },
+  { key: 'PASSED', label: '합격' },
+  { key: 'FAILED', label: '불합격' },
+]
+
+function ApplicationsTab({ applications }: { applications: AdminApplication[] }) {
+  const [filter, setFilter] = useState<'all' | AdminApplicationStatus>('all')
+  const shown =
+    filter === 'all'
+      ? applications
+      : applications.filter((a) => a.status === filter)
+
+  return (
+    <div className="bg-card border border-line rounded-xl p-5 space-y-3">
+      <div className="flex gap-1.5 flex-wrap">
+        {STATUS_FILTERS.map((f) => {
+          const count =
+            f.key === 'all'
+              ? applications.length
+              : applications.filter((a) => a.status === f.key).length
+          return (
+            <button
+              key={f.key}
+              type="button"
+              aria-pressed={filter === f.key}
+              onClick={() => setFilter(f.key)}
+              className={`text-[11px] font-medium px-2.5 py-1 rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg ${
+                filter === f.key
+                  ? 'bg-brand/15 text-brand border-brand/30'
+                  : 'bg-card-strong border-line text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {f.label} <span className="text-[10px] font-mono">({count})</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {applications.length === 0 ? (
+        <p className="text-text-tertiary text-sm">
+          아직 만든 지원 카드가 없어요.
+        </p>
+      ) : shown.length === 0 ? (
+        <p className="text-text-tertiary text-sm">해당 상태의 카드 없음</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {shown.map((app) => {
+            const chip = cardChip(app)
+            return (
+              <li key={app.id} className="py-2.5 flex items-center gap-2.5">
+                <div className="min-w-0 flex-1 flex items-baseline gap-2">
+                  <span className="text-text-primary text-sm font-semibold truncate">
+                    {app.companyName}
+                  </span>
+                  {app.jobTitle && (
+                    <span className="hidden sm:inline text-text-tertiary text-xs truncate">
+                      {app.jobTitle}
+                    </span>
+                  )}
+                  {app.isSample && (
+                    <span className="flex-none text-text-quaternary text-[10px]">
+                      샘플
+                    </span>
+                  )}
+                </div>
+                <span
+                  className={`flex-none text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${CARD_TONE[chip.tone]}`}
+                >
+                  {chip.label}
+                </span>
+                <span className="flex-none w-[86px] text-right text-text-tertiary text-[11px] font-mono">
+                  {app.currentStepDate
+                    ? formatDateTime(app.currentStepDate).slice(0, 10)
+                    : '—'}
+                </span>
+                <span className="hidden sm:block flex-none w-[86px] text-right text-text-quaternary text-[11px] font-mono">
+                  {formatDateTime(app.createdAt).slice(0, 10)}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <p className="text-text-quaternary text-[11px] pt-1 border-t border-line leading-relaxed">
+        열 순서 — 회사 · 직무 · 현재 단계 · 단계 예정일 · 카드 생성일 (KST).
+        메모·자소서 등 회원이 작성한 내용은 여기 표시되지 않습니다.
+      </p>
+    </div>
+  )
 }
 
 function AuditLogItem({ log }: { log: AuditLog }) {
