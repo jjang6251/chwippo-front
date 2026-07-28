@@ -435,15 +435,24 @@ function ThresholdField({
 
 // 5.6.11 — SystemStatusPanel 은 components/admin/SystemStatusPanel.tsx 로 분리
 
-/** 5.6.3 — Sentry 외부 link 카드 (자체 에러 log 구현 X) */
+/**
+ * 5.6.3 — Sentry 외부 link 카드 (자체 에러 log 구현 X).
+ *
+ * ADR-055: 이 카드는 SDK 도입 전에도 "Sentry 가 추적합니다"라고 단정해 **관리자에게 거짓 상태를
+ * 보여줬다**(2026-07-27 발견). 그래서 문구를 DSN 설정 여부에서 파생시킨다 — 켜지지 않았으면
+ * 켜지지 않았다고 말한다.
+ */
 function SentryLinkCard() {
+  const active = Boolean(import.meta.env.VITE_SENTRY_DSN)
   return (
     <section className="bg-surface-2 border border-line rounded-xl p-5 mb-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-text-primary text-sm font-semibold">에러 추적 (Sentry)</h2>
           <p className="text-text-tertiary text-xs mt-1">
-            서버·프론트 에러는 Sentry 가 추적합니다. 자세한 분석은 외부 dashboard.
+            {active
+              ? '서버·프론트 에러(5xx·렌더 크래시)를 Sentry 가 추적합니다. 자세한 분석은 외부 dashboard.'
+              : 'Sentry 미연결 — 에러가 수집되지 않고 있습니다. VITE_SENTRY_DSN 을 설정하세요.'}
           </p>
         </div>
         {SENTRY_URL ? (
