@@ -155,6 +155,76 @@ describe('CompanyAutocomplete', () => {
     // DART 섹션 라벨 X — 평범한 결과는 무라벨
   })
 
+  /**
+   * 출처 신뢰도 표시 (2026-07-28 — `로쏘(성심당` 실사례).
+   * DART 목록에 없는 회사는 사용자 자유 입력이라 오타가 추천에 그대로 남는다.
+   * 한 명만 넣은 이름은 "검증된 적 없다"를 드러내 사용자가 스스로 거르게 한다.
+   *
+   * 케이스:
+   *  1. userCount 1 → "한 명만 추가했어요" (경고성 힌트)
+   *  2. userCount 2+ → "N명이 추가" (숫자가 신뢰도)
+   *  3. dart 항목엔 어떤 출처 힌트도 없다 (공식 목록이므로)
+   *  4. accent(coral) 미사용 — 합격·pinned 전용 토큰이라 여기 쓰면 의도와 반대 신호
+   */
+  describe('출처 신뢰도 표시', () => {
+    it('1. 한 명만 추가한 이름 → 미검증 힌트', async () => {
+      apiMock.mockResolvedValue([
+        { name: '로쏘(성심당', source: 'user_added', userCount: 1 },
+      ])
+      render(<CompanyAutocomplete value="로쏘" onChange={vi.fn()} />, { wrapper })
+      fireEvent.focus(screen.getByRole('combobox'))
+
+      await waitFor(() =>
+        expect(screen.getByText('로쏘(성심당')).toBeInTheDocument(),
+      )
+      expect(screen.getByText('한 명만 추가했어요')).toBeInTheDocument()
+      expect(screen.queryByText(/명이 추가/)).not.toBeInTheDocument()
+    })
+
+    it('2. 여러 명이 추가한 이름 → 인원수 표시', async () => {
+      apiMock.mockResolvedValue([
+        { name: '커스텀스타트업', source: 'user_added', userCount: 7 },
+      ])
+      render(<CompanyAutocomplete value="커스" onChange={vi.fn()} />, { wrapper })
+      fireEvent.focus(screen.getByRole('combobox'))
+
+      await waitFor(() =>
+        expect(screen.getByText('커스텀스타트업')).toBeInTheDocument(),
+      )
+      expect(screen.getByText('7')).toBeInTheDocument()
+      expect(screen.queryByText('한 명만 추가했어요')).not.toBeInTheDocument()
+    })
+
+    it('3. DART 항목엔 출처 힌트가 붙지 않는다', async () => {
+      apiMock.mockResolvedValue([
+        { name: '네이버', domain: 'naver.com', source: 'dart' },
+      ])
+      render(<CompanyAutocomplete value="네" onChange={vi.fn()} />, { wrapper })
+      fireEvent.focus(screen.getByRole('combobox'))
+
+      await waitFor(() => expect(screen.getByText('네이버')).toBeInTheDocument())
+      expect(screen.queryByText('한 명만 추가했어요')).not.toBeInTheDocument()
+      expect(screen.queryByText(/명이 추가/)).not.toBeInTheDocument()
+    })
+
+    it('4. 출처 힌트에 accent(coral) 토큰을 쓰지 않는다', async () => {
+      apiMock.mockResolvedValue([
+        { name: '커스텀스타트업', source: 'user_added', userCount: 3 },
+      ])
+      const { container } = render(
+        <CompanyAutocomplete value="커스" onChange={vi.fn()} />,
+        { wrapper },
+      )
+      fireEvent.focus(screen.getByRole('combobox'))
+
+      await waitFor(() =>
+        expect(screen.getByText('커스텀스타트업')).toBeInTheDocument(),
+      )
+      // DESIGN.md — accent 는 합격·pinned 전용. 가장 덜 검증된 항목이 가장 눈에 띄면 안 된다
+      expect(container.querySelector('.text-accent')).toBeNull()
+    })
+  })
+
   it('disabled prop → input 비활성', () => {
     render(<CompanyAutocomplete value="" onChange={vi.fn()} disabled />, { wrapper })
     expect(screen.getByRole('combobox')).toBeDisabled()
