@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import * as Sentry from '@sentry/react'
 
 /**
  * 라우트 단위 에러 경계 — 섹션 하나의 렌더 크래시가 페이지 전체를 백지로 만들지 않게 막는다.
@@ -22,6 +23,11 @@ export class RouteErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[RouteErrorBoundary] 화면 렌더 실패:', error, info.componentStack)
+    // componentStack 은 컴포넌트 이름 트리라 사용자 데이터가 없다 (Sentry 전송 안전).
+    // 위 console.error 인자는 console breadcrumb 을 꺼둬서 전송되지 않는다 (lib/sentry.ts).
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: info.componentStack } },
+    })
   }
 
   render(): ReactNode {
