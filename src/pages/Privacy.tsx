@@ -2,9 +2,11 @@
 // TODO: 유료 결제 도입 시 → 결제 수탁업체(PG사) 추가, §3 보유 기간에 전자상거래법 5년 명시
 // TODO: 사업자 등록 시 → §8 개인정보 보호책임자에 사업자 정보 추가
 // 갱신 이력:
-// - 2026-07-27 공고 / 2026-08-03 시행: §1에 서비스 오류 진단 정보 + §5 수탁업체에 Sentry 추가.
+// - 2026-07-28 공고 / 2026-08-04 시행: §1에 서비스 오류 진단 정보 + §5 수탁업체에 Sentry 추가.
 //   출시(7/26) 후 첫 개정이라 §10 "시행일 7일 전 공지" 조항을 준수 — 공고와 시행 사이 7일.
-//   ⚠️ Sentry DSN 은 **시행일(8/3)에 주입**한다. 방침보다 먼저 켜면 고지 없는 수집이 된다.
+//   ⚠️ Sentry DSN 은 **시행일(8/4)에 주입**한다. 방침보다 먼저 켜면 고지 없는 수집이 된다.
+//   ⚠️ 공고일 = **운영 배포일**. 개정 커밋을 7/27 에 만들고 main 배포를 안 해 하루 밀렸다
+//      (develop 머지만으로는 공고가 아니다). 다음 개정 때도 배포일 기준으로 날짜를 적을 것.
 // - 2026-05-18 (PR DD, LRR Phase 5-B): §1에 user_profiles 8필드(실명·전화·이메일·생년월일·병역) 명시 + §5 수탁업체 정합 (AWS S3 → R2, Railway·Cloudflare·GitHub Actions 추가)
 // - 2026-05-14: 초안
 
@@ -23,9 +25,9 @@ export function Privacy() {
           ← 뒤로
         </button>
         <h1 className="text-2xl font-bold mb-2">개인정보처리방침</h1>
-        <p className="text-text-quaternary text-sm mb-2">시행일: 2026년 8월 3일</p>
+        <p className="text-text-quaternary text-sm mb-2">시행일: 2026년 8월 4일</p>
         <p className="text-text-tertiary text-xs mb-12 leading-relaxed">
-          이 방침은 2026년 7월 27일 공고되어 2026년 8월 3일부터 시행됩니다. 시행일 전까지는
+          이 방침은 2026년 7월 28일 공고되어 2026년 8월 4일부터 시행됩니다. 시행일 전까지는
           이전 방침(2026년 5월 18일 시행)이 적용됩니다. 변경 내용은 아래 페이지 하단에
           정리되어 있습니다.
         </p>
@@ -233,7 +235,7 @@ export function Privacy() {
 
         <div className="mt-12 pt-6 border-t border-line text-text-quaternary text-xs space-y-2">
           <p>
-            <span className="text-text-tertiary font-medium">공고일: 2026년 7월 27일 · 시행일: 2026년 8월 3일</span>
+            <span className="text-text-tertiary font-medium">공고일: 2026년 7월 28일 · 시행일: 2026년 8월 4일</span>
             <br />
             이전 방침(2026년 5월 18일 시행) 대비 변경 사항 — ① §1 수집 항목에 <strong>서비스 오류 진단
             정보</strong>(오류 메시지·발생 화면·브라우저 정보·IP·회원 고유 식별자) 추가 ② §5 수탁 업체에
