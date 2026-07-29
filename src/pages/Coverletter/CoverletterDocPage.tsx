@@ -18,6 +18,7 @@ import {
   useCompanyResearchCache,
 } from '@/hooks/useCoverletterDoc'
 import type { UpdateCoverletterDto } from '@/types/coverletter'
+import { DesktopOnlyNotice } from '@/components/coverletter/DesktopOnlyNotice'
 
 /**
  * F1 자소서 풀페이지 (회사 단위) — `/board/:applicationId/coverletter`.
@@ -213,11 +214,7 @@ export function CoverletterDocPage() {
         )}
       </header>
 
-      {readOnly && (
-        <div className="bg-card border border-line rounded-lg px-3 py-2 text-xs text-text-tertiary mb-5">
-          📱 모바일에서는 보기 전용이에요 — 작성·수정은 PC에서 진행해 주세요.
-        </div>
-      )}
+      {readOnly && <DesktopOnlyNotice className="mb-5" />}
 
       {/* Phase B — 회사 조사 banner.
         * PR UI: default collapse (outdated 우선 표시 — 사용자 인지 부하 ↓).

@@ -9,6 +9,7 @@ import {
 import { useApplication } from '@/hooks/useApplications'
 import { useCompanyResearchCache } from '@/hooks/useCoverletterDoc'
 import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
+import { DesktopOnlyNotice } from '@/components/coverletter/DesktopOnlyNotice'
 import { CoverLetterCard } from '@/components/card/CoverLetterCard'
 import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
 import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
@@ -84,9 +85,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
         {banners}
         <div className="border border-line bg-surface-2 rounded-xl p-4">
           {readOnly ? (
-            <p className="text-[11px] text-text-quaternary mb-2.5">
-              자소서는 PC에서 작성할 수 있어요. 작성한 내용은 여기서 볼 수 있어요.
-            </p>
+            <DesktopOnlyNotice variant="inline" className="mb-2.5" />
           ) : (
             <>
               <p className="text-text-primary text-sm font-semibold mb-1">
@@ -136,26 +135,33 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
       {/* PR_B1c Phase G — 회사 정보 outdated 안내 */}
       {/* PR UI — list.length===0 dead branch 제거 (line 47 에서 early return) */}
       <>
-          {/* 풀페이지 진입 강조 */}
-          <div className="flex items-center justify-between gap-2 bg-brand/5 border border-brand/20 rounded-xl px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-text-primary text-sm font-semibold">
-                <span className="inline-flex items-center gap-1">
-                  <Sparkles size={15} strokeWidth={1.75} aria-hidden="true" />
-                  자소서 풀페이지에서 AI 와 함께 작성하세요
-                </span>
-              </p>
-              <p className="text-text-quaternary text-[11px] mt-0.5">
-                회사·직무 조사 + 활동일지 + 채팅으로 답변 작성·검토 가능
-              </p>
+          {/*
+            풀페이지 진입 강조 — 보기 전용(모바일·앱)에서는 "AI 와 함께 작성하세요" 가
+            **지킬 수 없는 약속**이다. 열어도 못 쓴다. 그래서 안내를 바꿔 끼운다.
+          */}
+          {readOnly ? (
+            <DesktopOnlyNotice />
+          ) : (
+            <div className="flex items-center justify-between gap-2 bg-brand/5 border border-brand/20 rounded-xl px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-text-primary text-sm font-semibold">
+                  <span className="inline-flex items-center gap-1">
+                    <Sparkles size={15} strokeWidth={1.75} aria-hidden="true" />
+                    자소서 풀페이지에서 AI 와 함께 작성하세요
+                  </span>
+                </p>
+                <p className="text-text-quaternary text-[11px] mt-0.5">
+                  회사·직무 조사 + 활동일지 + 채팅으로 답변 작성·검토 가능
+                </p>
+              </div>
+              <Link
+                to={fullscreenHref}
+                className="shrink-0 px-3 py-2 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+              >
+                열기 →
+              </Link>
             </div>
-            <Link
-              to={fullscreenHref}
-              className="shrink-0 px-3 py-2 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
-            >
-              열기 →
-            </Link>
-          </div>
+          )}
 
           <div className="border border-line bg-surface-2 rounded-xl divide-y divide-line overflow-hidden">
             {list.map((cl) => (
