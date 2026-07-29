@@ -298,15 +298,27 @@ function Item({ id, company, active, onPick, onHover }: ItemProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-text-tertiary">
+        <div className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
           {company.industry && (
             <span className="px-1.5 py-0.5 rounded-full bg-card border border-line">
               {company.industry}
             </span>
           )}
-          {company.source === 'user_added' && company.userCount && (
-            <span className="text-accent font-mono">+{company.userCount}명 추가</span>
-          )}
+          {/*
+            출처 신뢰도. DART 목록에 없는 회사는 사용자들이 직접 친 이름이라
+            오타가 그대로 추천에 남는다 (2026-07-28 `로쏘(성심당` 실사례).
+            한 명만 넣은 이름은 **검증된 적 없다**는 걸 드러내 사용자가 스스로 거르게 한다.
+            accent(coral) 은 합격·pinned 전용이라 여기서 쓰지 않는다 — 오히려 의도와 반대
+            신호(가장 눈에 띄는 색 = 가장 덜 검증된 항목)였다.
+          */}
+          {company.source === 'user_added' &&
+            (company.userCount === 1 ? (
+              <span className="text-text-quaternary whitespace-nowrap">한 명만 추가했어요</span>
+            ) : company.userCount ? (
+              <span className="text-text-tertiary whitespace-nowrap">
+                <span className="font-mono">{company.userCount}</span>명이 추가
+              </span>
+            ) : null)}
         </div>
       </div>
       {active && (

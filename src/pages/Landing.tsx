@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Apple } from 'lucide-react'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 import { resolvePostLoginDestination } from '@/utils/authRouting'
@@ -319,6 +320,33 @@ export function Landing() {
       </section>
 
       </main>
+
+      {/*
+        앱 안내 — 2026-07-26 App Store 출시 후에도 웹 어디에도 앱 존재를 알리는 곳이
+        없었다 (2026-07-29 발견). 검색으로 들어온 사람이 앱을 모르고 나간다.
+        안드로이드는 아직 스토어에 없으므로 iOS 만 안내한다.
+      */}
+      <section className="border-t border-line py-10">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left">
+          <div>
+            <p className="text-text-primary text-sm font-semibold">
+              마감 알림은 앱으로 받으세요
+            </p>
+            <p className="text-text-tertiary text-xs mt-1 leading-relaxed">
+              서류 마감·면접 일정을 놓치지 않게 알려드려요. iPhone·iPad 지원.
+            </p>
+          </div>
+          <a
+            href="https://apps.apple.com/app/id6789707709"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg bg-brand hover:bg-brand-hover text-bg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+          >
+            <Apple size={15} strokeWidth={2} aria-hidden="true" />
+            App Store 에서 받기
+          </a>
+        </div>
+      </section>
 
       {/* 푸터 */}
       <footer className="border-t border-line py-8">
