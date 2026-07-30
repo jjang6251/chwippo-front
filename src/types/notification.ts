@@ -42,6 +42,22 @@ export type AlarmConfigUpdate = Partial<Omit<AlarmConfig, 'eventToggles'>> & {
   eventToggles?: Partial<EventToggles>
 }
 
+/**
+ * 인앱 알림의 구조화 이벤트 (payload.events).
+ *
+ * 과거 알림에는 **없다** — body 문자열만 있던 시절 데이터라 `parseNotificationEvents` 가
+ * null 을 돌려주고, 화면은 기존처럼 body 텍스트로 폴백한다.
+ */
+export interface NotificationEvent {
+  /** 회사명·시험명 등 주체 (강조 표시) */
+  subject: string
+  /** "서류 마감"·"1차 면접"·"14:00" 등 */
+  label: string
+  /** 오늘=0 · 미래 양수 · null = 날짜 없음 */
+  dday: number | null
+  deepLink: string | null
+}
+
 export interface NotificationItem {
   id: string
   type: NotificationType
