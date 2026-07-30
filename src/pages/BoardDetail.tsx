@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
@@ -170,7 +170,14 @@ function CurrentStepCard({
 export function BoardDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useDemoNavigate()
-  const { data: app, isLoading } = useApplication(id!)
+  /*
+    직접 진입(북마크·공유 링크·주소 입력)이면 '이전으로' 를 감춘다.
+    `window.history.length` 는 **우리 앱 안에서 왔는지 알려주지 않는다** — 외부에서
+    들어와도 1보다 클 수 있어, 그 상태로 뒤로 가면 앱 밖으로 나간다 (2026-07-30 수정).
+    react-router 는 앱 안에서 이동해 생긴 항목에만 고유 key 를 주고, 첫 진입은 'default' 다.
+  */
+  const canGoBack = useLocation().key !== 'default'
+  const { data: app, isLoading, isError } = useApplication(id!)
   const { mutate: update } = useUpdateApplication(id!)
   const { mutate: updateStep } = useUpdateCurrentStep()
   const { mutate: updateSteps, isPending: isSavingSteps } = useUpdateSteps(id!)
@@ -210,9 +217,48 @@ export function BoardDetail() {
   )
 
   if (isLoading) return <DetailSkeleton />
-  if (!app) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-text-tertiary text-sm">
-      카드를 찾을 수 없어요.
+  /*
+    카드가 없거나(삭제됨) id 형식이 틀린 경우(400) 둘 다 여기로 온다.
+    이전엔 `!app` 만 보고 "카드를 찾을 수 없어요" 한 줄만 띄워, 알림에서 넘어온
+    사용자가 **원인도 모르고 돌아갈 길도 없는** 화면에 갇혔다.
+    알림은 최대 30일 남는데 그 사이 카드를 지우면 링크가 죽는다 (2026-07-29 발견).
+  */
+  if (isError || !app) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
+      <p className="text-text-secondary text-sm font-medium mb-1">
+        카드를 찾을 수 없어요
+      </p>
+      <p className="text-text-tertiary text-xs leading-relaxed mb-5">
+        삭제되었거나 주소가 바뀌었을 수 있어요.
+      </p>
+      <div className="flex items-center gap-2">
+        {/*
+          나갈 길은 "내가 있던 곳"이 우선이다 — 알림에서 눌러 들어온 사용자를 보드로 보내면
+          안 물어본 곳으로 데려가는 셈이고, 읽던 알림 목록으로 못 돌아온다.
+          단 북마크·공유 링크·주소 직접 입력으로도 오는 화면이라 이력이 없을 수 있어
+          보드로 가는 길을 함께 둔다.
+        */}
+        {canGoBack && (
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="min-h-[44px] px-4 rounded-lg bg-brand hover:bg-brand-hover text-bg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+          >
+            ← 이전으로
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => navigate('/board')}
+          className={`min-h-[44px] px-4 rounded-lg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg ${
+            canGoBack
+              ? 'border border-line text-text-secondary hover:bg-surface-2'
+              : 'bg-brand hover:bg-brand-hover text-bg'
+          }`}
+        >
+          지원 현황 보드로 →
+        </button>
+      </div>
     </div>
   )
 

@@ -8,12 +8,17 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CalendarMonthlyGrid } from './CalendarMonthlyGrid'
-import { addDays, todayLocal } from '@/utils/datetime'
+import { addDays } from '@/utils/datetime'
 import type { CalendarEvent } from '@/api/calendar'
 
-// U4 — '오늘'은 KST 기준(todayLocal). 컴포넌트가 todayLocal() 을 쓰므로 테스트 기준도
-// 동일하게 잡아 UTC·KST 러너에서 로컬 now 와 갈라지지 않게 한다.
-const TODAY = todayLocal()
+// U4 — '오늘'은 KST 기준. 컴포넌트가 todayLocal() 을 쓰므로 테스트도 같은 날짜를 봐야 한다.
+//
+// 🔴 2026-07-30 수정 — 여기서 `todayLocal()` 을 호출하면 **모듈 로드 시점**에 평가돼
+// `beforeEach` 의 `vi.setSystemTime(2026-07-15)` 보다 먼저 실행된다. 그래서 테스트는
+// 실제 오늘을, 컴포넌트는 7/15 를 보게 되고 **두 날짜가 다른 주·달이 되는 순간 깨진다**
+// (7월 중순엔 우연히 같은 그리드라 통과했고 7/30 에 터졌다).
+// 아래 모든 describe 가 2026-07-15 로 고정하므로 상수도 그 값으로 박는다.
+const TODAY = '2026-07-15'
 const DAY_NUM = String(Number(TODAY.slice(8, 10)))
 
 function ev(partial: Partial<CalendarEvent> & { type: CalendarEvent['type'] }): CalendarEvent {
@@ -84,8 +89,10 @@ describe('CalendarMonthlyGrid — 마감 pill·"+N" 뱃지·링 (M8·U22)', () =
     vi.useRealTimers()
   })
 
-  // 오늘(15)이 아닌 미래·비오늘 날짜 → past opacity·today 배지 간섭 없음
-  const DEADLINE_DAY = addDays(todayLocal(), 2) // 2026-07-17
+  // 오늘(15)이 아닌 미래·비오늘 날짜 → past opacity·today 배지 간섭 없음.
+  // ⚠️ `todayLocal()` 을 쓰면 describe 본문(= beforeEach 보다 먼저) 에서 평가돼
+  // 고정 시각이 아직 안 걸린 실제 오늘을 잡는다. TODAY 상수로부터 계산한다.
+  const DEADLINE_DAY = addDays(TODAY, 2) // 2026-07-17
   const DEADLINE_DAY_NUM = String(Number(DEADLINE_DAY.slice(8, 10))) // '17'
 
   function deadlineEvents(n: number): CalendarEvent[] {
@@ -140,7 +147,9 @@ describe('CalendarMonthlyGrid — pill 스텝 딥링크 (U7)', () => {
     vi.useRealTimers()
   })
 
-  const DAY = todayLocal() // '2026-07-15'
+  // ⚠️ 위 DEADLINE_DAY 와 같은 함정 — describe 본문은 beforeEach 보다 먼저 평가된다.
+  // 주석은 '2026-07-15' 인데 실제로는 실행일이 들어가고 있었다. 상수로 고정.
+  const DAY = TODAY // '2026-07-15'
 
   it('1) pill 회사명 클릭 → 스텝 경로 이동 · 셀 onSelectDate 미호출', () => {
     const onSelectDate = vi.fn()
