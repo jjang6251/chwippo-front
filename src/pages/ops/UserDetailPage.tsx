@@ -17,6 +17,7 @@ import {
   type AdminApplicationStatus,
   type AdminChipTone,
 } from '@/utils/adminApplicationChip'
+import { visitDetailLine, visitSummary } from '@/utils/visitStats'
 
 /**
  * PR_B2 Phase 1 — 사용자 상세 페이지 (Q6 — 모든 항목 + 보기 편한 UI).
@@ -74,6 +75,20 @@ interface UserDetail {
     coverletterAnswered: number
     interviewPrepCount: number
     activityLogCount: number
+  }
+  /**
+   * A8 `user_daily_visits` 기반 방문 이력.
+   * `lastActiveAt` 은 마지막 한 점만 덮어써서 "얼마나 꾸준히 오나"를 못 답한다 — 그걸 여기가 답한다.
+   * ⚠️ `firstVisitDate` 는 **집계 시작일**이지 가입일이 아니다 (테이블 도입 2026-07-07).
+   *
+   * **optional 인 게 의도다.** 프론트(Vercel)가 백엔드(Railway)보다 먼저 뜨는 배포 창에는
+   * 이 필드가 없다. 필수로 두면 타입은 통과하고 런타임에 터진다 —
+   * optional 로 둬야 컴파일러가 undefined 처리를 강제한다. (`applications` 와 같은 이유)
+   */
+  visitStats?: {
+    totalDays: number
+    last30Days: number
+    firstVisitDate: string | null
   }
 }
 
@@ -150,6 +165,12 @@ export function UserDetailPage() {
   const { basic, coinBalance, inquiries, auditLogs, activityStats } = data
   // 배포 순서 무관 — 백엔드가 먼저 나가지 않아도 빈 배열로 안전하게 렌더
   const applications = data.applications ?? []
+  /*
+    같은 이유로 undefined 일 수 있다. 단 여기선 **기본값을 채우지 않는다** —
+    `?? { totalDays: 0 }` 은 "모른다"를 "0회 방문했다"는 거짓 주장으로 바꾼다.
+    undefined 를 그대로 넘겨서 visitSummary/visitDetailLine 이 '-' 를 그리게 한다.
+  */
+  const visitStats = data.visitStats
   const isSuspended = basic.suspendedAt !== null
 
   return (
@@ -206,14 +227,21 @@ export function UserDetailPage() {
           일째)
         </p>
         {/* 미니 stat — admin 한눈 정보 */}
-        <div className="grid grid-cols-3 gap-2 text-xs">
+        {/* 형제 ops 화면(OpsPage·SystemStatusPanel)이 쓰는 `grid-cols-2 md:grid-cols-4` 와 통일.
+            320px 에서 4개를 한 줄에 넣으면 값이 잘린다 → 2×2 로 접는다 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           <MiniStat
             label="잔여 코인"
             value={coinBalance ? `${coinBalance.balance}` : '-'}
             sub={coinBalance ? coinBalance.tier : undefined}
           />
+          {/*
+            "마지막 활동" → "마지막 접속". 그리고 sub 를 날짜에서 **시각까지**로 올렸다 —
+            전엔 저장값이 "그날 첫 접속 시각" 이라 시각을 보여주면 거짓말이었지만,
+            이제 1분 throttle 이라 진짜 마지막 접속 시각이다.
+          */}
           <MiniStat
-            label="마지막 활동"
+            label="마지막 접속"
             value={
               basic.lastActiveAt
                 ? relativeTime(basic.lastActiveAt, renderedNow)
@@ -221,10 +249,27 @@ export function UserDetailPage() {
             }
             sub={
               basic.lastActiveAt
-                ? new Date(basic.lastActiveAt).toLocaleDateString('ko-KR')
+                ? /*
+                     `dateStyle:'short' + timeStyle:'short'` 는 320px 2열에서 **12월에 잘린다**
+                     ("26. 12. 25. 오후 12:38 KST" = 117px / 칸 88px, 실측 2026-07-30).
+                     월·일·시각만 남기면 81px 로 여유가 생긴다. 연도는 relativeTime 이 대신 말해준다.
+                     `hourCycle:'h23'` 강제 — `hour12:false` 는 ICU 버전에 따라 자정이 24:00 이 된다.
+                  */
+                  `${new Date(basic.lastActiveAt).toLocaleString('ko-KR', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hourCycle: 'h23',
+                  })} KST`
                 : undefined
             }
           />
+          {/*
+            방문일수 — 총계만 보면 "가입 3개월에 24일"과 "가입 1주에 5일"을 구분 못 한다.
+            지금 꾸준한지는 **최근 30일**이 답하므로 sub 로 같이 준다.
+          */}
+          <MiniStat label="방문" {...visitSummary(visitStats)} />
           <MiniStat
             label="지원 카드"
             value={`${activityStats.applicationCount}`}
@@ -350,14 +395,26 @@ export function UserDetailPage() {
               label="가입일"
               value={new Date(basic.createdAt).toLocaleString('ko-KR')}
             />
+            {/*
+              `mono` 를 붙였다가 뺐다 — 320px 에서 값이 **40px 잘렸다**
+              (칸 140px / DM Mono 실제 180px, 실측 2026-07-30). 값에 "오후" 같은 한글이 섞여
+              DM Mono 에 글리프가 없어 중간에 폰트가 갈리기도 하고, 바로 위 `가입일` 이
+              같은 포맷인데 mono 가 아니라 두 행이 달라 보였다. DM Mono 는 숫자·코드용이다.
+            */}
             <Row
-              label="마지막 활동"
+              label="마지막 접속 (KST)"
               value={
                 basic.lastActiveAt
                   ? new Date(basic.lastActiveAt).toLocaleString('ko-KR')
                   : '-'
               }
             />
+            {/*
+              총 방문일수를 그냥 "24일" 로만 쓰면 **가입 후 24일로 읽힌다.**
+              user_daily_visits 는 2026-07-07 부터 쌓여서, 그 전 가입자는 부분값이다
+              (예: 4/28 가입자의 24일 = 7/7 이후 24일). 집계 시작일을 같이 붙여 오해를 막는다.
+            */}
+            <Row label="방문일수" value={visitDetailLine(visitStats)} />
             <Row
               label="정지 상태"
               value={isSuspended ? '정지됨' : '정상'}
@@ -829,8 +886,14 @@ function MiniStat({
     <div className="bg-card-strong border border-line rounded-md px-3 py-2">
       <p className="text-text-quaternary text-[10px] mb-0.5">{label}</p>
       <p className="text-text-primary text-sm font-bold font-mono">{value}</p>
+      {/*
+        `text-faint` 였는데 **다크 2.64:1 · 라이트 2.84:1** 로 그래픽 최저선(3:1)에도 미달했다
+        (2026-07-30 토큰 실측). DESIGN.md 규칙 6 이 text-faint 를 "장식 전용, 본문성 정보 금지"
+        로 두는데 여기엔 자소서 곳수·방문일수 같은 **읽어야 하는 값**이 들어간다.
+        tertiary 로 올려 5.00 / 5.94:1. 9px → 10px 도 같이 (숫자를 읽으라고 넣은 자리다).
+      */}
       {sub && (
-        <p className="text-text-faint text-[9px] mt-0.5 truncate">{sub}</p>
+        <p className="text-text-tertiary text-[10px] mt-0.5 truncate">{sub}</p>
       )}
     </div>
   )
