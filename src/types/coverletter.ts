@@ -46,17 +46,29 @@ export interface CoverletterFeedbackIssue {
   advice: string
 }
 
+/**
+ * D0 (2026-08-01 실사고) — 배열·문자열 필드가 전부 **optional** 이다.
+ *
+ * 백엔드가 정규화를 시작했으므로 *앞으로* 저장되는 값은 완전하지만,
+ * **그 이전에 `last_feedback` 에 저장된 불완전한 값이 DB 에 남아 있다.**
+ * 재진입 시 그 값을 그대로 읽으므로 타입이 "항상 있다"고 선언하면 tsc 가 아무것도 못 막는다
+ * (실제로 `suggestions.length` 에서 크래시했다).
+ *
+ * 소비 측은 반드시 `?? []` 로 방어할 것.
+ */
 export interface CoverletterFeedback {
-  strengths: string[]
-  issues: CoverletterFeedbackIssue[]
-  suggestions: Array<{ target: string; improved: string }>
-  summary: string
+  strengths?: string[]
+  issues?: CoverletterFeedbackIssue[]
+  suggestions?: Array<{ target: string; improved: string }>
+  summary?: string
 }
 
 export interface CoverletterFeedbackResult {
   status: 'ok' | 'blocked' | 'error'
   reason?: string
   feedback?: CoverletterFeedback
+  /** D0 — 출력 한도로 결과가 일부만 생성됨. 코인은 정상 차감 (부분 결과도 가치 있음) */
+  truncated?: boolean
 }
 
 export interface ApplicationCoverletter {
