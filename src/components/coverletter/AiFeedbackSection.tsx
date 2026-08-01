@@ -87,6 +87,16 @@ export function AiFeedbackSection({
   // 저장된(신규 아님) 결과를 보여주는 중인지 — "N분 전 점검" 라벨 노출용
   const showSavedLabel = !status && !!lastFeedback && !!lastFeedbackAt
 
+  // D0 (2026-08-01 크래시) — 배열이 없을 수 있다. 서버는 이제 정규화하지만
+  //   **이 수정 이전에 last_feedback 에 저장된 불완전한 값**이 DB 에 남아 있어
+  //   재진입 시 그대로 읽힌다. 소비 지점마다 흩뿌리지 않고 여기서 한 번만 방어한다.
+  const strengths = shownFeedback?.strengths ?? []
+  const issues = shownFeedback?.issues ?? []
+  const suggestions = shownFeedback?.suggestions ?? []
+  const summary = shownFeedback?.summary ?? ''
+  // 잘림 안내는 방금 받은 결과에만 — 저장분에는 플래그가 없다
+  const shownTruncated = status === 'done' && entry?.truncated === true
+
   const handleApplySuggestion = (i: number, target: string, improved: string) => {
     if (!canApply) return
     if (!answer.includes(target)) {
@@ -173,9 +183,25 @@ export function AiFeedbackSection({
             )}
           </div>
 
-          {shownFeedback.strengths.length > 0 && (
+          {/* D0 — 출력 한도로 결과가 일부만 생성된 경우. 사용자가 "이게 전부"라고 오해하는 걸 막는다 */}
+          {shownTruncated && (
+            // 이 안내의 목적이 "결과가 전부가 아님을 인지시키는 것"이라, 화면을 못 보는
+            // 사용자에게 전달되지 않으면 기능이 목적을 달성하지 못한다. aria-live 는 위쪽
+            // 로딩 블록에만 있어서 "점검 중"은 읽히고 정작 결과·경고는 안 읽히고 있었다.
+            <div
+              role="status"
+              aria-live="polite"
+              className="bg-warning/8 border border-warning/20 rounded-lg px-3 py-2"
+            >
+              <p className="text-warning text-[11px] leading-relaxed">
+                ⚠️ 답변이 길어 점검 결과가 일부만 나왔어요 — 지적사항이 더 있을 수 있어요.
+              </p>
+            </div>
+          )}
+
+          {strengths.length > 0 && (
             <div className="bg-success/5 border border-success/20 rounded-lg px-3 py-2">
-              {shownFeedback.strengths.map((st, i) => (
+              {strengths.map((st, i) => (
                 <p key={i} className="text-[11px] text-text-secondary leading-relaxed">
                   👍 {st}
                 </p>
@@ -183,7 +209,7 @@ export function AiFeedbackSection({
             </div>
           )}
 
-          {shownFeedback.issues.map((issue, i) => (
+          {issues.map((issue, i) => (
             <div key={i} className="bg-card border border-line rounded-lg px-3 py-2 space-y-1">
               <span
                 className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${KIND_LABEL[issue.kind]?.tone ?? 'text-text-tertiary bg-surface-3 border-line'}`}
@@ -197,10 +223,10 @@ export function AiFeedbackSection({
             </div>
           ))}
 
-          {shownFeedback.suggestions.length > 0 && (
+          {suggestions.length > 0 && (
             <div className="bg-card border border-line rounded-lg px-3 py-2 space-y-1.5">
               <p className="text-[10px] text-text-quaternary font-medium">예시 방향 (참고용)</p>
-              {shownFeedback.suggestions.map((sg, i) => (
+              {suggestions.map((sg, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <p className="flex-1 min-w-0 text-[11px] leading-relaxed">
                     <span className="text-text-quaternary line-through">{sg.target}</span>
@@ -233,7 +259,9 @@ export function AiFeedbackSection({
             </div>
           )}
 
-          <p className="text-[11px] text-text-tertiary leading-relaxed">💬 {shownFeedback.summary}</p>
+          {summary && (
+            <p className="text-[11px] text-text-tertiary leading-relaxed">💬 {summary}</p>
+          )}
 
           {/* 결과가 보이는 동안엔 "점검 받기" 대신 재검사 */}
           <div className="flex items-center justify-between gap-2 pt-1">

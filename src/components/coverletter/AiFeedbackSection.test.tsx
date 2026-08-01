@@ -233,4 +233,102 @@ describe('AiFeedbackSection', () => {
     await waitFor(() => expect(ensureConsentMock).toHaveBeenCalled())
     expect(postMock).not.toHaveBeenCalled()
   })
+
+  /**
+   * D0 (2026-08-01 실사고) — 불완전한 저장 결과로 인한 크래시 방어.
+   *
+   * 백엔드가 정규화를 시작했지만 **그 이전에 `last_feedback` 에 저장된 불완전한 값이 DB 에 남아 있고**,
+   * 재진입 시 그대로 렌더된다. 실제로 `suggestions.length` 에서 TypeError 가 나 페이지가 죽었다.
+   *
+   * 아래는 "렌더가 죽지 않는다"를 필드별로 고정한다 — 죽으면 render() 가 throw 하므로
+   * 별도 expect 없이도 회귀가 잡히지만, 의도를 드러내기 위해 화면 결과까지 확인한다.
+   */
+  describe('D0 — 불완전한 저장 결과 방어', () => {
+    it('🔴 suggestions 가 없어도 크래시하지 않는다 (실제 사고 케이스)', () => {
+      const { suggestions: _omitted, ...broken } = FEEDBACK
+      render(<AiFeedbackSection clId="cl-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
+
+      // 나머지 결과는 정상 렌더되고, 예시 섹션만 빠진다
+      expect(screen.getByText(/정량 근거가 좋아요/)).toBeInTheDocument()
+      expect(screen.queryByText('예시 방향 (참고용)')).not.toBeInTheDocument()
+    })
+
+    it('issues 가 없어도 크래시하지 않는다', () => {
+      const { issues: _omitted, ...broken } = FEEDBACK
+      render(<AiFeedbackSection clId="cl-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
+
+      expect(screen.getByText(/정량 근거가 좋아요/)).toBeInTheDocument()
+      expect(screen.queryByText('AI 티')).not.toBeInTheDocument()
+    })
+
+    it('strengths 가 없어도 크래시하지 않는다', () => {
+      const { strengths: _omitted, ...broken } = FEEDBACK
+      render(<AiFeedbackSection clId="cl-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
+
+      expect(screen.getByText(/도입부만 다듬으면/)).toBeInTheDocument()
+    })
+
+    it('summary 가 없으면 총평 줄 자체를 렌더하지 않는다', () => {
+      const { summary: _omitted, ...broken } = FEEDBACK
+      render(<AiFeedbackSection clId="cl-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
+
+      expect(screen.queryByText(/💬/)).not.toBeInTheDocument()
+      expect(screen.getByText(/정량 근거가 좋아요/)).toBeInTheDocument()
+    })
+
+    it('모든 필드가 없는 빈 객체여도 크래시하지 않는다', () => {
+      render(<AiFeedbackSection clId="cl-1" lastFeedback={{}} lastFeedbackAt={new Date().toISOString()} />)
+
+      expect(screen.getByRole('button', { name: '↻ 재검사' })).toBeInTheDocument()
+    })
+  })
+
+  describe('D0 — 출력 잘림 안내', () => {
+    it('truncated 응답이면 안내가 뜬다', async () => {
+      postMock.mockResolvedValue({
+        data: { data: { status: 'ok', feedback: FEEDBACK, truncated: true } },
+      } as never)
+      render(<AiFeedbackSection clId="cl-1" />)
+
+      fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
+
+      expect(await screen.findByText(/일부만 나왔어요/)).toBeInTheDocument()
+    })
+
+    it('truncated 가 아니면 안내가 없다', async () => {
+      postMock.mockResolvedValue({
+        data: { data: { status: 'ok', feedback: FEEDBACK, truncated: false } },
+      } as never)
+      render(<AiFeedbackSection clId="cl-1" />)
+
+      fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
+
+      await screen.findByText(/도입부만 다듬으면/)
+      expect(screen.queryByText(/일부만 나왔어요/)).not.toBeInTheDocument()
+    })
+
+    it('저장된 결과(재진입)에는 잘림 안내가 없다 — 플래그가 DB 에 없으므로', () => {
+      render(<AiFeedbackSection clId="cl-1" lastFeedback={FEEDBACK} lastFeedbackAt={new Date().toISOString()} />)
+
+      expect(screen.queryByText(/일부만 나왔어요/)).not.toBeInTheDocument()
+    })
+
+    /**
+     * 이 안내의 목적은 "결과가 전부가 아님을 인지시키는 것"이다. 화면을 못 보는 사용자에게
+     * 전달되지 않으면 기능이 목적을 달성하지 못하므로, 시각 표시와 같은 급으로 고정한다.
+     * (aria-live 가 로딩 블록에만 있어 결과·경고는 안 읽히던 상태였다 — /uiux 에서 발견)
+     */
+    it('잘림 안내가 role="status" + aria-live 로 스크린리더에 전달된다', async () => {
+      postMock.mockResolvedValue({
+        data: { data: { status: 'ok', feedback: FEEDBACK, truncated: true } },
+      } as never)
+      render(<AiFeedbackSection clId="cl-1" />)
+
+      fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
+
+      const alert = await screen.findByRole('status')
+      expect(alert).toHaveTextContent(/일부만 나왔어요/)
+      expect(alert).toHaveAttribute('aria-live', 'polite')
+    })
+  })
 })
