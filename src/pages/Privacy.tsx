@@ -131,15 +131,20 @@ export function Privacy() {
             <p className="font-medium mb-2">AI 기능 처리 위탁 (PIPA 26조)</p>
             <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
               <li>
-                <strong>OpenAI, L.L.C.</strong> (미국) — 노트 요약·자소서 추천·면접 질문 생성
-                (`gpt-4o-mini`). 사용자 입력 텍스트 처리 후 즉시 폐기, 학습 데이터 미사용
+                <strong>OpenAI, L.L.C.</strong> (미국) — 노트 요약, 자소서에 넣을 활동 추천,
+                채용공고 요건 정리, 면접 꼬리질문 생성. 사용자 입력 텍스트 처리 후 즉시 폐기,
+                학습 데이터 미사용
               </li>
               <li>
-                <strong>Anthropic, PBC</strong> (미국) — 자소서 초안·면접 답변·회사 조사
-                (`claude-haiku-4-5`). 동일 정책. 회사 조사용 web_search 도구 사용 시
-                지정된 화이트리스트 도메인만 검색
+                <strong>Anthropic, PBC</strong> (미국) — 자소서 초안 작성, 자소서 AI 채팅,
+                자소서 심층 점검, 면접 질문 생성. 동일 정책
               </li>
             </ul>
+            <p className="mt-2 text-text-quaternary text-xs">
+              위탁 업체 내에서 사용하는 구체적인 모델(버전)은 품질·비용에 따라 변경될 수 있으며,
+              변경 시에도 위 업체·처리 목적·보관 정책은 동일하게 유지됩니다. 위탁 업체 자체가
+              추가·변경되는 경우에는 본 방침을 개정하고 공지합니다.
+            </p>
             <p className="mt-2 text-text-quaternary text-xs">
               사용자는 가입 시 별도 동의 (`ai_consent_at`) 가 필요하며, 동의 없이는 AI 기능을
               사용할 수 없습니다.
