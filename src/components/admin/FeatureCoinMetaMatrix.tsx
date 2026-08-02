@@ -109,7 +109,7 @@ export function FeatureCoinMetaMatrix() {
         <MatrixConfirmModal
           title={`${featureLabel(pending.feature)} (${pending.feature}) 의 ${pending.field} 변경`}
           description={`${pending.before} → ${pending.newValue}\n\n즉시 적용 — 다음 LLM 호출부터 새 정책 사용 (cache 없음).`}
-          affectedUsers={0}
+          impactLabel={`${featureLabel(pending.feature)} 을(를) 사용하는 모든 사용자`}
           showApplyMode={false}
           onConfirm={handleConfirm}
           onClose={() => setPending(null)}

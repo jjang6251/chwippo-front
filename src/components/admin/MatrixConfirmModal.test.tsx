@@ -199,3 +199,48 @@ describe('MatrixConfirmModal', () => {
     })
   })
 })
+
+/**
+ * G-1 (2026-08-02) — **셀 수 없으면 세는 척하지 않는다.**
+ *
+ * 이전엔 feature 단위 설정 변경에서 `affectedUsers={0}` 을 넘겨 화면에
+ * `영향: 0명 사용자` 가 떴다. 대상이 없어서가 아니라 **셀 수 없어서** 0 이었는데,
+ * 읽는 사람에겐 "아무도 영향 없다" 로 보인다 — 위험한 방향으로 틀린 표시였다.
+ */
+describe('MatrixConfirmModal — 영향 대상 표기', () => {
+  const base = {
+    title: 't',
+    description: 'd',
+    onConfirm: vi.fn(),
+    onClose: vi.fn(),
+  }
+
+  it('셀 수 있으면 숫자로 보여준다 (tier 변경 등)', () => {
+    render(<MatrixConfirmModal {...base} affectedUsers={42} />)
+    expect(screen.getByText('42')).toBeInTheDocument()
+    expect(screen.getByText(/명/)).toBeInTheDocument()
+  })
+
+  it('🔴 셀 수 없으면 숫자 대신 대상을 말로 적는다', () => {
+    render(
+      <MatrixConfirmModal {...base} impactLabel="자소서 점검 을(를) 사용하는 모든 사용자" />,
+    )
+    expect(
+      screen.getByText(/자소서 점검 을\(를\) 사용하는 모든 사용자/),
+    ).toBeInTheDocument()
+    // "0명" 같은 오해 소지가 있는 표기가 남아있지 않아야 한다
+    expect(screen.queryByText(/0명/)).not.toBeInTheDocument()
+  })
+
+  it('문구를 안 주면 기본 문구로 대체 (숫자 0 으로 떨어지지 않는다)', () => {
+    render(<MatrixConfirmModal {...base} />)
+    expect(
+      screen.getByText(/이 설정을 사용하는 모든 사용자/),
+    ).toBeInTheDocument()
+  })
+
+  it('영향 0명은 여전히 표현 가능하다 (진짜 0일 때)', () => {
+    render(<MatrixConfirmModal {...base} affectedUsers={0} />)
+    expect(screen.getByText('0')).toBeInTheDocument()
+  })
+})

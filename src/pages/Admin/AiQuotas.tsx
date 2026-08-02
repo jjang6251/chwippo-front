@@ -14,6 +14,7 @@ import { formatKstDateTime } from '@/utils/datetime'
 import { featureCategory, featureLabel, FEATURE_CATEGORY_ORDER } from '@/utils/featureLabel'
 import { TierConfigMatrix } from '@/components/admin/TierConfigMatrix'
 import { FeatureCoinMetaMatrix } from '@/components/admin/FeatureCoinMetaMatrix'
+import { FeatureModelMatrix } from '@/components/admin/FeatureModelMatrix'
 
 // PR_B2 Phase 2b — feature 한국어 라벨 통일 (admin 전역 utils 사용)
 const labelFor = (feature: string): string => featureLabel(feature)
@@ -188,6 +189,11 @@ export function AiQuotas() {
       {/* PR_B2 Phase 3 — Feature Coin Meta 매트릭스 */}
       <div className="mt-4">
         <FeatureCoinMetaMatrix />
+      </div>
+
+      {/* G-1 — 기능별 AI 모델 전환 (코인 매트릭스 바로 아래: 원가·차감이 연동돼 함께 본다) */}
+      <div className="mt-4">
+        <FeatureModelMatrix />
       </div>
     </div>
   )
