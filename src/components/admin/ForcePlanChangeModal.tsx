@@ -97,7 +97,7 @@ export function ForcePlanChangeModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-card border border-line rounded-xl p-6 space-y-4"
+        className="w-full max-w-md bg-surface border border-line rounded-xl shadow-2xl p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2

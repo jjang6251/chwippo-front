@@ -10,7 +10,19 @@ import { createPortal } from 'react-dom'
 interface Props {
   title: string
   description: string
-  affectedUsers: number
+  /**
+   * 영향받는 사용자 수. **셀 수 있을 때만 넘긴다.**
+   *
+   * 🔴 tier 변경처럼 대상이 고정 집합이면 정확한 수를 셀 수 있지만, feature 단위
+   * 설정(모델·코인 정책)은 **앞으로 그 기능을 쓸 사람까지 포함**이라 수로 표현되지 않는다.
+   * 그런데도 0 을 넘기면 화면에 `영향: 0명 사용자` 가 떠서 **"아무도 영향 없다"** 로
+   * 읽힌다 — 틀린 정도가 아니라 위험한 방향으로 틀린다.
+   *
+   * 그래서 셀 수 없으면 **넘기지 않는다.** 대신 `impactLabel` 로 대상을 말로 적는다.
+   */
+  affectedUsers?: number
+  /** `affectedUsers` 를 생략했을 때 표시할 문구. 기본값은 "이 설정을 사용하는 모든 사용자" */
+  impactLabel?: string
   /** preview sample (잔액 변동 가시화) */
   sample?: Array<{ userId: string; balance: number }>
   /** balance diff (immediate 시 표시) — undefined 면 monthly_coin_limit 무관 변경 */
@@ -25,6 +37,7 @@ export function MatrixConfirmModal({
   title,
   description,
   affectedUsers,
+  impactLabel,
   sample,
   balanceDiff,
   showApplyMode = true,
@@ -54,7 +67,7 @@ export function MatrixConfirmModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-card border border-line rounded-xl p-6 space-y-4"
+        className="w-full max-w-md bg-surface border border-line rounded-xl shadow-2xl p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2
@@ -70,7 +83,15 @@ export function MatrixConfirmModal({
 
         <div className="bg-warning/10 border border-warning/30 rounded-md p-3 space-y-1">
           <p className="text-text-primary text-sm font-semibold">
-            ⚠️ 영향: <span className="font-mono">{affectedUsers}</span>명 사용자
+            {affectedUsers === undefined ? (
+              // 셀 수 있을 때만 센다 — 아래 주석 참조
+              <>⚠️ 영향: {impactLabel ?? '이 설정을 사용하는 모든 사용자'}</>
+            ) : (
+              <>
+                ⚠️ 영향: <span className="font-mono">{affectedUsers}</span>명
+                사용자
+              </>
+            )}
           </p>
           {sample && sample.length > 0 && (
             <div className="space-y-0.5 mt-2">
