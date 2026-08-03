@@ -1,3 +1,4 @@
+import type { PlatformDistribution } from './adminUsers'
 import { apiClient } from './client'
 import type { InquiryDetail } from './inquiries'
 
@@ -46,6 +47,12 @@ export interface InquiriesResult {
 
 export const getAdminStats = () =>
   apiClient.get('/admin/stats').then(unwrap<AdminStats>)
+
+/** 사용 환경 분포 — 웹만/앱만/둘다/미접속 (4분류 배타, 합계 = total) */
+export const getPlatformDistribution = () =>
+  apiClient
+    .get('/admin/platform-distribution')
+    .then(unwrap<PlatformDistribution>)
 
 export const getAdminInquiries = (params?: { status?: string; category?: string; page?: number }) =>
   apiClient.get('/admin/inquiries', { params }).then(unwrap<InquiriesResult>)
