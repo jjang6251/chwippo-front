@@ -250,6 +250,7 @@ export function useSendCoverletterChatStream(applicationId: string) {
             updateAssistantContent(currentReply, currentSuggested)
           },
           onDone: ({ assistantMessage, assistantStatus, assistantStatusReason }) => {
+            clearChatPending(applicationId) // 서버가 완료 응답 — 더는 "생성 중" 아님
             const userToUse = realUserMsg ?? tempUser
             replacePlaceholders(userToUse, assistantMessage)
             qc.invalidateQueries({ queryKey: messagesKey(applicationId) })
@@ -262,6 +263,7 @@ export function useSendCoverletterChatStream(applicationId: string) {
             })
           },
           onError: (message) => {
+            clearChatPending(applicationId) // 서버가 에러 응답 — 기다릴 게 없다
             removePlaceholders()
             onErrorCallback?.(message)
           },
@@ -271,7 +273,14 @@ export function useSendCoverletterChatStream(applicationId: string) {
         const message = err instanceof Error ? err.message : 'stream failed'
         onErrorCallback?.(message)
       } finally {
-        clearChatPending(applicationId)
+        // 🔴 **marker 는 여기서 지우지 않는다** (2026-08-03).
+        //   `finally` 는 "정상 종료" 와 "페이지가 죽어서 중단됨" 을 구분하지 못한다.
+        //   그런데 marker 가 필요한 건 **정확히 후자**다 — 새로고침하면 fetch abort →
+        //   catch → finally 순으로 실행돼, 언로드 직전에 marker 를 지워버렸다.
+        //   그 결과 재진입 시 "생성 중" 표시가 안 뜨고 사용자는 **요청이 날아간 줄 안다**
+        //   (서버는 멀쩡히 완주·저장 중인데도).
+        //   → clear 는 서버가 실제로 응답한 `onDone`·`onError` 에서만 한다.
+        //   끊긴 뒤 영영 응답이 없는 경우는 배너의 90초 타임아웃 + marker 3분 stale 이 정리한다.
         setSending(false)
       }
     },
