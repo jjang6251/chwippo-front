@@ -19,6 +19,12 @@ import type {
 interface FeedbackEntry {
   status: 'running' | 'done' | 'error'
   result?: CoverletterFeedback
+  /**
+   * D0 — 출력 한도로 결과가 일부만 생성됨. **방금 받은 결과에만 존재**한다.
+   * 서버가 `last_feedback` 에 저장하는 건 feedback 본문뿐이라 재진입 시에는 알 수 없다
+   * (안내의 목적이 "생성 직후 인지"라 이 범위로 충분하다고 판단).
+   */
+  truncated?: boolean
   errorMsg?: string
   startedAt: number
 }
@@ -53,7 +59,12 @@ export const useAiFeedbackStore = create<AiFeedbackState>((set, get) => ({
           set((s) => ({
             entries: {
               ...s.entries,
-              [clId]: { status: 'done', result: result.feedback, startedAt },
+              [clId]: {
+                status: 'done',
+                result: result.feedback,
+                truncated: result.truncated,
+                startedAt,
+              },
             },
           }))
         } else {

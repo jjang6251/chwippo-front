@@ -68,7 +68,7 @@ export function SuspendUserModal({ userId, nickname, onClose }: Props) {
       aria-modal="true"
       aria-labelledby="suspend-title"
     >
-      <div className="w-full max-w-sm bg-card border border-line rounded-xl p-6 space-y-4">
+      <div className="w-full max-w-sm bg-surface border border-line rounded-xl shadow-2xl p-6 space-y-4">
         <h2
           id="suspend-title"
           className="text-text-primary text-base font-bold"

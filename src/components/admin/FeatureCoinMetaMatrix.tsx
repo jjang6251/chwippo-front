@@ -109,7 +109,7 @@ export function FeatureCoinMetaMatrix() {
         <MatrixConfirmModal
           title={`${featureLabel(pending.feature)} (${pending.feature}) 의 ${pending.field} 변경`}
           description={`${pending.before} → ${pending.newValue}\n\n즉시 적용 — 다음 LLM 호출부터 새 정책 사용 (cache 없음).`}
-          affectedUsers={0}
+          impactLabel={`${featureLabel(pending.feature)} 을(를) 사용하는 모든 사용자`}
           showApplyMode={false}
           onConfirm={handleConfirm}
           onClose={() => setPending(null)}
@@ -177,8 +177,19 @@ function FeatureRow({
           aria-label={`${row.feature} 평균 코인`}
           defaultValue={parseFloat(row.avgCoinCost)}
           onBlur={(e) => {
-            const v = Number(e.target.value)
             const before = parseFloat(row.avgCoinCost)
+            // 🔴 빈칸 = **변경 없음** (2026-08-03). `Number('') === 0` 이라 값을 지우고
+            // 나가면 평균 코인이 **조용히 0 으로 저장**됐다 — 코인 예측이 통째로 깨진다.
+            // 위 `fixedCoinCost` 는 빈칸 = `null`(미설정)이 **의도된** 의미라 다르게 다룬다.
+            if (e.target.value === '') {
+              e.target.value = String(before)
+              return
+            }
+            const v = Number(e.target.value)
+            if (!Number.isFinite(v)) {
+              e.target.value = String(before)
+              return
+            }
             if (v !== before) {
               onChange('avgCoinCost', v, before)
             }

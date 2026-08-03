@@ -30,6 +30,7 @@ import type {
 } from '@/api/coverletterDoc'
 import { MyinfoCoverletterTree } from './MyinfoCoverletterTree'
 import { AwardTreeSection } from './AwardTreeSection'
+import { isNearLimit, willPasteTruncate } from '@/utils/inputLimit'
 
 /**
  * F1 자소서 풀페이지 Phase D — AI 채팅 패널.
@@ -62,6 +63,17 @@ interface Props {
  * Quick command chips.
  * - requireSelectedLog: true 면 활동 미선택 시 disabled (활동 자료 없으면 무의미).
  */
+/**
+ * 입력 글자수 상한.
+ *
+ * ⚠️ **백엔드 `coverletter-chat.service.ts` 의 `USER_MESSAGE_MAX_LEN` 과 같은 값이어야 한다.**
+ * 프론트는 우회 가능하므로 백엔드가 최종 방어선이고, 이 값은 "사용자가 미리 알게 하는" 역할이다.
+ * 한쪽만 바꾸면 사용자가 다 쓰고 나서 서버에서 거절당한다 — 반드시 함께 수정할 것.
+ *
+ * (feature 별 AI 한도에서 역산한 값이 아니라 관행값이다. `count_tokens` 실측 후 재조정 예정)
+ */
+const CHAT_INPUT_MAX = 5000
+
 const CHIPS = [
   {
     label: '전체 답변 생성',
@@ -129,6 +141,8 @@ export function CoverletterChatPanel({
 
   const isDemo = useDemoMode()
   const [input, setInput] = useState('')
+  /** D0 — 붙여넣기가 한도에서 잘렸음. 입력이 한도 아래로 내려가면 자동 해제 */
+  const [pasteTruncated, setPasteTruncated] = useState(false)
   const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set())
   const [selectedMyinfoKeys, setSelectedMyinfoKeys] = useState<Set<MyinfoFieldKey>>(new Set())
   const [selectedAwardIds, setSelectedAwardIds] = useState<Set<string>>(new Set())
@@ -392,12 +406,46 @@ export function CoverletterChatPanel({
             />
           ))
         )}
+        {/*
+          재진입 "생성 중" — **세션 중 placeholder 와 같은 말풍선**으로 보여준다.
+          이전엔 대화 맨 아래 회색 안내 배너였는데, 사용자가 보낸 질문 밑이 비어 있어
+          "요청이 날아갔나" 로 읽혔다. 답변이 올 자리에 답변 모양으로 서 있어야 한다.
+        */}
         {pendingBanner && (
-          <div
-            aria-live="polite"
-            className="bg-info/8 border border-info/20 text-info text-[11px] rounded-lg p-2.5"
-          >
-            ⏳ 직전 요청의 답변을 아직 생성 중이에요 — 완료되면 대화에 나타나요.
+          <div className="flex gap-2 justify-start" aria-live="polite">
+            <span
+              className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-brand/15 text-brand text-xs"
+              aria-hidden="true"
+            >
+              ✨
+            </span>
+            <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-line bg-surface-2 px-3 py-2">
+              <p className="flex items-center gap-1.5 text-[13px] text-text-tertiary">
+                <span>답변 생성중</span>
+                <span className="inline-flex gap-0.5">
+                  <span
+                    className="w-1 h-1 rounded-full bg-text-quaternary animate-bounce"
+                    style={{ animationDelay: '0ms' }}
+                  />
+                  <span
+                    className="w-1 h-1 rounded-full bg-text-quaternary animate-bounce"
+                    style={{ animationDelay: '150ms' }}
+                  />
+                  <span
+                    className="w-1 h-1 rounded-full bg-text-quaternary animate-bounce"
+                    style={{ animationDelay: '300ms' }}
+                  />
+                </span>
+              </p>
+              {/*
+                세션 중 placeholder 와 다른 점 — 새로고침해도 계속된다는 안심 문구.
+                장식 라벨이 아니라 **읽어야 하는 안내**라 12px (DESIGN.md 규칙 7:
+                본문성 최소 11px·권장 12px+).
+              */}
+              <p className="mt-1 text-xs text-text-quaternary">
+                창을 닫아도 계속 생성돼요. 완료되면 여기에 나타나요.
+              </p>
+            </div>
           </div>
         )}
         <div ref={listEndRef} />
@@ -528,7 +576,28 @@ export function CoverletterChatPanel({
           <textarea
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value)
+              // 한도 아래로 내려오면 잘림 경고 해제 — 초과 상태가 해소된 것
+              if (pasteTruncated && e.target.value.length < CHAT_INPUT_MAX) {
+                setPasteTruncated(false)
+              }
+            }}
+            // D0 — maxLength 는 붙여넣기를 **말없이 자른다**. 사용자가 뒷부분이 사라진 걸
+            //   모른 채 "AI 가 왜 이상하지" 하는 조용한 데이터 손실을 막는다.
+            onPaste={(e) => {
+              const el = e.currentTarget
+              if (
+                willPasteTruncate(
+                  input.length,
+                  el.selectionEnd - el.selectionStart,
+                  e.clipboardData.getData('text').length,
+                  CHAT_INPUT_MAX,
+                )
+              ) {
+                setPasteTruncated(true)
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -544,7 +613,7 @@ export function CoverletterChatPanel({
             }
             disabled={quotaBlocked || sending}
             rows={2}
-            maxLength={5000}
+            maxLength={CHAT_INPUT_MAX}
             className="flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none disabled:opacity-50 px-1 py-1"
           />
           <button
@@ -563,12 +632,33 @@ export function CoverletterChatPanel({
             )}
           </button>
         </div>
-        <div className="flex items-center justify-between mt-1.5 px-1">
+        {/*
+          붙여넣기 잘림 경고는 시각적 변화가 유일한 신호라, aria-live 없이는 스크린리더
+          사용자가 "뒷부분이 잘렸다"는 걸 알 방법이 전혀 없다 — 이 기능이 막으려던
+          조용한 데이터 손실이 그대로 재현된다. 행 전체를 감싸 근접 경고도 함께 알린다.
+        */}
+        <div
+          className="flex items-center justify-between mt-1.5 px-1"
+          aria-live="polite"
+        >
           <AiQuotaChip feature="coverletter_chat" />
-          <span className="text-[10px] text-text-quaternary">
-            {input.length > 0 && `${input.length} / 5000`}
-            {selectedLogIds.size > 0 && ` · 활동 ${selectedLogIds.size}개`}
-          </span>
+          {pasteTruncated ? (
+            <span className="text-[10px] text-warning">
+              ⚠️ {CHAT_INPUT_MAX.toLocaleString()}자까지만 입력됐어요 · 나눠서 보내주세요
+            </span>
+          ) : (
+            <span
+              className={`text-[10px] ${
+                isNearLimit(input.length, CHAT_INPUT_MAX)
+                  ? 'text-warning'
+                  : 'text-text-quaternary'
+              }`}
+            >
+              {input.length > 0 &&
+                `${input.length.toLocaleString()} / ${CHAT_INPUT_MAX.toLocaleString()}`}
+              {selectedLogIds.size > 0 && ` · 활동 ${selectedLogIds.size}개`}
+            </span>
+          )}
         </div>
       </div>
 

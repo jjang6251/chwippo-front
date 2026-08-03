@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AdminCard } from '@/components/common/AdminCard'
+import { NumberInput } from '@/components/common/NumberInput'
 import {
   useAiFeatureQuotas,
   useUpdateAiFeatureQuota,
@@ -14,6 +15,7 @@ import { formatKstDateTime } from '@/utils/datetime'
 import { featureCategory, featureLabel, FEATURE_CATEGORY_ORDER } from '@/utils/featureLabel'
 import { TierConfigMatrix } from '@/components/admin/TierConfigMatrix'
 import { FeatureCoinMetaMatrix } from '@/components/admin/FeatureCoinMetaMatrix'
+import { FeatureModelMatrix } from '@/components/admin/FeatureModelMatrix'
 
 // PR_B2 Phase 2b — feature 한국어 라벨 통일 (admin 전역 utils 사용)
 const labelFor = (feature: string): string => featureLabel(feature)
@@ -189,6 +191,11 @@ export function AiQuotas() {
       <div className="mt-4">
         <FeatureCoinMetaMatrix />
       </div>
+
+      {/* G-1 — 기능별 AI 모델 전환 (코인 매트릭스 바로 아래: 원가·차감이 연동돼 함께 본다) */}
+      <div className="mt-4">
+        <FeatureModelMatrix />
+      </div>
     </div>
   )
 }
@@ -257,32 +264,29 @@ function FeatureRow({ row }: { row: FeatureQuotaConfig }) {
         </div>
       </td>
       <td className="px-3 py-2">
-        <input
-          type="number"
+        <NumberInput
           min={0}
           max={10000}
           value={dayLimit}
-          onChange={(e) => setDayLimit(Math.max(0, Number(e.target.value)))}
+          onValueChange={setDayLimit}
           className="w-full bg-card border border-line text-text-primary text-xs text-right px-2 py-1 rounded focus:outline-none focus:border-brand"
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          type="number"
+        <NumberInput
           min={10}
           max={100000}
           value={monthLimit}
-          onChange={(e) => setMonthLimit(Math.max(10, Number(e.target.value)))}
+          onValueChange={setMonthLimit}
           className="w-full bg-card border border-line text-text-primary text-xs text-right px-2 py-1 rounded focus:outline-none focus:border-brand"
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          type="number"
+        <NumberInput
           min={0}
           max={3600}
           value={cooldown}
-          onChange={(e) => setCooldown(Math.max(0, Number(e.target.value)))}
+          onValueChange={setCooldown}
           className="w-full bg-card border border-line text-text-primary text-xs text-right px-2 py-1 rounded focus:outline-none focus:border-brand"
         />
       </td>

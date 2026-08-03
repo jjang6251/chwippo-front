@@ -47,6 +47,21 @@ const FIVE_EVENTS: CalendarEvent[] = [
 ]
 
 describe('CalendarMonthlyGrid — 셀·+N개 탭 (U8/U9)', () => {
+  // 🔴 2026-08-02 — 이 describe 만 시간 고정이 빠져 있었다. 위 17행 주석이 "아래 모든
+  // describe 가 2026-07-15 로 고정" 이라고 적어놨지만 **첫 describe 가 누락**돼 있었고,
+  // 7/30 수정 당시엔 실제 오늘도 7월이라 우연히 통과해서 드러나지 않았다.
+  // 8/1 자정에 그리드가 8월로 넘어가면서 3건이 깨졌다 (셀 15 → 2026-08-15 반환,
+  // 이벤트는 전부 7월 날짜라 8월 그리드에 없어 "+N개" 미생성).
+  // 시간을 고정하지 않으면 **매달 1일마다 재발**한다.
+  beforeEach(() => {
+    vi.useFakeTimers()
+    // 2026-07-15 정오 KST (= 03:00Z) — UTC·KST 러너 양쪽에서 7월 그리드
+    vi.setSystemTime(new Date('2026-07-15T03:00:00Z'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('1) 셀 탭 → onSelectDate(date)', () => {
     const onSelectDate = vi.fn()
     render(<CalendarMonthlyGrid events={[ev({ type: 'exam', examId: 'e1' })]} onSelectDate={onSelectDate} />)
