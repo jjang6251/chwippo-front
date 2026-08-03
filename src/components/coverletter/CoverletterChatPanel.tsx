@@ -406,12 +406,46 @@ export function CoverletterChatPanel({
             />
           ))
         )}
+        {/*
+          재진입 "생성 중" — **세션 중 placeholder 와 같은 말풍선**으로 보여준다.
+          이전엔 대화 맨 아래 회색 안내 배너였는데, 사용자가 보낸 질문 밑이 비어 있어
+          "요청이 날아갔나" 로 읽혔다. 답변이 올 자리에 답변 모양으로 서 있어야 한다.
+        */}
         {pendingBanner && (
-          <div
-            aria-live="polite"
-            className="bg-info/8 border border-info/20 text-info text-[11px] rounded-lg p-2.5"
-          >
-            ⏳ 직전 요청의 답변을 아직 생성 중이에요 — 완료되면 대화에 나타나요.
+          <div className="flex gap-2 justify-start" aria-live="polite">
+            <span
+              className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-brand/15 text-brand text-xs"
+              aria-hidden="true"
+            >
+              ✨
+            </span>
+            <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-line bg-surface-2 px-3 py-2">
+              <p className="flex items-center gap-1.5 text-[13px] text-text-tertiary">
+                <span>답변 생성중</span>
+                <span className="inline-flex gap-0.5">
+                  <span
+                    className="w-1 h-1 rounded-full bg-text-quaternary animate-bounce"
+                    style={{ animationDelay: '0ms' }}
+                  />
+                  <span
+                    className="w-1 h-1 rounded-full bg-text-quaternary animate-bounce"
+                    style={{ animationDelay: '150ms' }}
+                  />
+                  <span
+                    className="w-1 h-1 rounded-full bg-text-quaternary animate-bounce"
+                    style={{ animationDelay: '300ms' }}
+                  />
+                </span>
+              </p>
+              {/*
+                세션 중 placeholder 와 다른 점 — 새로고침해도 계속된다는 안심 문구.
+                장식 라벨이 아니라 **읽어야 하는 안내**라 12px (DESIGN.md 규칙 7:
+                본문성 최소 11px·권장 12px+).
+              */}
+              <p className="mt-1 text-xs text-text-quaternary">
+                창을 닫아도 계속 생성돼요. 완료되면 여기에 나타나요.
+              </p>
+            </div>
           </div>
         )}
         <div ref={listEndRef} />
