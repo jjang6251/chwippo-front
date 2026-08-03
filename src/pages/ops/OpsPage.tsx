@@ -5,7 +5,8 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
-import { getAdminStats, getAdminAnalytics, type DayData, type GlobalStorage } from '@/api/admin'
+import { getAdminStats, getAdminAnalytics, getPlatformDistribution, type DayData, type GlobalStorage } from '@/api/admin'
+import { PlatformDistributionCard } from '@/components/admin/PlatformDistributionCard'
 import { ActivationSection } from '@/components/admin/ActivationSection'
 import dayjs from 'dayjs'
 
@@ -21,6 +22,13 @@ export function OpsPage() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: getAdminStats,
+    refetchInterval: 60_000,
+  })
+
+  // 사용 환경 분포 — 쿼리 1회 (서버가 users LEFT JOIN 으로 한 번에 집계)
+  const { data: platformDist, isLoading: platformLoading } = useQuery({
+    queryKey: ['admin', 'platform-distribution'],
+    queryFn: getPlatformDistribution,
     refetchInterval: 60_000,
   })
 
@@ -92,6 +100,9 @@ export function OpsPage() {
           </div>
         ))}
       </div>
+
+      {/* 사용 환경 분포 — 누가 앱을 쓰는가 (푸시 도달 가능 인원 포함) */}
+      <PlatformDistributionCard data={platformDist} isLoading={platformLoading} />
 
       {/* 파일 저장 (R2) — 전역 */}
       {stats?.globalStorage && (

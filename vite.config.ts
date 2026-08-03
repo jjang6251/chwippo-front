@@ -68,6 +68,9 @@ export default defineConfig({
         'src/components/card/StarToggle.tsx',
         'src/components/card/StepBar.tsx',
         'src/components/card/DdayBadge.tsx',
+        // admin 사용 환경 표시 — 테스트를 먼저 붙이고 목록에 넣는다 (순서 뒤집으면 threshold 에 즉시 걸린다)
+        'src/components/admin/PlatformBadges.tsx',
+        'src/components/admin/PlatformDistributionCard.tsx',
         'src/components/myinfo/FileUpload.tsx',
         'src/components/myinfo/MyinfoProgressGauge.tsx',
         'src/components/myinfo/ConvertExamToCertModal.tsx',

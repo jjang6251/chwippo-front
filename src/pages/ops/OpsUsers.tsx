@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import dayjs from 'dayjs'
+import { PlatformBadges } from '@/components/admin/PlatformBadges'
 import { getAdminUsers, type AdminUser } from '@/api/adminUsers'
 
 // ─── 뱃지 ────────────────────────────────────────────────────────────────────
@@ -258,6 +259,7 @@ export function OpsUsers() {
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider">상태</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider hidden xl:table-cell">관심 직군</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider hidden sm:table-cell">가입일</th>
+                  <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider">사용 환경</th>
                   <th className="text-left px-4 py-3 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider hidden lg:table-cell">최근접속</th>
                   <th className="px-4 py-3 w-12" />
                 </tr>
@@ -341,6 +343,11 @@ function UserRow({ user, onSelect }: { user: AdminUser; onSelect: () => void }) 
       </td>
       <td className="px-4 py-3.5 text-text-tertiary text-xs hidden sm:table-cell tabular-nums">
         {dayjs(user.createdAt).format('YYYY.MM.DD')}
+      </td>
+      {/* 사용 환경 — 좁은 화면에선 아이콘만 (라벨은 sr-only 로 유지) */}
+      <td className="px-4 py-3.5">
+        <span className="hidden xl:inline"><PlatformBadges platform={user.platform} /></span>
+        <span className="xl:hidden"><PlatformBadges platform={user.platform} compact /></span>
       </td>
       <td className="px-4 py-3.5 text-text-tertiary text-xs hidden lg:table-cell tabular-nums">
         {user.lastActiveAt ? dayjs(user.lastActiveAt).format('YYYY.MM.DD HH:mm') : <span className="text-text-quaternary">—</span>}
