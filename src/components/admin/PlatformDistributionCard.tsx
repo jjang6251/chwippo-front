@@ -1,4 +1,4 @@
-import { Monitor, Smartphone } from 'lucide-react'
+import { Bell, Monitor, Smartphone } from 'lucide-react'
 import type { PlatformDistribution } from '@/api/adminUsers'
 
 /**
@@ -96,7 +96,7 @@ export function PlatformDistributionCard({ data, isLoading }: Props) {
         <Segment n={none} total={total} className="bg-line-strong" />
       </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs" data-testid="segments">
         <Row
           icon={<Monitor className="w-3 h-3" aria-hidden />}
           label="웹만"
@@ -116,15 +116,40 @@ export function PlatformDistributionCard({ data, isLoading }: Props) {
       </div>
 
       {appUsers > 0 && (
-        <div className="mt-3 pt-3 border-t border-line flex items-center justify-between text-xs">
-          <span className="text-text-quaternary">앱 사용자 중 푸시 도달 가능</span>
-          <span
-            className={`font-medium tabular-nums ${
-              pushCapable < appUsers ? 'text-warning' : 'text-text-secondary'
-            }`}
-          >
-            {pushCapable} / {appUsers}명
-          </span>
+        <div className="mt-3 pt-3 border-t border-line">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-text-quaternary inline-flex items-center gap-1.5">
+              <Bell className="w-3 h-3" aria-hidden />
+              알림 도달
+            </span>
+            <span className="text-text-quaternary tabular-nums text-[11px]">
+              앱 사용자 {appUsers}명
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 text-xs" data-testid="push-rows">
+            <Row label="허용" n={pushCapable} total={appUsers} color="text-success" />
+            <Row
+              label="미허용"
+              n={appUsers - pushCapable}
+              total={appUsers}
+              color={pushCapable < appUsers ? 'text-warning' : 'text-text-tertiary'}
+            />
+          </div>
+          {pushCapable < appUsers && (
+            <p className="text-[11px] text-text-quaternary mt-1.5">
+              브리핑·마감 알림이 {appUsers - pushCapable}명에게 닿지 않아요.
+            </p>
+          )}
+          {/*
+            🔴 **배포 직후 "미허용 0" 을 "전원 허용" 으로 읽으면 안 된다.**
+            기존 사용자의 앱 판정은 푸시 토큰으로 백필했기 때문에, 백필로 채워진 사람은
+            정의상 전원 "허용" 이다. 알림을 거부한 앱 사용자는 **다음 앱 로그인 때** 비로소 드러난다.
+          */}
+          {appUsers === pushCapable && (
+            <p className="text-[11px] text-text-quaternary mt-1.5">
+              알림을 거부한 앱 사용자는 다음 앱 로그인 후 집계돼요.
+            </p>
+          )}
         </div>
       )}
     </div>
