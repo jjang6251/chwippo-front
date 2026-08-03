@@ -4,6 +4,7 @@ import {
   useSendTestAlert,
   useUpdateAlertThresholds,
 } from '@/hooks/useAlertThresholds'
+import { NumberInput } from '@/components/common/NumberInput'
 import { SystemStatusPanel } from '@/components/admin/SystemStatusPanel'
 import { toast } from '@/stores/toastStore'
 import { formatKstDateTime } from '@/utils/datetime'
@@ -49,6 +50,9 @@ export function Monitoring() {
   // AI cost guard — per-user / per-feature daily USD cap
   const [perUserCost, setPerUserCost] = useState(0.5)
   const [perFeatureCost, setPerFeatureCost] = useState(5)
+  // G-8 런타임 이상 — 둘 다 정상이면 0 이어야 하는 지표
+  const [truncation, setTruncation] = useState(3)
+  const [chargedFail, setChargedFail] = useState(1)
 
   useEffect(() => {
     if (data?.thresholds) {
@@ -65,6 +69,8 @@ export function Monitoring() {
       setCostOutlier(data.thresholds.costOutlierStddev)
       setPerUserCost(data.thresholds.perUserDailyCostUsd)
       setPerFeatureCost(data.thresholds.perFeatureDailyCostUsd)
+      setTruncation(data.thresholds.outputTruncationCount1h)
+      setChargedFail(data.thresholds.chargedFailureCount1h)
     }
   }, [data?.thresholds])
 
@@ -81,7 +87,9 @@ export function Monitoring() {
       signupSpike !== data.thresholds.freeUserSignupSpikePct ||
       Math.abs(costOutlier - data.thresholds.costOutlierStddev) > 0.01 ||
       Math.abs(perUserCost - data.thresholds.perUserDailyCostUsd) > 0.001 ||
-      Math.abs(perFeatureCost - data.thresholds.perFeatureDailyCostUsd) > 0.001)
+      Math.abs(perFeatureCost - data.thresholds.perFeatureDailyCostUsd) > 0.001 ||
+      truncation !== data.thresholds.outputTruncationCount1h ||
+      chargedFail !== data.thresholds.chargedFailureCount1h)
 
   const save = () => {
     update(
@@ -98,6 +106,8 @@ export function Monitoring() {
         costOutlierStddev: costOutlier,
         perUserDailyCostUsd: perUserCost,
         perFeatureDailyCostUsd: perFeatureCost,
+        outputTruncationCount1h: truncation,
+        chargedFailureCount1h: chargedFail,
       },
       {
         onSuccess: () => toast.show('임계치를 변경했어요.'),
@@ -136,48 +146,57 @@ export function Monitoring() {
             </h2>
             <div className="space-y-4">
               <ThresholdField
+                htmlFor="th-daily"
                 label="일 누적 비용 임계치 (USD)"
                 hint="오늘 모든 LLM 호출 비용 합계가 이 값 이상이면 알람"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-daily"
+                  name="th-daily"
+                  autoComplete="off"
                   min={0}
                   max={10000}
                   step={1}
                   value={daily}
-                  onChange={(e) => setDaily(Number(e.target.value))}
+                  onValueChange={setDaily}
                   className="w-32 bg-card border border-line text-text-primary text-sm text-right px-3 py-1.5 rounded focus:outline-none focus:border-brand"
                 />
                 <span className="text-text-tertiary text-xs ml-2">USD</span>
               </ThresholdField>
 
               <ThresholdField
+                htmlFor="th-hourly"
                 label="시간당 error 비율 임계치 (%)"
                 hint="최근 1시간 error 호출 비율이 이 값 이상이면 알람 (분모 0 safe)"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-hourly"
+                  name="th-hourly"
+                  autoComplete="off"
                   min={0}
                   max={100}
                   step={1}
                   value={hourly}
-                  onChange={(e) => setHourly(Number(e.target.value))}
+                  onValueChange={setHourly}
                   className="w-32 bg-card border border-line text-text-primary text-sm text-right px-3 py-1.5 rounded focus:outline-none focus:border-brand"
                 />
                 <span className="text-text-tertiary text-xs ml-2">%</span>
               </ThresholdField>
 
               <ThresholdField
+                htmlFor="th-vsYest"
                 label="전일 대비 비용 급증 임계치 (%)"
                 hint="오늘 vs 어제 같은 시각 누적 비용 증가율이 이 값 이상이면 알람"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-vsYest"
+                  name="th-vsYest"
+                  autoComplete="off"
                   min={0}
                   max={10000}
                   step={10}
                   value={vsYest}
-                  onChange={(e) => setVsYest(Number(e.target.value))}
+                  onValueChange={setVsYest}
                   className="w-32 bg-card border border-line text-text-primary text-sm text-right px-3 py-1.5 rounded focus:outline-none focus:border-brand"
                 />
                 <span className="text-text-tertiary text-xs ml-2">%</span>
@@ -201,130 +220,193 @@ export function Monitoring() {
 
               {/* PR_B2 Phase 2b — Phase 1 admin grant 2 + Phase 2 신규 4 임계치 */}
               <ThresholdField
+                htmlFor="th-adminGrantHour"
                 label="admin 시간당 grant 합계 (코인)"
                 hint="admin 1명이 1시간 동안 지급한 코인 합계가 이 값 초과 시 Discord 알림 (S1)"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-adminGrantHour"
+                  name="th-adminGrantHour"
+                  autoComplete="off"
                   aria-label="admin 시간당 grant 합계 (코인)"
                   min={1}
                   max={1000000}
                   step={1000}
                   value={adminGrantHour}
-                  onChange={(e) => setAdminGrantHour(Number(e.target.value))}
+                  onValueChange={setAdminGrantHour}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>
 
               <ThresholdField
+                htmlFor="th-adminGrantSingle"
                 label="admin 1회 grant 임계치 (코인)"
                 hint="단일 grant 의 amount 가 이 값 초과 시 Discord 알림"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-adminGrantSingle"
+                  name="th-adminGrantSingle"
+                  autoComplete="off"
                   aria-label="admin 1회 grant 임계치 (코인)"
                   min={1}
                   max={1000000}
                   step={1000}
                   value={adminGrantSingle}
-                  onChange={(e) => setAdminGrantSingle(Number(e.target.value))}
+                  onValueChange={setAdminGrantSingle}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>
 
               <ThresholdField
+                htmlFor="th-inquirySla"
                 label="문의 SLA 시간"
                 hint="문의 처리 SLA 기본값 (Phase 4 sla_deadline_at 의 기본). 초과 시 알림"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-inquirySla"
+                  name="th-inquirySla"
+                  autoComplete="off"
                   aria-label="문의 SLA 시간"
                   min={1}
                   max={720}
                   step={1}
                   value={inquirySla}
-                  onChange={(e) => setInquirySla(Number(e.target.value))}
+                  onValueChange={setInquirySla}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>
 
               <ThresholdField
+                htmlFor="th-abuserDaily"
                 label="abuser 의심 일 호출"
                 hint="사용자 1명의 일 호출이 이 값 초과 시 abuser 의심 알림"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-abuserDaily"
+                  name="th-abuserDaily"
+                  autoComplete="off"
                   aria-label="abuser 의심 일 호출"
                   min={1}
                   max={10000}
                   step={10}
                   value={abuserDaily}
-                  onChange={(e) => setAbuserDaily(Number(e.target.value))}
+                  onValueChange={setAbuserDaily}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>
 
               <ThresholdField
+                htmlFor="th-signupSpike"
                 label="Free 가입 폭증 (%)"
                 hint="전일 대비 Free 신규 가입 증가율 이 값 초과 시 알림 (abuse 폭증 감지)"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-signupSpike"
+                  name="th-signupSpike"
+                  autoComplete="off"
                   aria-label="Free 가입 폭증 (%)"
                   min={0}
                   max={10000}
                   step={10}
                   value={signupSpike}
-                  onChange={(e) => setSignupSpike(Number(e.target.value))}
+                  onValueChange={setSignupSpike}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>
 
               <ThresholdField
+                htmlFor="th-costOutlier"
                 label="cost outlier σ"
                 hint="feature 별 cost 평균 ±N σ 초과 시 outlier 알림 (보통 2.0)"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-costOutlier"
+                  name="th-costOutlier"
+                  autoComplete="off"
                   aria-label="cost outlier σ"
                   min={0.1}
                   max={10}
                   step={0.1}
                   value={costOutlier}
-                  onChange={(e) => setCostOutlier(Number(e.target.value))}
+                  onValueChange={setCostOutlier}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>
 
               {/* AI cost guard — per-user / per-feature daily USD cap */}
               <ThresholdField
+                htmlFor="th-perUserCost"
                 label="사용자 일 cost cap ($)"
                 hint="user 1명/day 의 모든 feature 합산 USD cap. 도달 시 LLM 호출 차단 (코인 외 hard guard)"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-perUserCost"
+                  name="th-perUserCost"
+                  autoComplete="off"
                   aria-label="사용자 일 cost cap"
                   min={0}
                   max={100}
                   step={0.1}
                   value={perUserCost}
-                  onChange={(e) => setPerUserCost(Number(e.target.value))}
+                  onValueChange={setPerUserCost}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>
 
               <ThresholdField
+                htmlFor="th-perFeatureCost"
                 label="feature 일 cost cap ($)"
                 hint="user 1명/feature/day USD cap. 단일 feature 폭주 방지"
               >
-                <input
-                  type="number"
+                <NumberInput
+                  id="th-perFeatureCost"
+                  name="th-perFeatureCost"
+                  autoComplete="off"
                   aria-label="feature 일 cost cap"
                   min={0}
                   max={1000}
                   step={0.1}
                   value={perFeatureCost}
-                  onChange={(e) => setPerFeatureCost(Number(e.target.value))}
+                  onValueChange={setPerFeatureCost}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              {/* G-8 런타임 이상 — 예방(QA)이 놓친 걸 배포 후에 잡는다 */}
+              <ThresholdField
+                htmlFor="th-truncation"
+                label="출력 잘림 (1h)"
+                hint="응답이 잘렸는데 성공으로 기록된 호출. 사용자는 잘린 결과를 받고 코인은 차감된다 — 정상이면 0"
+              >
+                <NumberInput
+                  id="th-truncation"
+                  name="th-truncation"
+                  autoComplete="off"
+                  aria-label="출력 잘림 (1h)"
+                  min={1}
+                  max={1000}
+                  step={1}
+                  value={truncation}
+                  onValueChange={setTruncation}
+                  className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
+                />
+              </ThresholdField>
+
+              <ThresholdField
+                htmlFor="th-chargedFail"
+                label="차감 후 실패 (1h)"
+                hint="코인은 나갔는데 실패한 호출. 돈만 잃는 실패라 1건도 즉시 알린다 — 정상이면 0"
+              >
+                <NumberInput
+                  id="th-chargedFail"
+                  name="th-chargedFail"
+                  autoComplete="off"
+                  aria-label="차감 후 실패 (1h)"
+                  min={1}
+                  max={1000}
+                  step={1}
+                  value={chargedFail}
+                  onValueChange={setChargedFail}
                   className="bg-card border border-line rounded-md px-3 py-1.5 text-sm text-text-primary w-32"
                 />
               </ThresholdField>
@@ -413,19 +495,39 @@ export function Monitoring() {
   )
 }
 
+/**
+ * `htmlFor` 를 주면 라벨이 **클릭 가능**해진다 (Vercel WIG "Labels clickable").
+ * 지금까지는 `<p>` 라서 라벨을 눌러도 아무 일이 없었고, 조작 가능한 영역이 128px 입력창뿐이었다.
+ *
+ * 🔴 **일부러 옵셔널로 뒀다** — kill switch 행은 `<button>` 을 감싸는데, `<button>` 도
+ * labelable 이라 `htmlFor` 를 붙이면 **라벨 텍스트 클릭만으로 알람 전체가 꺼진다.**
+ * 되돌리기 어려운 토글에 히트 영역을 넓히는 건 개선이 아니라 사고 경로다.
+ */
 function ThresholdField({
   label,
   hint,
+  htmlFor,
   children,
 }: {
   label: string
   hint: string
+  htmlFor?: string
   children: React.ReactNode
 }) {
   return (
     <div className="flex items-start gap-4">
       <div className="flex-1 min-w-0">
-        <p className="text-text-primary text-xs font-medium">{label}</p>
+        {htmlFor ? (
+          // w-fit — 히트 영역을 라벨 글자에만 둔다 (행 전체가 아니라)
+          <label
+            htmlFor={htmlFor}
+            className="text-text-primary text-xs font-medium block w-fit cursor-pointer"
+          >
+            {label}
+          </label>
+        ) : (
+          <p className="text-text-primary text-xs font-medium">{label}</p>
+        )}
         <p className="text-text-quaternary text-[10px] mt-0.5">{hint}</p>
       </div>
       <div className="shrink-0 flex items-center">{children}</div>

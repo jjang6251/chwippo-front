@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AdminCard } from '@/components/common/AdminCard'
+import { NumberInput } from '@/components/common/NumberInput'
 import {
   useAiFeatureQuotas,
   useUpdateAiFeatureQuota,
@@ -263,32 +264,29 @@ function FeatureRow({ row }: { row: FeatureQuotaConfig }) {
         </div>
       </td>
       <td className="px-3 py-2">
-        <input
-          type="number"
+        <NumberInput
           min={0}
           max={10000}
           value={dayLimit}
-          onChange={(e) => setDayLimit(Math.max(0, Number(e.target.value)))}
+          onValueChange={setDayLimit}
           className="w-full bg-card border border-line text-text-primary text-xs text-right px-2 py-1 rounded focus:outline-none focus:border-brand"
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          type="number"
+        <NumberInput
           min={10}
           max={100000}
           value={monthLimit}
-          onChange={(e) => setMonthLimit(Math.max(10, Number(e.target.value)))}
+          onValueChange={setMonthLimit}
           className="w-full bg-card border border-line text-text-primary text-xs text-right px-2 py-1 rounded focus:outline-none focus:border-brand"
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          type="number"
+        <NumberInput
           min={0}
           max={3600}
           value={cooldown}
-          onChange={(e) => setCooldown(Math.max(0, Number(e.target.value)))}
+          onValueChange={setCooldown}
           className="w-full bg-card border border-line text-text-primary text-xs text-right px-2 py-1 rounded focus:outline-none focus:border-brand"
         />
       </td>
