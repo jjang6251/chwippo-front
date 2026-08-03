@@ -1,4 +1,4 @@
-import { Monitor, Smartphone } from 'lucide-react'
+import { Bell, BellOff, Monitor, Smartphone } from 'lucide-react'
 
 /**
  * 회원 **사용 환경** 뱃지 — 웹/앱을 각각 독립 뱃지로 그린다.
@@ -52,30 +52,39 @@ export function PlatformBadges({ platform, compact = false }: Props) {
       {app && (
         <span
           className={`${BASE} text-violet bg-violet/10 border-violet/20`}
-          title={
-            platform?.pushCapable === false
-              ? '앱으로 로그인한 이력 있음 · 알림 미허용 (푸시가 닿지 않음)'
-              : '앱으로 로그인한 이력 있음'
-          }
+          title="앱(네이티브 로그인) 이력 있음"
         >
           <Smartphone className="w-3 h-3" aria-hidden />
           {!compact && '앱'}
           {compact && <span className="sr-only">앱</span>}
-          {/*
-            알림 미허용 앱 사용자 — 푸시를 보내도 안 닿으므로 운영에서 구분이 필요하다.
-
-            🔴 **점 하나로만 표시하면 색·모양만으로 정보를 전달하는 것**이 된다. `title` 은
-            보조 수단이 못 된다 — 키보드·터치에서 안 뜨고, 이미 텍스트가 있는 요소에서는
-            스크린리더가 무시하기도 한다. 그래서 sr-only 로 뜻을 함께 준다.
-          */}
-          {platform?.pushCapable === false && (
-            <>
-              <span className="w-1 h-1 rounded-full bg-warning inline-block" aria-hidden />
-              <span className="sr-only">알림 미허용</span>
-            </>
-          )}
         </span>
       )}
+      {/*
+        알림 도달 여부 — **앱 사용과 별개 축**이라 독립 뱃지로 뺀다.
+        앱을 쓰지만 알림을 거부한 사용자는 브리핑·마감 알림을 보내도 **안 닿는다.**
+        "안 본 건지 애초에 안 닿은 건지" 를 구분해 주는 게 이 표시의 목적이다.
+
+        🔴 색·모양만으로 전달하지 않는다 — compact 에서도 `sr-only` 로 뜻을 남긴다.
+        `title` 은 키보드·터치에서 안 뜨고 텍스트 있는 요소에선 무시되기도 해 보조 수단이 못 된다.
+      */}
+      {app &&
+        (platform?.pushCapable ? (
+          <span
+            className={`${BASE} text-success bg-success/10 border-success/20`}
+            title="알림 허용 — 푸시가 닿는다"
+          >
+            <Bell className="w-3 h-3" aria-hidden />
+            {compact ? <span className="sr-only">알림 허용</span> : '알림'}
+          </span>
+        ) : (
+          <span
+            className={`${BASE} text-warning bg-warning/10 border-warning/20`}
+            title="알림 미허용 — 푸시를 보내도 닿지 않는다"
+          >
+            <BellOff className="w-3 h-3" aria-hidden />
+            {compact ? <span className="sr-only">알림 미허용</span> : '알림 X'}
+          </span>
+        ))}
     </span>
   )
 }

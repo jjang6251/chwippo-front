@@ -9,7 +9,7 @@
  * - 로딩 = 스켈레톤 · 회원 0명 빈 상태
  * - 반올림: 비율 합이 100 이 아닐 수 있다 — **인원수가 진실**이라 인원을 먼저 보여준다
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { PlatformDistributionCard } from './PlatformDistributionCard'
 import type { PlatformDistribution } from '@/api/adminUsers'
@@ -25,12 +25,17 @@ const base: PlatformDistribution = {
 }
 
 describe('PlatformDistributionCard', () => {
+  /**
+   * ⚠️ 같은 숫자가 4분류와 알림 도달 양쪽에 뜰 수 있어(예: 웹만 4명 · 알림 허용 4명)
+   * 전역 쿼리는 모호해진다. **섹션으로 스코프를 좁혀** 무엇을 검증하는지 분명히 한다.
+   */
   it('4분류 인원과 전체가 표시된다', () => {
     render(<PlatformDistributionCard data={base} />)
     expect(screen.getByText('전체 10명')).toBeInTheDocument()
-    expect(screen.getByText('4명')).toBeInTheDocument() // 웹만
-    expect(screen.getByText('3명')).toBeInTheDocument() // 앱만
-    expect(screen.getByText('1명')).toBeInTheDocument() // 미접속
+    const seg = within(screen.getByTestId('segments'))
+    expect(seg.getByText('4명')).toBeInTheDocument() // 웹만
+    expect(seg.getByText('3명')).toBeInTheDocument() // 앱만
+    expect(seg.getByText('1명')).toBeInTheDocument() // 미접속
   })
 
   it('막대에 접근성 요약이 붙는다', () => {
@@ -52,14 +57,31 @@ describe('PlatformDistributionCard', () => {
   })
 
   describe('푸시 도달', () => {
-    it('미도달자가 있으면 경고 색으로 강조', () => {
+    it('허용·미허용 인원을 나눠 보여준다', () => {
       render(<PlatformDistributionCard data={base} />)
-      expect(screen.getByText('4 / 5명')).toHaveClass('text-warning')
+      expect(screen.getByText('앱 사용자 5명')).toBeInTheDocument()
+      const push = within(screen.getByTestId('push-rows'))
+      expect(push.getByText('4명')).toBeInTheDocument() // 허용
+      expect(push.getByText('1명')).toBeInTheDocument() // 미허용
     })
 
-    it('전원 도달이면 경고가 아니다', () => {
+    it('미도달자가 있으면 몇 명에게 안 닿는지 알려준다', () => {
+      render(<PlatformDistributionCard data={base} />)
+      expect(
+        screen.getByText('브리핑·마감 알림이 1명에게 닿지 않아요.'),
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * 🔴 **"미허용 0" 을 "전원 허용" 으로 읽으면 안 된다.**
+     * 기존 사용자의 앱 판정은 푸시 토큰으로 백필했으므로 백필된 사람은 정의상 전원 허용이다.
+     * 화면이 그 한계를 스스로 말해야 오독이 안 생긴다.
+     */
+    it('전원 도달이면 백필 한계를 문구로 알린다', () => {
       render(<PlatformDistributionCard data={{ ...base, pushCapable: 5 }} />)
-      expect(screen.getByText('5 / 5명')).not.toHaveClass('text-warning')
+      expect(
+        screen.getByText('알림을 거부한 앱 사용자는 다음 앱 로그인 후 집계돼요.'),
+      ).toBeInTheDocument()
     })
 
     /** 앱 사용자가 없으면 "0 / 0명" 은 정보가 아니라 잡음이다 */
@@ -69,7 +91,7 @@ describe('PlatformDistributionCard', () => {
           data={{ ...base, appOnly: 0, both: 0, appUsers: 0, pushCapable: 0 }}
         />,
       )
-      expect(screen.queryByText(/푸시 도달 가능/)).toBeNull()
+      expect(screen.queryByText('알림 도달')).toBeNull()
     })
   })
 
