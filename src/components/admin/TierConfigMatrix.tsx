@@ -167,7 +167,18 @@ export function TierConfigMatrix() {
                         aria-label={`${t.tier} ${col.label}`}
                         defaultValue={value}
                         onBlur={(e) => {
+                          // 🔴 빈칸 = **변경 없음** (2026-08-03). `Number('') === 0` 이라
+                          // 값을 지우고 나가면 티어 한도가 **조용히 0 으로 저장**됐다.
+                          // 비제어 입력이라 화면엔 빈칸만 남아 뭐가 저장됐는지도 안 보인다.
+                          if (e.target.value === '') {
+                            e.target.value = String(value)
+                            return
+                          }
                           const v = Number(e.target.value)
+                          if (!Number.isFinite(v)) {
+                            e.target.value = String(value)
+                            return
+                          }
                           if (v !== value) {
                             void handleChange(
                               t.tier,

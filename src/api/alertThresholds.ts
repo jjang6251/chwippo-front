@@ -12,6 +12,10 @@ export interface AlertThresholds {
   // PR_B2 Phase 2 — 신규 4 임계치 (Q5)
   inquirySlaHours: number
   abuserSuspectDailyCalls: number
+  /** G-8 — finish_reason='length' (출력 잘림) 1h 누적 임계 */
+  outputTruncationCount1h: number
+  /** G-8 — 코인 차감 후 실패 1h 누적 임계 */
+  chargedFailureCount1h: number
   freeUserSignupSpikePct: number
   costOutlierStddev: number
   // AI cost guard — per-user / per-feature daily USD cap
@@ -58,6 +62,8 @@ export interface UpdateAlertThresholdsDto {
   // PR_B2 Phase 2
   inquirySlaHours?: number
   abuserSuspectDailyCalls?: number
+  outputTruncationCount1h?: number
+  chargedFailureCount1h?: number
   freeUserSignupSpikePct?: number
   costOutlierStddev?: number
   // AI cost guard
