@@ -12,6 +12,33 @@ export interface AdminUser {
   signupJobCategories: string[] | null
   /** W1 — "기타" 자유 입력 직무명 */
   signupOtherText: string | null
+  /**
+   * 사용 환경 — 웹/앱 로그인 이력 기반 (서버 `user-platform.ts` 판정).
+   *
+   * 🔴 **옵셔널이다.** 백엔드가 프론트보다 늦게 뜨는 배포 창에서는 이 필드가 없다
+   * (2026-07-31 실사고: 새 필드를 필수로 타이핑하고 바로 읽어 페이지 전체가 죽었다).
+   */
+  platform?: PlatformUsage
+}
+
+export interface PlatformUsage {
+  app: boolean
+  web: boolean
+  /** 푸시 토큰 보유 = 알림이 실제로 닿는다 */
+  pushCapable: boolean
+}
+
+/** 사용 환경 분포 — 4분류는 서로 배타적이라 합계 = total */
+export interface PlatformDistribution {
+  total: number
+  both: number
+  appOnly: number
+  webOnly: number
+  none: number
+  /** 앱 사용자 (appOnly + both) */
+  appUsers: number
+  /** 그중 푸시가 닿는 인원 */
+  pushCapable: number
 }
 
 export interface AdminUserStorageStats {
