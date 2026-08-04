@@ -2,6 +2,7 @@
 import { addDays, todayLocal } from '@/utils/datetime'
 import type { Application, ApplicationStep } from '@/types/application'
 import type { ApplicationCoverletter } from '@/types/coverletter'
+import type { AutocompleteCompany } from '@/types/company'
 import type {
   DashboardStats, DdayItem, InterviewReviewItem, GrowthMetricsResponse,
 } from '@/api/dashboard'
@@ -770,6 +771,28 @@ export const DEMO_STORAGE_USAGE: StorageUsage = {
 // (self-cl 답변처럼 "지원자 본인의 서술"은 가상이 아닌 실존 회사에 붙어도 허위가 아니지만,
 //  회사 조사는 "회사에 대한 앱의 주장"이라 성격이 다르다.)
 export const DEMO_COMPANY_RESEARCH: CompanyResearchResult | null = null
+
+/**
+ * 보드 "지원 추가" 회사명 자동완성 후보.
+ *
+ * 🔴 미등록이면 `CompanyAutocomplete` 가 `null.filter` 로 **화면 전체를 죽인다**
+ * (2026-08-05 데모 실사고 — 둘러보기의 첫 CTA 가 크래시했다).
+ * 빈 배열로 막을 수도 있지만, 데모에서 "검색 결과 없음"만 뜨면 기능이 없어 보인다.
+ * 데모 카드에 쓰는 회사들과 같은 목록이라 화면 간 인상이 어긋나지 않는다.
+ */
+export const DEMO_AUTOCOMPLETE_COMPANIES: AutocompleteCompany[] = [
+  { name: '카카오', source: 'dart', market: 'KOSPI', industry: 'IT·플랫폼' },
+  { name: '네이버', source: 'dart', market: 'KOSPI', industry: 'IT·플랫폼' },
+  { name: '삼성전자', source: 'dart', market: 'KOSPI', industry: '전기·전자' },
+  { name: '토스', source: 'user_added', userCount: 12 },
+  { name: '쿠팡', source: 'dart', market: 'OTC', industry: '유통·이커머스' },
+  { name: '당근마켓', source: 'user_added', userCount: 8 },
+  { name: '현대자동차', source: 'dart', market: 'KOSPI', industry: '자동차' },
+  { name: 'KB국민은행', source: 'dart', market: 'KOSPI', industry: '금융' },
+  { name: '한국전력공사', source: 'dart', market: 'KOSPI', industry: '공기업' },
+  { name: '아모레퍼시픽', source: 'dart', market: 'KOSPI', industry: '화장품' },
+]
+
 
 // ── 코인 잔액 (헤더 코인 칩·자소서 AI UI) ────────────────────
 export const DEMO_COIN_BALANCE: CoinBalance = {

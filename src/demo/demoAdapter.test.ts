@@ -77,6 +77,44 @@ describe('demoAdapter — 신규 GET 경로 형태', () => {
   })
 })
 
+/**
+ * 🔴 **둘러보기의 첫 CTA 가 여기서 죽었다** (2026-08-05).
+ *
+ * `+ 추가 → 지원 중으로 추가` 모달의 회사명 자동완성이 이 경로를 부르는데 미등록이었다.
+ * 어댑터는 미등록에 `null` 을 주고, `CompanyAutocomplete` 의 구조분해 기본값(`= []`)은
+ * **undefined 에만** 걸리므로 `null.filter` 에서 에러 바운더리로 떨어졌다.
+ *
+ * 같은 파일에 `/schools/*` 자동완성 4형제가 이미 등록돼 있었는데 **이것만 빠져 있었다** —
+ * 겪은 것만 고치고 같은 부류를 세지 않은 결과다. e2e 는 한 경로만 지나가므로,
+ * **쿼리를 params 로 받는 경우와 URL 에 붙은 경우 양쪽**을 여기서 못 박는다.
+ */
+describe('demoAdapter — 회사명 자동완성 (/companies/autocomplete)', () => {
+  it('URL 쿼리로 q 가 오면 매칭 목록을 준다', async () => {
+    const res = await get('/companies/autocomplete?q=%EC%B9%B4%EC%B9%B4%EC%98%A4')
+    expect(Array.isArray(res.data.data)).toBe(true)
+    expect(res.data.data.map((c: { name: string }) => c.name)).toContain('카카오')
+  })
+
+  it('params 로 q 가 오면 동일하게 동작한다 (axios 는 보통 이쪽)', async () => {
+    const res = await demoAdapter({
+      url: '/companies/autocomplete',
+      method: 'get',
+      params: { q: '네이버' },
+    } as InternalAxiosRequestConfig)
+    expect(res.data.data.map((c: { name: string }) => c.name)).toContain('네이버')
+  })
+
+  it('일치하는 회사가 없으면 빈 배열 (null 아님 — null 이면 프론트가 크래시했다)', async () => {
+    const res = await get('/companies/autocomplete?q=없는회사이름')
+    expect(res.data.data).toEqual([])
+  })
+
+  it('q 가 비면 빈 배열', async () => {
+    const res = await get('/companies/autocomplete')
+    expect(res.data.data).toEqual([])
+  })
+})
+
 describe('demoAdapter — fail-loud (미등록 GET)', () => {
   it('미등록 경로 — console.error + null 반환 (계약 유지)', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})

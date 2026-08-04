@@ -85,6 +85,16 @@ function resolveGet(url: string, params: Record<string, unknown>): unknown {
     case '/schools/majors/autocomplete': return []
     case '/schools/certs/autocomplete': return []
     case '/schools/lang-certs/autocomplete': return []
+    // 🔴 보드 "지원 추가" 회사명 자동완성 — **둘러보기의 첫 CTA 가 여기서 죽었다** (2026-08-05).
+    // 위 4형제를 등록할 때 같이 세지 않아 혼자 빠져 있었다. 빈 배열 대신 실제 후보를 준다 —
+    // 데모에서 "검색 결과 없음"만 뜨면 기능이 없는 것처럼 보인다.
+    case '/companies/autocomplete': {
+      const q = String(
+        params.q ?? new URLSearchParams(url.split('?')[1] ?? '').get('q') ?? '',
+      ).trim()
+      if (!q) return []
+      return S.DEMO_AUTOCOMPLETE_COMPANIES.filter((c) => c.name.includes(q))
+    }
     default: return UNREGISTERED
   }
 }
