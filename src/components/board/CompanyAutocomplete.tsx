@@ -40,7 +40,11 @@ export function CompanyAutocomplete({
   const [open, setOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
 
-  const { data: items = [], isLoading } = useCompanyAutocomplete(open ? value : '')
+  // 🔴 구조분해 기본값(`= []`)은 **undefined 에만** 적용된다. 서버·데모 어댑터가 `null` 을 주면
+  // 그대로 흘러가 아래 `.filter`/`.length` 에서 화면이 죽는다 (2026-08-05 데모 실사고).
+  // `??` 는 null 도 잡으므로 이쪽을 쓴다. 프론트는 서버 응답을 신뢰하지 않는다.
+  const { data, isLoading } = useCompanyAutocomplete(open ? value : '')
+  const items = data ?? []
 
   // 외부 클릭 닫기
   useEffect(() => {

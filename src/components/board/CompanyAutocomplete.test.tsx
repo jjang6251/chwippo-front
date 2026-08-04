@@ -229,4 +229,28 @@ describe('CompanyAutocomplete', () => {
     render(<CompanyAutocomplete value="" onChange={vi.fn()} disabled />, { wrapper })
     expect(screen.getByRole('combobox')).toBeDisabled()
   })
+
+  /**
+   * 🔴 **응답이 `null` 이어도 죽지 않는다** — 2026-08-05 데모 실사고 회귀.
+   *
+   * 구조분해 기본값(`const { data: items = [] }`)은 **undefined 에만** 적용된다.
+   * 데모 어댑터는 미등록 경로에 `null` 을 주므로 기본값이 안 걸리고, 아래 `.filter`/`.length`
+   * 에서 에러 바운더리로 떨어졌다 — **둘러보기의 첫 CTA 가 통째로 죽었다.**
+   *
+   * 서버가 계약을 어겨도 화면은 살아야 한다. e2e 는 데모 경로만 덮으므로, 계약 위반 자체는
+   * 여기서 막는다 (운영 API 가 null 을 주는 경우도 같은 방어에 걸린다).
+   */
+  it('🔴 응답이 null 이어도 크래시하지 않고 빈 목록으로 처리한다', async () => {
+    apiMock.mockResolvedValue(null as unknown as never)
+
+    expect(() =>
+      render(<CompanyAutocomplete value="카카오" onChange={vi.fn()} />, { wrapper }),
+    ).not.toThrow()
+
+    fireEvent.focus(screen.getByRole('combobox'))
+    await waitFor(() => expect(apiMock).toHaveBeenCalled())
+
+    // 죽지 않고 "결과 없음" 경로로 간다
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
+  })
 })

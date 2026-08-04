@@ -123,6 +123,37 @@ test.describe('데모 모드', () => {
     expect(guard.consoleErrors()).toEqual([])
   })
 
+  /**
+   * 🔴 **둘러보기의 첫 CTA 가 실제로 죽어 있었다** (2026-08-05).
+   *
+   * `+ 추가 → 지원 중으로 추가` 로 열리는 모달의 회사명 자동완성이
+   * `GET /companies/autocomplete` 를 부르는데 **demoAdapter 에 미등록**이었다.
+   * 어댑터는 미등록 경로에 `null` 을 주고, `CompanyAutocomplete` 의 구조분해 기본값
+   * (`= []`)은 **undefined 에만** 걸리므로 `null.filter` 에서 에러 바운더리로 떨어졌다.
+   *
+   * 기존 스펙은 **12개 페이지 로드**만 봤고 **모달을 여는 시나리오가 없어서** 이 경로가
+   * 통째로 무방비였다. 홍보 유입이 제일 먼저 누를 버튼이라 여기서 막는다.
+   */
+  test('🔴 회귀 — 지원 추가 모달: 자동완성까지 크래시 없음', async ({ page }) => {
+    const guard = await attachGuard(page)
+    await page.goto('/demo/board')
+
+    await page.getByRole('button', { name: /추가/ }).first().click()
+    await page.getByText('지원 중으로 추가').click()
+
+    // 자동완성은 입력이 있어야 뜬다 — null 응답이면 여기서 죽었다
+    const input = page.getByPlaceholder(/회사명/)
+    await expect(input).toBeVisible()
+    await input.fill('카카오')
+    await expect(page.getByText('화면을 불러오지 못했어요')).toHaveCount(0)
+
+    // 데모답게 실제 후보가 보여야 한다 (빈 배열로 막으면 기능이 없어 보임)
+    await expect(page.getByText('카카오').first()).toBeVisible()
+
+    expect(guard.backendHits()).toBe(0)
+    expect(guard.consoleErrors()).toEqual([])
+  })
+
   test('카드 상세 — 공고 요건 카드 노출 + 펼치면 더미 고지', async ({ page }) => {
     const guard = await attachGuard(page)
     await page.goto('/demo/board/demo-a1')
