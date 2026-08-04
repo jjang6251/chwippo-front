@@ -68,6 +68,9 @@ export default defineConfig({
         'src/components/card/StarToggle.tsx',
         'src/components/card/StepBar.tsx',
         'src/components/card/DdayBadge.tsx',
+        // 행태 분석(Clarity) — 개인정보 수집 코드라 커버리지 사각을 두면 안 된다
+        'src/lib/clarity.ts',
+        'src/components/common/ClarityMask.tsx',
         // admin 사용 환경 표시 — 테스트를 먼저 붙이고 목록에 넣는다 (순서 뒤집으면 threshold 에 즉시 걸린다)
         'src/components/admin/PlatformBadges.tsx',
         'src/components/admin/PlatformDistributionCard.tsx',

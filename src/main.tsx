@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 import App from './App.tsx'
 import { requireEnvs } from '@/utils/requireEnvs'
+import { initClarity } from '@/lib/clarity'
 import { initSentry, setSentryUser } from '@/lib/sentry'
 import { useAuthStore } from '@/stores/authStore'
 import './index.css'
@@ -19,6 +20,8 @@ requireEnvs(['VITE_API_URL'], import.meta.env)
 // 에러 추적 — render 전에 초기화해야 초기 렌더 크래시도 잡힌다.
 // VITE_SENTRY_DSN 미설정이면 no-op 이므로 requireEnvs 대상이 아니다 (로컬·CI 무영향).
 initSentry()
+// 행태 분석 — VITE_CLARITY_PROJECT_ID 미설정이면 no-op. 방침 시행일(8/11) 전까지 미주입.
+initClarity()
 // 로그인 상태를 Sentry user 에 반영 — **id 만** 전달 (개인정보처리방침 §1)
 let lastUserId: string | null = null
 useAuthStore.subscribe((state) => {

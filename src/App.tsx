@@ -5,6 +5,7 @@ import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
 import { FirstCardCelebration } from '@/components/common/FirstCardCelebration'
 import { FailedCareOverlay } from '@/components/card/FailedCareOverlay'
 import { AiConsentRequiredModal } from '@/components/common/AiConsentRequiredModal'
+import { ClarityMask } from '@/components/common/ClarityMask'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AiFeatureGuard, InterviewAiGuard } from '@/components/auth/AiFeatureGuard'
 import { AdminGuard } from '@/components/layout/AdminGuard'
@@ -175,27 +176,30 @@ export default function App() {
             <Route path="/board/:id" element={<BoardDetail />} />
             <Route path="/board/:id/steps/:stepId" element={<StepPage />} />
             <Route path="/calendar" element={<Calendar />} />
-            <Route path="/myinfo" element={<MyInfo />} />
-            <Route path="/inquiry" element={<InquiryList />} />
-            <Route path="/inquiry/new" element={<InquiryNew />} />
-            <Route path="/inquiry/:id" element={<InquiryDetail />} />
+            {/* Clarity 마스킹 경계 — 방침 §5-2 의 "민감 화면 마스킹" 약속을 이행하는 곳.
+                라우트에서 감싸야 로딩·에러·빈 상태 등 다른 렌더 분기까지 전부 덮인다. */}
+            <Route element={<ClarityMask />}>
+              <Route path="/myinfo" element={<MyInfo />} />
+              <Route path="/activity" element={<ActivityTimelinePage />} />
+              <Route path="/activity/manage" element={<ActivityPage />} />
+              <Route path="/activity/insights" element={<InsightsPage />} />
+              <Route element={<AiFeatureGuard />}>
+                <Route path="/coverletters" element={<Coverletters />} />
+                <Route
+                  path="/board/:applicationId/coverletter"
+                  element={<CoverletterDocPage />}
+                />
+              </Route>
+              {/* 문의 — 개인적 서술이 들어갈 수 있어 마스킹 대상 */}
+              <Route path="/inquiry" element={<InquiryList />} />
+              <Route path="/inquiry/new" element={<InquiryNew />} />
+              <Route path="/inquiry/:id" element={<InquiryDetail />} />
+            </Route>
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/alarm" element={<AlarmSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/help" element={<Help />} />
-            {/* activity-redesign — 기본 화면 = 날짜 타임라인, 관리는 /activity/manage */}
-            <Route path="/activity" element={<ActivityTimelinePage />} />
-            <Route path="/activity/manage" element={<ActivityPage />} />
-            <Route path="/activity/insights" element={<InsightsPage />} />
-            {/* AI 기능 라우트 — flag off 시 dashboard redirect (useAiEnabled.ts) */}
-            <Route element={<AiFeatureGuard />}>
-              <Route path="/coverletters" element={<Coverletters />} />
-              <Route
-                path="/board/:applicationId/coverletter"
-                element={<CoverletterDocPage />}
-              />
-            </Route>
             {/* 면접 AI 라우트 — 비공개 유지 (useInterviewAiEnabled) */}
             <Route element={<InterviewAiGuard />}>
               <Route path="/interviews" element={<Interviews />} />
