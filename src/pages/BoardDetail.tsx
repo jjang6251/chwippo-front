@@ -3,7 +3,7 @@ import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useParams, useLocation } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
-import dayjs from 'dayjs'
+import { needsResult as isAwaitingResult } from '@/utils/boardViewGroups'
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor,
@@ -264,12 +264,8 @@ export function BoardDetail() {
 
   const sortedSteps = [...app.steps].sort((a, b) => a.orderIndex - b.orderIndex)
   const currentStep = sortedSteps[app.currentStepIndex]
-  const today = dayjs().startOf('day')
-  const isLastStep = sortedSteps.length > 0 && app.currentStepIndex === sortedSteps.length - 1
-  const stepDatePassed =
-    !!currentStep?.scheduledDate &&
-    dayjs(currentStep.scheduledDate).startOf('day').isBefore(today)
-  const needsResult = app.status === 'IN_PROGRESS' && isLastStep && stepDatePassed
+  // 결과 대기 판정은 boardViewGroups 단일 구현 (KST 기준 — CompanyCard 와 같은 값)
+  const needsResult = isAwaitingResult(app)
 
   // D-day: 현재 스텝 날짜만 사용 (날짜 없으면 배지 없음)
   const ddayTarget = currentStep?.scheduledDate ?? null

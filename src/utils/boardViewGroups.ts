@@ -1,5 +1,5 @@
-import dayjs, { type Dayjs } from 'dayjs'
 import type { Application } from '@/types/application'
+import { calcDday } from '@/utils/dday'
 
 /**
  * A11 — 보드 뷰 3종 토글 공용 로직.
@@ -44,17 +44,22 @@ function sortedSteps(app: Application) {
 }
 
 /**
- * 결과 대기 판정 — CompanyCard 의 needsResult 로직과 동일.
- * IN_PROGRESS + 마지막 스텝 + 그 스텝 예정일이 오늘 이전.
+ * 결과 대기 판정 — IN_PROGRESS + 마지막 스텝 + 그 스텝 예정일이 오늘 이전.
+ *
+ * 🔴 **이 함수가 유일한 구현이다.** 예전엔 CompanyCard·BoardDetail 이 같은 식을
+ * 각자 인라인으로 갖고 있었고(주석에도 "동일" 이라 적혀 있었다), 셋 다 로컬 TZ 를 타서
+ * **비KST 기기에서 하루 일찍 "결과 입력하세요" 가 떴다.** 한 곳만 고치면 나머지가 남는다.
+ *
+ * `scheduled_date` 는 `timestamptz` 라 API 가 `2026-08-13T15:00:00Z`(= KST 8/14) 를 준다.
+ * 지남 판정은 KST 날짜 기준이어야 하므로 `calcDday` 에 위임한다.
+ * (날짜가 아닌 값이면 `calcDday` 가 `NaN` → `NaN < 0` 은 false → 오유도 안 뜸)
  */
-export function needsResult(app: Application, now: Dayjs = dayjs()): boolean {
+export function needsResult(app: Application): boolean {
   if (app.status !== 'IN_PROGRESS') return false
   const steps = sortedSteps(app)
   const isLastStep = steps.length > 0 && app.currentStepIndex === steps.length - 1
-  const currentStep = steps[app.currentStepIndex]
-  const stepDatePassed =
-    !!currentStep?.scheduledDate &&
-    dayjs(currentStep.scheduledDate).startOf('day').isBefore(now.startOf('day'))
+  const scheduled = steps[app.currentStepIndex]?.scheduledDate
+  const stepDatePassed = !!scheduled && calcDday(scheduled) < 0
   return isLastStep && stepDatePassed
 }
 
@@ -71,12 +76,12 @@ export type BoardGroupKey =
  * status 우선(PASSED→합격 · FAILED→불합격 · PLANNED→지원 예정) →
  * IN_PROGRESS 는 현재 스텝으로: 마지막 스텝 날짜 경과=결과 대기 / orderIndex 0=서류 / 그 외=면접·시험.
  */
-export function getBoardGroupKey(app: Application, now: Dayjs = dayjs()): BoardGroupKey {
+export function getBoardGroupKey(app: Application): BoardGroupKey {
   if (app.status === 'PASSED') return 'passed'
   if (app.status === 'FAILED') return 'failed'
   if (app.status === 'PLANNED') return 'planned'
   // IN_PROGRESS
-  if (needsResult(app, now)) return 'waiting'
+  if (needsResult(app)) return 'waiting'
   const currentStep = sortedSteps(app)[app.currentStepIndex]
   if (!currentStep || currentStep.orderIndex === 0) return 'document'
   return 'interview'
@@ -106,10 +111,10 @@ export interface BoardGroup extends BoardGroupMeta {
  * 입력 순서(= sortApplications 결과)를 그룹 내에서 보존하며 그룹핑.
  * 빈 그룹은 제외 → 렌더 시 숨김.
  */
-export function groupApplications(apps: Application[], now: Dayjs = dayjs()): BoardGroup[] {
+export function groupApplications(apps: Application[]): BoardGroup[] {
   const buckets = new Map<BoardGroupKey, Application[]>()
   for (const app of apps) {
-    const key = getBoardGroupKey(app, now)
+    const key = getBoardGroupKey(app)
     const arr = buckets.get(key)
     if (arr) arr.push(app)
     else buckets.set(key, [app])
@@ -131,11 +136,11 @@ export interface StepChip {
  * 리스트 뷰 현재 스텝 칩.
  * 결과 대기=warning · 합격=success · 그 외(진행 스텝명·지원 예정·불합격)=neutral(surface-3).
  */
-export function getStepChip(app: Application, now: Dayjs = dayjs()): StepChip {
+export function getStepChip(app: Application): StepChip {
   if (app.status === 'PASSED') return { label: '최종 합격', tone: 'success' }
   if (app.status === 'FAILED') return { label: '불합격', tone: 'neutral' }
   if (app.status === 'PLANNED') return { label: '지원 예정', tone: 'neutral' }
-  if (needsResult(app, now)) return { label: '결과 대기', tone: 'warning' }
+  if (needsResult(app)) return { label: '결과 대기', tone: 'warning' }
   const currentStep = sortedSteps(app)[app.currentStepIndex]
   return { label: currentStep?.name ?? '진행 중', tone: 'neutral' }
 }

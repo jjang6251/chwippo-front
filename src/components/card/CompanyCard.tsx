@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSwipeable } from 'react-swipeable'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
-import dayjs from 'dayjs'
 import type { Application, UpdateApplicationDto } from '@/types/application'
+import { needsResult as isAwaitingResult } from '@/utils/boardViewGroups'
 import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
 import { StarToggle } from './StarToggle'
@@ -78,17 +78,13 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   const sortedSteps = [...application.steps].sort((a, b) => a.orderIndex - b.orderIndex)
   const currentStep = sortedSteps[application.currentStepIndex]
 
-  const today = dayjs().startOf('day')
-
   // D-day: 현재 스텝 날짜만 사용 (날짜 없으면 배지 없음)
   const ddayTarget = currentStep?.scheduledDate ?? null
 
-  // 결과 배지: 마지막 스텝에서만, 날짜가 지났을 때
-  const isLastStep = sortedSteps.length > 0 && application.currentStepIndex === sortedSteps.length - 1
-  const stepDatePassed =
-    !!currentStep?.scheduledDate &&
-    dayjs(currentStep.scheduledDate).startOf('day').isBefore(today)
-  const needsResult = application.status === 'IN_PROGRESS' && isLastStep && stepDatePassed
+  // 결과 배지: 마지막 스텝에서만, 날짜가 지났을 때.
+  // 판정은 boardViewGroups 단일 구현 — 예전엔 여기·BoardDetail 이 각자 인라인으로
+  // 갖고 있었고 셋 다 로컬 TZ 를 타서 비KST 기기에서 하루 일찍 떴다.
+  const needsResult = isAwaitingResult(application)
 
   const tags = parseTags(application.jobCategory)
 
@@ -307,7 +303,14 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
         </button>
       )}
 
-      {/* 하단 배지 */}
+      {/*
+        하단 배지 — 둘이 **동시에** 뜰 수 있어서 색으로 우열을 가른다.
+        상세 입력(warning) < 결과 입력(danger). 결과 입력이 더 급하다.
+
+        리스트 뷰 칩·BoardDetail 배너는 같은 상태를 warning 으로 그리는데, 거기엔
+        경쟁하는 배지가 없어 한 단계 올릴 이유가 없기 때문이다 — 뷰마다 색이 제각각인 게
+        아니라 **여기만 옆 배지 때문에 올린 것**이다.
+      */}
       {(application.needsDetail || needsResult) && (
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
           {application.needsDetail && (
