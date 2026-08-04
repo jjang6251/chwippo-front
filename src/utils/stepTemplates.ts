@@ -120,6 +120,26 @@ const FINANCE_RE = /은행|증권|보험|카드|캐피탈/
 const PUBLIC_RE = /공사|공단|진흥원|재단|청$/
 const MEDIA_RE = /방송|일보|신문|뉴스|MBC|KBS|SBS|JTBC/
 
+/**
+ * 🔴 직군 → 템플릿 매핑. **값이 `utils/sampleData.ts` 의 `JOB_CATEGORIES` 와 정확히 일치해야 한다.**
+ *
+ * W1 에서 직군이 8분류(`'IT개발'` 등)에서 **21개 세부 직군**(`'백엔드 개발'` 등)으로 바뀌었는데
+ * 이 함수만 옛 값을 그대로 보고 있었다. 그 결과 **IT 직군을 골라도 IT 템플릿이 절대 추천되지
+ * 않았다** — `['백엔드 개발'].includes('IT개발')` 은 언제나 false 다. (2026-08-05 발견)
+ *
+ * 회사명 기반(금융·공기업·방송)은 정규식이라 살아 있었기 때문에 **일부만 죽은 상태**로 오래 갔다.
+ * 아래 spec 이 `JOB_CATEGORIES` 와의 정합을 지킨다 — 직군 목록을 바꾸면 여기도 같이 본다.
+ */
+export const IT_CATEGORIES = [
+  '백엔드 개발',
+  '프론트엔드 개발',
+  '모바일 앱 개발',
+  '데이터·AI',
+  'DevOps·인프라·보안',
+  'IT개발', // 레거시 8분류 — 옛 카드 데이터가 흘러들어와도 동작하게 남긴다
+]
+export const FINANCE_CATEGORIES = ['금융·은행·증권·보험', '금융'] // 뒤는 레거시
+
 // 직군 태그·회사명·자연어 입력으로 전형 템플릿 추천 (추천일 뿐 — 드롭다운에서 변경 가능)
 export function recommendTemplate(args: {
   jobCategories?: string[]
@@ -128,7 +148,8 @@ export function recommendTemplate(args: {
 }): string {
   const { jobCategories = [], companyName = '', rawInput = '' } = args
   if (rawInput.includes('인턴')) return 'internship'
-  if (jobCategories.includes('IT개발')) return 'it_dev'
+  if (jobCategories.some((c) => IT_CATEGORIES.includes(c))) return 'it_dev'
+  if (jobCategories.some((c) => FINANCE_CATEGORIES.includes(c))) return 'finance'
   if (FINANCE_RE.test(companyName)) return 'finance'
   if (PUBLIC_RE.test(companyName)) return 'public'
   if (MEDIA_RE.test(companyName)) return 'media'

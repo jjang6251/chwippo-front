@@ -10,7 +10,7 @@ import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDelete
 import { StepNoteEditor } from '@/components/editor/StepNoteEditor'
 import { Modal } from '@/components/common/Modal'
 import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTemplates'
-import { getDdayLabel, getDdayVariant } from '@/utils/dday'
+import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
 import { postToNative } from '@/utils/nativeBridge'
 import { mergePinnedIntoNotes } from '@/utils/stepNotes'
 import { Calendar, MapPin } from 'lucide-react'
@@ -120,9 +120,8 @@ export function StepPage() {
   const hasPreset = !!CHECKLIST_PRESETS[stepType]
   const doneCount = checklist.filter((i) => i.isDone).length
 
-  const dday = step.scheduledDate
-    ? dayjs(step.scheduledDate).startOf('day').diff(dayjs().startOf('day'), 'day')
-    : null
+  // KST 기준 — 인라인 계산은 로컬 TZ 를 타서 비KST 기기에서 하루 어긋났다
+  const dday = step.scheduledDate ? calcDday(step.scheduledDate) : null
   const ddayVariant = dday !== null ? getDdayVariant(dday) : null
   const ddayLabel = dday !== null ? getDdayLabel(dday) : null
 

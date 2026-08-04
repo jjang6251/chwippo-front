@@ -6,7 +6,10 @@ import {
   recommendTemplate,
   STEP_TYPE_CONFIG,
   CHECKLIST_PRESETS,
+  IT_CATEGORIES,
+  FINANCE_CATEGORIES,
 } from './stepTemplates'
+import { JOB_CATEGORIES } from '@/utils/sampleData'
 
 describe('APPLICATION_TEMPLATES', () => {
   it('모든 템플릿은 "서류 제출" 시작 / "최종 합격" 끝', () => {
@@ -160,9 +163,39 @@ describe('recommendTemplate', () => {
     expect(recommendTemplate({ rawInput: '네이버 인턴', jobCategories: ['IT개발'] })).toBe('internship')
   })
 
-  it('jobCategories에 IT개발 → it_dev', () => {
+  /**
+   * 🔴 **이 테스트가 옛 값(`'IT개발'`)만 검증해서 버그가 살아남았다** (2026-08-05).
+   *
+   * W1 에서 직군이 8분류 → **21개 세부 직군**으로 바뀌었는데 `recommendTemplate` 은 옛 값을
+   * 그대로 보고 있었다. 그런데 이 spec 도 옛 값을 넣고 있었으므로 **초록불인 채로**
+   * "IT 직군을 골라도 IT 템플릿이 안 나오는" 상태가 유지됐다.
+   * 앱이 만들지 않는 값으로는 규칙이 맞는지 검증할 수 없다.
+   */
+  it('🔴 실제 IT 직군 값(21분류) → it_dev', () => {
+    for (const c of ['백엔드 개발', '프론트엔드 개발', '모바일 앱 개발', '데이터·AI', 'DevOps·인프라·보안']) {
+      expect(recommendTemplate({ jobCategories: [c] })).toBe('it_dev')
+    }
+    expect(recommendTemplate({ jobCategories: ['그래픽·브랜드 디자이너', '백엔드 개발'] })).toBe('it_dev')
+  })
+
+  it('실제 금융 직군 값 → finance (회사명이 금융권이 아니어도)', () => {
+    expect(recommendTemplate({ jobCategories: ['금융·은행·증권·보험'], companyName: '토스' })).toBe('finance')
+  })
+
+  it('레거시 8분류 값도 계속 동작한다 (옛 카드 데이터 호환)', () => {
     expect(recommendTemplate({ jobCategories: ['IT개발'] })).toBe('it_dev')
-    expect(recommendTemplate({ jobCategories: ['디자인', 'IT개발'] })).toBe('it_dev')
+    expect(recommendTemplate({ jobCategories: ['금융'] })).toBe('finance')
+  })
+
+  /**
+   * 🔴 **드리프트 가드** — 매핑에 적은 값이 실제 직군 목록에 없으면 그 분기는 죽은 코드다.
+   * 직군 목록을 바꾸면 여기서 먼저 깨진다. (레거시 별칭은 목록에 없는 게 정상이라 제외)
+   */
+  it('🔴 매핑 값이 실제 JOB_CATEGORIES 에 존재한다', () => {
+    const legacy = ['IT개발', '금융']
+    for (const c of [...IT_CATEGORIES, ...FINANCE_CATEGORIES].filter((c) => !legacy.includes(c))) {
+      expect(JOB_CATEGORIES).toContain(c)
+    }
   })
 
   it('회사명 패턴 — 금융권', () => {

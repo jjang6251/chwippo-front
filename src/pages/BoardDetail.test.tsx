@@ -13,7 +13,7 @@
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { Application, ApplicationStep } from '@/types/application'
 
 const h = vi.hoisted(() => ({
@@ -251,6 +251,47 @@ describe('BoardDetail — 상태 5종', () => {
     fireEvent.click(btn)
     // 결과 모달 오픈 (SetResultModal)
     expect(screen.getByRole('dialog', { name: /합격|불합격|결과/ })).toBeInTheDocument()
+  })
+
+  /**
+   * 🔴 **마감 당일 아침에 결과 입력을 재촉하면 안 된다** — 기기 TZ 가 판정을 바꾸던 버그.
+   *
+   * 위 케이스는 마감이 2000년이라 어떤 TZ 로 계산해도 "지남" 이다 — **그래서 이 버그를
+   * 못 잡았다.** 경계는 *마감 당일*에만 드러난다.
+   *
+   * `scheduled_date` 는 `timestamptz` 라 API 가 `2026-08-13T15:00:00Z`(= KST 8/14 자정) 를
+   * 준다. 실제 시각 KST 8/14 오전 10시에 로컬 TZ 로 계산하면 UTC 기기에서 "8/13 → 지남" 이
+   * 되어 **마감 당일 아침부터 "결과 대기 중"** 이 떴다.
+   *
+   * 판정은 `boardViewGroups.needsResult` 단일 구현으로 옮겼고(CompanyCard 도 같은 함수),
+   * 이 테스트는 그 위임이 **화면까지 실제로 이어지는지**를 지킨다.
+   */
+  describe('결과 대기 — 마감 당일 경계 (기기 TZ 무관)', () => {
+    const KST_MIDNIGHT_AUG14 = '2026-08-13T15:00:00.000Z'
+
+    beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }))
+    afterEach(() => vi.useRealTimers())
+
+    it('마감 당일 아침 — "결과 대기 중" 이 뜨지 않는다', () => {
+      vi.setSystemTime(new Date('2026-08-14T01:00:00.000Z')) // KST 8/14 10:00
+      h.app = makeApp({
+        currentStepIndex: 0,
+        steps: [step(0, '최종 발표', { scheduledDate: KST_MIDNIGHT_AUG14 })],
+      })
+      renderDetail()
+      expect(screen.queryByText(/결과 대기 중/)).toBeNull()
+    })
+
+    /** 하루가 진짜 지나면 뜬다 — 위 케이스가 무조건 null 이라서 통과하는 게 아님 */
+    it('마감 다음 날 — "결과 대기 중" 이 뜬다', () => {
+      vi.setSystemTime(new Date('2026-08-15T01:00:00.000Z')) // KST 8/15 10:00
+      h.app = makeApp({
+        currentStepIndex: 0,
+        steps: [step(0, '최종 발표', { scheduledDate: KST_MIDNIGHT_AUG14 })],
+      })
+      renderDetail()
+      expect(screen.getByText(/결과 대기 중/)).toBeInTheDocument()
+    })
   })
 
   it('PASSED — 🎉 최종 합격 배지 + 결과 되돌리기, 스텝 편집·현재 스텝 카드 없음', () => {

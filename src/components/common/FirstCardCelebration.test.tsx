@@ -6,15 +6,16 @@
  * 4. planned: 등록 체크 + 유도, 템플릿 체크 없음 (거짓 체크 금지)
  * 5. CTA → navigate(/board/:id) + dismiss
  * 6. 배경 클릭 → dismiss
+ * 7. 🔴 회귀: KST 날짜 경계(UTC 15:00 이후)에도 D-day 가 밀리지 않음
  */
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FirstCardCelebration } from './FirstCardCelebration'
 import {
   useCelebrationStore,
   type FirstCardCelebrationData,
 } from '@/stores/celebrationStore'
-import dayjs from 'dayjs'
+import { addDays, todayLocal } from '@/utils/datetime'
 
 const navigateMock = vi.fn()
 vi.mock('react-router-dom', () => ({ useNavigate: () => navigateMock }))
@@ -24,7 +25,10 @@ const show = (over: Partial<FirstCardCelebrationData> = {}) =>
     appId: 'app-1',
     companyName: '카카오',
     hadTemplate: true,
-    deadline: dayjs().add(14, 'day').format('YYYY-MM-DD'),
+    // 🔴 마감일은 **KST 기준**으로 만든다 — `dayjs().add(14,'day')` 는 기기 로컬 시각이라
+    // 컴포넌트의 KST 기준 D-day 와 어긋난다. UTC 러너에서 15:00 이후(=KST 다음날)면
+    // 하루 밀려 D-13 이 나온다. 픽스처와 검증 대상이 **같은 시계**를 봐야 한다.
+    deadline: addDays(todayLocal(), 14),
     planned: false,
     ...over,
   })
@@ -33,6 +37,10 @@ describe('FirstCardCelebration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useCelebrationStore.getState().dismissFirstCard()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('1) store 비면 렌더 없음', () => {
@@ -82,5 +90,28 @@ describe('FirstCardCelebration', () => {
     render(<FirstCardCelebration />)
     fireEvent.click(screen.getByRole('dialog'))
     expect(useCelebrationStore.getState().firstCard).toBeNull()
+  })
+
+  /**
+   * 🔴 **CI 가 언제 도느냐에 따라 깨지면 안 된다** — 실제로 여기서 한 번 터졌다.
+   *
+   * D-day 는 **KST 기준**인데 픽스처를 `dayjs().add(14,'day')`(기기 로컬)로 만들고 있었다.
+   * 두 시계는 **15:00~24:00 UTC 구간에서만** 갈린다 — 그때 KST 는 이미 다음 날이라
+   * 하루가 밀려 `D-13` 이 된다. 로컬 실행(14:30 UTC)은 그 구간을 안 지나서 통과했고,
+   * CI 가 15:48 UTC 에 돌면서 드러났다.
+   *
+   * **타임존 테스트는 `TZ` 만 바꿔선 부족하다 — "언제 도는가" 도 조건이다.**
+   * 그래서 이 케이스는 그 구간에 시각을 고정해 둔다.
+   *
+   * ⚠️ **이 테스트는 `TZ=Asia/Seoul`(개발 기본값)에서는 회귀를 못 잡는다.** 픽스처를 로컬
+   * 시각으로 되돌려도 로컬 TZ 가 KST 면 두 시계가 일치해 그냥 통과한다 — 실측으로 확인했다.
+   * 잡히는 건 CI(UTC) 뿐이므로, **"테스트가 있으니 안전" 이라고 읽으면 안 된다.**
+   */
+  it('🔴 KST 날짜 경계(UTC 15:48 = KST 익일 00:48)에도 D-14 로 나온다', () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-08-04T15:48:00.000Z')) // KST 2026-08-05 00:48
+    show()
+    render(<FirstCardCelebration />)
+    expect(screen.getByText('D-14')).toBeInTheDocument()
   })
 })
