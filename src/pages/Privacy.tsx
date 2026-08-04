@@ -2,6 +2,21 @@
 // TODO: 유료 결제 도입 시 → 결제 수탁업체(PG사) 추가, §3 보유 기간에 전자상거래법 5년 명시
 // TODO: 사업자 등록 시 → §8 개인정보 보호책임자에 사업자 정보 추가
 // 갱신 이력:
+// - 2026-08-04 공고 / **2026-08-04 즉시 시행** (CEO 결정): §1 에 서비스 이용 분석(자동) + §5 수탁업체에 Microsoft(Clarity)·
+//   Google(AdSense)·Vercel 추가 + §5-2 쿠키·행태정보 신설.
+//   🔴 Google·Vercel 은 **새로 시작하는 것이 아니라 이미 하고 있던 것을 명확히 반영**한 것이다 —
+//      AdSense 스크립트는 index.html 이 매 페이지 로드에서 붙이고 있었고, Vercel 은 프론트 호스팅이다.
+//      2026-08-04 Clarity 도입 검토 중 방침과 실제의 불일치를 발견해 함께 정합화했다.
+//   🔴 문안 정정 (초안 → 최종): "수집 자체를 하지 않습니다" 로 썼다가 **Clarity 에 수집 중단 API 가
+//      없다는 것을 확인**하고 "마스킹되어 전송되지 않습니다" 로 고쳤다. SPA 라 스크립트가 한 번
+//      로드되면 이후 라우팅까지 기록되므로 특정 화면만 제외할 수 없다. **지킬 수 없는 문구를 방침에
+//      적으면 그 자체가 고지 위반이 된다.**
+//   🔴 **§9 "시행일 7일 전 공지" 와 어긋난다.** 초안은 8/11 시행이었으나 CEO 가 즉시 시행을
+//      결정했다. 기록으로 남긴다 — 다음 개정 때 이 선례를 근거로 삼지 말 것. Google·Vercel·쿠키
+//      조항은 **이미 하던 처리의 정정**이라 유예가 불필요했지만, **Clarity 는 신규 수집**이다.
+//   🔴 **순서가 중요하다** — 같은 날이어도 **방침 배포가 먼저, ID 주입이 나중**이다.
+//      순서가 뒤집히면 고지가 0인 상태의 수집이 된다.
+//   ⚠️ 공고일 = **운영 배포일**. develop 머지만으로는 공고가 아니다.
 // - 2026-07-28 공고 / 2026-08-04 시행: §1에 서비스 오류 진단 정보 + §5 수탁업체에 Sentry 추가.
 //   출시(7/26) 후 첫 개정이라 §10 "시행일 7일 전 공지" 조항을 준수 — 공고와 시행 사이 7일.
 //   ⚠️ Sentry DSN 은 **시행일(8/4)에 주입**한다. 방침보다 먼저 켜면 고지 없는 수집이 된다.
@@ -27,9 +42,8 @@ export function Privacy() {
         <h1 className="text-2xl font-bold mb-2">개인정보처리방침</h1>
         <p className="text-text-quaternary text-sm mb-2">시행일: 2026년 8월 4일</p>
         <p className="text-text-tertiary text-xs mb-12 leading-relaxed">
-          이 방침은 2026년 7월 28일 공고되어 2026년 8월 4일부터 시행됩니다. 시행일 전까지는
-          이전 방침(2026년 5월 18일 시행)이 적용됩니다. 변경 내용은 아래 페이지 하단에
-          정리되어 있습니다.
+          이 방침은 2026년 8월 4일 공고되어 같은 날부터 시행됩니다. 변경 내용은 아래 페이지
+          하단에 정리되어 있습니다.
         </p>
 
         <DocSection title="1. 수집하는 개인정보 항목">
@@ -61,6 +75,11 @@ export function Privacy() {
                 '서비스 오류 진단 (자동)',
                 '오류 메시지·오류가 발생한 화면 주소·브라우저 및 운영체제 정보·IP 주소·회원 고유 식별자',
                 '서비스 오류 발생 시에만',
+              ],
+              [
+                '서비스 이용 분석 (자동)',
+                '접속 기기·브라우저 정보, 방문 페이지·클릭·스크롤 등 행태정보, 광고 식별을 위한 쿠키',
+                '서비스 이용 중',
               ],
             ]}
           />
@@ -122,6 +141,13 @@ export function Privacy() {
                 '서비스 오류 로그 수집·분석 (오류 발생 시에만)',
                 '미국',
               ],
+              ['Vercel Inc.', '프론트엔드 웹 호스팅·CDN', '미국·글로벌'],
+              [
+                'Microsoft Corporation',
+                '서비스 이용 행태 분석 (Clarity) — 화면 조작 기록. 입력·표시된 글의 내용은 마스킹되어 전송되지 않으며, 화면 구조와 클릭·스크롤 위치만 기록됩니다',
+                '미국',
+              ],
+              ['Google LLC', '광고 게재 (AdSense)', '미국'],
             ]}
           />
           <p className="mt-3 text-text-quaternary text-xs">
@@ -196,6 +222,38 @@ export function Privacy() {
           </p>
         </DocSection>
 
+        <DocSection title="5-2. 쿠키 및 행태정보">
+          <p className="mb-3">
+            치뽀는 서비스 개선과 광고 게재를 위해 쿠키 및 행태정보를 수집합니다.
+          </p>
+          <ul className="list-disc pl-5 space-y-2 text-text-secondary">
+            <li>
+              <strong>서비스 이용 분석 (Microsoft Clarity)</strong> — 어느 화면에서 이용에
+              어려움을 겪는지 파악해 개선하는 데 사용합니다.{' '}
+              <strong className="text-text-primary">
+                입력하거나 화면에 표시된 글의 내용은 마스킹되어 전송되지 않습니다.
+              </strong>{' '}
+              Clarity 에는 화면 구조와 클릭·스크롤 위치만 기록되며, 자기소개서·활동 기록·
+              내 정보·문의 등 민감한 화면에는 마스킹을 추가로 적용합니다.
+            </li>
+            <li>
+              <strong>광고 (Google AdSense)</strong> — 광고 게재에 사용됩니다.
+            </li>
+          </ul>
+          <p className="mt-3">
+            <strong>거부 방법</strong> — 브라우저 설정에서 쿠키를 차단하거나,{' '}
+            <a
+              href="https://adssettings.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand hover:underline"
+            >
+              Google 광고 설정
+            </a>
+            에서 맞춤 광고를 해제할 수 있습니다. 쿠키를 차단해도 서비스 이용에는 지장이 없습니다.
+          </p>
+        </DocSection>
+
         <DocSection title="6. 개인정보의 파기">
           <p className="mb-3">
             보유 기간이 경과하거나 처리 목적이 달성된 개인정보는 지체 없이 파기합니다.
@@ -239,6 +297,18 @@ export function Privacy() {
         </DocSection>
 
         <div className="mt-12 pt-6 border-t border-line text-text-quaternary text-xs space-y-2">
+          <p>
+            <span className="text-text-primary font-medium">
+              공고일: 2026년 8월 4일 · 시행일: 2026년 8월 4일 (베타 서비스로 사용자 적어 즉시 시행)
+            </span>
+            <br />
+            ① §1 수집 항목에 <strong>서비스 이용 분석 정보</strong>(접속 기기·브라우저, 방문 페이지·
+            클릭·스크롤 등 행태정보, 광고 쿠키) 추가 ② §5 수탁 업체에 <strong>Microsoft(Clarity)</strong>
+            추가, 그리고 <strong>Google(AdSense)·Vercel</strong> 기재 — 이 둘은 새로 시작하는 처리가
+            아니라 <strong>이미 이용 중이던 서비스를 방침에 정확히 반영</strong>한 것입니다
+            ③ <strong>§5-2 쿠키 및 행태정보</strong> 조항 신설(거부 방법 포함). 자기소개서·활동 기록·
+            내 정보·문의 등 민감한 화면의 글 내용은 <strong>마스킹되어 전송되지 않습니다</strong>.
+          </p>
           <p>
             <span className="text-text-tertiary font-medium">공고일: 2026년 7월 28일 · 시행일: 2026년 8월 4일</span>
             <br />
