@@ -7,12 +7,35 @@ import { test, expect, type Page } from '@playwright/test'
  *  - page.route('http://localhost:3000/**') 로 백엔드행 요청을 잡아 카운트 → 모든 시나리오 후 0 단언.
  *    (주의: 'api' 를 포함하는 glob 패턴 금지 — Vite 소스 파일 경로까지 매칭되는 사고 방지. 오리진 기준으로 잡는다.)
  *  - console error 0 (fail-loud console.error = 미등록 GET 이므로 이게 뜨면 데모에 구멍이 있다는 신호)
- *    · 이미지 로드 실패(favicon 등)는 앱 오류가 아니므로 제외.
+ *    · 서드파티 소음은 제외 — 기준·근거는 `isThirdPartyNoise` 참조.
  */
 
 interface Guard {
   backendHits: () => number
   consoleErrors: () => string[]
+}
+
+/**
+ * 이 가드가 잡으려는 건 **우리 데모의 구멍**(미등록 GET · JS 예외)이지, 서드파티 잡음이 아니다.
+ * 아래 두 종류는 신호가 아니라 소음이라 제외한다 — 안 걸러내면 **진짜 실패가 났을 때
+ * "또 그거겠지" 로 넘기게 된다.**
+ *
+ * 🔴 **report-only CSP** (2026-08-05 실측): `index.html` 이 AdSense 를 로드하고, 그 iframe 이
+ * **Google 자신의** report-only 정책(`frame-ancestors 'self'`)을 건드려 콘솔에 찍힌다.
+ * *"logged, but no further action has been taken"* — **아무것도 차단되지 않는다.**
+ * 광고 로드가 비동기라 테스트 창 안에 들어올 때만 나타나서 **전체 스위트 12회 중 1회(~8%)**
+ * 실패했다. 우리 설정엔 `frame-ancestors` 가 아예 없다(확인함).
+ *
+ * ⚠️ **report-only 만** 제외한다. 강제(enforcing) CSP 위반은 실제로 무언가를 막은 것이므로
+ * 그대로 실패해야 한다. Chrome 문구가 바뀌면 필터가 빗나가 **다시 실패하는 방향**이라 안전하다.
+ */
+function isThirdPartyNoise(text: string): boolean {
+  return (
+    // 이미지·favicon 404 등 — 앱 오류가 아니다
+    text.includes('Failed to load resource') ||
+    // 서드파티(AdSense)가 유발하는 report-only 위반 — 차단 효과 0
+    text.includes('report-only Content Security Policy')
+  )
 }
 
 async function attachGuard(page: Page): Promise<Guard> {
@@ -23,10 +46,11 @@ async function attachGuard(page: Page): Promise<Guard> {
     route.abort()
   })
   page.on('console', (msg) => {
-    if (msg.type() === 'error' && !msg.text().includes('Failed to load resource')) {
+    if (msg.type() === 'error' && !isThirdPartyNoise(msg.text())) {
       errors.push(msg.text())
     }
   })
+  // 실제 JS 예외는 그대로 잡는다 (데모 크래시 신호)
   page.on('pageerror', (err) => errors.push(String(err)))
   return { backendHits: () => hits, consoleErrors: () => errors }
 }
