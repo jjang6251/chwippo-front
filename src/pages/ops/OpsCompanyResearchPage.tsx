@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import dayjs from 'dayjs'
+import { calcDday } from '@/utils/dday'
 import {
   adminResearchApi,
   type ResearchFilter,
@@ -421,9 +421,8 @@ function SortableTh({
 
 function ResearchTableRow({ row }: { row: ResearchRow }) {
   const expiresAt = row.expiresAt
-  const daysLeft = expiresAt
-    ? dayjs(expiresAt).startOf('day').diff(dayjs().startOf('day'), 'day')
-    : null
+  // KST 기준 (admin 도 국내지만 계산 방식은 앱 전역과 통일)
+  const daysLeft = expiresAt ? calcDday(expiresAt) : null
   const expiryClass =
     daysLeft == null
       ? 'text-text-quaternary'
