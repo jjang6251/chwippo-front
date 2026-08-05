@@ -13,6 +13,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary'
 import { RouteFallback } from '@/components/common/RouteFallback'
 import { DemoRouteGuard } from '@/components/demo/DemoRouteGuard'
+import { RouteMeta } from '@/components/layout/RouteMeta'
 import { lazyWithReload } from '@/utils/lazyWithReload'
 // ── 첫 진입 코어 (eager) ────────────────────────────────────────────────
 // 홈(캘린더)·보드·로그인·온보딩·설정·문의 등 로그인 직후 흔히 닿는 화면은 즉시 로드해
@@ -129,6 +130,9 @@ const Monitoring = lazyWithReload(() =>
 export default function App() {
   return (
     <BrowserRouter>
+      {/* 라우트별 title·canonical·OG 갱신 — 없으면 sitemap 의 8개 URL 이
+          전부 "표준 주소는 홈" 이라고 선언한다 (`utils/routeMeta.ts` 참조) */}
+      <RouteMeta />
       <DemoRouteGuard />
       <Routes>
         <Route path="/" element={<Landing />} />
