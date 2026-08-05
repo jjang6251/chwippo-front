@@ -100,8 +100,12 @@ export interface ActivationData {
   funnel: { signup: number; setup: number; ahaBeta: number; d7: number }
   briefing: {
     receivedUserDays: number
-    actedRateRead: number | null
-    actedRateUnread: number | null
+    /**
+     * 🔴 서버는 **비율이 아니라 분자·분모**를 준다 (2026-08-06). % 만 받으면 분모가 5든 500이든
+     * 화면이 똑같이 그려서, 소표본 백분율을 막을 방법이 없다. 표기는 `utils/shareFormat` 담당.
+     */
+    read: { acted: number; total: number }
+    unread: { acted: number; total: number }
   }
   generatedAt: string
 }

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getAdminActivation, type ActivationCohort } from '@/api/admin'
 import dayjs from 'dayjs'
+import { formatShare } from '@/utils/shareFormat'
 
 /**
  * A8 — Activation (아하 모먼트) 섹션. OpsPage 분석 대시보드 하단.
@@ -10,11 +11,6 @@ import dayjs from 'dayjs'
  * - AI 아하: 7일 내 AI 초안+편집 (AI hide 동안 0%) / D7·D30: window 재방문
  * 방문 기록(user_daily_visits)은 배포일부터 축적 — 초기 D7/D30은 과소 표시됨.
  */
-
-function pct(n: number, total: number): string {
-  if (total === 0) return '—'
-  return `${Math.round((n / total) * 100)}%`
-}
 
 export function ActivationSection() {
   const { data, isLoading, isError } = useQuery({
@@ -26,10 +22,11 @@ export function ActivationSection() {
   const funnel = data?.funnel
   const funnelSteps = funnel
     ? [
-        { label: '가입', value: funnel.signup, rate: '100%' },
-        { label: '당일 첫 카드', value: funnel.setup, rate: pct(funnel.setup, funnel.signup) },
-        { label: '아하 (3일 내 마감카드 2개)', value: funnel.ahaBeta, rate: pct(funnel.ahaBeta, funnel.signup) },
-        { label: 'D7 재방문', value: funnel.d7, rate: pct(funnel.d7, funnel.signup) },
+        // 가입 행의 비율은 언제나 100% 라 계산값이 아니다 — '기준' 으로 적어 오해를 막는다
+        { label: '가입', value: funnel.signup, rate: '기준' },
+        { label: '당일 첫 카드', value: funnel.setup, rate: formatShare(funnel.setup, funnel.signup) },
+        { label: '아하 (3일 내 마감카드 2개)', value: funnel.ahaBeta, rate: formatShare(funnel.ahaBeta, funnel.signup) },
+        { label: 'D7 재방문', value: funnel.d7, rate: formatShare(funnel.d7, funnel.signup) },
       ]
     : []
 
@@ -100,11 +97,11 @@ export function ActivationSection() {
                   <tr key={c.weekStart} className="border-b border-line/50 last:border-0">
                     <td className="py-2 text-text-secondary">{dayjs(c.weekStart).format('M/D')} 주</td>
                     <td className="py-2 text-right tabular-nums text-text-secondary">{c.cohortSize}</td>
-                    <td className="py-2 text-right tabular-nums">{pct(c.setup, c.cohortSize)}</td>
-                    <td className="py-2 text-right tabular-nums text-brand font-medium">{pct(c.ahaBeta, c.cohortSize)}</td>
-                    <td className="py-2 text-right tabular-nums text-text-tertiary">{pct(c.ahaAi, c.cohortSize)}</td>
-                    <td className="py-2 text-right tabular-nums">{pct(c.d7, c.cohortSize)}</td>
-                    <td className="py-2 text-right tabular-nums">{pct(c.d30, c.cohortSize)}</td>
+                    <td className="py-2 text-right tabular-nums">{formatShare(c.setup, c.cohortSize, { compact: true })}</td>
+                    <td className="py-2 text-right tabular-nums text-brand font-medium">{formatShare(c.ahaBeta, c.cohortSize, { compact: true })}</td>
+                    <td className="py-2 text-right tabular-nums text-text-tertiary">{formatShare(c.ahaAi, c.cohortSize, { compact: true })}</td>
+                    <td className="py-2 text-right tabular-nums">{formatShare(c.d7, c.cohortSize, { compact: true })}</td>
+                    <td className="py-2 text-right tabular-nums">{formatShare(c.d30, c.cohortSize, { compact: true })}</td>
                   </tr>
                 ))}
               </tbody>
@@ -124,14 +121,14 @@ export function ActivationSection() {
                 <div>
                   <p className="text-[11px] text-text-quaternary">브리핑 읽은 날</p>
                   <p className="text-xl font-bold tabular-nums text-success">
-                    {data.briefing.actedRateRead != null ? `${data.briefing.actedRateRead}%` : '—'}
+                    {formatShare(data.briefing.read.acted, data.briefing.read.total)}
                   </p>
                   <p className="text-[11px] text-text-quaternary">당일 카드·스텝 행동률</p>
                 </div>
                 <div>
                   <p className="text-[11px] text-text-quaternary">안 읽은 날</p>
                   <p className="text-xl font-bold tabular-nums text-text-secondary">
-                    {data.briefing.actedRateUnread != null ? `${data.briefing.actedRateUnread}%` : '—'}
+                    {formatShare(data.briefing.unread.acted, data.briefing.unread.total)}
                   </p>
                   <p className="text-[11px] text-text-quaternary">수신 {data.briefing.receivedUserDays.toLocaleString()} 유저-일</p>
                 </div>
