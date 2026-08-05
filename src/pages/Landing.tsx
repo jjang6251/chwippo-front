@@ -120,7 +120,7 @@ export function Landing() {
               </div>
             </div>
             {/*
-              GIF(820KB) → 정적 스크린샷(104KB). 히어로라 `loading="lazy"` 가 무의미했고
+              GIF(820KB) → 정적 WebP(14~29KB). 히어로라 `loading="lazy"` 가 무의미했고
               (첫 화면이라 즉시 받는다), 모바일 유입에 그대로 부담이었다.
               바로 위에 "로그인 없이 둘러보기" 가 있어 **데모 영상보다 데모 자체가 낫다** —
               GIF 의 역할이 이미 대체돼 있었다.
@@ -128,9 +128,9 @@ export function Landing() {
             <picture>
               {/* 🔴 치수는 source·img 각각 필요하다 — 두 컷의 종횡비가 달라(1280×755 vs 390×735)
                   하나로 못 잡는다. 히어로는 접힘선 위라 빠지면 로드 전 레이아웃이 점프한다(CLS). */}
-              <source media="(min-width: 1024px)" srcSet="/hero.png" width={1280} height={755} />
+              <source media="(min-width: 1024px)" srcSet="/hero.webp" width={1280} height={755} />
               <img
-                src="/hero-m.png"
+                src="/hero-m.webp"
                 alt="치뽀 지원 현황 보드 — 회사별 전형 단계와 D-day"
                 width={390}
                 height={735}
@@ -162,8 +162,8 @@ export function Landing() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* 이미지 (모바일: 위, 데스크탑: 좌) */}
             <ScreenshotPlaceholder
-              src="/add-card.png"
-              mobileSrc="/add-card-m.png"
+              src="/add-card.webp"
+              mobileSrc="/add-card-m.webp"
               alt="지원 추가 화면 — 직군을 고르면 전형 템플릿이 자동 추천됩니다"
               label="전형 템플릿 자동 세팅"
             />
@@ -229,8 +229,8 @@ export function Landing() {
           </div>
           {/* 이미지 세로 스택 */}
           <div className="flex flex-col gap-4">
-            <ScreenshotPlaceholder src="/board-list.png" mobileSrc="/board-list-m.png" alt="지원 현황 보드 — 회사별 현재 단계와 D-day" label="지원 현황 보드" />
-            <ScreenshotPlaceholder src="/calendar.png" mobileSrc="/calendar-m.png" alt="캘린더 — 임박한 면접·시험 일정" label="캘린더" />
+            <ScreenshotPlaceholder src="/board-list.webp" mobileSrc="/board-list-m.webp" alt="지원 현황 보드 — 회사별 현재 단계와 D-day" label="지원 현황 보드" />
+            <ScreenshotPlaceholder src="/calendar.webp" mobileSrc="/calendar-m.webp" alt="캘린더 — 임박한 면접·시험 일정" label="캘린더" />
           </div>
         </div>
       </section>
@@ -240,7 +240,7 @@ export function Landing() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <ScreenshotPlaceholder
-              src="/coverletter.png"
+              src="/coverletter.webp"
               alt="자소서 문항 카드 — 답변과 글자수, AI 도구"
               label="자소서 탭"
             />

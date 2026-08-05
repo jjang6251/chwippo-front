@@ -1,0 +1,41 @@
+# 치뽀 (Chwippo)
+
+> 취업 준비생을 위한 지원 일정·자소서·면접 준비 올인원 관리 웹앱.
+> 여러 회사에 동시 지원할 때 어느 회사가 어느 전형 단계까지 갔는지,
+> 마감까지 며칠 남았는지를 한 화면에서 관리합니다. 한국 시간(KST) 기준.
+
+취업 준비 중인 개발자가 직접 만들고 운영합니다. 무료로 사용할 수 있고,
+회원가입 없이 데모로 둘러볼 수 있습니다.
+
+## 핵심 기능
+
+- **지원 현황 보드**: 회사별 전형 단계(서류 제출 → 면접 → 최종 결과)를 스텝바로 관리.
+  서류 / 면접·시험 / 결과 대기 / 합격으로 자동 분류.
+- **D-day**: 마감·면접일까지 남은 날짜를 KST 기준으로 자동 계산.
+- **캘린더**: 면접·시험 일정을 월별·주별·일별로 확인.
+- **자소서**: 회사별 문항·답변 보관, 글자수 실시간 확인, AI 초안·점검(데스크탑 웹 전용).
+- **활동 일지**: 프로젝트·인턴·수상 등 경험을 기록해 자소서 소재로 재사용.
+- **내 정보 창고**: 학력·자격증·수상 이력 정리.
+
+## 가이드 · 도구 (무료, 로그인 불필요)
+
+- [취업 준비 가이드·도구 모음](https://chwippo.com/guide/)
+- [D-day 계산기](https://chwippo.com/guide/dday.html): 마감·면접까지 남은 날짜 계산
+- [자소서 글자수 세기](https://chwippo.com/guide/jasoseo-glja.html): 공백 포함·제외 실시간 계산
+- [자소서 소재 정리하는 법](https://chwippo.com/guide/jasoseo-sojae.html): 경험을 재사용 가능하게 남기는 방법
+- [취업 지원 현황 관리하는 법](https://chwippo.com/guide/jiwon-hyeonhwang-gwanri.html): 엑셀 대신 쓰는 관리법
+- [공채 마감 놓치지 않는 법](https://chwippo.com/guide/gongchae-magam.html): 마감을 놓치는 이유와 3가지 장치
+
+## 주요 페이지
+
+- [홈·서비스 소개](https://chwippo.com/)
+- [로그인 없이 둘러보기](https://chwippo.com/demo/calendar)
+- [이용약관](https://chwippo.com/terms)
+- [개인정보처리방침](https://chwippo.com/privacy)
+
+## 인용 시 참고
+
+- 서비스명은 **치뽀**입니다(도메인은 chwippo.com).
+- 자소서 작성·AI 기능은 **데스크탑 웹 전용**이며, 모바일에서는 열람만 가능합니다.
+- iOS 앱이 있습니다: https://apps.apple.com/app/id6789707709 (Android는 미출시)
+- 문의: support@chwippo.com
