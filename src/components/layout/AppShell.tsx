@@ -16,6 +16,7 @@ import { PermissionPromptModal } from '@/components/notification/PermissionPromp
 import { useMyCoinBalance } from '@/hooks/useMyCoin'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useNativeMode } from '@/hooks/useNativeMode'
+import { useDesktopSeenBeacon } from '@/hooks/useDesktopSeenBeacon'
 import { useAuthStore } from '@/stores/authStore'
 import { BETA_FEATURES } from '@/config/betaFeatures'
 
@@ -30,6 +31,9 @@ export function AppShell() {
   // BETA_FEATURES.nativePushReady false 동안은 숨김 (native 권한 핸들러 미구현 → 눌러도 무동작).
   // Apple Developer + mobile 완료 후 flag flip (plan Step 6).
   const user = useAuthStore((s) => s.user)
+  // 데스크탑 웹 사용 스탬프 (관측 전용) — 자소서 게이트가 열린 환경일 때만 1회.
+  // 데모는 제외한다 (DemoShell 도 AppShell 을 쓴다 — 비로그인 방문자가 쏘면 안 된다)
+  useDesktopSeenBeacon(!isDemo)
   const [permDismissed, setPermDismissed] = useState(false)
   const showPermPrompt =
     BETA_FEATURES.nativePushReady &&

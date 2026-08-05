@@ -141,6 +141,16 @@ export function OpsPage() {
           </div>
           <span className="text-text-tertiary">›</span>
         </Link>
+        <Link
+          to="/ops/reach"
+          className="flex items-center justify-between bg-surface-2 border border-line rounded-xl px-5 py-4 hover:border-line-strong transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold">도달 현황</p>
+            <p className="text-xs text-text-tertiary mt-0.5">가입 후 어디까지 갔나 — 1인 1행 전수 (누적)</p>
+          </div>
+          <span className="text-text-tertiary">›</span>
+        </Link>
       </div>
 
       {/* ── 분석 대시보드 ── */}
