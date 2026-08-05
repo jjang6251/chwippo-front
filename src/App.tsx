@@ -101,6 +101,9 @@ const OpsAnnouncements = lazyWithReload(() =>
     default: m.OpsAnnouncements,
   })),
 )
+const OpsReach = lazyWithReload(() =>
+  import('@/pages/ops/OpsReach').then((m) => ({ default: m.OpsReach })),
+)
 const OpsUsers = lazyWithReload(() =>
   import('@/pages/ops/OpsUsers').then((m) => ({ default: m.OpsUsers })),
 )
@@ -229,6 +232,7 @@ export default function App() {
               <Route path="/ops" element={<OpsPage />} />
               <Route path="/ops/inquiries" element={<OpsInquiries />} />
               <Route path="/ops/announcements" element={<OpsAnnouncements />} />
+              <Route path="/ops/reach" element={<OpsReach />} />
               <Route path="/ops/users" element={<OpsUsers />} />
               <Route path="/ops/users/:id" element={<UserDetailPage />} />
               <Route path="/ops/ai-usage" element={<AiUsage />} />

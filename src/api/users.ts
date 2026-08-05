@@ -40,6 +40,13 @@ export const dismissAllSampleCards = () =>
 export const dismissCalendarHomeIntro = () =>
   apiClient.post('/users/me/dismiss-calendar-home-intro').then(() => undefined)
 
+/**
+ * 데스크탑 웹 사용 스탬프 (관측 전용) — **자소서 게이트와 같은 조건**일 때만 부른다.
+ * 서버는 최초 1회만 기록하고 재호출은 0행이다. 실패해도 화면에 영향을 주지 않는다.
+ */
+export const markDesktopWebSeen = () =>
+  apiClient.post('/users/me/desktop-seen').then(() => undefined)
+
 export interface DashboardSection {
   id: string
   visible: boolean
