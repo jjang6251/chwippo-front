@@ -265,6 +265,26 @@ input[type='time']::-webkit-calendar-picker-indicator {
   }
 }
 
+/* 🔴 모션 최소화 설정 존중 — 위 today-pulse 만 개별 가드를 두고 나머지는 무방비였다.
+   스켈레톤 pulse(96곳)·타이핑 bounce·spinner·celebrate 가 그대로 돈다.
+
+   전역 규칙으로 덮는 이유 — 애니메이션이 96곳에 흩어져 있어 개별 가드는 반드시 새는 곳이 생긴다.
+
+   ⚠️ 진입 애니메이션을 **끄는 게 아니라 즉시 완료**시킨다 (`duration: 0.01ms`).
+   fadeInUp·fadeIn·celebrateUp 은 `opacity: 0` 에서 시작하므로 그냥 없애면 요소가 안 보인다.
+   0.01ms + iteration 1 이면 끝 상태(보이는 상태)로 즉시 점프한다 — 전 keyframe 이
+   visible 로 끝나는 것을 확인했다(tailwind.config.js). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* card-detail-remodel — 리치 에디터(tiptap) 본문 위계·placeholder.
    typography 플러그인 미사용이라 preflight 가 heading 을 평평하게 만든 것을 H2/H3 위계로 복원.
    (CEO 2026-07-20 — 글자별 폰트 조절 대신 H2/H3 위계). 소비 측: .chw-prose */
