@@ -244,7 +244,9 @@ a {
 /* 작성자·작성일 — E-E-A-T(Trustworthiness). 스키마뿐 아니라 사람 눈에도 보여야 한다 */
 .byline {
   font-size: 12px;
-  color: rgb(var(--text-quaternary));
+  /* 🔴 이 파일의 :root 에는 --text-quaternary 가 없다 (bg·brand·line·surface·text-primary/secondary/tertiary 뿐).
+     앱 토큰을 습관적으로 가져다 쓰면 값이 invalid 가 되어 **조용히 상속색으로 렌더된다.** */
+  color: rgb(var(--text-tertiary));
   margin: -8px 0 24px;
 }
 .byline time { font-variant-numeric: tabular-nums; }
