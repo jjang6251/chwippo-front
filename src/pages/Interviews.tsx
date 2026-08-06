@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
 import {
   useDeleteInterviewSession,
@@ -27,6 +27,7 @@ import type {
 export function Interviews() {
   const { data: applications = [], isLoading } = useApplications()
   const [creatingForAppId, setCreatingForAppId] = useState<string | null>(null)
+  const navigate = useNavigate()
   // Phase 5c — 필터 state (면접 종류·기간)
   const [typeFilter, setTypeFilter] = useState<InterviewType | 'all'>('all')
   const [periodFilter, setPeriodFilter] = useState<'all' | '7d' | '30d'>('all')
@@ -136,6 +137,12 @@ export function Interviews() {
           applicationId={creatingForAppId}
           onClose={() => setCreatingForAppId(null)}
           onCreated={() => setCreatingForAppId(null)}
+          // 자소서 0건 → 그 카드의 자소서 탭으로 (BoardDetail 이 `?tab=` 을 읽는다)
+          onNeedCoverletter={() => {
+            const appId = creatingForAppId
+            setCreatingForAppId(null)
+            navigate(`/board/${appId}?tab=coverletter`)
+          }}
         />
       )}
     </div>

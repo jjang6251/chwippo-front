@@ -13,7 +13,16 @@ export function useAiEnabled(): boolean {
   return true
 }
 
-/** 면접 AI 진입점 전용 flag — 비공개 유지 */
+/**
+ * 면접 AI 진입점 전용 flag — 비공개 유지.
+ *
+ * 🔴 **품질 검증 미통과 상태다** (2026-08-07 교차검증). 답변에 면접장에서 말할 수 없는
+ * 문장이 섞이고, 자료에 없는 기술을 "했다고 했는데" 로 단정하며, 활동 기록 참조가
+ * 어긋난 사례가 남아 있다. 그대로 열면 사용자가 틀린 내용을 외워서 말한다.
+ * 남은 수정과 재검증을 통과한 뒤에 켠다 (여기 1줄).
+ *
+ * 로컬 실기 확인이 필요하면 임시로 true 로 두되, **커밋 전에 반드시 되돌린다.**
+ */
 export function useInterviewAiEnabled(): boolean {
   return false
 }

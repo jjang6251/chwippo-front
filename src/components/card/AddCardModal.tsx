@@ -178,18 +178,26 @@ export function AddCardModal({
         </div>
 
         <div>
-          <label className="block text-xs text-text-tertiary mb-1.5">
-            직무명{' '}
-            {!isPlanned && <span className="text-text-quaternary">(나중에 입력 가능)</span>}
-          </label>
+          {/*
+            🔴 라벨에서 "(나중에 입력 가능)" 을 뺐다 (2026-08-06).
+            그 문구가 **"안 써도 된다" 는 신호**로 읽혀서 dev 카드 12장 중 5장이 비어 있었다.
+            직무는 자소서·면접 AI 가 무엇을 물을지 정하는 기준이라, 비면 결과가 일반론이 된다.
+            여전히 필수는 아니다 — 대신 **왜 필요한지**를 알린다.
+            라벨·플레이스홀더는 `BoardDetail` 기본 정보 편집 · 직무 게이트 모달과 통일한다.
+          */}
+          <label className="block text-xs text-text-tertiary mb-1.5">지원 직무</label>
           <input
             type="text"
             value={jobTitle}
             onChange={(e) => setJobTitle(e.target.value)}
             maxLength={100}
-            placeholder="예) 백엔드 개발자, iOS 개발자"
+            placeholder="예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계"
             className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
+          <p className="text-text-faint text-[11px] mt-1.5">
+            자소서·면접 AI 가 <span className="text-text-tertiary">이 직무 기준</span>으로
+            만들어요.
+          </p>
         </div>
 
         <div>

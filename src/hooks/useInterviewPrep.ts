@@ -39,6 +39,19 @@ export function useInterviewPrepSession(sessionId: string, enabled = true) {
     queryKey: sessionKey(sessionId),
     queryFn: () => interviewPrepApi.findOne(sessionId),
     enabled: enabled && !!sessionId,
+    /**
+     * 🔴 생성 중이면 3초마다 폴링 — **새로고침 복귀용**이다.
+     *
+     * 생성은 ~10초 걸린다. 그 사이 새로고침하면 이 값이 `in_progress` 로 내려오고,
+     * 화면은 "생성 중" 을 다시 보여준다. 폴링이 없으면 끝나도 화면이 안 바뀌어
+     * 사용자가 또 새로고침해야 한다.
+     *
+     * 서버가 2분 초과분은 `idle` 로 보정해 주므로 여기서 무한 폴링이 되지 않는다.
+     * 자소서 회사조사(`useApplication`)와 같은 방식.
+     */
+    refetchInterval: (query) =>
+      query.state.data?.generationStatus === 'in_progress' ? 3000 : false,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -160,6 +173,27 @@ export function useUpdateInterviewQuestion() {
   return useMutation({
     mutationFn: (params: { questionId: string; dto: UpdateQuestionDto }) =>
       interviewPrepApi.updateQuestion(params.questionId, params.dto),
+  })
+}
+
+/**
+ * v2 — 질문 1개의 예상 답변 생성.
+ *
+ * 성공·실패와 무관하게 쿼터·코인을 invalidate 한다 — 차단으로 끝났어도 사용량 표시는
+ * 최신이어야 하고, 실패해도 시도 자체가 기록될 수 있다.
+ */
+export function useGenerateInterviewAnswer(sessionId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (questionId: string) =>
+      interviewPrepApi.generateAnswer(questionId),
+    onSuccess: (result) => {
+      if (result.status === 'ok') {
+        qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+      }
+      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
+    },
   })
 }
 

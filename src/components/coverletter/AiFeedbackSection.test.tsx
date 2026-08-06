@@ -41,6 +41,16 @@ vi.mock('@/hooks/useRequireAiConsent', () => ({
   useRequireAiConsent: () => ensureConsentMock,
 }))
 
+// 직무 사전 게이트 — 기본 통과(true). 카드에 직무가 있는 상태를 뜻한다.
+//   미입력 시나리오는 게이트 자체 spec(`useRequireJobTitle`)이 아니라
+//   백엔드 `job-text.spec.ts` 와 각 서비스 spec 이 덮는다.
+const { ensureJobTitleMock } = vi.hoisted(() => ({
+  ensureJobTitleMock: vi.fn(async () => true),
+}))
+vi.mock('@/hooks/useRequireJobTitle', () => ({
+  useRequireJobTitle: () => ensureJobTitleMock,
+}))
+
 const postMock = vi.mocked(apiClient.post)
 const blockedMock = vi.mocked(useAiQuotaBlocked)
 
@@ -64,18 +74,19 @@ describe('AiFeedbackSection', () => {
     vi.clearAllMocks()
     blockedMock.mockReturnValue({ blocked: false, reason: null })
     ensureConsentMock.mockResolvedValue(true)
+    ensureJobTitleMock.mockResolvedValue(true)
     useAiFeedbackStore.setState({ entries: {} })
   })
 
   it('초기 — 점검 받기 버튼 + 비용 안내', () => {
-    render(<AiFeedbackSection clId="cl-1" />)
+    render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
     expect(screen.getByRole('button', { name: '점검 받기' })).toBeInTheDocument()
     expect(screen.getByText(/약 10코인/)).toBeInTheDocument()
   })
 
   it('성공 — 잘한 점·kind 라벨·원문 인용·예시·총평 렌더', async () => {
     postMock.mockResolvedValue(OK_RESPONSE as never)
-    render(<AiFeedbackSection clId="cl-1" />)
+    render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
     fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
 
@@ -91,7 +102,7 @@ describe('AiFeedbackSection', () => {
     postMock.mockResolvedValue({
       data: { data: { status: 'blocked', reason: '오늘 한도 소진' } },
     } as never)
-    render(<AiFeedbackSection clId="cl-1" />)
+    render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
     fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
     expect(await screen.findByText('오늘 한도 소진')).toBeInTheDocument()
@@ -100,7 +111,7 @@ describe('AiFeedbackSection', () => {
 
   it('API 실패 → 에러 토스트', async () => {
     postMock.mockRejectedValue(new Error('500'))
-    render(<AiFeedbackSection clId="cl-1" />)
+    render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
     fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
     await waitFor(() => expect(toast.error).toHaveBeenCalled())
@@ -110,8 +121,7 @@ describe('AiFeedbackSection', () => {
     postMock.mockResolvedValue(OK_RESPONSE as never)
     const onApplyText = vi.fn()
     render(
-      <AiFeedbackSection
-        clId="cl-1"
+      <AiFeedbackSection clId="cl-1" applicationId="app-1"
         answer="저는 끊임없는 열정으로 성장했습니다"
         onApplyText={onApplyText}
       />,
@@ -129,8 +139,7 @@ describe('AiFeedbackSection', () => {
     postMock.mockResolvedValue(OK_RESPONSE as never)
     const onApplyText = vi.fn()
     render(
-      <AiFeedbackSection
-        clId="cl-1"
+      <AiFeedbackSection clId="cl-1" applicationId="app-1"
         answer="이미 전부 고쳐 쓴 답변입니다"
         onApplyText={onApplyText}
       />,
@@ -145,7 +154,7 @@ describe('AiFeedbackSection', () => {
 
   it('answer/onApplyText 미전달 → 적용 버튼 미노출 (하위호환)', async () => {
     postMock.mockResolvedValue(OK_RESPONSE as never)
-    render(<AiFeedbackSection clId="cl-1" />)
+    render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
     fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
     await screen.findByText('AI 티 나는 표현')
@@ -154,8 +163,7 @@ describe('AiFeedbackSection', () => {
 
   it('저장된 결과(lastFeedback) — 라벨 + 결과 렌더, 점검 받기 미노출', () => {
     render(
-      <AiFeedbackSection
-        clId="cl-1"
+      <AiFeedbackSection clId="cl-1" applicationId="app-1"
         lastFeedback={FEEDBACK}
         lastFeedbackAt={new Date(Date.now() - 3 * 60 * 1000).toISOString()}
       />,
@@ -169,7 +177,7 @@ describe('AiFeedbackSection', () => {
 
   it('quota 사전 차단 — 점검 받기 disabled + reason title', () => {
     blockedMock.mockReturnValue({ blocked: true, reason: '오늘 한도 소진' })
-    render(<AiFeedbackSection clId="cl-1" />)
+    render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
     const btn = screen.getByRole('button', { name: '점검 받기' })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('title', '오늘 한도 소진')
@@ -178,8 +186,7 @@ describe('AiFeedbackSection', () => {
   it('재검사 클릭 → clear 후 재호출 (running 표시)', async () => {
     postMock.mockResolvedValue(OK_RESPONSE as never)
     render(
-      <AiFeedbackSection
-        clId="cl-1"
+      <AiFeedbackSection clId="cl-1" applicationId="app-1"
         lastFeedback={FEEDBACK}
         lastFeedbackAt={new Date().toISOString()}
       />,
@@ -197,7 +204,7 @@ describe('AiFeedbackSection', () => {
   it('미동의 — 점검 받기 클릭 → 게이트 차단으로 API 미호출', async () => {
     ensureConsentMock.mockResolvedValue(false)
     postMock.mockResolvedValue(OK_RESPONSE as never)
-    render(<AiFeedbackSection clId="cl-1" />)
+    render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
     fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
 
@@ -207,7 +214,7 @@ describe('AiFeedbackSection', () => {
 
   it('동의 — 점검 받기 클릭 → 게이트 통과 후 API 호출', async () => {
     postMock.mockResolvedValue(OK_RESPONSE as never)
-    render(<AiFeedbackSection clId="cl-1" />)
+    render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
     fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
 
@@ -221,8 +228,7 @@ describe('AiFeedbackSection', () => {
     ensureConsentMock.mockResolvedValue(false)
     postMock.mockResolvedValue(OK_RESPONSE as never)
     render(
-      <AiFeedbackSection
-        clId="cl-1"
+      <AiFeedbackSection clId="cl-1" applicationId="app-1"
         lastFeedback={FEEDBACK}
         lastFeedbackAt={new Date().toISOString()}
       />,
@@ -246,7 +252,7 @@ describe('AiFeedbackSection', () => {
   describe('D0 — 불완전한 저장 결과 방어', () => {
     it('🔴 suggestions 가 없어도 크래시하지 않는다 (실제 사고 케이스)', () => {
       const { suggestions: _omitted, ...broken } = FEEDBACK
-      render(<AiFeedbackSection clId="cl-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
 
       // 나머지 결과는 정상 렌더되고, 예시 섹션만 빠진다
       expect(screen.getByText(/정량 근거가 좋아요/)).toBeInTheDocument()
@@ -255,7 +261,7 @@ describe('AiFeedbackSection', () => {
 
     it('issues 가 없어도 크래시하지 않는다', () => {
       const { issues: _omitted, ...broken } = FEEDBACK
-      render(<AiFeedbackSection clId="cl-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
 
       expect(screen.getByText(/정량 근거가 좋아요/)).toBeInTheDocument()
       expect(screen.queryByText('AI 티')).not.toBeInTheDocument()
@@ -263,21 +269,21 @@ describe('AiFeedbackSection', () => {
 
     it('strengths 가 없어도 크래시하지 않는다', () => {
       const { strengths: _omitted, ...broken } = FEEDBACK
-      render(<AiFeedbackSection clId="cl-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
 
       expect(screen.getByText(/도입부만 다듬으면/)).toBeInTheDocument()
     })
 
     it('summary 가 없으면 총평 줄 자체를 렌더하지 않는다', () => {
       const { summary: _omitted, ...broken } = FEEDBACK
-      render(<AiFeedbackSection clId="cl-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" lastFeedback={broken} lastFeedbackAt={new Date().toISOString()} />)
 
       expect(screen.queryByText(/💬/)).not.toBeInTheDocument()
       expect(screen.getByText(/정량 근거가 좋아요/)).toBeInTheDocument()
     })
 
     it('모든 필드가 없는 빈 객체여도 크래시하지 않는다', () => {
-      render(<AiFeedbackSection clId="cl-1" lastFeedback={{}} lastFeedbackAt={new Date().toISOString()} />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" lastFeedback={{}} lastFeedbackAt={new Date().toISOString()} />)
 
       expect(screen.getByRole('button', { name: '↻ 재검사' })).toBeInTheDocument()
     })
@@ -288,7 +294,7 @@ describe('AiFeedbackSection', () => {
       postMock.mockResolvedValue({
         data: { data: { status: 'ok', feedback: FEEDBACK, truncated: true } },
       } as never)
-      render(<AiFeedbackSection clId="cl-1" />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
       fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
 
@@ -299,7 +305,7 @@ describe('AiFeedbackSection', () => {
       postMock.mockResolvedValue({
         data: { data: { status: 'ok', feedback: FEEDBACK, truncated: false } },
       } as never)
-      render(<AiFeedbackSection clId="cl-1" />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
       fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
 
@@ -308,7 +314,7 @@ describe('AiFeedbackSection', () => {
     })
 
     it('저장된 결과(재진입)에는 잘림 안내가 없다 — 플래그가 DB 에 없으므로', () => {
-      render(<AiFeedbackSection clId="cl-1" lastFeedback={FEEDBACK} lastFeedbackAt={new Date().toISOString()} />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" lastFeedback={FEEDBACK} lastFeedbackAt={new Date().toISOString()} />)
 
       expect(screen.queryByText(/일부만 나왔어요/)).not.toBeInTheDocument()
     })
@@ -322,7 +328,7 @@ describe('AiFeedbackSection', () => {
       postMock.mockResolvedValue({
         data: { data: { status: 'ok', feedback: FEEDBACK, truncated: true } },
       } as never)
-      render(<AiFeedbackSection clId="cl-1" />)
+      render(<AiFeedbackSection clId="cl-1" applicationId="app-1" />)
 
       fireEvent.click(screen.getByRole('button', { name: '점검 받기' }))
 

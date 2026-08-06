@@ -22,9 +22,18 @@ import { Modal } from '@/components/common/Modal'
 export function InterviewPrepTab({
   applicationId,
   active,
+  onNeedCoverletter,
 }: {
   applicationId: string
   active: boolean
+  /**
+   * v2 — 자소서 0건이라 세션을 만들 수 없을 때 자소서 탭으로 보낸다.
+   *
+   * 🔴 여기서 `navigate('/board/:id?tab=coverletter')` 를 쓰면 **동작하지 않는다** —
+   * 같은 라우트라 BoardDetail 이 리마운트되지 않고, 탭 초기값을 읽는 `useState`
+   * 이니셜라이저가 다시 돌지 않는다. 부모가 직접 상태를 바꿔야 한다.
+   */
+  onNeedCoverletter: () => void
 }) {
   const { data: items, isLoading } = useInterviewPrepSessions(
     applicationId,
@@ -138,6 +147,10 @@ export function InterviewPrepTab({
             setCreating(false)
             toast.show('면접 세션이 생성됐어요.')
             navigate(`/interviews/${sessionId}`)
+          }}
+          onNeedCoverletter={() => {
+            setCreating(false)
+            onNeedCoverletter()
           }}
         />
       )}

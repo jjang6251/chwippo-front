@@ -5,6 +5,7 @@ import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
 import { FirstCardCelebration } from '@/components/common/FirstCardCelebration'
 import { FailedCareOverlay } from '@/components/card/FailedCareOverlay'
 import { AiConsentRequiredModal } from '@/components/common/AiConsentRequiredModal'
+import { JobTitleRequiredModal } from '@/components/common/JobTitleRequiredModal'
 import { ClarityMask } from '@/components/common/ClarityMask'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { AiFeatureGuard, InterviewAiGuard } from '@/components/auth/AiFeatureGuard'
@@ -256,6 +257,7 @@ export default function App() {
       <FirstCardCelebration />
       <FailedCareOverlay />
       <AiConsentRequiredModal />
+      <JobTitleRequiredModal />
     </BrowserRouter>
   )
 }

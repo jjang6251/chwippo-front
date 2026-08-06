@@ -16,7 +16,14 @@ import { InterviewQuestionCard } from './InterviewQuestionCard'
  * - 빈 트리: "AI 질문 생성" CTA (2-stage main 20)
  * - 트리 있음: depth 0 main 카드 list, 각각 children 펼침
  */
-export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
+export function InterviewSessionDetail({
+  sessionId,
+  applicationId,
+}: {
+  sessionId: string
+  /** 직무 사전 게이트용 (질문 카드로 전달) */
+  applicationId: string
+}) {
   const { data: questions, isLoading } = useInterviewPrepQuestions(sessionId)
   const { mutateAsync: generateSession, isPending: generating } =
     useGenerateInterviewSession(sessionId)
@@ -130,6 +137,7 @@ export function InterviewSessionDetail({ sessionId }: { sessionId: string }) {
           key={q.id}
           question={q}
           sessionId={sessionId}
+          applicationId={applicationId}
         />
       ))}
     </div>

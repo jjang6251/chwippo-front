@@ -520,6 +520,7 @@ export function CoverletterQuestionCard({
           text={answer}
           limit={cl.charLimit}
           aiFeedbackClId={aiEnabled ? cl.id : null}
+          applicationId={applicationId}
           lastFeedback={cl.lastFeedback}
           lastFeedbackAt={cl.lastFeedbackAt}
           onClose={() => setShowCleanup(false)}

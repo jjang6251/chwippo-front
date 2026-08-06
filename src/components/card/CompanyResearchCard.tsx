@@ -1,15 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Building2,
   Calendar,
   MapPin,
   PenLine,
-  Pencil,
   TriangleAlert,
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { useAutoResize } from '@/hooks/useAutoResize'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import {
   useCompanyResearch,
@@ -22,6 +20,14 @@ interface Props {
   sessionId: string
   /** session 의 userResearchNotes (read 용) */
   userNotes: string | null
+  /**
+   * `회사 정보` 접힘 카드의 초기 상태. 기본 펼침.
+   *
+   * `세션 자료` 모달은 **자료를 고치는 곳**이라 `false` 로 넘긴다 — AI 조사 8항목이
+   * 펼쳐져 있으면 정작 편집할 입력란이 스크롤 아래로 밀린다. 사이드바는 **읽는 곳**이라
+   * 기본값(펼침)을 그대로 쓴다. `내가 알아본 정보` 는 직접 쓰는 칸이라 접지 않는다.
+   */
+  defaultExpanded?: boolean
 }
 
 /**
@@ -38,16 +44,74 @@ interface Props {
  * - 출처 명시 + 클릭 시 원본 이동 (transformative use 강화)
  * - AI 정보 read-only — 사용자 수정은 별도 "내가 알아본 정보" 카드
  */
-export function CompanyResearchCard({ sessionId, userNotes }: Props) {
+export function CompanyResearchCard({
+  sessionId,
+  userNotes,
+  defaultExpanded = true,
+}: Props) {
   const { data: research, isLoading } = useCompanyResearch(sessionId)
-  const [cardExpanded, setCardExpanded] = useState(true) // 카드 전체 toggle (default 펼침)
+  const [cardExpanded, setCardExpanded] = useState(defaultExpanded) // 카드 전체 toggle
   const [showMore, setShowMore] = useState(false) // "더 보기" — 나머지 5 항목
   const [showSources, setShowSources] = useState(false) // 출처 토글 (default 접힘)
-  const [editingNotes, setEditingNotes] = useState(false)
+  /**
+   * `내가 알아본 정보` 인라인 편집 — 1.5초 debounce 자동 저장.
+   * 질문 카드의 `내 답변 메모` 와 같은 패턴이다.
+   *
+   * 🔴 `userNotes` 가 서버에서 갱신되면 draft 를 다시 맞춘다. 안 그러면 다른 화면
+   * (사이드바 ↔ 세션 자료 모달)에서 고친 내용이 서로 덮어쓴다 — 같은 카드가 두 곳에 뜬다.
+   */
+  const [notesDraft, setNotesDraft] = useState(userNotes ?? '')
+  const { mutate: saveNotes, isPending: savingNotes } =
+    useUpdateUserResearchNotes(sessionId)
+  const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 저장 안 된 편집이 남아 있는 동안엔 서버값 동기화를 막는다 (아래 effect 참고) */
+  const notesDirty = useRef(false)
+
+  useEffect(() => {
+    // 🔴 내가 방금 친 글자를 서버 응답이 되돌리면 입력이 통째로 사라진다.
+    //    debounce 1.5초 + 왕복 시간 동안 계속 타이핑하면 실제로 발생한다.
+    if (notesDirty.current) return
+    setNotesDraft(userNotes ?? '')
+  }, [userNotes])
+
+  /** debounce 대기 중인 저장을 즉시 실행 — 언마운트 시 유실 방지용 */
+  const flushNotes = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    // 🔴 적자마자 모달을 닫으면(1.5초 안) debounce 가 안 터져서 메모가 통째로 날아간다.
+    //    타이머를 지우기만 하면 안 되고, 대기 중이던 저장을 흘려보내야 한다.
+    return () => flushNotes.current?.()
+  }, [])
+
+  const handleNotesChange = (val: string) => {
+    setNotesDraft(val)
+    notesDirty.current = true
+    if (notesTimer.current) clearTimeout(notesTimer.current)
+
+    const commit = () => {
+      notesTimer.current = null
+      flushNotes.current = null
+      saveNotes(val.trim() || null, {
+        onSuccess: () => {
+          notesDirty.current = false
+        },
+        onError: () => toast.error('메모 저장에 실패했습니다.'),
+      })
+    }
+    flushNotes.current = () => {
+      if (notesTimer.current) clearTimeout(notesTimer.current)
+      commit()
+    }
+    notesTimer.current = setTimeout(commit, 1500)
+  }
 
 
   return (
-    <>
+    /*
+     * 🔴 두 카드를 fragment 로 내보내면 간격이 **부모마다 달라진다.**
+     * 사이드바는 `space-y-2.5` 라 떨어져 보였지만 `세션 자료` 모달에선 맞붙어
+     * 하나의 카드처럼 읽혔다. 간격은 이 컴포넌트가 책임진다.
+     */
+    <div className="space-y-2.5">
       {/* 🏢 회사 정보 — primary 위계 (bg-brand/5 + border-brand/20) */}
       <div className="border border-brand/20 bg-brand/5 rounded-lg overflow-hidden">
         {/* 카드 헤더 — chevron 좌측 (Notion 패턴), 전체 클릭으로 토글 */}
@@ -247,44 +311,68 @@ export function CompanyResearchCard({ sessionId, userNotes }: Props) {
         )}
       </div>
 
-      {/* 📝 내가 알아본 추가 정보 — secondary 위계 */}
+      {/*
+        📝 내가 알아본 정보 — **바로 쓴다** (2026-08-06).
+
+        이전엔 `편집` 버튼 → 별도 모달이었는데 두 가지가 문제였다:
+        ① 한 번 더 눌러야 해서 짧은 메모를 남기는 마찰이 컸다
+        ② 이 카드가 `세션 자료` 모달 안에도 들어가면서 **모달 위에 모달**이 뜬다
+
+        저장은 질문 카드의 `내 답변 메모` 와 같은 1.5초 debounce 자동 저장이다.
+      */}
       <div className="border border-line bg-surface-2 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-3.5 py-3 border-b border-line/50">
+        <div className="flex items-center justify-between gap-2 px-3.5 py-3 border-b border-line/50">
           <h3 className="text-text-primary text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
             <PenLine size={14} strokeWidth={1.75} aria-hidden="true" />
             내가 알아본 정보
           </h3>
-          <button
-            onClick={() => setEditingNotes(true)}
-            className="text-[11px] text-text-tertiary hover:text-brand"
+          <span
+            className="text-text-faint text-[10px] shrink-0"
+            aria-live="polite"
           >
-            <span className="inline-flex items-center gap-1">
-              <Pencil size={13} strokeWidth={1.75} aria-hidden="true" />
-              편집
-            </span>
-          </button>
+            {savingNotes ? '저장 중…' : '자동 저장'}
+          </span>
         </div>
-        <div className="px-3.5 py-3">
-          {userNotes?.trim() ? (
-            <p className="text-text-secondary text-xs leading-relaxed whitespace-pre-wrap line-clamp-6">
-              {userNotes}
-            </p>
-          ) : (
-            <p className="text-text-faint text-xs leading-relaxed">
-              AI 가 놓친 회사 분위기·면접관 후기 등을 직접 적어두세요.
-            </p>
-          )}
+        <div className="px-3.5 py-3 space-y-2">
+          {/* AI 오류 정정이 이 메모의 목적이라 안내를 입력란 위에 남긴다 */}
+          <p className="text-danger text-[11px] leading-relaxed">
+            <span className="inline-flex items-center gap-1">
+              <TriangleAlert
+                size={13}
+                strokeWidth={1.75}
+                aria-hidden="true"
+                className="shrink-0"
+              />
+              <strong>AI 가 잘못된 정보를 안내할 수 있어요.</strong>
+            </span>{' '}
+            잘못된 부분은 여기에 정정 내용을 적어 주세요. 면접 전 회사 공식
+            홈페이지·공시·뉴스로 반드시 확인하세요.
+          </p>
+          <textarea
+            // 시각적 라벨은 위 h3("내가 알아본 정보")가 하지만 연결이 없어 스크린리더가
+            // 이 입력을 무명으로 읽는다. 목적(AI 조사 정정)까지 담아 이름을 준다.
+            aria-label="내가 알아본 정보 — AI 회사 조사 정정 메모"
+            value={notesDraft}
+            onChange={(e) => handleNotesChange(e.target.value)}
+            maxLength={5000}
+            rows={4}
+            placeholder="예: 회사 분위기는 자유로움 / 작년 면접관은 기술 깊이 위주로 물어봤음"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
+          />
+          <p
+            className={`text-[10px] text-right ${
+              notesDraft.length >= 5000
+                ? 'text-danger'
+                : notesDraft.length >= 4500
+                  ? 'text-warning'
+                  : 'text-text-faint'
+            }`}
+          >
+            {notesDraft.length} / 5000
+          </p>
         </div>
       </div>
-
-      {editingNotes && (
-        <EditUserNotesModal
-          sessionId={sessionId}
-          initialNotes={userNotes ?? ''}
-          onClose={() => setEditingNotes(false)}
-        />
-      )}
-    </>
+    </div>
   )
 }
 
@@ -537,7 +625,8 @@ function SourceChip({ url }: { url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 bg-surface border border-line hover:border-brand/40 hover:bg-surface-3 text-text-tertiary hover:text-text-primary text-[10px] px-2 py-1 rounded-md transition-colors max-w-full"
+      // min-w-0 없이는 안쪽 truncate 가 동작하지 않는다 — 긴 도메인이 칩 밖으로 나간다
+      className="inline-flex items-center gap-1 min-w-0 bg-surface border border-line hover:border-brand/40 hover:bg-surface-3 text-text-tertiary hover:text-text-primary text-[10px] px-2 py-1 rounded-md transition-colors max-w-full"
       title={url}
     >
       <img
@@ -553,118 +642,5 @@ function SourceChip({ url }: { url: string }) {
       />
       <span className="truncate">{domain}</span>
     </a>
-  )
-}
-
-function EditUserNotesModal({
-  sessionId,
-  initialNotes,
-  onClose,
-}: {
-  sessionId: string
-  initialNotes: string
-  onClose: () => void
-}) {
-  const [notes, setNotes] = useState(initialNotes)
-  const { ref: notesRef, autoResize: autoResizeNotes } = useAutoResize(notes, { min: 80, max: 500 })
-  const { mutate: save, isPending } = useUpdateUserResearchNotes(sessionId)
-
-  // ESC 키 닫기 — Vercel Web Interface Guidelines 모달 표준
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  const handleSave = () => {
-    save(notes.trim() || null, {
-      onSuccess: () => {
-        onClose()
-        toast.show('저장됐어요.')
-      },
-      onError: () => toast.error('저장에 실패했습니다.'),
-    })
-  }
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="user-notes-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-surface-2 border border-line rounded-xl shadow-2xl w-full max-w-2xl p-5 max-h-[85vh] overflow-y-auto"
-      >
-        <h2
-          id="user-notes-modal-title"
-          className="text-text-primary text-base font-semibold mb-2 inline-flex items-center gap-1.5"
-        >
-          <PenLine size={16} strokeWidth={1.75} aria-hidden="true" />
-          내가 알아본 추가 정보
-        </h2>
-
-        <div className="bg-danger/5 border border-danger/20 rounded-md p-3 mb-4">
-          <p className="text-danger text-xs leading-relaxed">
-            <span className="inline-flex items-center gap-1">
-              <TriangleAlert size={14} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
-              <strong>AI 가 잘못된 정보를 안내할 수 있어요.</strong>
-            </span>
-            <br />
-            AI 정보는 read-only — 잘못된 부분이 있으면 이 메모에 정정 내용을
-            적어 주세요. 면접 전 회사 공식 홈페이지·공시·뉴스로 반드시
-            확인하세요.
-          </p>
-        </div>
-
-        <textarea
-          ref={notesRef}
-          value={notes}
-          onChange={(e) => {
-            setNotes(e.target.value)
-            autoResizeNotes()
-          }}
-          maxLength={5000}
-          placeholder="예: 회사 분위기는 자유로움 / 작년 면접관은 기술 깊이 위주로 물어봤음 / 채용 페이지 인터뷰에서 강조한 점 등"
-          autoFocus
-          style={{ minHeight: 80, lineHeight: 1.6 }}
-          className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/50 focus:ring-1 focus:ring-brand/20 outline-none resize-y transition-all"
-        />
-        <p
-          className={`text-[11px] mt-1 text-right ${
-            notes.length >= 5000
-              ? 'text-danger'
-              : notes.length >= 4500
-              ? 'text-warning'
-              : notes.length >= 200
-              ? 'text-success'
-              : 'text-text-faint'
-          }`}
-        >
-          {notes.length} / 5000
-        </p>
-
-        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-line">
-          <button
-            onClick={onClose}
-            disabled={isPending}
-            className="px-3 py-1.5 text-sm text-text-tertiary hover:text-text-primary"
-          >
-            취소
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="px-4 py-1.5 text-sm bg-brand hover:bg-brand-hover text-white rounded-md font-medium disabled:opacity-50"
-          >
-            {isPending ? '저장 중…' : '저장'}
-          </button>
-        </div>
-      </div>
-    </div>
   )
 }

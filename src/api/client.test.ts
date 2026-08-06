@@ -15,6 +15,7 @@ import axios from 'axios'
 import {
   performRefresh,
   handleAuthFailure,
+  jobTitleRequiredApplicationId,
   __resetRefreshPromiseForTest,
 } from './client'
 import { useAuthStore } from '@/stores/authStore'
@@ -310,5 +311,37 @@ describe('handleAuthFailure — 네이티브 로그아웃 전파 (401 한정)', 
     })
     handleAuthFailure({ response: { status: 401 } })
     expect(mockedPostToNative).not.toHaveBeenCalled()
+  })
+})
+
+
+/**
+ * 직무 미입력 400 → **토스트 대신 입력 모달**.
+ *
+ * 🔴 백엔드 `assertJobTextPresent` 가 던지는 payload 모양에 의존한다
+ * (`{ code: 'JOB_TITLE_REQUIRED', applicationId }`). 백엔드 쪽 회귀는
+ * `chwippo-back/src/applications/job-text.spec.ts` 가 같은 계약을 고정한다.
+ * 한쪽만 바뀌면 사용자는 "실패했어요" 만 보고 뭘 해야 할지 모르게 된다.
+ */
+describe('jobTitleRequiredApplicationId — 직무 게이트 400 판별', () => {
+  it('code + applicationId 가 맞으면 카드 id 를 돌려준다', () => {
+    expect(
+      jobTitleRequiredApplicationId(400, {
+        code: 'JOB_TITLE_REQUIRED',
+        applicationId: 'app-1',
+        message: '지원 직무를 먼저 입력해 주세요.',
+      }),
+    ).toBe('app-1')
+  })
+
+  it.each([
+    ['400 이 아니면', 403, { code: 'JOB_TITLE_REQUIRED', applicationId: 'a' }],
+    ['다른 code 면', 400, { code: 'QUOTA_EXCEEDED', applicationId: 'a' }],
+    ['code 가 없으면', 400, { message: '뭔가 잘못됨' }],
+    ['applicationId 가 없으면', 400, { code: 'JOB_TITLE_REQUIRED' }],
+    ['applicationId 가 빈 문자열이면', 400, { code: 'JOB_TITLE_REQUIRED', applicationId: '' }],
+    ['body 가 없으면', 400, undefined],
+  ])('%s null — 기존 토스트 경로로 흘려보낸다', (_label, status, data) => {
+    expect(jobTitleRequiredApplicationId(status, data)).toBeNull()
   })
 })

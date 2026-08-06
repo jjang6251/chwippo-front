@@ -12,6 +12,7 @@ import {
 import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
+import { useRequireJobTitle } from '@/hooks/useRequireJobTitle'
 import {
   PENDING_ASSISTANT_MSG_ID,
   useCoverletterMessages,
@@ -117,6 +118,8 @@ export function CoverletterChatPanel({
   const { mutate: deleteAll, isPending: deleting } = useDeleteCoverletterMessages(applicationId)
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('coverletter_chat')
   const ensureAiConsent = useRequireAiConsent()
+  // 직무 게이트 — 대화도 직무 기준으로 조언한다 (서버에도 같은 게이트)
+  const ensureJobTitle = useRequireJobTitle(applicationId)
   // citation 칩 — 현재 자소서 N문항 정보 (clId → question + 1-based 번호 매핑)
   const { data: cls = [] } = useCoverletters(applicationId, !!applicationId)
   const clMap = useMemo(
@@ -241,6 +244,7 @@ export function CoverletterChatPanel({
     const text = (textOverride ?? input).trim()
     if (!text || sending || quotaBlocked) return
     if (!(await ensureAiConsent())) return
+    if (!(await ensureJobTitle())) return
     // 즉시 input clear — placeholder bubble 이 list 끝에 추가됨 (hook onMutate).
     // selection 은 유지 (multi-turn follow-up 자연스러움). 사용자가 tree 헤더 ✕ 로 수동 clear.
     setInput('')

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FolderOpen, Lightbulb, Target } from 'lucide-react'
 import { Modal } from '@/components/common/Modal'
+import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { useActivities, useActivityLogs } from '@/hooks/useActivities'
-import { useApplication } from '@/hooks/useApplications'
+import { useApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { useCreateInterviewPrepSession } from '@/hooks/useInterviewPrep'
 import { toast } from '@/stores/toastStore'
 import type { InterviewType } from '@/types/interviewPrep'
@@ -13,6 +14,11 @@ interface Props {
   applicationId: string
   onClose: () => void
   onCreated: (sessionId: string) => void
+  /**
+   * v2 — 자소서가 0건이라 세션을 만들 수 없을 때 "자소서 등록하러 가기".
+   * 모달을 닫고 같은 카드의 자소서 탭으로 보낸다 (부모가 탭 전환을 안다).
+   */
+  onNeedCoverletter: () => void
 }
 
 const TYPE_OPTIONS: Array<{ value: InterviewType; label: string }> = (
@@ -27,23 +33,38 @@ const CUSTOM_ROUND = '__custom__'
  * 섹션 구분 (필수·권장·선택 시각화):
  * 1. 회사·직무 확인 (read-only, 상단 confirm 카드)
  * 2. 면접 정보 (round 필수 · 면접 종류 선택)
- * 3. AI 질문 품질 강화 (권장) — 모집 요강 · 강조 포인트
+ * 3. AI 질문 품질 강화 (권장) — 공고 요건(정리 결과 재사용) · 강조 포인트
  * 4. 참고 자료 (권장) — 자소서 multi-select + 활동 로그 트리 (전체 선택 가능)
  */
 export function NewInterviewSessionModal({
   applicationId,
   onClose,
   onCreated,
+  onNeedCoverletter,
 }: Props) {
   const [roundChoice, setRoundChoice] = useState('')
   const [customRound, setCustomRound] = useState('')
   const [interviewType, setInterviewType] = useState<InterviewType | ''>('')
-  const [jobDescription, setJobDescription] = useState('')
+  // 공고 요건 섹션 접힘 — 정리된 내용이 없으면 펼쳐서 CTA 를 바로 보이게 한다
+  const [jpExpanded, setJpExpanded] = useState(true)
   const [emphasisPoints, setEmphasisPoints] = useState('')
   const [selectedClIds, setSelectedClIds] = useState<Set<string>>(new Set())
   const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set())
 
   const { data: app } = useApplication(applicationId)
+  const { mutateAsync: updateApp } = useUpdateApplication(applicationId)
+  /** 카드에 직무가 없을 때 이 모달에서 받는 값. 저장되면 카드의 jobTitle 이 된다 */
+  const [jobTitleDraft, setJobTitleDraft] = useState('')
+
+  /**
+   * 프롬프트가 실제로 쓰는 직무 — 백엔드 `resolveJobText` 와 **같은 규칙**이다.
+   * **`jobTitle`("백엔드 개발자") 우선**, 없으면 직군 태그.
+   * 한쪽만 고치면 화면에 보이는 직무와 질문 기준이 어긋난다.
+   */
+  const resolvedJob = app?.jobTitle?.trim() || app?.jobCategory?.trim() || null
+  /** 카드에 있거나, 이 모달에서 적었거나 */
+  const jobReady = Boolean(resolvedJob) || jobTitleDraft.trim().length > 0
+
   const { data: coverletters } = useCoverletters(applicationId, true)
   const { data: activities } = useActivities()
   const { mutate: create, isPending } = useCreateInterviewPrepSession(
@@ -73,11 +94,34 @@ export function NewInterviewSessionModal({
   const round =
     roundChoice === CUSTOM_ROUND ? customRound.trim() : roundChoice.trim()
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!round) {
       toast.error('면접 차수를 선택하거나 입력해 주세요.')
       return
     }
+    // v2 — 자소서가 이 기능의 재료다. 서버도 같은 조건으로 막지만(우회 방어),
+    //   버튼 disabled 로 먼저 알려 사용자가 제출 후에 알게 되지 않도록 한다.
+    if (selectedClIds.size === 0) {
+      toast.error('자소서를 1개 이상 선택해 주세요.')
+      return
+    }
+    const newJobTitle = jobTitleDraft.trim()
+    if (!resolvedJob && !newJobTitle) {
+      toast.error('지원 직무를 입력해 주세요. 직무별 질문의 기준이 됩니다.')
+      return
+    }
+    // 🔴 세션 생성은 서버가 **카드의 직무를 다시 읽어** 프롬프트를 만든다.
+    //    그래서 카드에 먼저 저장한 뒤 create 해야 한다. 순서가 바뀌면 이번 세션만
+    //    직무 없이 생성되고, 서버 게이트에 걸려 세션 자체가 안 만들어진다.
+    if (!resolvedJob && newJobTitle) {
+      try {
+        await updateApp({ jobTitle: newJobTitle })
+      } catch {
+        toast.error('직무 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+        return
+      }
+    }
+
     create(
       {
         applicationId,
@@ -85,7 +129,6 @@ export function NewInterviewSessionModal({
         interviewType: interviewType || undefined,
         coverletterIds: Array.from(selectedClIds),
         extraLogIds: Array.from(selectedLogIds),
-        jobDescription: jobDescription.trim() || undefined,
         emphasisPoints: emphasisPoints.trim() || undefined,
       },
       {
@@ -116,17 +159,50 @@ export function NewInterviewSessionModal({
                 {app?.companyName ?? '…'}
               </span>
               <span className="text-text-tertiary text-xs">
-                {app?.jobCategory ?? '직무 미지정'}
+                {resolvedJob ?? '직무 미지정'}
               </span>
             </div>
-            {!app?.jobCategory && (
-              <p className="text-warning text-[10px] mt-1.5">
-                <span className="inline-flex items-center gap-1">
-                  <Lightbulb size={13} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
-                  직무가 없으면 일반론적 답변이 나옵니다. 카드 상세에서 직무를
-                  먼저 입력하면 좋아요.
-                </span>
-              </p>
+            {/*
+              🔴 직무가 비면 **여기서 바로 적는다** (2026-08-06).
+
+              "세션 만들 때 물어볼게요" 안내만 뒀더니, 눈앞에 `직무 미지정` 이 보이는데
+              고칠 칸이 없어서 막다른 길처럼 읽혔다. 미지정을 보여주는 자리와 고치는
+              자리가 같아야 한다. 공용 게이트 모달(`useRequireJobTitle`)은 자소서
+              점검·대화처럼 **입력 자리가 없는 진입점**을 위한 장치다.
+            */}
+            {app && !resolvedJob && (
+              <div className="mt-2.5 border-t border-line pt-2.5">
+                <label
+                  htmlFor="interview-job-title"
+                  className="block text-xs text-text-tertiary mb-1.5"
+                >
+                  지원 직무 <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="interview-job-title"
+                  type="text"
+                  value={jobTitleDraft}
+                  onChange={(e) => setJobTitleDraft(e.target.value)}
+                  maxLength={100}
+                  placeholder="예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계"
+                  /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
+                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                />
+                <p className="text-warning text-[11px] mt-1.5">
+                  <span className="inline-flex items-start gap-1">
+                    <Lightbulb
+                      size={13}
+                      strokeWidth={1.75}
+                      aria-hidden="true"
+                      className="shrink-0 mt-px"
+                    />
+                    <span>
+                      직무가 없으면 <strong>직무별 질문이 안 나옵니다.</strong> 카드에도
+                      함께 저장됩니다.
+                    </span>
+                  </span>
+                </p>
+              </div>
             )}
           </div>
         </section>
@@ -242,7 +318,27 @@ export function NewInterviewSessionModal({
               </span>
             </label>
             {clList.length === 0 ? (
-              <p className="text-text-faint text-sm">자소서 문항이 없어요.</p>
+              /*
+                v2 — 자소서가 없으면 세션을 못 만든다. 단순 차단으로 끝내면 사용자는
+                막다른 길에 서므로, **왜 필요한지 + 어디로 가면 되는지**를 같이 준다.
+                (자소서 등록 동기를 만드는 게 이 차단의 목적이기도 하다)
+              */
+              <div className="border border-warning/30 bg-warning/8 rounded-lg p-3">
+                <p className="text-text-secondary text-xs leading-relaxed">
+                  이 카드에 등록된 자소서가 없어요. 면접 질문은{' '}
+                  <strong className="text-text-primary font-semibold">
+                    내가 쓴 자소서를 파고드는 방식
+                  </strong>
+                  이라 자소서가 있어야 만들 수 있어요.
+                </p>
+                <button
+                  type="button"
+                  onClick={onNeedCoverletter}
+                  className="mt-2 min-h-8 text-xs font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-3 py-2 rounded-lg transition-colors"
+                >
+                  자소서 등록하러 가기
+                </button>
+              </div>
             ) : (
               <div className="max-h-32 overflow-y-auto overscroll-contain space-y-1 border border-line rounded-lg p-2 bg-surface">
                 {clList.map((cl) => (
@@ -315,21 +411,30 @@ export function NewInterviewSessionModal({
           </div>
 
           <div className="space-y-3">
+            {/*
+              v2 (2026-08-06) — 손으로 붙여넣던 "모집 요강" textarea 를 **공고 요건 정리 UI**
+              로 교체했다. 카드·자소서에서 이미 정리했으면 그 결과가 여기 그대로 보이고,
+              안 했으면 여기서 바로 정리할 수 있다. 같은 정보를 두 번 넣게 하지 않는다.
+              (실측: 기존 수동 입력란은 세션 8건 중 0건 사용 — 아무도 두 번 쓰지 않았다)
+
+              `app.jobPosting` 단일 소스라 카드 상세·자소서와 자동으로 같은 내용을 본다.
+            */}
             <div>
               <label className="block text-xs text-text-tertiary mb-1.5">
-                모집 요강 / 우대사항
+                공고 요건{' '}
+                <span className="text-text-faint">
+                  (있으면 직무 질문이 정확해져요)
+                </span>
               </label>
-              <textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                maxLength={8000}
-                rows={4}
-                placeholder="공고에서 복사·붙여넣기 — 요구역량 / 우대사항 / 직무 요건 등&#10;예) C++ 3년 이상, Linux 환경 개발 경험, MSA 경험 우대…"
-                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
+              <JobPostingBanner
+                variant="section"
+                applicationId={applicationId}
+                jobPosting={app?.jobPosting}
+                jobPostingStatus={app?.jobPostingStatus}
+                readOnly={false}
+                expanded={jpExpanded}
+                onToggle={() => setJpExpanded((v) => !v)}
               />
-              <p className="text-text-faint text-[11px] mt-1 text-right">
-                {jobDescription.length} / 8000
-              </p>
             </div>
 
             <div>
@@ -361,9 +466,18 @@ export function NewInterviewSessionModal({
           취소
         </button>
         <button
-          onClick={handleSubmit}
-          disabled={isPending || !round}
-          className="px-4 py-1.5 text-xs bg-brand hover:bg-brand-hover text-white rounded-md font-medium disabled:opacity-50"
+          onClick={() => void handleSubmit()}
+          // v2 — 자소서가 재료다. 0개면 만들 수 없다 (서버도 같은 조건으로 막는다)
+          //   직무는 직무별 질문의 기준이라 비어 있으면 위 칸에서 고르게 한다
+          disabled={isPending || !round || selectedClIds.size === 0 || !jobReady}
+          title={
+            selectedClIds.size === 0
+              ? '자소서를 1개 이상 선택해 주세요'
+              : !jobReady
+                ? '지원 직무를 입력해 주세요'
+                : undefined
+          }
+          className="px-4 py-1.5 text-xs bg-brand hover:bg-brand-hover text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? '생성 중…' : '세션 만들기'}
         </button>
