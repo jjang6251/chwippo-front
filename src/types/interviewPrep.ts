@@ -135,6 +135,14 @@ export interface InterviewPrepQuestion {
   followupBasis: 'my_memo' | 'ai_answer' | 'question' | null
   questionText: string
   suggestedAnswer: string | null
+  /**
+   * AI 답변의 자료 부족 사유. null = 충분.
+   *
+   * 🔴 **`suggestedAnswer` 에 절대 섞이면 안 되는 내용**이라 필드를 나눴다 — 답변은
+   * 면접장에서 그대로 말할 문장인데, 예전엔 모델이 `"자료상 명확한 실패 사례가
+   * 있었던 것은 아니지만"` 처럼 본문 안에서 말했다. 면접관은 "자료" 가 뭔지 모른다.
+   */
+  materialGap: string | null
   sourceLogIds: string[]
   myMemo: string | null
   createdAt: string

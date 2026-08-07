@@ -41,11 +41,11 @@ beforeEach(() => {
 describe('Landing — 출시 상태 고지', () => {
   /**
    * 🔴 **출시된 기능에 "곧 출시" 가 붙으면 안 된다.** 실제로 그래서 아무도 안 썼을 수 있다.
-   * 자소서 AI 는 재공개됐고, 아직 안 나온 건 면접 AI 하나뿐이다.
+   * 2026-08-07 면접 AI 가 열리면서 **AI 카드 3장이 전부 출시 상태**가 됐다.
    */
-  it('자소서 AI 카드에는 "곧 출시" 가 없다 (이미 출시됨)', () => {
+  it('출시된 AI 카드에 "곧 출시" 가 없다', () => {
     renderLanding()
-    for (const title of ['AI 자소서 초안', 'AI 자소서 점검']) {
+    for (const title of ['AI 자소서 초안', 'AI 자소서 점검', 'AI 면접 질문 뽑기']) {
       // 제목(h3)의 부모 = 카드 한 장. 조상까지 올라가면 섹션 전체가 잡혀 다른 카드의 배지가 섞인다
       const card = screen.getByText(title).closest('div')
       expect(card, `${title} 카드를 찾지 못함`).not.toBeNull()
@@ -54,12 +54,23 @@ describe('Landing — 출시 상태 고지', () => {
     }
   })
 
-  /** 면접 AI 는 flag 가 꺼져 있는 동안에만 "곧 출시" 가 맞다 — 켜지면 이 테스트가 깨져야 한다 */
-  it('면접 AI 의 "곧 출시" 는 useInterviewAiEnabled 가 false 일 때만 유효하다', () => {
-    expect(useInterviewAiEnabled()).toBe(false) // 켜면 여기서 먼저 깨진다
+  /**
+   * 🔴 **flag 와 랜딩 배지가 어긋나면 깨진다** — 양방향 가드다.
+   *
+   * flag 를 끄면(비공개 복귀) 랜딩은 다시 "곧 출시" 를 달아야 하고, 켜면 떼야 한다.
+   * 이 테스트가 없으면 flag 만 토글하고 랜딩을 안 고쳐 **있는 기능을 없다고**
+   * (또는 그 반대로) 안내하게 된다. 자소서 AI 가 실제로 한 달 넘게 그 상태였다.
+   */
+  it('면접 AI 배지가 useInterviewAiEnabled 상태와 일치한다', () => {
     renderLanding()
-    expect(screen.getByText('AI 면접 질문 뽑기')).toBeInTheDocument()
-    expect(screen.getAllByText('곧 출시').length).toBe(1) // 면접 하나뿐
+    const card = screen.getByText('AI 면접 질문 뽑기').closest('div')
+    expect(card).not.toBeNull()
+    if (useInterviewAiEnabled()) {
+      expect(card?.textContent).toContain('PC에서 사용 가능')
+      expect(screen.queryAllByText('곧 출시')).toHaveLength(0)
+    } else {
+      expect(card?.textContent).toContain('곧 출시')
+    }
   })
 })
 

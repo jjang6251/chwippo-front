@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Clock, CornerDownRight, Sparkles, Star } from 'lucide-react'
+import { Clock, CornerDownRight, Info, Sparkles, Star } from 'lucide-react'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import {
@@ -314,11 +314,26 @@ export function InterviewQuestionCard({
             주인공은 아래 "내 답변 메모" 다 — 여기는 막혔을 때 꺼내 쓰는 보조 도구라
             brand 색을 쓰되 크기·비중을 낮춘다.
           */}
+          {/*
+            🔴 **완료가 안 읽히던 자리.** aria-live 가 아래 "생성 중" 블록에만 있어서,
+            생성이 끝나면 그 블록이 통째로 사라지고 답변은 **형제 요소**에 나타났다 —
+            화면을 못 보는 사용자는 시작만 듣고 끝을 못 들었다.
+
+            답변 본문(350~400자)을 live 영역에 넣으면 전부 낭독돼 더 나쁘다.
+            그래서 **상태 한 줄만** 알린다. 자료 부족 배지도 여기서 함께 알린다 —
+            그건 "답변이 뼈대뿐" 이라는 신호라 못 보고 넘어가면 안 된다.
+          */}
+          <p className="sr-only" aria-live="polite">
+            {generatingAnswer
+              ? 'AI 답변을 만드는 중이에요.'
+              : question.suggestedAnswer
+                ? question.materialGap
+                  ? 'AI 답변이 만들어졌어요. 자료가 부족해 뼈대만 작성됐다는 안내가 함께 있어요.'
+                  : 'AI 답변이 만들어졌어요.'
+                : ''}
+          </p>
           {generatingAnswer ? (
-            <div
-              className="bg-surface border border-line rounded-lg p-3 space-y-1.5"
-              aria-live="polite"
-            >
+            <div className="bg-surface border border-line rounded-lg p-3 space-y-1.5">
               <p className="text-text-secondary text-xs font-medium animate-pulse">
                 ✨ AI 가 답변을 쓰는 중이에요…
               </p>
@@ -365,6 +380,25 @@ export function InterviewQuestionCard({
                   <p className="text-text-secondary text-[13px] leading-relaxed whitespace-pre-wrap mt-1.5">
                     {question.suggestedAnswer}
                   </p>
+                  {/*
+                    🔴 자료 부족은 **답변 본문 밖**에서 알린다.
+                    예전엔 모델이 "자료상 ~한 사례가 있었던 것은 아니지만" 처럼 본문 안에서
+                    말했고, 사용자가 그걸 그대로 외우면 면접장에서 통하지 않는다.
+                    warning 색 — 답변이 틀린 게 아니라 **재료가 모자란다**는 신호다.
+                  */}
+                  {question.materialGap && (
+                    <div className="mt-2 flex items-start gap-1.5 px-2.5 py-2 rounded-lg bg-warning/8 border border-warning/25">
+                      <Info
+                        size={12}
+                        strokeWidth={2.25}
+                        aria-hidden="true"
+                        className="text-warning shrink-0 mt-0.5"
+                      />
+                      <p className="min-w-0 text-warning text-[11px] leading-relaxed">
+                        {question.materialGap}
+                      </p>
+                    </div>
+                  )}
                   {/* AI 답변에도 같은 기준을 붙여 "내 메모가 긴가" 를 비교할 수 있게 한다 */}
                   {/* 내 메모 칩과 같은 형태 — 나란히 두고 길이를 비교하는 게 목적이다 */}
                   <p className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-info/8 border-info/20">
