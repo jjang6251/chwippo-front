@@ -115,9 +115,33 @@ export function Interviews() {
             {p === 'all' ? '기간 전체' : p === '7d' ? '최근 7일' : '최근 30일'}
           </button>
         ))}
+        {/*
+          🔴 **필터를 푸는 길이 없었다.** 세션은 기업 그룹별로 따로 그려지는데, 필터가
+          걸리면 각 그룹이 조용히 비어서 "세션이 사라졌다" 로 읽힌다. 어느 그룹이 비었는지는
+          부모가 알 수 없으므로(그룹마다 따로 fetch 한다) **필터 자리에 되돌리는 버튼**을 둔다 —
+          비어 보이는 원인이 여기 있다는 것도 같이 알려주는 자리다.
+        */}
+        {(typeFilter !== 'all' || periodFilter !== 'all') && (
+          <button
+            type="button"
+            onClick={() => {
+              setTypeFilter('all')
+              setPeriodFilter('all')
+            }}
+            className="text-[11px] px-2 py-1 rounded-full border border-dashed border-line text-text-tertiary hover:text-text-primary hover:border-line-strong transition-colors"
+          >
+            필터 해제
+          </button>
+        )}
       </div>
 
-      <div className="space-y-6 mt-6">
+      {/*
+        🔴 **전부 필터에 걸리면 페이지가 텅 빈다.** 그룹은 관련 없을 때 스스로 숨는데
+        (회사가 여럿이면 그게 맞다), 전부 숨으면 필터 바만 남아 "세션이 사라졌다" 로 읽힌다.
+        세션은 그룹마다 따로 fetch 하므로 부모가 "전부 비었나" 를 알 수 없다 —
+        컨테이너가 실제로 비었다는 사실을 **CSS 로** 읽어 아래 안내를 띄운다.
+      */}
+      <div className="peer space-y-6 mt-6">
         {active.map((app) => (
           <ApplicationInterviewGroup
             key={app.id}
@@ -132,16 +156,43 @@ export function Interviews() {
         ))}
       </div>
 
+      {/*
+        `mt-6` 를 걸지 않는다 — 위 `peer` 컨테이너가 비어도 **높이 0으로 남은 채 자기 `mt-6` 는
+        유지**한다. 여기 또 걸면 빈 상태일 때만 위 여백이 48px 로 벌어진다.
+      */}
+      <div className="hidden peer-empty:block border border-dashed border-line bg-surface-2/50 rounded-xl px-5 py-8 text-center">
+        <p className="text-text-tertiary text-sm">
+          이 조건에 맞는 세션이 없어요
+        </p>
+        <p className="text-text-quaternary text-xs mt-1">
+          위 필터를 바꾸거나 해제해 보세요.
+        </p>
+      </div>
+
       {creatingForAppId && (
         <NewInterviewSessionModal
           applicationId={creatingForAppId}
           onClose={() => setCreatingForAppId(null)}
-          onCreated={() => setCreatingForAppId(null)}
-          // 자소서 0건 → 그 카드의 자소서 탭으로 (BoardDetail 이 `?tab=` 을 읽는다)
+          /*
+            만든 세션으로 **바로 들어간다.** 모달만 닫으면 목록에서 방금 만든 차수를
+            눈으로 찾아 다시 눌러야 한다 — 만들자마자 할 일은 질문 생성이라 그 자리로 보낸다.
+            카드 상세(`InterviewPrepTab`)는 진작 이렇게 하고 있었고 여기만 빠져 있었다.
+          */
+          onCreated={(sessionId) => {
+            setCreatingForAppId(null)
+            toast.show('면접 세션이 생성됐어요.')
+            navigate(`/interviews/${sessionId}`)
+          }}
+          /*
+            자소서 0건 → 그 카드의 **자소서 풀페이지**로 보낸다.
+            예전엔 카드 상세의 자소서 탭(`?tab=coverletter`)으로 보냈는데, 거기서
+            다시 풀페이지로 들어가야 실제로 쓸 수 있었다. 지금 필요한 건 "자소서를
+            쓰는 것" 이므로 쓰는 자리로 바로 보낸다.
+          */
           onNeedCoverletter={() => {
             const appId = creatingForAppId
             setCreatingForAppId(null)
-            navigate(`/board/${appId}?tab=coverletter`)
+            navigate(`/board/${appId}/coverletter`)
           }}
         />
       )}
@@ -256,9 +307,30 @@ function ApplicationInterviewGroup({
       </div>
 
       {/* 세션 카드 컨테이너 */}
+      {/*
+        🔴 **세 상태를 갈라야 한다.** 예전엔 `sessions.length === 0` 만 보고 나머지를
+        `filtered.map()` 에 맡겼는데, 필터로 0건이 되면 **빈 `<ul>` 이 렌더돼 아무 문구 없이
+        목록만 사라졌다.** 사용자는 세션이 지워진 줄 안다.
+
+        🔴 필터로 0건인 경우는 **여기 오지 않는다** — 위쪽 early return 이 그룹을 통째로
+        숨긴다(회사가 여럿일 때 관련 없는 회사를 지우는 게 맞다). 전부 숨어 페이지가
+        비는 경우는 **페이지 레벨**에서 처리한다.
+      */}
       {sessions.length === 0 ? (
         <div className="border border-dashed border-line bg-surface-2/50 rounded-xl px-5 py-6 text-center">
-          <p className="text-text-tertiary text-sm">아직 면접 세션이 없어요</p>
+          <p className="text-text-tertiary text-sm mb-1">
+            아직 면접 세션이 없어요
+          </p>
+          <p className="text-text-quaternary text-xs leading-relaxed mb-4">
+            차수를 만들면 자소서를 바탕으로 예상 질문을 뽑아드려요.
+          </p>
+          <button
+            type="button"
+            onClick={onCreate}
+            className="min-h-8 px-4 py-2 text-xs font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors"
+          >
+            면접 차수 만들기
+          </button>
         </div>
       ) : (
         <ul className="space-y-2">

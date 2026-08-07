@@ -40,6 +40,14 @@ interface Props {
   collapseSignal?: number
   /** 그 신호가 접기인지 펼치기인지 */
   collapseAll?: boolean
+  /**
+   * 읽기 모드 — **면접 직전에 꺼내 보는 화면**.
+   *
+   * 준비하는 화면과 성격이 다르다. 대기실에서 스크롤하다 `AI 도움`·`꼬리질문 추가` 를
+   * 잘못 누르면 **코인이 나간다.** 그래서 코인 쓰는 버튼을 전부 감추고, 외워야 할
+   * **내 답변**을 앞세운다.
+   */
+  readOnly?: boolean
 }
 
 /**
@@ -65,11 +73,17 @@ export function InterviewQuestionCard({
   questionNo,
   collapseSignal = 0,
   collapseAll = false,
+  readOnly = false,
 }: Props) {
   const ensureJobTitle = useRequireJobTitle(applicationId)
   const [memo, setMemo] = useState(question.myMemo ?? '')
-  // depth 0 default 펼침, depth 1·2 default 접힘 (메인부터 보게 유도)
-  const [expanded, setExpanded] = useState(question.depth === 0)
+  /**
+   * depth 0 default 펼침, depth 1·2 default 접힘 (메인부터 보게 유도).
+   *
+   * 🔴 **읽기 모드는 depth 무관 전부 펼침** — 꼬리질문이 접혀 있으면 면접 직전에
+   * 하나씩 눌러 열어야 한다. 꺼내 보는 화면에서 그건 마찰이다.
+   */
+  const [expanded, setExpanded] = useState(readOnly || question.depth === 0)
   /**
    * 부모의 전체 접기·펼치기 반영 — **렌더 중 상태 조정**(React 공식 패턴)이다.
    * effect 로 하면 렌더가 한 번 더 돌고 lint(cascading renders)에도 걸린다.
@@ -79,7 +93,11 @@ export function InterviewQuestionCard({
    * AI 답변 펼침 — **기본 펼침**이다. 답변이 있다는 건 사용자가 직접 만든 것이라
    * 감추고 시작할 이유가 없다. 길어서 거슬릴 때 접는 용도다 (`전체 닫기` 도 같이 접는다).
    */
-  const [answerOpen, setAnswerOpen] = useState(true)
+  const [answerOpen, setAnswerOpen] = useState(
+    // 읽기 모드에서 외워야 할 건 **내가 쓴 답**이다. 메모가 있으면 AI 답변은 접고 시작한다
+    // (참고 자료라 필요하면 펼친다). 메모가 없으면 볼 게 그것뿐이라 펼친다.
+    readOnly ? !(question.myMemo ?? '').trim() : true,
+  )
   const speakSec = useMemo(() => estimateSpeakingSeconds(memo), [memo])
   /**
    * 파고들 답변이 있는가 — 백엔드 `resolveFollowupBasis` 와 **같은 판정**이다.
@@ -300,7 +318,25 @@ export function InterviewQuestionCard({
               </span>
             )}
           </span>
-          <span className="block text-text-primary text-[15px] font-medium leading-snug">
+          {/*
+            🔴 **읽기 모드에선 질문이 소제목이다.** 편집 모드의 15px/medium 은 목록을
+            훑기엔 맞지만, 문서로 읽을 땐 본문(13px)과 2px 차이라 **위계가 안 보인다** —
+            라벨을 안 읽으면 질문인지 답인지 구분이 안 됐다. 크기와 굵기를 함께 올린다
+            (둘 중 하나만 올리면 여전히 애매하다).
+          */}
+          <span
+            className={`block text-text-primary ${
+              readOnly
+                ? // 16 × 1.25 — 레벨 간 1.2배 미만은 사용자가 구분하지 못한다 (모듈러 스케일).
+                  // leading 은 한글 최소 150% (국문은 글자 폭이 균일해 충분한 행간이 필요하다).
+                  'text-[20px] font-semibold leading-[1.5]'
+                : // 편집 모드는 20문항을 훑는 **목록**이라 읽기 모드(20px)만큼 키우면
+                  // 한 화면에 들어오는 문항이 준다. 대신 본문(13px) 대비 **1.23배**로
+                  // 임계(1.2)는 넘긴다. `text-base` 는 하우스 스케일 —
+                  // 기존 `text-[15px]` 은 프로젝트 통틀어 이 카드에만 있던 예외값이었다.
+                  'text-base font-semibold leading-normal'
+            }`}
+          >
             {question.questionText}
           </span>
         </span>
@@ -357,7 +393,11 @@ export function InterviewQuestionCard({
                   className="min-w-0 text-left inline-flex items-center gap-1.5 text-text-tertiary text-xs font-semibold hover:text-text-secondary transition-colors"
                 >
                   <CollapsibleChevron open={answerOpen} />
-                  <Sparkles size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <Sparkles
+                    size={readOnly ? 12 : 14}
+                    strokeWidth={1.75}
+                    aria-hidden="true"
+                  />
                   AI 예상 답변
                   {!answerOpen && (
                     <span className="text-text-faint font-normal truncate">
@@ -365,19 +405,29 @@ export function InterviewQuestionCard({
                     </span>
                   )}
                 </button>
-                <button
-                  onClick={() => void runGenerateAnswer()}
-                  disabled={answerBlocked}
-                  // 재생성이 공짜로 보이지 않게 — 코인이 다시 든다는 걸 title 로 명시
-                  title={answerReason ?? '답변을 새로 만들어요 (코인이 다시 차감됩니다)'}
-                  className="shrink-0 min-h-8 text-[11px] font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  ↻ 다시 생성
-                </button>
+                {/* 읽기 모드에선 코인 쓰는 버튼을 감춘다 — 대기실 오탭 방지 */}
+                {!readOnly && (
+                  <button
+                    onClick={() => void runGenerateAnswer()}
+                    disabled={answerBlocked}
+                    // 재생성이 공짜로 보이지 않게 — 코인이 다시 든다는 걸 title 로 명시
+                    title={
+                      answerReason ?? '답변을 새로 만들어요 (코인이 다시 차감됩니다)'
+                    }
+                    className="shrink-0 min-h-8 text-[11px] font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ↻ 다시 생성
+                  </button>
+                )}
               </div>
               {answerOpen && (
                 <>
-                  <p className="text-text-secondary text-[13px] leading-relaxed whitespace-pre-wrap mt-1.5">
+                  {/* 읽기 모드에선 참고 자료로 한 단계 물러난다 — 외울 건 내 메모다 */}
+                  <p
+                    className={`leading-relaxed whitespace-pre-wrap mt-1.5 text-[13px] ${
+                      readOnly ? 'text-text-tertiary' : 'text-text-secondary'
+                    }`}
+                  >
                     {question.suggestedAnswer}
                   </p>
                   {/*
@@ -425,7 +475,7 @@ export function InterviewQuestionCard({
                 </>
               )}
             </div>
-          ) : answerError ? (
+          ) : readOnly ? null : answerError ? (
             <div className="flex items-center justify-between gap-3 bg-surface border border-line rounded-lg p-3">
               {/* 서버가 준 사유를 그대로 — 고정 문구로 덮으면 진짜 이유가 사라진다 */}
               <p className="text-danger text-xs min-w-0">{answerError}</p>
@@ -458,28 +508,50 @@ export function InterviewQuestionCard({
           <div>
             <label
               htmlFor={`memo-${question.id}`}
-              className="block text-text-tertiary text-xs font-semibold mb-1.5"
+              className={`block mb-1.5 ${
+                readOnly
+                  ? 'text-text-quaternary text-[11px] font-medium'
+                  : 'text-text-tertiary text-xs font-semibold'
+              }`}
             >
-              내 답변 메모 (자동 저장)
+              {readOnly ? '내 답변' : '내 답변 메모 (자동 저장)'}
             </label>
             {/*
               길어지면 자동으로 늘어난다 — 면접 답변은 보통 5~10줄이라 3줄 고정이면
               **자기가 쓴 글을 한눈에 못 본다** (베타 피드백으로 나왔던 문제).
               상한 420px 은 카드가 화면을 다 먹지 않게 두는 선이고, 넘으면 스크롤된다.
             */}
-            <textarea
-              id={`memo-${question.id}`}
-              ref={memoRef}
-              value={memo}
-              onChange={(e) => {
-                handleMemoChange(e.target.value)
-                autoResizeMemo()
-              }}
-              placeholder="이 질문에 본인이 어떻게 답할지 적어보세요…"
-              maxLength={5000}
-              style={{ minHeight: 76 }}
-              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
-            />
+            {/*
+              🔴 읽기 모드에선 **입력칸이 아니라 글**로 보여준다. 면접 직전에 필요한 건
+              고쳐 쓰는 게 아니라 외우는 것이고, textarea 는 탭하면 키보드가 올라와
+              화면 절반을 먹는다. 비어 있으면 "안 썼다" 를 조용히 넘기지 않고 말해 준다 —
+              그게 지금 준비가 덜 된 지점이다.
+            */}
+            {readOnly ? (
+              memo.trim() ? (
+                <p className="text-text-primary text-[16px] leading-[1.75] whitespace-pre-wrap">
+                  {memo}
+                </p>
+              ) : (
+                <p className="text-text-quaternary text-[13px] leading-relaxed">
+                  아직 안 썼어요. 이 문항은 답을 준비하지 못한 상태예요.
+                </p>
+              )
+            ) : (
+              <textarea
+                id={`memo-${question.id}`}
+                ref={memoRef}
+                value={memo}
+                onChange={(e) => {
+                  handleMemoChange(e.target.value)
+                  autoResizeMemo()
+                }}
+                placeholder="이 질문에 본인이 어떻게 답할지 적어보세요…"
+                maxLength={5000}
+                style={{ minHeight: 76 }}
+                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
+              />
+            )}
             {/*
               🔴 글자수보다 **말하는 시간**이 실제 제약이다. 면접은 답변 하나에
               1분 남짓밖에 못 쓰는데, 글자수만 보면 "5000자 중 800자" 라 여유로워 보인다.
@@ -555,6 +627,7 @@ export function InterviewQuestionCard({
                   question={child}
                   sessionId={sessionId}
                   applicationId={applicationId}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
@@ -575,7 +648,7 @@ export function InterviewQuestionCard({
             모른다 (예전 `lg:opacity-0`). 그 사이가 이 자리다 —
             평상시 text-tertiary, hover 시 brand. `min-h-8` 은 모바일 터치 타겟.
           */}
-          {question.depth < 2 && (
+          {question.depth < 2 && !readOnly && (
             <button
               onClick={handleAddFollowup}
               disabled={creatingFollowup || followupBlocked}

@@ -9,7 +9,6 @@ import { EditInterviewSessionModal } from '@/components/card/EditInterviewSessio
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
-import { Spinner } from '@/components/common/Spinner'
 import { useApplication } from '@/hooks/useApplications'
 import {
   useDeleteInterviewSession,
@@ -17,6 +16,7 @@ import {
   useInterviewPrepQuestions,
   useInterviewPrepRefs,
   useInterviewPrepSession,
+  useRefetchQuestionsOnGenerationEnd,
   useUpdateInterviewPrepSession,
 } from '@/hooks/useInterviewPrep'
 import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
@@ -69,6 +69,11 @@ export function InterviewSessionPage() {
    */
   const generating =
     pendingLocal || session?.generationStatus === 'in_progress'
+  /*
+    생성 중 새로고침하면 이 탭엔 mutation 이 없어 완료를 알 방법이 없었다 —
+    서버는 질문을 다 만들어 놨는데 화면은 0개인 채로 생성 버튼을 다시 띄웠다.
+  */
+  useRefetchQuestionsOnGenerationEnd(sessionId, session?.generationStatus)
   const ensureAiConsent = useRequireAiConsent()
   // 생성 중 새로고침 = 코인만 차감되고 질문은 유실 (면접에만 이 가드가 없었다)
   useUnloadGuard(generating)
@@ -76,6 +81,32 @@ export function InterviewSessionPage() {
     useUpdateInterviewPrepSession(sessionId, applicationId)
   const { mutate: deleteSession } = useDeleteInterviewSession(applicationId)
   const [editing, setEditing] = useState(false)
+  /**
+   * 읽기 모드 — **면접 직전에 꺼내 보는 화면**.
+   *
+   * 이 페이지는 준비하는 화면이라 편집 표면이 촘촘하다. 대기실에서 스크롤하다
+   * `AI 도움`·`꼬리질문 추가` 를 잘못 누르면 **코인이 나간다.** 읽기 모드는 그 버튼을
+   * 전부 감추고, 꼬리질문까지 펼쳐 **훑어보기**에 맞춘다.
+   *
+   * 🔴 자소서의 `useCoverletterReadOnly` 처럼 **강제하지 않는다** — 그건 뷰포트·네이티브로
+   * 편집을 막는 제약(IAP 심사)이라, 면접에 적용하면 모바일에서 질문 생성 자체를 못 한다.
+   * 여기선 사용자가 고르는 토글이다.
+   */
+  const [readMode, setReadMode] = useState(false)
+  /**
+   * 전체 접기·펼치기 — **목록 전체를 다루는 동작**이라 `↻ 다시 생성` 과 같은 줄에 둔다.
+   * 예전엔 필터 바 안에 `ml-auto` 로 있었는데, 뒤에 카테고리 칩이 더 붙어 줄바꿈되면
+   * 목록 한가운데 놓였다.
+   *
+   * `collapseSignal` 은 카드에 "지금 다시 맞춰라" 를 알리는 카운터다 — 카드가 각자
+   * 펼침 상태를 들고 있어서(메모 입력 중 상태 보존) 값 하나로는 못 덮는다.
+   */
+  const [allCollapsed, setAllCollapsed] = useState(false)
+  const [collapseSignal, setCollapseSignal] = useState(0)
+  const toggleAll = () => {
+    setAllCollapsed((v) => !v)
+    setCollapseSignal((n) => n + 1)
+  }
   // 공고 요건 접힘 — 정리 안 했으면 펼쳐서 CTA 가 바로 보이게
   const [jpExpanded, setJpExpanded] = useState(true)
 
@@ -113,7 +144,13 @@ export function InterviewSessionPage() {
     deleteSession(sessionId, {
       onSuccess: () => {
         toast.show('세션을 삭제했어요.')
-        navigate(applicationId ? `/board/${applicationId}` : '/interviews')
+        /*
+          🔴 **온 자리로 돌려보낸다.** 예전엔 카드 상세(`/board/:id`)로 보냈는데,
+          이 페이지는 면접 준비 모아보기에서 들어온다. 세션 하나를 지웠다고 카드
+          상세로 튕기면 "내가 왜 여기 있지" 가 되고, 다른 세션을 지우려면 다시
+          모아보기로 돌아와야 한다.
+        */
+        navigate('/interviews')
       },
       onError: () => toast.error('삭제에 실패했어요.'),
     })
@@ -199,12 +236,31 @@ export function InterviewSessionPage() {
               ✎ 세션 자료
             </button>
             <button
-              onClick={handleDelete}
-              className="text-xs text-text-tertiary hover:text-danger border border-line hover:border-danger/40 bg-surface-2 px-3 py-1.5 rounded-md transition-colors"
-              title="세션 삭제 (질문·메모 모두 삭제, 회사 조사 캐시는 보존)"
+              onClick={() => setReadMode((v) => !v)}
+              aria-pressed={readMode}
+              className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                readMode
+                  ? 'bg-brand text-text-primary border-brand'
+                  : 'text-text-tertiary hover:text-brand border-line hover:border-brand/40 bg-surface-2'
+              }`}
+              title={
+                readMode
+                  ? '편집 화면으로 돌아가요'
+                  : '면접 직전에 훑어보기 좋게 — 코인 쓰는 버튼을 감추고 꼬리질문까지 펼쳐요'
+              }
             >
-              🗑️ 삭제
+              {readMode ? '✎ 편집 모드' : '📖 읽기 모드'}
             </button>
+            {/* 읽기 중에 삭제가 보일 이유가 없다 — 오탭이 가장 비싼 버튼이다 */}
+            {!readMode && (
+              <button
+                onClick={handleDelete}
+                className="text-xs text-text-tertiary hover:text-danger border border-line hover:border-danger/40 bg-surface-2 px-3 py-1.5 rounded-md transition-colors"
+                title="세션 삭제 (질문·메모 모두 삭제, 회사 조사 캐시는 보존)"
+              >
+                🗑️ 삭제
+              </button>
+            )}
             {/*
               🔴 **접혀 있을 때만** 노출한다 — 펼쳐져 있으면 사이드바 안의 `←` 가 닫기를
               맡는다. 같은 일을 하는 버튼이 둘 다 보이면 어느 쪽이 무엇인지 흐려진다.
@@ -472,21 +528,36 @@ export function InterviewSessionPage() {
                 </button>
               </div>
             ) : generating && questions.length === 0 ? (
-              <div className="border border-dashed border-brand/40 bg-brand/5 rounded-xl px-6 py-12 text-center">
-                <Spinner size={40} className="mx-auto text-brand mb-4" />
-                <p className="text-text-secondary text-sm mb-2 font-medium">
-                  🤖 AI 면접관이 질문을 만들고 있어요
-                </p>
-                <p className="text-text-quaternary text-xs leading-relaxed">
-                  자소서·활동·회사 조사를 꼼꼼히 읽고 있어요. 1~2분쯤 걸려요.
-                  <br />
-                  잠시만 기다려 주세요
-                  <span className="inline-flex ml-0.5">
-                    <span className="animate-pulse [animation-delay:0ms]">.</span>
-                    <span className="animate-pulse [animation-delay:200ms]">.</span>
-                    <span className="animate-pulse [animation-delay:400ms]">.</span>
-                  </span>
-                </p>
+              /*
+                🔴 **스피너를 스켈레톤으로** — DESIGN.md 는 로딩에 스켈레톤을 쓴다.
+                같은 화면의 답변 생성(InterviewQuestionCard)은 이미 스켈레톤인데 여기만
+                스피너라 자기모순이었다. 스피너는 "돌고 있다" 만 말하지만, 질문 모양
+                스켈레톤은 **무엇이 몇 개 올지**를 보여준다 — 10초를 기다리는 근거가 된다.
+              */
+              <div className="space-y-3">
+                <div className="border border-dashed border-brand/40 bg-brand/5 rounded-xl px-5 py-4 text-center">
+                  <p className="text-text-secondary text-sm font-medium mb-1">
+                    🤖 AI 면접관이 질문을 만들고 있어요
+                  </p>
+                  <p className="text-text-quaternary text-xs leading-relaxed">
+                    자소서·활동·회사 조사를 꼼꼼히 읽고 있어요. 1~2분쯤 걸려요.
+                  </p>
+                </div>
+                {/* 곧 들어올 질문 카드의 자리 — 번호·태그·본문 두 줄 구조를 그대로 흉내낸다 */}
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="border border-line bg-surface-2 rounded-xl p-4 space-y-2 animate-pulse"
+                    style={{ animationDelay: `${i * 120}ms` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-6 bg-surface-3 rounded" />
+                      <div className="h-3 w-16 bg-surface-3 rounded-full" />
+                    </div>
+                    <div className="h-3.5 w-full bg-surface-3 rounded" />
+                    <div className="h-3.5 w-4/5 bg-surface-3 rounded" />
+                  </div>
+                ))}
               </div>
             ) : questions.length === 0 ? (
               <div className="border border-dashed border-line bg-surface-2/30 rounded-xl px-6 py-12 text-center">
@@ -520,26 +591,38 @@ export function InterviewSessionPage() {
                     </p>
                     <AiQuotaChip feature="interview_prep_session" />
                   </div>
-                  <button
-                    onClick={() => handleGenerate(true)}
-                    disabled={generating || quotaBlocked}
-                    className="inline-flex items-center gap-1.5 text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
-                    title={quotaReason ?? '기존 질문 모두 삭제 + AI 1회 차감'}
-                  >
-                    {generating ? (
-                      <>
-                        <Spinner size={12} />
-                        <span>다시 만들고 있어요...</span>
-                      </>
-                    ) : (
-                      <span>↻ 다시 생성</span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={toggleAll}
+                      className="text-xs text-text-tertiary hover:text-text-primary transition-colors inline-flex items-center gap-1"
+                    >
+                      <CollapsibleChevron open={!allCollapsed} />
+                      {allCollapsed ? '전체 펼치기' : '전체 닫기'}
+                    </button>
+                    {/* 읽기 모드엔 코인 쓰는 버튼을 두지 않는다 */}
+                    {!readMode && (
+                      <button
+                        onClick={() => handleGenerate(true)}
+                        disabled={generating || quotaBlocked}
+                        className="inline-flex items-center gap-1.5 text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
+                        title={quotaReason ?? '기존 질문 모두 삭제 + AI 1회 차감'}
+                      >
+                        {/* 버튼 로딩은 하우스 패턴대로 **텍스트 변경**만 (스피너 없음) */}
+                        <span>
+                          {generating ? '다시 만들고 있어요…' : '↻ 다시 생성'}
+                        </span>
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </div>
                 <CategoryFilterAndList
                   questions={questions}
                   sessionId={sessionId}
                   applicationId={applicationId}
+                  readOnly={readMode}
+                  allCollapsed={allCollapsed}
+                  collapseSignal={collapseSignal}
                 />
               </>
             )}
@@ -627,10 +710,18 @@ function CategoryFilterAndList({
   questions,
   sessionId,
   applicationId,
+  readOnly = false,
+  allCollapsed,
+  collapseSignal,
 }: {
   questions: InterviewPrepQuestion[]
   sessionId: string
   applicationId: string
+  /** 읽기 모드 — 카드까지 그대로 내려간다 (꼬리질문 포함) */
+  readOnly?: boolean
+  /** 전체 접기·펼치기 — 버튼은 부모(다시 생성 옆)에 있고 상태만 내려온다 */
+  allCollapsed: boolean
+  collapseSignal: number
 }) {
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
   /**
@@ -650,12 +741,6 @@ function CategoryFilterAndList({
    * 펼침 상태를 들고 있어서(메모 입력 중 유실 방지), 부모가 통째로 소유하지 않고
    * 신호만 보낸다. 카드는 신호가 바뀐 렌더에서만 자기 상태를 재설정한다.
    */
-  const [allCollapsed, setAllCollapsed] = useState(false)
-  const [collapseSignal, setCollapseSignal] = useState(0)
-  const toggleAll = () => {
-    setAllCollapsed((v) => !v)
-    setCollapseSignal((n) => n + 1)
-  }
 
   // 카테고리별 카운트 (UI chip badge)
   const catCounts = useMemo(() => {
@@ -733,15 +818,11 @@ function CategoryFilterAndList({
               우선 ({mustCount})
             </button>
           )}
-          {/* 전체 접기·펼치기 — 필터 칩과 축이 달라 우측 끝으로 민다 */}
-          <button
-            type="button"
-            onClick={toggleAll}
-            className="ml-auto text-[11px] px-2 py-1 rounded-full border border-line bg-card hover:bg-card-strong text-text-tertiary hover:text-text-primary transition-colors inline-flex items-center gap-1"
-          >
-            <CollapsibleChevron open={!allCollapsed} />
-            {allCollapsed ? '전체 펼치기' : '전체 닫기'}
-          </button>
+          {/*
+            🔴 **전체 접기·펼치기는 여기 없다** (2026-08-07). `ml-auto` 로 우측에 밀었는데
+            **뒤에 카테고리 칩이 더 붙어서**, 줄바꿈되면 목록 한가운데 놓였다.
+            필터 바는 필터만 두고, 목록 전체를 다루는 동작은 `↻ 다시 생성` 옆으로 올렸다.
+          */}
           {Array.from(catCounts.entries()).map(([cat, count]) => {
             const isActive = selectedCat === cat
             const label = CATEGORY_LABEL[cat] ?? cat
@@ -782,6 +863,7 @@ function CategoryFilterAndList({
               applicationId={applicationId}
               collapseSignal={collapseSignal}
               collapseAll={allCollapsed}
+              readOnly={readOnly}
             />
           ))}
         </div>

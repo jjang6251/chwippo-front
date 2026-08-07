@@ -572,7 +572,8 @@ export function BoardDetail() {
         <InterviewPrepTab
           applicationId={app.id}
           active
-          onNeedCoverletter={() => setActiveTab('coverletter')}
+          /* 탭 전환이 아니라 **쓰는 자리**로 — 탭은 목록이고 풀페이지가 편집 화면이다 */
+          onNeedCoverletter={() => navigate(`/board/${app.id}/coverletter`)}
         />
       )}
 
