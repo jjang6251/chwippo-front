@@ -16,7 +16,8 @@ interface Props {
   onCreated: (sessionId: string) => void
   /**
    * v2 — 자소서가 0건이라 세션을 만들 수 없을 때 "자소서 등록하러 가기".
-   * 모달을 닫고 같은 카드의 자소서 탭으로 보낸다 (부모가 탭 전환을 안다).
+   * 모달을 닫고 같은 카드의 **자소서 풀페이지**(`/board/:id/coverletter`)로 보낸다.
+   * 경로는 부모가 안다 — 이 모달은 어디서 열렸는지 모르기 때문이다.
    */
   onNeedCoverletter: () => void
 }
