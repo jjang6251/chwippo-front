@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
-import { useParams, useLocation } from 'react-router-dom'
+import { useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { goBack } from '@/utils/navigation'
 import { needsResult as isAwaitingResult } from '@/utils/boardViewGroups'
@@ -190,9 +190,19 @@ export function BoardDetail() {
   const [editSteps, setEditSteps] = useState<SortableStepItem[]>([])
   const [editTags, setEditTags] = useState<string[]>([])
   const [editForm, setEditForm] = useState({ companyName: '', jobTitle: '', jobUrl: '' })
+  /**
+   * 탭은 URL `?tab=` 으로도 열 수 있다 — 다른 화면에서 특정 탭으로 바로 보내기 위해.
+   * (면접 세션 생성 모달의 "자소서 등록하러 가기" 가 첫 사용처)
+   * 초기값만 URL 에서 읽고 이후 전환은 로컬 상태로 둔다 — 탭 전환마다 히스토리를
+   * 쌓으면 뒤로가기가 탭 왕복이 돼 카드에서 빠져나가지 못한다.
+   */
+  const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<
     'steps' | 'coverletter' | 'interview'
-  >('steps')
+  >(() => {
+    const t = searchParams.get('tab')
+    return t === 'coverletter' || t === 'interview' ? t : 'steps'
+  })
   const aiEnabled = useAiEnabled()
   const interviewAiEnabled = useInterviewAiEnabled()
 
@@ -559,7 +569,12 @@ export function BoardDetail() {
 
       {aiEnabled && activeTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
       {interviewAiEnabled && activeTab === 'interview' && (
-        <InterviewPrepTab applicationId={app.id} active />
+        <InterviewPrepTab
+          applicationId={app.id}
+          active
+          /* 탭 전환이 아니라 **쓰는 자리**로 — 탭은 목록이고 풀페이지가 편집 화면이다 */
+          onNeedCoverletter={() => navigate(`/board/${app.id}/coverletter`)}
+        />
       )}
 
       {/* 결과 모달 */}
@@ -583,13 +598,19 @@ export function BoardDetail() {
             />
           </div>
           <div>
-            <label className="block text-xs text-text-tertiary mb-1.5">직무</label>
+            {/* 라벨·플레이스홀더는 AddCardModal · 직무 게이트 모달과 통일 (같은 컬럼이다) */}
+            <label className="block text-xs text-text-tertiary mb-1.5">지원 직무</label>
             <input
               value={editForm.jobTitle}
               onChange={(e) => setEditForm((f) => ({ ...f, jobTitle: e.target.value }))}
-              placeholder="예: 서버 개발자"
+              maxLength={100}
+              placeholder="예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계"
               className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
             />
+            <p className="text-text-faint text-[11px] mt-1.5">
+              자소서·면접 AI 가 <span className="text-text-tertiary">이 직무 기준</span>
+              으로 만들어요.
+            </p>
           </div>
           <div>
             <label className="block text-xs text-text-tertiary mb-2">직군 태그</label>

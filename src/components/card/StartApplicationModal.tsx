@@ -11,12 +11,15 @@ interface StartApplicationModalProps {
   applicationId: string
   companyName: string
   currentCategory?: string | null
+  /** 이미 적어둔 직무 — 비우면 안 되므로 prefill 한다 */
+  currentJobTitle?: string | null
 }
 
 export function StartApplicationModal({
-  open, onClose, applicationId, companyName, currentCategory,
+  open, onClose, applicationId, companyName, currentCategory, currentJobTitle,
 }: StartApplicationModalProps) {
   const [deadline, setDeadline] = useState('')
+  const [jobTitle, setJobTitle] = useState(currentJobTitle ?? '')
   const [tags, setTags] = useState<string[]>(() => parseTags(currentCategory ?? null))
   const { mutate: update, isPending } = useUpdateApplication(applicationId)
 
@@ -27,6 +30,7 @@ export function StartApplicationModal({
         status: 'IN_PROGRESS',
         deadline: deadline || undefined,
         jobCategory: serializeTags(tags) || undefined,
+        jobTitle: jobTitle.trim() || undefined,
       },
       {
         onSuccess: () => {
@@ -55,6 +59,27 @@ export function StartApplicationModal({
             onChange={(e) => setDeadline(e.target.value)}
             className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
+        </div>
+        {/*
+          지원 직무 (2026-08-06 추가) — 이 모달이 **지원 예정 → 지원 시작** 전환 지점이라
+          사용자가 직무를 가장 확실히 아는 순간이다. 원래 직군 태그만 받아서, 이 경로로
+          시작한 카드는 직무가 영영 비어 있었다. AI 결과 기준이 되는 값이다.
+          라벨·플레이스홀더는 AddCardModal · 기본 정보 편집 · 게이트 모달과 통일.
+        */}
+        <div>
+          <label className="block text-xs text-text-tertiary mb-1.5">지원 직무</label>
+          <input
+            type="text"
+            value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value)}
+            maxLength={100}
+            placeholder="예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+          />
+          <p className="text-text-faint text-[11px] mt-1.5">
+            자소서·면접 AI 가 <span className="text-text-tertiary">이 직무 기준</span>으로
+            만들어요.
+          </p>
         </div>
         <div>
           <label className="block text-xs text-text-tertiary mb-1.5">직군 태그</label>

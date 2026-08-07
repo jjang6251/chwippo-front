@@ -298,6 +298,7 @@ export function Board() {
           applicationId={startApp.id}
           companyName={startApp.companyName}
           currentCategory={startApp.jobCategory}
+          currentJobTitle={startApp.jobTitle}
         />
       )}
 

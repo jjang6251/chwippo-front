@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import { useNavigate, useParams } from 'react-router-dom'
+import { JobTitleField } from '@/components/common/JobTitleField'
 import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPanel'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
 import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
@@ -207,9 +208,20 @@ export function CoverletterDocPage() {
         <h1 className="text-text-primary text-[22px] lg:text-[26px] font-bold leading-tight">
           {app.companyName} <span className="text-brand italic">자소서</span>
         </h1>
-        {(app.jobTitle || app.jobCategory) && (
+        {/*
+          🔴 직무를 **여기서 고칠 수 있어야 한다** (2026-08-06).
+          자소서 AI(초안·점검·대화)가 전부 이 직무를 기준으로 쓴다. 예전엔 표시만
+          있어서, 비었거나 잘못 적힌 걸 발견해도 카드 상세로 돌아가야 했다.
+          표시 규칙도 `resolveJobText` 로 통일 — 프롬프트가 보는 값과 같은 걸 보여준다.
+        */}
+        {!readOnly && applicationId && (
+          <div className="max-w-md">
+            <JobTitleField applicationId={applicationId} />
+          </div>
+        )}
+        {readOnly && (app.jobTitle || app.jobCategory) && (
           <p className="text-text-tertiary text-xs">
-            {[app.jobCategory, app.jobTitle].filter(Boolean).join(' · ')}
+            {app.jobTitle ?? app.jobCategory}
           </p>
         )}
       </header>

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 import { interviewPrepApi } from '@/api/interviewPrep'
 import type {
   CreateFollowupDto,
@@ -39,6 +40,19 @@ export function useInterviewPrepSession(sessionId: string, enabled = true) {
     queryKey: sessionKey(sessionId),
     queryFn: () => interviewPrepApi.findOne(sessionId),
     enabled: enabled && !!sessionId,
+    /**
+     * 🔴 생성 중이면 3초마다 폴링 — **새로고침 복귀용**이다.
+     *
+     * 생성은 ~10초 걸린다. 그 사이 새로고침하면 이 값이 `in_progress` 로 내려오고,
+     * 화면은 "생성 중" 을 다시 보여준다. 폴링이 없으면 끝나도 화면이 안 바뀌어
+     * 사용자가 또 새로고침해야 한다.
+     *
+     * 서버가 2분 초과분은 `idle` 로 보정해 주므로 여기서 무한 폴링이 되지 않는다.
+     * 자소서 회사조사(`useApplication`)와 같은 방식.
+     */
+    refetchInterval: (query) =>
+      query.state.data?.generationStatus === 'in_progress' ? 3000 : false,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -148,6 +162,9 @@ export function useGenerateInterviewSession(sessionId: string) {
     onSuccess: (result) => {
       if (result.status === 'ok') {
         qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+        // 세션도 — generationStatus 가 캐시에 in_progress 로 남아
+        // 질문이 도착한 뒤에도 "다시 만들고 있어요…" 가 최대 3초(폴링 주기) 더 떴다
+        qc.invalidateQueries({ queryKey: sessionKey(sessionId) })
       }
       qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
       qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
@@ -155,11 +172,61 @@ export function useGenerateInterviewSession(sessionId: string) {
   })
 }
 
+/**
+ * 🔴 **생성이 끝난 걸 이 탭이 알아야 질문이 보인다** (2026-08-07 CEO 실기).
+ *
+ * 평소엔 생성 mutation 의 `onSuccess` 가 질문 목록을 무효화한다. 그런데 **생성 중
+ * 새로고침하면 그 mutation 이 이 탭에 없다.** 서버는 다 만들어 놨는데 화면은
+ * 질문 0개인 채로 `completed` 만 보고 "AI 면접질문 생성" 버튼을 다시 띄운다 —
+ * 사용자는 실패한 줄 알고 또 누른다 (누르면 코인이 또 나간다).
+ *
+ * 🔴 **폴링 주기에 기대면 안 된다.** "질문 목록도 생성 중엔 폴링" 으로 풀면,
+ * 세션 폴링이 완료를 먼저 보는 순간 질문 폴링이 꺼져서 **완료 후 한 번도 안 받는
+ * 창**이 생긴다. 두 폴링의 순서는 보장되지 않으므로 전이를 직접 잡는다.
+ *
+ * `in_progress` → 그 외로 넘어간 **순간**에만 무효화한다. 이미 끝난 세션을 열 때는
+ * 이전 상태가 `in_progress` 가 아니므로 불필요한 재요청이 없다.
+ */
+export function useRefetchQuestionsOnGenerationEnd(
+  sessionId: string,
+  status: 'idle' | 'in_progress' | 'completed' | 'failed' | undefined,
+) {
+  const qc = useQueryClient()
+  const prev = useRef(status)
+  useEffect(() => {
+    const wasRunning = prev.current === 'in_progress'
+    prev.current = status
+    if (!wasRunning || !status || status === 'in_progress') return
+    qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+  }, [status, sessionId, qc])
+}
+
 /** my_memo autosave — invalidate 없음 (트리 구조 안 바뀜) */
 export function useUpdateInterviewQuestion() {
   return useMutation({
     mutationFn: (params: { questionId: string; dto: UpdateQuestionDto }) =>
       interviewPrepApi.updateQuestion(params.questionId, params.dto),
+  })
+}
+
+/**
+ * v2 — 질문 1개의 예상 답변 생성.
+ *
+ * 성공·실패와 무관하게 쿼터·코인을 invalidate 한다 — 차단으로 끝났어도 사용량 표시는
+ * 최신이어야 하고, 실패해도 시도 자체가 기록될 수 있다.
+ */
+export function useGenerateInterviewAnswer(sessionId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (questionId: string) =>
+      interviewPrepApi.generateAnswer(questionId),
+    onSuccess: (result) => {
+      if (result.status === 'ok') {
+        qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+      }
+      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
+    },
   })
 }
 

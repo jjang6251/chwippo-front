@@ -201,7 +201,7 @@ export function JobPostingBanner({
               ) : data ? (
                 <>
                   {renderRequirements(data)}
-                  <div className="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-line">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 pt-2 mt-1 border-t border-line">
                     <p className="text-text-quaternary text-[10px]">
                       {data.parsedAt
                         ? `${formatMonthDay(data.parsedAt)} 정리됨 · 회원님의 지원 준비에만 활용돼요`
@@ -318,7 +318,12 @@ export function JobPostingBanner({
           <div className="px-3 pb-2 text-xs">
             {renderRequirements(data)}
 
-            <div className="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-line">
+            {/*
+              🔴 `flex-wrap` 필수 — 이 섹션은 카드 상세(넓음)뿐 아니라 **면접 세션
+              사이드바(280px)** 에서도 쓰인다. wrap 이 없으면 "수정·다시 정리·삭제" 가
+              날짜와 한 줄에 눌려 깨져 보인다. 좁으면 날짜 → 버튼 순으로 두 줄이 된다.
+            */}
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 pt-2 mt-1 border-t border-line">
               <p className="text-text-quaternary text-[10px]">
                 {data.parsedAt ? `${formatMonthDay(data.parsedAt)} 정리됨` : ''}
               </p>

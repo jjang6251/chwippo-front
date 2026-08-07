@@ -3,6 +3,7 @@ import type {
   CompanyResearchResult,
   CreateFollowupDto,
   CreateSessionDto,
+  GenerateAnswerResult,
   GenerateFollowupResult,
   GenerateSessionResult,
   InterviewPrepQuestion,
@@ -77,6 +78,19 @@ export const interviewPrepApi = {
       .patch<{ data: InterviewPrepQuestion }>(
         `/interview-prep-questions/${questionId}`,
         dto,
+      )
+      .then(unwrap),
+
+  /**
+   * v2 — 질문 1개의 예상 답변 생성 (on-demand).
+   *
+   * 세션 생성이 질문만 만들기 때문에 답변은 사용자가 `AI 도움` 을 눌렀을 때만 만들어진다.
+   * 이미 답변이 있으면 재생성해 덮어쓴다 (코인이 다시 차감된다).
+   */
+  generateAnswer: (questionId: string) =>
+    apiClient
+      .post<{ data: GenerateAnswerResult }>(
+        `/interview-prep-questions/${questionId}/answer`,
       )
       .then(unwrap),
 
