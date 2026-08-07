@@ -276,7 +276,7 @@ export function Landing() {
                   </li>
                 ))}
               </ul>
-              {/* AI 연결 — 자소서 AI 는 이미 출시됐다(2026-07 재공개). "곧 출시" 는 면접 AI 뿐 */}
+              {/* AI 연결 — 자소서·면접 AI 모두 출시됨 (면접은 2026-08-07) */}
               <div className="bg-brand/5 border border-brand/15 rounded-lg px-4 py-3 text-xs text-text-tertiary leading-relaxed">
                 <span className="text-brand font-medium">PC에서 —</span>{' '}
                 자소서 작성과 AI 초안·첨삭을 도와드려요.
@@ -293,7 +293,8 @@ export function Landing() {
           {/*
             🔴 자소서 AI 는 **이미 출시돼 있다** (2026-07 재공개 · 2026-08 모델 업그레이드).
             섹션 전체가 "곧 출시 · 도와드릴 예정" 이라 **있는 기능을 없다고 안내**하고 있었다.
-            아직 안 나온 건 면접 AI 하나뿐이라, 상태를 항목별로 나눴다. (2026-08-05)
+            면접 AI 도 2026-08-07 에 열렸다 — 이제 셋 다 live 다. 새 AI 기능을 낼 때
+            **이 배열의 `live` 를 같이 고쳐야** 랜딩이 다시 거짓말하지 않는다.
 
             "PC에서" 를 명시하는 이유 — 자소서 편집·AI 는 데스크탑 웹 전용이다
             (`useCoverletterReadOnly`: lg 미만 또는 네이티브면 보기 전용, IAP 심사 리스크).
@@ -311,7 +312,7 @@ export function Landing() {
             {[
               { title: 'AI 자소서 초안', desc: '활동 기록과 내 정보를 근거로 문항에 맞는 초안을 만들어줘요.', badge: 'PC에서 사용 가능', live: true },
               { title: 'AI 자소서 점검', desc: '쓴 답변의 개선 포인트를 짚어주고 예시 문장을 제안해요.', badge: 'PC에서 사용 가능', live: true },
-              { title: 'AI 면접 질문 뽑기', desc: '내 자소서와 회사 정보를 분석해 예상 면접 질문을 뽑아줘요.', badge: '곧 출시', live: false },
+              { title: 'AI 면접 질문 뽑기', desc: '내 자소서와 회사 정보를 분석해 예상 면접 질문을 뽑아줘요.', badge: 'PC에서 사용 가능', live: true },
             ].map(({ title, desc, badge, live }) => (
               <div key={title} className="bg-surface-2 border border-line rounded-xl p-4">
                 <span

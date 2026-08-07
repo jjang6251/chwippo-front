@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { FileText, FolderOpen, Lightbulb, Target } from 'lucide-react'
 import { Modal } from '@/components/common/Modal'
+import { CompanyResearchCard } from '@/components/card/CompanyResearchCard'
+import { JobTitleField } from '@/components/common/JobTitleField'
+import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { useActivities, useActivityLogs } from '@/hooks/useActivities'
+import { useApplication } from '@/hooks/useApplications'
 import { toast } from '@/stores/toastStore'
 import type {
   InterviewPrepSession,
@@ -16,6 +20,15 @@ import {
 
 interface Props {
   session: InterviewPrepSession
+  /**
+   * 이미 생성된 질문 수. **0보다 크면 면접 차수·종류를 잠근다.**
+   *
+   * 🔴 자료(자소서·로그·공고)와 달리 차수·종류는 세션의 **정체성**이다. 바꾸면 기존 질문이
+   * "다른 면접용" 이 돼 헤더(임원·인성)와 내용(기술 질문)이 어긋난다. 자료는 바꿔도 질문이
+   * 덜 정확해질 뿐 유효하지만, 이건 아니다.
+   * 다른 차수는 **새 세션**으로 만드는 게 맞는 동선이다 (세션은 카드 하위에 여러 개 붙는다).
+   */
+  questionCount: number
   onClose: () => void
   onSave: (dto: UpdateSessionDto, refs: {
     coverletterIds: string[]
@@ -37,6 +50,7 @@ const TYPE_OPTIONS: Array<{ value: InterviewType; label: string }> = (
  */
 export function EditInterviewSessionModal({
   session,
+  questionCount,
   onClose,
   onSave,
   isSaving,
@@ -44,9 +58,19 @@ export function EditInterviewSessionModal({
   const [interviewType, setInterviewType] = useState<InterviewType | ''>(
     session.interviewType ?? '',
   )
-  const [jobDescription, setJobDescription] = useState(
-    session.jobDescription ?? '',
-  )
+  // 질문이 이미 있으면 차수·종류를 잠근다 (자료와 달리 세션의 정체성이라)
+  const identityLocked = questionCount > 0
+  const [round, setRound] = useState(session.round)
+  // 공고 요건 접힘 — 정리 안 했으면 펼쳐서 CTA 가 바로 보이게
+  /**
+   * 공고 요건·회사 정보는 **접힌 채로 시작**한다 (2026-08-06).
+   * 이 모달의 목적은 **자료를 고치는 것**인데, 둘 다 펼쳐져 있으면 읽을 내용이 화면을
+   * 다 먹어서 정작 편집할 입력란(차수·메모·자소서)이 스크롤 아래로 밀린다.
+   * 사이드바는 반대로 **읽는 곳**이라 펼침을 유지한다.
+   */
+  const [jpExpanded, setJpExpanded] = useState(false)
+  // v2 — 프롬프트가 읽는데 입력 UI 가 없던 필드. 여기서 처음 편집 가능해진다
+  const [sessionMemo, setSessionMemo] = useState(session.myMemo ?? '')
   const [emphasisPoints, setEmphasisPoints] = useState(
     session.emphasisPoints ?? '',
   )
@@ -57,6 +81,7 @@ export function EditInterviewSessionModal({
     new Set(session.extraLogIds),
   )
 
+  const { data: app } = useApplication(session.applicationId)
   const { data: coverletters } = useCoverletters(session.applicationId, true)
   const { data: activities } = useActivities()
 
@@ -70,9 +95,14 @@ export function EditInterviewSessionModal({
   const handleSubmit = () => {
     onSave(
       {
-        interviewType: interviewType || null,
-        jobDescription: jobDescription.trim() || null,
+        // 잠겨 있으면 기존 값을 그대로 보낸다 (화면이 disabled 라 바뀔 일이 없지만
+        // 상태가 어긋나 저장되는 경로를 아예 만들지 않는다)
+        round: identityLocked ? session.round : round.trim() || session.round,
+        interviewType: identityLocked
+          ? session.interviewType
+          : interviewType || null,
         emphasisPoints: emphasisPoints.trim() || null,
+        myMemo: sessionMemo.trim() || null,
       },
       {
         coverletterIds: Array.from(selectedClIds),
@@ -88,7 +118,7 @@ export function EditInterviewSessionModal({
   )
 
   return (
-    <Modal open onClose={onClose} title="면접 세션 편집" width="max-w-2xl">
+    <Modal open onClose={onClose} title="세션 자료" width="max-w-2xl">
       <div className="space-y-5 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
         <p className="text-text-tertiary text-xs leading-relaxed bg-info/5 border border-info/20 rounded-lg p-3">
           <span className="inline-flex items-center gap-1">
@@ -99,53 +129,104 @@ export function EditInterviewSessionModal({
           재생성돼요. (기존 질문·내 메모는 사라집니다)
         </p>
 
-        {/* 면접 종류 */}
+        {/*
+          지원 직무 — **질문 생성의 기준**이라 여기서도 보이고 고쳐져야 한다.
+          차수·종류와 달리 잠그지 않는다: 이건 세션의 정체성이 아니라 카드의 속성이고,
+          잘못 적힌 걸 발견했을 때 고칠 길을 막으면 세션을 새로 파는 수밖에 없다.
+          (이미 만들어진 질문은 그대로다 — 다음 "다시 생성" 부터 반영된다)
+        */}
         <section>
-          <label className="block text-sm text-text-secondary font-medium mb-2">
-            면접 종류
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {TYPE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() =>
-                  setInterviewType(
-                    interviewType === opt.value ? '' : opt.value,
-                  )
-                }
-                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                  interviewType === opt.value
-                    ? INTERVIEW_TYPE_STYLE[opt.value]
-                    : 'bg-surface border-line text-text-tertiary hover:text-text-secondary'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <JobTitleField applicationId={session.applicationId} />
+        </section>
+
+        {/* 면접 차수 · 종류 — 질문이 생성됐으면 잠금 (세션의 정체성이라 자료와 다르게 다룬다) */}
+        <section className="space-y-3">
+          {identityLocked && (
+            <p className="text-text-tertiary text-xs leading-relaxed bg-warning/8 border border-warning/25 rounded-lg p-3">
+              질문이 이미 만들어져서 <strong>면접 차수·종류는 바꿀 수 없어요.</strong>{' '}
+              지금 질문은 <strong>{session.round}</strong>
+              {session.interviewType
+                ? ` · ${INTERVIEW_TYPE_LABEL[session.interviewType]}`
+                : ''}{' '}
+              기준으로 만들어졌거든요. 다른 면접은 <strong>새 세션</strong>으로
+              만들거나, <strong>"↻ 다시 생성"</strong> 후에 바꿔주세요.
+            </p>
+          )}
+
+          <div>
+            <label
+              htmlFor="edit-round"
+              className="block text-sm text-text-secondary font-medium mb-2"
+            >
+              면접 차수
+            </label>
+            <input
+              id="edit-round"
+              type="text"
+              value={round}
+              onChange={(e) => setRound(e.target.value)}
+              disabled={identityLocked}
+              maxLength={40}
+              placeholder="예: 1차 면접 / 임원 면접"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-text-secondary font-medium mb-2">
+              면접 종류
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  disabled={identityLocked}
+                  onClick={() =>
+                    setInterviewType(
+                      interviewType === opt.value ? '' : opt.value,
+                    )
+                  }
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    interviewType === opt.value
+                      ? INTERVIEW_TYPE_STYLE[opt.value]
+                      : 'bg-surface border-line text-text-tertiary hover:text-text-secondary'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* 모집 요강 + 강조 */}
+        {/* 공고 요건 + 강조 */}
         <section className="space-y-3">
           <h3 className="text-sm text-text-secondary font-medium inline-flex items-center gap-1.5">
             <Target size={15} strokeWidth={1.75} aria-hidden="true" />
             AI 강화 자료
           </h3>
+          {/*
+            v2 — 새 세션 모달과 같이 공고 요건 정리 UI 로 교체.
+            🔴 여기 수동 textarea 를 남겨두면 **효과 없는 칸**이 된다 —
+            프롬프트가 `session.jobDescription` 을 더 이상 읽지 않기 때문에
+            사용자가 열심히 채워도 질문에 반영되지 않는다.
+          */}
           <div>
             <label className="block text-xs text-text-tertiary mb-1.5">
-              모집 요강 / 우대사항
+              공고 요건{' '}
+              <span className="text-text-faint">
+                (있으면 직무 질문이 정확해져요)
+              </span>
             </label>
-            <textarea
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              maxLength={8000}
-              rows={5}
-              placeholder="공고에서 복사·붙여넣기"
-              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
+            <JobPostingBanner
+              variant="section"
+              applicationId={session.applicationId}
+              jobPosting={app?.jobPosting}
+              jobPostingStatus={app?.jobPostingStatus}
+              readOnly={false}
+              expanded={jpExpanded}
+              onToggle={() => setJpExpanded((v) => !v)}
             />
-            <p className="text-text-faint text-[11px] mt-1 text-right">
-              {jobDescription.length} / 8000
-            </p>
           </div>
           <div>
             <label className="block text-xs text-text-tertiary mb-1.5">
@@ -163,6 +244,46 @@ export function EditInterviewSessionModal({
               {emphasisPoints.length} / 2000
             </p>
           </div>
+
+          {/*
+            v2 — 세션 메모. 🔴 **프롬프트가 읽고 있었는데 입력 UI 가 어디에도 없었다.**
+            (`interview-context-builder` 의 `sessionMemo` — "# 면접 준비 메모" 로 주입)
+            즉 값이 항상 비어 있는 죽은 경로였다. 여기서 처음 쓸 수 있게 한다.
+          */}
+          <div>
+            <label
+              htmlFor="edit-session-memo"
+              className="block text-xs text-text-tertiary mb-1.5"
+            >
+              면접 준비 메모{' '}
+              <span className="text-text-faint">(질문 생성에 함께 반영돼요)</span>
+            </label>
+            <textarea
+              id="edit-session-memo"
+              value={sessionMemo}
+              onChange={(e) => setSessionMemo(e.target.value)}
+              maxLength={5000}
+              rows={3}
+              placeholder="이번 면접에서 신경 쓰이는 점·준비 방향 등&#10;예) 이직 사유를 어떻게 말할지 정리가 안 됐어요"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
+            />
+            <p className="text-text-faint text-[11px] mt-1 text-right">
+              {sessionMemo.length} / 5000
+            </p>
+          </div>
+        </section>
+
+        {/*
+          v2 — 회사 조사 + 내가 알아본 정보.
+          🔴 모바일에서는 사이드바가 없으므로 **이 모달이 자료의 유일한 창구**가 된다.
+          사이드바에만 있고 여기 없으면 모바일 사용자는 회사 조사를 볼 방법이 없다.
+        */}
+        <section>
+          <CompanyResearchCard
+            sessionId={session.id}
+            userNotes={session.userResearchNotes}
+            defaultExpanded={false}
+          />
         </section>
 
         {/* 자소서 */}

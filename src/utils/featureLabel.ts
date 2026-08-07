@@ -16,6 +16,7 @@ export const FEATURE_LABEL_KR: Record<string, string> = {
   coverletter_chat: '자소서 채팅',
   interview_prep_session: '면접 질문 생성',
   interview_prep_followup: '면접 꼬리질문',
+  interview_prep_answer: '면접 예상 답변',
   company_research: '회사 조사',
   jobposting_parse: '공고 요건 정리',
   // legacy / deprecated
@@ -114,6 +115,7 @@ export const FEATURE_CATEGORY_KR: Record<string, string> = {
   jobposting_parse: '자소서',
   interview_prep_session: '면접',
   interview_prep_followup: '면접',
+  interview_prep_answer: '면접',
   company_research: '회사 조사',
   note_summary: '노트',
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
+import { useRequireJobTitle } from '@/hooks/useRequireJobTitle'
 import { useAiFeedbackStore } from '@/stores/aiFeedbackStore'
 import type {
   CoverletterFeedback,
@@ -43,6 +44,8 @@ function relativeKo(iso: string): string {
 
 interface AiFeedbackSectionProps {
   clId: string
+  /** 직무 게이트용 — 직무가 비면 모달로 입력받아 이 카드에 저장한다 */
+  applicationId: string
   /** 현재 답변 텍스트 — 예시 문장 적용(치환)용. 없으면 적용 버튼 미노출 */
   answer?: string
   /** 예시 적용 — 치환된 전체 답변으로 저장 (CleanupModal onApply 경유) */
@@ -55,6 +58,7 @@ interface AiFeedbackSectionProps {
 
 export function AiFeedbackSection({
   clId,
+  applicationId,
   answer,
   onApplyText,
   lastFeedback,
@@ -72,9 +76,13 @@ export function AiFeedbackSection({
   const requestFeedback = useAiFeedbackStore((s) => s.requestFeedback)
   const clear = useAiFeedbackStore((s) => s.clear)
   const ensureAiConsent = useRequireAiConsent()
+  // 직무 게이트 — 점검은 "이 문항이 직무와 맞나" 를 보므로 직무가 있어야 한다.
+  // 없으면 모달에서 입력받아 카드에 저장한 뒤 진행한다. 서버에도 같은 게이트가 있다.
+  const ensureJobTitle = useRequireJobTitle(applicationId)
 
   const runFeedback = async () => {
     if (!(await ensureAiConsent())) return
+    if (!(await ensureJobTitle())) return
     requestFeedback(clId)
   }
 
@@ -109,6 +117,7 @@ export function AiFeedbackSection({
 
   const handleRetry = async () => {
     if (!(await ensureAiConsent())) return
+    if (!(await ensureJobTitle())) return
     setAppliedIdx(new Set())
     setNotFoundIdx(new Set())
     clear(clId)

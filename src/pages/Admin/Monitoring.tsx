@@ -356,7 +356,7 @@ export function Monitoring() {
               <ThresholdField
                 htmlFor="th-perFeatureCost"
                 label="feature 일 cost cap ($)"
-                hint="user 1명/feature/day USD cap. 단일 feature 폭주 방지"
+                hint="user 1명/feature/day USD cap. 단일 feature 폭주 방지. 0 = 무제한 (기능 차단은 AI 한도 탭의 enabled 로)"
               >
                 <NumberInput
                   id="th-perFeatureCost"

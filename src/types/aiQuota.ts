@@ -14,6 +14,8 @@ export type LlmFeature =
   | 'coverletter_recommend'
   | 'interview_prep_session'
   | 'interview_prep_followup'
+  // v2 (2026-08-06) — 세션·꼬리질문이 질문만 만들게 되면서 신설. 답변 1개 on-demand 생성
+  | 'interview_prep_answer'
   | 'company_research'
   | 'coverletter_chat'
   | 'jobposting_parse'

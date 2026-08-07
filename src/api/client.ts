@@ -1,6 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { toast } from '@/stores/toastStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useJobTitleGateStore } from '@/stores/jobTitleGateStore'
 import { postToNative } from '@/utils/nativeBridge'
 
 export const apiClient = axios.create({
@@ -171,6 +172,27 @@ apiClient.interceptors.request.use((config: TrackedConfig) => {
   return config
 })
 
+/**
+ * 직무 미입력 400 인지 판별하고, 맞으면 대상 카드 id 를 돌려준다.
+ *
+ * 인터셉터 본문에서 분리한 이유는 **테스트 가능성** 이다 — 기존 client spec 이
+ * `axios.create` 를 mock 해서 인터셉터가 등록되지 않아 직접 태울 수 없다.
+ *
+ * 백엔드 계약: `chwippo-back/src/applications/job-text.ts` `assertJobTextPresent`
+ * 가 `{ code: 'JOB_TITLE_REQUIRED', applicationId, message }` 로 던진다.
+ */
+export function jobTitleRequiredApplicationId(
+  status: number | undefined,
+  data: unknown,
+): string | null {
+  if (status !== 400) return null
+  const body = data as { code?: string; applicationId?: string } | undefined
+  if (body?.code !== 'JOB_TITLE_REQUIRED') return null
+  return typeof body.applicationId === 'string' && body.applicationId
+    ? body.applicationId
+    : null
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -188,6 +210,23 @@ apiClient.interceptors.response.use(
       !!trackedFileUrl &&
       !original?._isCleanupCall &&
       status !== 401
+
+    /**
+     * 🔴 직무 미입력은 **토스트가 아니라 입력 모달**로 받는다 (2026-08-06).
+     *
+     * "지원 직무를 먼저 입력해 주세요" 를 토스트로 띄우면 사용자는 어디서 입력하는지
+     * 찾아 헤맨다. 할 일이 명확한 에러라 그 자리에서 받는 게 맞다.
+     * 저장하면 카드에 반영되므로 다시 누르면 통과한다.
+     *
+     * 백엔드가 `{ code: 'JOB_TITLE_REQUIRED', applicationId }` 로 구분해 준다
+     * (`chwippo-back/src/applications/job-text.ts`). 이 코드가 아니면 기존대로 토스트.
+     */
+    const jobTitleAppId = jobTitleRequiredApplicationId(status, error.response?.data)
+    if (jobTitleAppId) {
+      void useJobTitleGateStore.getState().request(jobTitleAppId)
+      if (original) original._toastShown = true
+      return Promise.reject(error)
+    }
 
     if (
       status === 400 &&
