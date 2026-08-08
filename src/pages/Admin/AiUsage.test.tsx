@@ -101,4 +101,45 @@ describe('AiUsage page — date preset + area chart', () => {
     const labels = Array.from(groups).map((g) => g.getAttribute('label'))
     expect(labels).toEqual(['자소서', '면접', '회사 조사', '노트'])
   })
+
+  /**
+   * 🔴 **드롭다운이 백엔드 feature 목록보다 뒤처지는 게 이번 사고의 형태다** (2026-08-09).
+   *
+   * 면접 v2 에서 질문·답변을 분리하며 `interview_prep_answer` 가 생겼는데
+   * **`featureLabel.ts` 엔 등록하고 드롭다운엔 안 넣었다.** 목록에는 한글로 잘 떴기 때문에
+   * 빠진 걸 눈치채기 어려웠고, 하필 **호출 1위**(137건 · 질문 생성 67건보다 많다)였다.
+   *
+   * 질문 생성과 답변 생성이 **각각 2코인**이라 섞여 있으면 **어디에 돈이 나가는지 못 가린다.**
+   * 필터가 곧 비용 분석 수단이라 누락이 조용히 아프다.
+   */
+  it('🔴 면접 3종이 모두 필터에 있다 (answer 가 빠져 있었다)', async () => {
+    render(<AiUsage />, { wrapper })
+    await flush()
+    const select = screen.getByRole('combobox') as HTMLSelectElement
+    const values = Array.from(select.querySelectorAll('option')).map(
+      (o) => o.value,
+    )
+    for (const f of [
+      'interview_prep_session',
+      'interview_prep_answer',
+      'interview_prep_followup',
+    ]) {
+      expect(values).toContain(f)
+    }
+  })
+
+  /**
+   * 🔴 **`company_research` 를 지우지 말 것.** 백엔드 `FEATURE_MATRIX` 에 없어서 죽은 옵션처럼
+   * 보이지만 **과거 로그가 29건 있다** (2026-07-09 유저 트리거 조사 제거 이전 · ADR-040).
+   * 지우면 그 이력을 화면에서 영영 못 좁힌다. 실제로 한 번 "죽은 옵션" 으로 오판했었다.
+   */
+  it('🔴 company_research 는 남아 있다 (과거 이력 29건 조회용)', async () => {
+    render(<AiUsage />, { wrapper })
+    await flush()
+    const select = screen.getByRole('combobox') as HTMLSelectElement
+    const values = Array.from(select.querySelectorAll('option')).map(
+      (o) => o.value,
+    )
+    expect(values).toContain('company_research')
+  })
 })
