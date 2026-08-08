@@ -168,6 +168,9 @@ export default function App() {
           <Route path="activity" element={<ActivityTimelinePage />} />
           <Route path="activity/manage" element={<ActivityPage />} />
           <Route path="coverletters" element={<Coverletters />} />
+          {/* 면접 준비 — 샘플 세션 1개(카카오 1차 기술면접). AI 버튼은 demoAdapter 가 차단(가입 모달) */}
+          <Route path="interviews" element={<Interviews />} />
+          <Route path="interviews/:sessionId" element={<InterviewSessionPage />} />
           <Route path="myinfo" element={<MyInfo />} />
           {/* 설정 — 실서비스 Settings 골격 재사용. 데모 컨텍스트(useDemoMode)에서
               변경 항목은 가입 모달로 잠금, 테마는 실동작(무백엔드). demoAdapter 로 API 0 유지. */}
