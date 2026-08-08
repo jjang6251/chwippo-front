@@ -108,7 +108,7 @@ export function Settings() {
 
       <div className="bg-surface-2 border border-line rounded-xl mb-4">
         <button
-          onClick={isDemo ? showDemoSignup : startTour}
+          onClick={isDemo ? () => showDemoSignup() : startTour}
           className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
         >
           <span className="text-xl w-7 text-center">🚀</span>
@@ -122,7 +122,7 @@ export function Settings() {
 
       <div className="bg-surface-2 border border-line rounded-xl">
         <button
-          onClick={isDemo ? showDemoSignup : () => setShowLogoutModal(true)}
+          onClick={isDemo ? () => showDemoSignup() : () => setShowLogoutModal(true)}
           className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
         >
           <span className="text-xl w-7 text-center">🚪</span>

@@ -18,6 +18,14 @@ interface NavItem {
   icon: any
   /** AI 기능 — `useAiEnabled()` false 일 때 hide */
   ai?: boolean
+  /**
+   * 데모 모드에서 노출할지. **기본은 노출**이고, `false` 인 항목만 숨긴다.
+   *
+   * 🔴 데모는 `/demo/*` 라우트와 `demoAdapter` 의 엔드포인트가 **둘 다** 있어야 동작한다.
+   * 하나라도 없으면 메뉴는 보이는데 눌러도 아무 데도 안 가거나 빈 화면이 뜬다 —
+   * 실제로 면접 AI 를 공개하면서 이 상태가 됐다(2026-08-08 발견, 운영 데모에서 캘린더로 튕김).
+   */
+  demoReady?: boolean
   /** 면접 AI — `useInterviewAiEnabled()` false 일 때 hide (비공개 유지) */
   interviewAi?: boolean
 }
@@ -46,8 +54,17 @@ export function Sidebar() {
   const aiEnabled = useAiEnabled()
   const interviewAiEnabled = useInterviewAiEnabled()
   const link = (p: string) => (isDemo ? '/demo' + p : p)
+  /**
+   * 🔴 **데모에서는 `demoReady: false` 항목을 숨긴다** (2026-08-08).
+   * 면접 AI flag 를 켜자 데모 사이드바에도 「면접 준비」가 떴는데 `/demo/interviews` 라우트가 없어
+   * `<Route path="*">` 에 걸려 **캘린더로 튕겼다.** 메뉴가 광고하는 곳에 갈 수 없는 상태다.
+   * 데모용 라우트·샘플 데이터가 준비되면 이 플래그만 지우면 된다.
+   */
   const visibleNavItems = NAV_ITEMS.filter(
-    (item) => (aiEnabled || !item.ai) && (interviewAiEnabled || !item.interviewAi),
+    (item) =>
+      (aiEnabled || !item.ai) &&
+      (interviewAiEnabled || !item.interviewAi) &&
+      (item.demoReady !== false || !isDemo),
   )
   // 캘린더 UX 재구성 — 회고 nav 옆 streak 배지 (>=2 조건, 1일 이하는 상처 방지 hide)
   const { data: streak } = useDashboardStreak()

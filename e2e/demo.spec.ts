@@ -199,13 +199,24 @@ test.describe('데모 모드', () => {
     expect(guard.consoleErrors()).toEqual([])
   })
 
-  test('설정 데모 — 잠긴 메뉴 항목(프로필 설정) 탭 → 가입 모달 (이탈·API 0)', async ({ page }) => {
+  /**
+ * 가입 모달 존재 확인.
+ *
+ * 🔴 **제목 문구로 단언하지 않는다** (2026-08-09). 예전엔 `'데모에서는 저장되지 않아요'` 를
+ * 찾았는데, 모달이 **무엇을 하려다 막혔는지에 따라 제목이 달라지도록** 바뀌면서 3건이 깨졌다.
+ * 문구는 앞으로도 계속 다듬을 자리이므로, **항상 있는 CTA 버튼**으로 판정한다.
+ */
+function demoSignupModal(page: import('@playwright/test').Page) {
+  return page.getByRole('button', { name: '로그인하고 시작하기' })
+}
+
+test('설정 데모 — 잠긴 메뉴 항목(프로필 설정) 탭 → 가입 모달 (이탈·API 0)', async ({ page }) => {
     const guard = await attachGuard(page)
     await page.goto('/demo/settings')
 
     // 실서비스에선 링크지만 데모에선 버튼 (AuthGuard 라우트로 안 나감)
     await page.locator('main').getByRole('button', { name: /프로필 설정/ }).click()
-    await expect(page.getByText('데모에서는 저장되지 않아요')).toBeVisible()
+    await expect(demoSignupModal(page)).toBeVisible()
     // 데모 잔류 (랜딩·실서비스 라우트로 이탈 안 함)
     await expect(page).toHaveURL(/\/demo\/settings/)
 
@@ -222,7 +233,7 @@ test.describe('데모 모드', () => {
     await main.getByRole('button', { name: '자소서' }).click()
     await main.getByRole('button', { name: '+ 지원 동기' }).click()
 
-    await expect(page.getByText('데모에서는 저장되지 않아요')).toBeVisible()
+    await expect(demoSignupModal(page)).toBeVisible()
 
     // 차단은 서버 요청 없이 모달만 — 백엔드 히트 0 유지
     expect(guard.backendHits()).toBe(0)
@@ -335,7 +346,7 @@ test.describe('데모 모드', () => {
     await page.waitForTimeout(1200)
     // 데모 잔류 (가입 모달 노출) — 랜딩(/) 금지
     expect(page.url()).toContain('/demo')
-    await expect(page.getByText('데모에서는 저장되지 않아요')).toBeVisible()
+    await expect(demoSignupModal(page)).toBeVisible()
   })
 
 })

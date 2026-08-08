@@ -138,6 +138,13 @@ export function AiUsage() {
             </optgroup>
             <optgroup label="면접">
               <option value="interview_prep_session">면접 질문 생성</option>
+              {/*
+                🔴 v2 에서 질문·답변을 분리하며 생긴 feature 인데 **드롭다운에만 빠져 있었다**
+                (2026-08-09 발견). `featureLabel.ts` 엔 등록돼 있어 목록에는 한글로 떴지만
+                필터로 좁힐 수가 없었고, 하필 **호출 1위**(137건 · 질문 생성 67건보다 많다)다.
+                질문 생성과 답변 생성이 각각 2코인이라 섞여 있으면 **어디에 돈이 나가는지 못 가린다.**
+              */}
+              <option value="interview_prep_answer">면접 예상 답변</option>
               <option value="interview_prep_followup">면접 꼬리질문</option>
             </optgroup>
             <optgroup label="회사 조사">
