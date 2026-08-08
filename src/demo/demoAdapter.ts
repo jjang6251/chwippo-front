@@ -5,7 +5,10 @@
 // DemoModeProvider 가 마운트 시 apiClient.defaults.adapter 를 이걸로 교체하고 언마운트 시 복구한다.
 // 실 서비스 영향 0 — 서버로 나가는 요청이 없다(favicon 등 외부 이미지는 컴포넌트가 직접 로드).
 import type { AxiosAdapter, AxiosResponse } from 'axios'
-import { useDemoSignupStore } from '@/stores/demoSignupStore'
+import {
+  useDemoSignupStore,
+  type DemoBlockReason,
+} from '@/stores/demoSignupStore'
 import * as S from './sampleData'
 import * as store from './demoStore'
 
@@ -30,6 +33,39 @@ function resolveGet(url: string, params: Record<string, unknown>): unknown {
   // 자소서 AI 채팅 이력 — 데모는 대화 없음. null 이면 ChatPanel .filter 크래시 → 빈 배열.
   m = path.match(/^\/applications\/[^/]+\/coverletter\/messages$/)
   if (m) return []
+  // ── 면접 준비 (카카오 1차 기술면접) ──────────────────────
+  m = path.match(/^\/interview-prep-sessions$/)
+  if (m) {
+    /**
+     * 🔴 **쿼리스트링과 `params` 를 둘 다 본다.** `interviewPrep.ts` 는
+     * `` `/interview-prep-sessions?applicationId=${id}` `` 처럼 **URL 에 직접** 붙이지
+     * axios `params` 로 넘기지 않는다. `params` 만 읽었더니 실기에서 "세션이 없어요" 가 떴다
+     * (2026-08-09). 캘린더·자동완성도 같은 이유로 이 패턴을 쓴다.
+     */
+    const appId =
+      (params.applicationId as string | undefined) ??
+      new URLSearchParams(url.split('?')[1] ?? '').get('applicationId') ??
+      undefined
+    return appId ? (S.DEMO_INTERVIEW_SESSIONS[appId] ?? []) : []
+  }
+  m = path.match(/^\/interview-prep-sessions\/([^/]+)\/questions$/)
+  if (m) return S.DEMO_INTERVIEW_QUESTIONS[m[1]] ?? []
+  m = path.match(/^\/interview-prep-sessions\/([^/]+)\/refs$/)
+  if (m) return S.DEMO_INTERVIEW_REFS[m[1]] ?? { coverletters: [], logs: [] }
+  /**
+   * 🔴 **회사 조사는 `null` 이다** — 자소서 탭과 **같은 판단**이다.
+   * 데모 카드의 회사는 전부 실존 기업이고, 회사 조사는 앱이 "치뽀가 수집한 사실" 로
+   * 제시하는 정보라 지어내면 곧 허위 사실이 된다. 컴포넌트는 null 을 정상 상태로 다룬다
+   * (배너 미노출). `DEMO_COMPANY_RESEARCH` 주석 참조.
+   */
+  m = path.match(/^\/interview-prep-sessions\/([^/]+)\/research$/)
+  if (m) return S.DEMO_COMPANY_RESEARCH
+  m = path.match(/^\/interview-prep-sessions\/([^/]+)$/)
+  if (m) {
+    const all = Object.values(S.DEMO_INTERVIEW_SESSIONS).flat()
+    return all.find((x) => x.id === m![1]) ?? null
+  }
+
   m = path.match(/^\/applications\/([^/]+)$/)
   if (m) return store.getApplication(m[1]) ?? null
 
@@ -122,12 +158,33 @@ function parseBody(data: unknown): Record<string, unknown> {
  *   POST/PATCH/DELETE .../steps/:stepId/checklist    (체크리스트 추가·토글·삭제)
  *   POST/PATCH/DELETE /calendar/daily-notes          (데일리 노트 추가·토글·삭제)
  *   PATCH /applications/:id/coverletters/:clId       (자소서 답변 텍스트 저장 — 비 AI)
+ *   PATCH /interview-prep-questions/:id              (면접 내 답변 메모 — 비 AI)
+ *   PATCH /interview-prep-sessions/:id/user-notes    (면접 자료 메모 — 비 AI)
  *
  * 그 외 전부(AI 호출·카드 생성/삭제·파일 업로드·계정/설정 등) = 차단 → 가입 모달.
  */
 function resolveMutation(method: string, url: string, body: Record<string, unknown>): { payload: unknown } | null {
   const path = url.split('?')[0]
   let m: RegExpMatchArray | null
+
+  /**
+   * 면접 메모 — **자소서 답변 저장과 같은 성격**(비 AI 텍스트)이라 허용한다.
+   * 데모에서 실제로 써볼 수 있어야 기능을 이해한다. 인메모리라 새로고침하면 사라진다.
+   * 🔴 반면 `POST .../answer`·`/followups`·`/generate` 는 **AI 호출**이라 화이트리스트에
+   * 넣지 않는다 — 아래 기본 분기가 가입 모달을 띄운다.
+   */
+  if (
+    method === 'patch' &&
+    (m = path.match(/^\/interview-prep-questions\/([^/]+)$/))
+  ) {
+    return { payload: { ...body, id: m[1] } }
+  }
+  if (
+    method === 'patch' &&
+    path.match(/^\/interview-prep-sessions\/[^/]+\/user-notes$/)
+  ) {
+    return { payload: body }
+  }
 
   if (method === 'patch' && (m = path.match(/^\/applications\/([^/]+)\/step$/))) {
     return { payload: store.updateCurrentStep(m[1], Number(body.stepIndex)) }
@@ -181,6 +238,31 @@ function envelope(config: Parameters<AxiosAdapter>[0], payload: unknown): AxiosR
   } as AxiosResponse
 }
 
+/**
+ * 데모에서 차단된 요청의 식별 코드. 호출부는 이 코드를 만나면 **토스트를 띄우지 않는다** —
+ * 사용자에겐 이미 가입 모달이 떠 있고, 에러 문구가 겹치면 두 번 혼내는 꼴이 된다.
+ */
+/**
+ * 차단된 경로를 **사용자가 하려던 일**로 옮긴다 — 모달이 맥락에 맞는 말을 하기 위해서다.
+ * 여기서 못 알아본 경로는 `default` 로 떨어지고, 그때도 문구는 어색하지 않아야 한다.
+ */
+function blockReason(path: string): DemoBlockReason {
+  if (/^\/interview-prep-questions\/[^/]+\/answer$/.test(path)) return 'ai_answer'
+  if (/^\/interview-prep-questions\/[^/]+\/followups$/.test(path)) return 'ai_followup'
+  if (/^\/interview-prep-sessions\/[^/]+\/generate$/.test(path)) return 'ai_generate'
+  // 🔴 자소서는 **AI 경로와 문항 추가를 구분**한다 (2026-08-08 QA 발견).
+  //    `/coverletter/` 하나로 뭉치면 `+ 지원 동기`(문항 추가)에도 "초안을 만들어드릴게요" 가
+  //    떠서, 앱이 내 행동을 모른다는 게 더 분명해진다.
+  if (/ai-draft|\/chat|feedback|research/.test(path)) return 'ai_coverletter'
+  if (/^\/coverletters?(\/|$)/.test(path)) return 'coverletter_item'
+  // 세션 생성이 곧 질문 생성이다 — "지원 카드 추가" 안내가 나가면 안 된다
+  if (path === '/interview-prep-sessions') return 'ai_generate'
+  if (path === '/applications') return 'create'
+  return 'default'
+}
+
+export const DEMO_BLOCKED = 'DEMO_BLOCKED' as const
+
 export const demoAdapter: AxiosAdapter = (config) => {
   const method = (config.method ?? 'get').toLowerCase()
   const url = config.url ?? ''
@@ -199,7 +281,18 @@ export const demoAdapter: AxiosAdapter = (config) => {
   const handled = resolveMutation(method, url, parseBody(config.data))
   if (handled) return Promise.resolve(envelope(config, handled.payload))
 
-  // 차단 대상(AI·생성/삭제·업로드·계정 등) — 가입 모달 + 영원 pending(onSuccess/onError 안 탐 → 토스트 안 뜸)
-  useDemoSignupStore.getState().show()
-  return new Promise<never>(() => {})
+  /**
+   * 차단 대상(AI·생성/삭제·업로드·계정 등) — 가입 모달을 띄우고 요청은 **거절**한다.
+   *
+   * 🔴 **예전엔 영원히 pending 인 Promise 를 돌려줬다.** `onSuccess`/`onError` 를 안 타서
+   * 토스트가 안 뜨는 건 맞았는데, **`isPending` 도 영원히 풀리지 않았다.** 모달을 닫아도
+   * 버튼이 `꼬리질문 만드는 중…` 인 채로 멈춰 있었다(2026-08-09 실기 발견).
+   *
+   * 대신 **전용 코드로 reject** 한다. `onError` 는 타지만 호출부가 이 코드를 알아보고
+   * 조용히 넘기므로 토스트는 여전히 안 뜬다 — 그러면서 로딩은 정상적으로 풀린다.
+   */
+  useDemoSignupStore.getState().show(blockReason(url.split('?')[0]))
+  return Promise.reject(
+    Object.assign(new Error('demo-blocked'), { code: DEMO_BLOCKED }),
+  )
 }

@@ -39,8 +39,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   // F6 PR 1 — 자소서 통합 페이지 (데스크탑 only. MobileNav 변경 X — 모바일은 카드 상세에서 진입)
   { label: '자소서', path: '/coverletters', icon: CoverLetterIcon, ai: true },
   // F6 PR 2 Phase 4 — 면접 준비 통합 페이지 (데스크탑 only. 동일 정책)
-  // 🔴 `demoReady: false` — 데모에 라우트·샘플 데이터가 아직 없다. 아래 필터 주석 참조
-  { label: '면접 준비', path: '/interviews', icon: InterviewIcon, ai: true, interviewAi: true, demoReady: false },
+  { label: '면접 준비', path: '/interviews', icon: InterviewIcon, ai: true, interviewAi: true },
   { label: '내 정보 창고', path: '/myinfo', icon: StorageIcon },
 ] as const
 
