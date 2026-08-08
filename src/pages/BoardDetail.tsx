@@ -20,6 +20,7 @@ import { useChecklist } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
 import { CoverLetterTab } from '@/components/card/CoverLetterTab'
 import { InterviewPrepTab } from '@/components/card/InterviewPrepTab'
+import { useDemoMode } from '@/contexts/demoMode'
 import { DdayBadge } from '@/components/card/DdayBadge'
 import { StarToggle } from '@/components/card/StarToggle'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -205,6 +206,7 @@ export function BoardDetail() {
   })
   const aiEnabled = useAiEnabled()
   const interviewAiEnabled = useInterviewAiEnabled()
+  const isDemo = useDemoMode()
 
   // 공고 요건 — 자소서와 동일 정책(모바일·RN 보기 전용) + DART 처럼 접힘 localStorage 기억
   const jpReadOnly = useCoverletterReadOnly()
@@ -483,7 +485,12 @@ export function BoardDetail() {
           ...(aiEnabled
             ? [{ v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' }]
             : []),
-          ...(interviewAiEnabled
+          /*
+            🔴 데모에서는 숨긴다 — `demoAdapter` 에 `interview-prep-*` 엔드포인트가 없어
+            탭은 뜨는데 GET 이 전부 `null` 로 떨어지고 콘솔에 미등록 에러만 남는다.
+            사이드바 「면접 준비」와 같은 이유이며 그쪽은 `demoReady: false` 로 처리했다.
+          */
+          ...(interviewAiEnabled && !isDemo
             ? [{ v: 'interview' as const, label: '면접 준비' }]
             : []),
         ].map((t) => (
@@ -568,7 +575,11 @@ export function BoardDetail() {
       )}
 
       {aiEnabled && activeTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
-      {interviewAiEnabled && activeTab === 'interview' && (
+      {/*
+        🔴 **탭 버튼만 숨기면 부족하다** — `?tab=interview` 로 직접 들어오면 초기 activeTab 이
+        'interview' 가 돼 **버튼 없이 본문만** 뜬다(2026-08-09 QA 발견). 렌더 조건에도 건다.
+      */}
+      {interviewAiEnabled && !isDemo && activeTab === 'interview' && (
         <InterviewPrepTab
           applicationId={app.id}
           active
