@@ -54,7 +54,11 @@ const makeQuestion = (
     ...overrides,
   }) as unknown as InterviewPrepQuestion
 
-function renderCard(question: InterviewPrepQuestion, readOnly: boolean) {
+function renderCard(
+  question: InterviewPrepQuestion,
+  readOnly: boolean,
+  opts: { forceAnswerOpen?: boolean } = {},
+) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -65,6 +69,7 @@ function renderCard(question: InterviewPrepQuestion, readOnly: boolean) {
         question={question}
         sessionId="sess-1"
         readOnly={readOnly}
+        forceAnswerOpen={opts.forceAnswerOpen}
       />
     </QueryClientProvider>,
   )
@@ -278,6 +283,77 @@ describe('InterviewQuestionCard — 읽기 모드 타이포 위계', () => {
     renderCard(withAll(), true)
     const label = screen.getByText('내 답변')
     expect(label.className).toContain('text-[11px]')
-    expect(screen.queryByText('내 답변 메모 (자동 저장)')).toBeNull()
+    expect(screen.queryByText('내 답변 (자동 저장)')).toBeNull()
+  })
+})
+
+/**
+ * 🔴 **`forceAnswerOpen` — 읽기 모드의 접힘 규칙을 예외적으로 연다** (2026-08-09).
+ *
+ * 읽기 모드는 **내 답변이 있으면 AI 답변을 접는다** — 면접 직전에 외울 건 내가 쓴 답이라는
+ * 제품 판단이다. 그런데 **랜딩은 AI 가 무엇을 써주는지 보여줘야** 한다.
+ * 제품 규칙을 바꾸지 않고 예외만 명시적으로 여는 게 이 prop 의 존재 이유라,
+ * **기본값에서 기존 동작이 그대로인지**가 절반이다.
+ */
+describe('InterviewQuestionCard — forceAnswerOpen', () => {
+  beforeEach(() => blockedMock.mockReturnValue({ blocked: false, reason: null }))
+
+  const withBoth = () =>
+    makeQuestion({
+      suggestedAnswer: '측정으로 병목을 좁히는 백엔드 개발자입니다.',
+      myMemo: '내 말로 줄인 답변',
+    })
+
+  /**
+   * 접혀도 **한 줄 미리보기**는 남는다 — AI 답변이 있다는 사실 자체는 보여야 하기 때문이다.
+   * 그래서 "텍스트가 없다" 가 아니라 **`aria-expanded`** 로 판정한다.
+   */
+  const answerToggle = () =>
+    screen
+      .getAllByRole('button')
+      .find((b) => b.textContent?.includes('AI 예상 답변'))
+
+  it('🔴 읽기 모드 + 내 답변 있음 → AI 답변은 접힌 채 시작한다 (기본 동작 유지)', () => {
+    renderCard(withBoth(), true)
+    expect(answerToggle()?.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('🔴 forceAnswerOpen → 내 답변이 있어도 AI 답변이 펼쳐진다', () => {
+    renderCard(withBoth(), true, { forceAnswerOpen: true })
+    expect(answerToggle()?.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('내 답변이 없으면 원래도 펼쳐진다 (규칙 자체는 그대로)', () => {
+    renderCard(makeQuestion({ suggestedAnswer: '측정으로 병목을 좁히는 백엔드 개발자입니다.' }), true)
+    expect(screen.getByText(/측정으로 병목을 좁히는/)).toBeTruthy()
+  })
+})
+
+/**
+ * 🔴 **읽기 모드에서는 쿼터를 조회하지 않는다** (2026-08-09).
+ *
+ * 읽기 모드엔 코인 쓰는 버튼이 없어 쿼터 값이 **쓰이지 않는데도** 요청이 나갔다
+ * (`refetchOnMount: 'always'`). 랜딩에서는 비로그인 401 → refresh 재시도까지 연쇄돼
+ * 요청 30건이 됐고, 제품에서도 면접 직전 화면에서 낭비였다.
+ */
+describe('InterviewQuestionCard — 읽기 모드 쿼터 조회 차단', () => {
+  beforeEach(() => {
+    blockedMock.mockClear()
+    blockedMock.mockReturnValue({ blocked: false, reason: null })
+  })
+
+  it('🔴 readOnly → enabled: false 로 부른다', () => {
+    renderCard(makeQuestion(), true)
+    for (const call of blockedMock.mock.calls) {
+      expect(call[1], `${call[0]} 에 enabled 옵션 없음`).toEqual({ enabled: false })
+    }
+    expect(blockedMock.mock.calls.length).toBeGreaterThan(0)
+  })
+
+  it('편집 모드 → 조회한다', () => {
+    renderCard(makeQuestion(), false)
+    for (const call of blockedMock.mock.calls) {
+      expect(call[1]).toEqual({ enabled: true })
+    }
   })
 })

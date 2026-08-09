@@ -8,6 +8,7 @@ import type {
 } from '@/api/dashboard'
 import type { CalendarEvent, DailyNote } from '@/api/calendar'
 import type { ChecklistItem } from '@/api/stepDetail'
+import type { CoverletterChatMessage } from '@/api/coverletterDoc'
 import type {
   UserProfile, LanguageCert, Cert, Award, Experience, CoverletterData, StorageUsage,
 } from '@/api/myinfo'
@@ -468,6 +469,49 @@ export const DEMO_COVERLETTERS: Record<string, ApplicationCoverletter[]> = {
 export const getDemoCoverletters = (applicationId: string): ApplicationCoverletter[] =>
   DEMO_COVERLETTERS[applicationId] ?? []
 
+// ── 자소서 AI 대화 (카카오 지원동기) ─────────────────────
+/**
+ * 🔴 **데모 채팅창이 비어 있었다** (2026-08-09). `/coverletter/messages` 가 `[]` 를 돌려줘서
+ * 데모 방문자는 **「AI 에게 묻기」가 뭘 해주는지 볼 수 없었다** — 랜딩은 그걸 광고하는데.
+ * 어제 면접에서 고친 것과 같은 문제다(광고하는 기능이 체험판에 없음).
+ *
+ * 🔴 **대화는 사람이 썼다.** AI 로 뽑으면 실사용자 자료가 섞일 위험이 있고,
+ * 데모 자소서(카카오 = 배치 개선·Kafka)와 소재가 맞물려야 진짜처럼 보인다.
+ *
+ * 🔴 **보내기는 여전히 차단**된다(`POST /coverletter/chat` → 가입 모달).
+ * 지난 대화를 보여주는 것과 새로 부르는 것은 다르다.
+ */
+export const DEMO_COVERLETTER_MESSAGES: Record<string, CoverletterChatMessage[]> = {
+  'demo-a1': [
+    {
+      id: 'demo-msg1',
+      applicationId: 'demo-a1',
+      role: 'user',
+      content:
+        '지원동기 도입부가 좀 늘어지는 것 같아요. 배치를 40분으로 줄인 수치를 앞으로 당기고 200자쯤 줄여줄 수 있을까요?',
+      suggestedUpdates: null,
+      citations: null,
+      createdAt: d(-1) + 'T04:12:00Z',
+    },
+    {
+      id: 'demo-msg2',
+      applicationId: 'demo-a1',
+      role: 'assistant',
+      content:
+        '도입부에서 믿음을 먼저 말하고 사례가 뒤에 오는 구조라 첫 세 문장이 비슷한 말을 반복하고 있었어요. 수치를 첫 문장으로 올리고, 인덱스 시행착오는 한 문장으로 압축했습니다. 카카오가 요구하는 대규모 트래픽 맥락은 마지막에 그대로 두었어요.',
+      suggestedUpdates: [
+        {
+          clId: 'demo-a1-cl0',
+          newAnswer:
+            '[4시간 배치를 40분으로 — 대용량은 증설이 아니라 구조로 견딥니다]\n하루 30만 건을 처리하던 정산 배치를 4시간에서 40분으로 줄인 경험이 지원의 계기였습니다. 스타트업 백엔드 인턴 시절 매일 새벽 큐가 지연되는 문제를 맡았을 때, 처음엔 서버 증설을 제안했지만 APM 으로 다시 재보니 병목은 트래픽 총량이 아니라 정산 배치와 큐 소비가 같은 커넥션 풀을 나눠 쓰는 구조에 있었습니다. 풀을 역할별로 분리하고 배치를 청크로 쪼개 처리 시간을 40분으로 줄였습니다. 중간에 인덱스를 성급히 추가했다가 쓰기 성능이 20% 떨어져 되돌린 뒤로는, 개선 전후를 반드시 지표로 비교하고 반영하는 습관이 생겼습니다. 카카오처럼 수천만 명이 동시에 쓰는 서비스에서는 1%의 지연도 수십만 명의 경험이 됩니다. 추측이 아니라 측정으로 구조를 바로잡는 백엔드로 기여하고 싶습니다.',
+        },
+      ],
+      citations: { citedLogIds: ['demo-log-intern'] },
+      createdAt: d(-1) + 'T04:12:40Z',
+    },
+  ],
+}
+
 // ── 스텝 체크리스트 (1차 기술면접 등 일부만) ─────────────────
 export const DEMO_CHECKLISTS: Record<string, ChecklistItem[]> = {
   'demo-a1-s2': [
@@ -894,6 +938,12 @@ const IQ_KAKAO: InterviewPrepQuestion[] = [
     must: true,
     answer:
       '안녕하십니까. 문제의 원인을 감이 아니라 측정으로 좁혀 구조를 바로잡는 백엔드 개발자입니다. 스타트업 인턴 시절 매일 새벽 4시간씩 돌던 결제 정산 배치가 영업시간을 침범하기 시작했을 때, 처음엔 서버 증설을 제안했지만 APM으로 재보니 병목은 트래픽 총량이 아니라 정산 배치와 큐 소비가 같은 커넥션 풀을 나눠 쓰는 구조에 있었습니다. 풀을 역할별로 분리하고 배치를 청크로 쪼개 처리 시간을 40분으로 줄였습니다. 캡스톤에서는 주문과 알림을 Kafka로 분리해 트래픽이 몰려도 메시지 유실 없이 처리했습니다. 카카오의 대규모 트래픽 위에서도 측정으로 병목을 좁히는 백엔드 개발자가 되겠습니다.',
+    /**
+     * 🔴 **AI 답변만 있고 내 답변이 비면 읽기 모드가 "아직 안 썼어요" 로 보인다** (2026-08-09).
+     * 실제로 준비한 사람은 AI 문장을 그대로 외우지 않고 **자기 말로 줄여 적는다** —
+     * 그 모습이 이 기능의 요점이라 데모에도 그대로 둔다.
+     */
+    memo: '첫 문장에 "측정" 넣고 시작 · 4시간 → 40분 수치는 꼭 말하기\n증설 먼저 제안했다가 APM 보고 방향 바꿨다는 흐름 유지 (솔직한 게 나음)\nKafka는 시간 남으면 — 1분 넘기지 말 것',
   }),
   iq('demo-is1', 1, 'cs_tech', '커넥션 풀을 역할별로 분리했다고 하셨는데, 풀 크기는 어떤 지표를 근거로 정하고 분리 이후 오히려 자원이 남거나 모자라는 상황은 어떻게 판단하시겠습니까?', {
     must: true,

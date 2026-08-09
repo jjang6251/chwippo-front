@@ -31,8 +31,10 @@ function resolveGet(url: string, params: Record<string, unknown>): unknown {
   m = path.match(/^\/applications\/[^/]+\/coverletter\/research$/)
   if (m) return S.DEMO_COMPANY_RESEARCH
   // 자소서 AI 채팅 이력 — 데모는 대화 없음. null 이면 ChatPanel .filter 크래시 → 빈 배열.
-  m = path.match(/^\/applications\/[^/]+\/coverletter\/messages$/)
-  if (m) return []
+  // 자소서 AI 대화 이력 — 데모는 카카오 1건만 (「AI 에게 묻기」가 뭘 해주는지 보여주기 위해).
+  // 보내기(POST /coverletter/chat)는 여전히 차단된다 — 지난 대화를 보는 것과 새로 부르는 건 다르다.
+  m = path.match(/^\/applications\/([^/]+)\/coverletter\/messages$/)
+  if (m) return S.DEMO_COVERLETTER_MESSAGES[m[1]] ?? []
   // ── 면접 준비 (카카오 1차 기술면접) ──────────────────────
   m = path.match(/^\/interview-prep-sessions$/)
   if (m) {

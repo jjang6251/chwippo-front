@@ -42,6 +42,17 @@ interface Props {
   flash?: boolean
   /** 펼친 카드 루트 ref — 부모가 적용 시 scrollIntoView 대상 등록 */
   containerRef?: (el: HTMLDivElement | null) => void
+  /**
+   * 🔴 **랜딩 미리보기 — 네트워크를 타지 않는다** (2026-08-09).
+   *
+   * 랜딩이 이 카드를 **스크린샷 대신 실물로** 렌더한다(이미지는 UI 가 바뀌면 조용히 낡고
+   * 다크에 박제된다). 그런데 참조 경험 조회가 **비로그인 방문자에게 401** 을 내고
+   * refresh 재시도까지 연쇄된다 — 면접 카드에서 실측으로 요청 30건이 나왔다.
+   *
+   * `readOnly` 로 대신하지 않는 이유: 참조 경험 칩은 `readOnly`(모바일)에서도 **보여야 한다.**
+   * 여기에 `!readOnly` 를 걸면 모바일 동작이 조용히 바뀐다. 그래서 별도 플래그를 둔다.
+   */
+  preview?: boolean
 }
 
 export function CoverletterQuestionCard({
@@ -54,6 +65,7 @@ export function CoverletterQuestionCard({
   onDelete,
   onAskAI,
   readOnly = false,
+  preview = false,
   flash = false,
   containerRef,
 }: Props) {
@@ -150,7 +162,7 @@ export function CoverletterQuestionCard({
   const fillCount = useMemo(() => countFillPlaceholders(answer), [answer])
 
   // source_refs (답변 있을 때만)
-  const { data: sourceRefs = [] } = useCoverletterSourceRefs(cl.id, hasAnswer)
+  const { data: sourceRefs = [] } = useCoverletterSourceRefs(cl.id, hasAnswer && !preview)
 
   // 접힘 모드
   if (!expanded) {
