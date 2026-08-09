@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Star } from 'lucide-react'
 import { CompanyResearchCard } from '@/components/card/CompanyResearchCard'
@@ -9,10 +10,13 @@ import { EditInterviewSessionModal } from '@/components/card/EditInterviewSessio
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useApplication } from '@/hooks/useApplications'
 import {
   useDeleteInterviewSession,
   useGenerateInterviewSession,
+  questionsKey,
+  sessionKey,
   useInterviewPrepQuestions,
   useInterviewPrepRefs,
   useInterviewPrepSession,
@@ -47,15 +51,21 @@ import type { InterviewPrepQuestion } from '@/types/interviewPrep'
 export function InterviewSessionPage() {
   const { sessionId = '' } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
-  const { data: session, isLoading: sessionLoading } = useInterviewPrepSession(
-    sessionId,
-  )
+  const qc = useQueryClient()
+  const {
+    data: session,
+    isLoading: sessionLoading,
+    isError: sessionError,
+  } = useInterviewPrepSession(sessionId)
   const applicationId = session?.applicationId ?? ''
   const { data: app } = useApplication(applicationId)
   // 사전 게이트 — 누르기 전에 직무를 받는다 (누른 뒤 실패로 알게 되지 않도록)
   const ensureJobTitle = useRequireJobTitle(applicationId)
-  const { data: questions = [], isLoading: questionsLoading } =
-    useInterviewPrepQuestions(sessionId)
+  const {
+    data: questions = [],
+    isLoading: questionsLoading,
+    isError: questionsError,
+  } = useInterviewPrepQuestions(sessionId)
   const { data: refs } = useInterviewPrepRefs(sessionId)
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('interview_prep_session')
   const quota = useMyAiQuota('interview_prep_session')
@@ -169,11 +179,29 @@ export function InterviewSessionPage() {
     if (!(await ensureAiConsent())) return
     if (!(await ensureJobTitle())) return
     try {
-      const result = await generateSession()
+      // 🔴 파괴적 의사표시를 서버에 그대로 넘긴다 — 확인창을 통과한 경로만 true
+      const result = await generateSession(isRegenerate)
       if (result.status === 'ok') {
         // v2 — 세션 생성은 **질문만** 만든다. 꼬리질문 개수는 항상 0 이라 안 쓴다
         toast.show(
           `질문 ${result.meta?.mainCount ?? 0}개 생성 — 답변은 각 질문에서 만들 수 있어요`,
+        )
+      } else if (result.code === 'REGENERATE_REQUIRED') {
+        /*
+          🔴 **서버가 화면을 정정한 상황이다.** 화면은 "질문이 없다" 고 믿고 최초 생성을
+          보냈는데, 서버가 세어 보니 있었다 — 조회가 실패했다는 뜻이다. 이때 필요한 건
+          "실패했어요" 가 아니라 **답변이 무사하다는 사실**과 새로고침이다.
+          여기서 재생성을 권하면 이 가드를 만든 이유가 없어진다.
+        */
+        /*
+          🔴 사용자에게 새로고침을 시킬 이유가 없다 — **서버가 방금 「있다」고 알려줬으니**
+          그대로 다시 가져오면 화면이 스스로 회복한다. 저위험 동작은 확인 없이 실행한다는
+          AI UX 원칙과도 같은 결이다.
+        */
+        qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+        qc.invalidateQueries({ queryKey: sessionKey(sessionId) })
+        toast.error(
+          '이미 만들어 둔 질문이 있어요 — 작성한 답변은 그대로 있어요. 다시 불러올게요.',
         )
       } else {
         toast.error(result.reason ?? '생성에 실패했어요.')
@@ -190,10 +218,53 @@ export function InterviewSessionPage() {
     }
   }
 
-  if (sessionLoading || !session) {
+  if (sessionLoading) {
     return (
       <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
         <div className="h-32 bg-surface-2 border border-line rounded-xl animate-pulse" />
+      </div>
+    )
+  }
+
+  /**
+   * 🔴 **로딩과 실패를 갈라야 한다** (2026-08-09).
+   *
+   * 예전엔 `if (sessionLoading || !session)` 한 줄이 둘 다 삼켰다. 조회가 **실패하면**
+   * `isLoading=false` · `data=undefined` 가 되는데, 그러면 이 조건이 다시 참이라
+   * **로딩이 끝났는데도 로딩 화면**으로 돌아간다. 상태가 더 안 바뀌니 영원히 그대로다.
+   *
+   * 삭제된 세션 링크(404) · 남의 세션(403) · 네트워크 끊김 · 배포 중 500 에서 걸리고,
+   * 화면엔 빠져나갈 길이 없어 새로고침만 반복하게 된다. `main.tsx` 가 기본
+   * `new QueryClient()` 라 **재시도 3회**를 이미 쓴 뒤다 — 더 기다려도 안 바뀐다.
+   */
+  if (!session) {
+    return (
+      <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
+        <div className="border border-line bg-surface-2 rounded-xl px-5 py-10 text-center">
+          <p className="text-text-primary text-sm font-semibold mb-1.5">
+            면접 준비를 불러오지 못했어요
+          </p>
+          <p className="text-text-tertiary text-xs leading-relaxed mb-5">
+            {sessionError
+              ? '삭제됐거나 접근할 수 없는 세션일 수 있어요.'
+              : '잠시 후 다시 시도해 주세요.'}
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg min-h-[44px] text-xs font-medium text-text-secondary border border-line hover:border-line-strong px-4 py-3 rounded-lg transition-colors"
+            >
+              다시 시도
+            </button>
+            {/* 막다른 길을 만들지 않는다 — 어디로든 나갈 문이 화면에 있어야 한다 */}
+            <button
+              onClick={() => navigate('/interviews')}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg min-h-[44px] text-xs font-semibold text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-4 py-3 rounded-lg transition-colors"
+            >
+              면접 준비 목록으로
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -505,6 +576,36 @@ export function InterviewSessionPage() {
                   />
                 ))}
               </div>
+            ) : questionsError ? (
+              /*
+                🔴 **실패를 빈 상태로 보여주면 데이터가 날아간다** (2026-08-09).
+
+                훅이 `data = []` 로 떨어져서, 질문 20개짜리 세션이 조회 한 번 실패했다고
+                **"아직 질문이 없어요" + [✨ AI 질문 생성]** 으로 보였다. 그리고 그 버튼은
+                `handleGenerate(false)` — **재생성이 아니라 최초 생성으로 취급**되므로
+                `기존 질문과 메모가 모두 삭제됩니다` 확인창도 **안 뜬다.**
+                서버는 `interview-prep-ai.service.ts:726` 에서
+                `em.delete(InterviewPrepQuestion, { sessionId })` 로 전부 지우고 새로 만든다.
+
+                즉 **한 번의 조회 실패 → 한 번의 클릭 → 사용자가 쓴 답변 전량 소실 + 코인 차감.**
+                에러를 빈 상태로 착각시키는 건 그냥 못 보는 것보다 나쁘다.
+              */
+              <div className="border border-line bg-surface-2 rounded-xl px-6 py-10 text-center">
+                <p className="text-text-primary text-sm font-semibold mb-1.5">
+                  질문을 불러오지 못했어요
+                </p>
+                <p className="text-text-quaternary text-xs leading-relaxed mb-5">
+                  질문이 없는 게 아니라 <b className="font-semibold">불러오기가 실패</b>한 거예요.
+                  <br />
+                  새로 만들지 말고 다시 시도해 주세요.
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg min-h-[44px] text-xs font-semibold text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-4 py-3 rounded-lg transition-colors"
+                >
+                  다시 시도
+                </button>
+              </div>
             ) : session?.generationStatus === 'failed' &&
               questions.length === 0 ? (
               /*
@@ -592,10 +693,15 @@ export function InterviewSessionPage() {
                     <AiQuotaChip feature="interview_prep_session" />
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
+                    {/*
+                      🔴 **좁은 화면에선 감춘다** (2026-08-09). 모바일 목록은 이제 한 줄
+                      요약이라 접을 게 없다 — 눌러도 아무 일이 안 일어나는 **거짓 어포던스**가
+                      된다. 카드가 실제로 펼쳐지는 건 넓은 화면뿐이다.
+                    */}
                     <button
                       type="button"
                       onClick={toggleAll}
-                      className="text-xs text-text-tertiary hover:text-text-primary transition-colors inline-flex items-center gap-1"
+                      className="hidden sm:inline-flex text-xs text-text-tertiary hover:text-text-primary transition-colors items-center gap-1"
                     >
                       <CollapsibleChevron open={!allCollapsed} />
                       {allCollapsed ? '전체 펼치기' : '전체 닫기'}
@@ -783,14 +889,128 @@ function CategoryFilterAndList({
 
   const totalCats = catCounts.size
 
+  /**
+   * 🔴 **모바일은 「목록 ↔ 집중」 두 화면으로 나눈다** (2026-08-09 CEO).
+   *
+   * 390px 에서 카드를 세로로 쌓으면 문항 하나가 화면을 넘긴다. 그래서 평소엔
+   * **한 줄 요약**으로 20문항을 한 화면에 담고, 준비할 문항을 누르면 그것만 전체 화면으로 연다.
+   * 넓은 화면은 원래대로 카드 목록이다 — 폭이 있어서 나눌 이유가 없다.
+   *
+   * 꼬리질문은 **순서에 넣지 않고 그 문항 아래에 그대로 둔다** (기본 접힘).
+   * 순서에 넣으면 재귀 구조를 평탄한 배열로 바꿔야 하는데, 그러면 "이 꼬리가 누구의 꼬리인지"
+   * 를 라벨로만 설명하게 된다. 아래 두는 편이 관계가 눈에 보인다.
+   */
+  const narrow = useMediaQuery('(max-width: 639px)')
+  const [focusIdx, setFocusIdx] = useState<number | null>(null)
+
+  // 필터를 바꾸면 인덱스가 다른 문항을 가리킨다 — 목록으로 되돌린다
+  const [seenLen, setSeenLen] = useState(filtered.length)
+  if (seenLen !== filtered.length) {
+    setSeenLen(filtered.length)
+    setFocusIdx(null)
+  }
+
+  const focused = focusIdx !== null ? filtered[focusIdx] : undefined
+
+  /**
+   * 🔴 **문항을 넘기면 맨 위로 올린다** (2026-08-09). 「다음 질문」 버튼은 카드 **하단**에 있어
+   * 누르는 순간 스크롤이 페이지 아래쪽이다. 카드가 remount 돼도 스크롤은 그대로라
+   * **다음 질문의 첫 줄이 아니라 중간부터** 보인다 — 꼬리질문이 있으면 확실히 어긋난다.
+   * 20문항을 넘기는 동안 매번 겪는 자리라 자동으로 맞춘다.
+   */
+  useEffect(() => {
+    if (focusIdx === null) return
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [focusIdx])
+
+  if (narrow && focused) {
+    const answered = filtered.filter(({ q }) => (q.myMemo ?? '').trim()).length
+    return (
+      <div className="space-y-3">
+        {/* 상단 — 어디쯤인지와 나갈 문 */}
+        <div className="rounded-xl border border-line bg-surface-2 px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              type="button"
+              onClick={() => setFocusIdx(null)}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg min-h-[44px] -ml-1 inline-flex items-center gap-1 pl-1 pr-3 text-xs font-medium text-text-secondary"
+            >
+              <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
+              목록
+            </button>
+            <span className="text-[13px] font-mono font-semibold tabular-nums">
+              {focusIdx! + 1}
+              <span className="text-text-quaternary"> / {filtered.length}</span>
+            </span>
+            <span className="text-[11px] text-text-quaternary">· 답변 {answered}개</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-brand transition-all duration-300"
+              style={{ width: `${((focusIdx! + 1) / filtered.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/*
+          카드를 그대로 쓴다 — 꼬리질문·AI 답변·자동저장이 전부 이미 여기 있다.
+          `key` 를 문항 id 로 두는 이유: 문항을 넘기면 카드가 새로 마운트돼
+          **가림 상태가 다시 걸린다.** 그게 연습이다.
+        */}
+        <InterviewQuestionCard
+          key={focused.q.id}
+          question={focused.q}
+          questionNo={focused.no}
+          sessionId={sessionId}
+          applicationId={applicationId}
+          readOnly={readOnly}
+        />
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFocusIdx((i) => Math.max(0, (i ?? 0) - 1))}
+            disabled={focusIdx === 0}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg min-h-[44px] flex-1 text-[13px] font-medium text-text-secondary border border-line rounded-lg py-3 disabled:opacity-35 disabled:cursor-not-allowed"
+          >
+            ← 이전
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setFocusIdx((i) => Math.min(filtered.length - 1, (i ?? 0) + 1))
+            }
+            disabled={focusIdx === filtered.length - 1}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg min-h-[44px] flex-[2] text-[13px] font-semibold rounded-lg py-3 bg-brand text-bg disabled:opacity-35 disabled:cursor-not-allowed"
+          >
+            다음 질문 →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+
   return (
     <div className="space-y-3">
       {totalCats > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        /*
+          🔴 **모바일은 가로 스크롤 한 줄** (2026-08-09 CEO).
+
+          실측: 세션에 흔한 칩 12개가 390px 에서 **4줄 · 약 122px** 를 먹었다 — 질문이
+          나오기 전에 화면 1/6 이다. PC(1028px)에선 한 줄에 들어가 문제가 안 보였다.
+          **같은 요소가 폭에 따라 성격이 달라진 경우**다.
+
+          칩을 없애지 않고 눕힌다 — 모바일에서 카테고리 필터를 쓰는지 **관측한 적이 없어서**
+          (실사용자 3명 전원 PC) 기능을 지우는 결정은 근거가 없다. 안 쓰는 게 확인되면
+          그때 빼면 된다. `전체`·`우선` 은 맨 앞이라 스크롤 없이 잡힌다.
+        */
+        <div className="relative">
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible sm:pb-0">
           <button
             type="button"
             onClick={() => setSelectedCat(null)}
-            className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+            className={`shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border transition-colors ${
               selectedCat === null
                 ? 'bg-brand text-text-primary border-brand'
                 : 'bg-card hover:bg-card-strong border-line text-text-secondary hover:text-text-primary'
@@ -808,7 +1028,7 @@ function CategoryFilterAndList({
               onClick={() => setOnlyMust((v) => !v)}
               aria-pressed={onlyMust}
               title="이 면접에서 나올 확률이 높은 질문만 봅니다"
-              className={`text-[11px] px-2 py-1 rounded-full border transition-colors inline-flex items-center gap-1 ${
+              className={`shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border transition-colors inline-flex items-center gap-1 ${
                 onlyMust
                   ? 'bg-accent text-white border-accent'
                   : 'bg-accent/10 text-accent border-accent/25 hover:bg-accent/15'
@@ -836,7 +1056,7 @@ function CategoryFilterAndList({
                   "필터의 파랑" 과 "카드의 파랑" 이 따로 놀아 색이 묶음 역할을 못 한다.
                   활성은 대비를 위해 채도를 올린다.
                 */
-                className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                className={`shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border transition-colors ${
                   isActive
                     ? 'bg-brand text-text-primary border-brand font-medium'
                     : `${CATEGORY_STYLE[cat] ?? CATEGORY_STYLE_FALLBACK} hover:brightness-110`
@@ -846,12 +1066,100 @@ function CategoryFilterAndList({
               </button>
             )
           })}
+          </div>
+          {/*
+            우측 페이드 — **더 있다는 신호.** 없으면 스크롤 되는 줄 모르고, 오른쪽 칩은
+            존재 자체가 안 알려진다. 넓은 화면은 줄바꿈이라 필요 없다.
+          */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-bg to-transparent sm:hidden"
+          />
         </div>
       )}
       {filtered.length === 0 ? (
         <p className="text-text-quaternary text-xs text-center py-4">
           이 카테고리에 질문이 없어요.
         </p>
+      ) : narrow ? (
+        /*
+          🔴 **모바일 목록은 한 줄이다.** 카드를 그대로 쌓으면 문항 하나가 화면을 넘겨서
+          "어디까지 했나" 를 보려면 한참 스크롤해야 했다. 여기서 필요한 정보는 세 개뿐이다 —
+          **몇 번인지 · 답을 썼는지 · 꼬리가 몇 개인지.** 나머지는 눌러서 본다.
+        */
+        <ul className="space-y-1.5">
+          {filtered.map(({ q, no }, i) => {
+            const done = (q.myMemo ?? '').trim().length > 0
+            const kids =
+              q.children.length +
+              q.children.reduce((m, c) => m + c.children.length, 0)
+            /* 🔴 분모가 손자(재꼬리)까지 세므로 분자도 같은 범위로 — 안 맞추면 재꼬리에 답해도 안 오른다 */
+            const kidsDone =
+              q.children.filter((c) => (c.myMemo ?? '').trim()).length +
+              q.children.reduce(
+                (m, c) =>
+                  m + c.children.filter((g) => (g.myMemo ?? '').trim()).length,
+                0,
+              )
+            return (
+              <li key={q.id}>
+                <button
+                  type="button"
+                  onClick={() => setFocusIdx(i)}
+                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg w-full min-h-[52px] text-left border border-line-strong bg-card-solid shadow-sm rounded-lg px-3 py-3 flex items-start gap-2.5 active:bg-card-hover transition-colors"
+                >
+                  <span className="shrink-0 w-5 mt-0.5 text-text-tertiary text-[11px] font-mono font-semibold tabular-nums">
+                    {no}.
+                  </span>
+                  {/* 작성 여부를 색 점 하나로 — 목록을 훑는 눈이 제일 먼저 잡는 신호다 */}
+                  <span
+                    aria-hidden="true"
+                    className={`shrink-0 mt-1.5 w-2 h-2 rounded-full ${done ? 'bg-brand' : 'bg-surface-3'}`}
+                  />
+                  <span
+                    /*
+                      🔴 **2줄까지 보여준다** (2026-08-09). 1줄(약 13자)로는 질문이 구분되지
+                      않았다 — 실측상 질문 56개의 **최소 길이가 44자**이고 「커넥션 풀을…」
+                      「커넥션 획득…」처럼 앞머리가 겹치는 게 흔하다. 목록의 일은
+                      **어느 질문인지 알아보는 것**인데 그게 안 되면 결국 하나씩 열어보게 된다.
+                      모든 질문이 26자를 넘으므로 행 높이는 **전부 2줄로 균일**하다.
+                    */
+                    className={`flex-1 min-w-0 line-clamp-2 text-[14px] font-medium leading-snug ${
+                      done ? 'text-text-primary' : 'text-text-secondary'
+                    }`}
+                  >
+                    {q.questionText}
+                  </span>
+                  {q.mustPrepare && (
+                    <Star
+                      size={12}
+                      strokeWidth={2.5}
+                      aria-label="우선 준비"
+                      className="shrink-0 mt-0.5 text-accent fill-accent"
+                    />
+                  )}
+                  {/*
+                    🔴 **320px 에선 「꼬리」 두 글자를 뗀다.** 이 표시가 58px 를 먹는데,
+                    320px 행에서 질문에 남는 폭이 178 → 120px 로 줄어 2줄 합쳐 16자밖에 안 된다.
+                    목록의 일은 **어느 질문인지 아는 것**이라 그쪽이 우선이다 —
+                    분자/분모 숫자만 남겨도 무엇을 세는지는 위치와 아이콘으로 읽힌다.
+                  */}
+                  {kids > 0 && (
+                    <span
+                      className="shrink-0 mt-0.5 text-[11px] text-text-quaternary tabular-nums"
+                      title={`꼬리질문 ${kids}개 중 ${kidsDone}개 작성`}
+                    >
+                      <span className="max-[359px]:hidden">꼬리 </span>
+                      {kidsDone}/{kids}
+                    </span>
+                  )}
+                  <span className="sr-only">{done ? '답변 작성함' : '미작성'}</span>
+                  <CollapsibleChevron open={false} />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
       ) : (
         <div className="space-y-3">
           {filtered.map(({ q, no }) => (

@@ -4,6 +4,7 @@ import { interviewPrepApi } from '@/api/interviewPrep'
 import type {
   CreateFollowupDto,
   CreateSessionDto,
+  InterviewPrepQuestion,
   UpdateQuestionDto,
   UpdateSessionDto,
 } from '@/types/interviewPrep'
@@ -17,14 +18,20 @@ import type {
  * - questions tree: `['interview-prep-questions', sessionId]`
  *
  * 일괄 생성 / 꼬리질문 mutation 후 questions tree 만 invalidate (sessions list 영향 X).
- * my_memo autosave 는 mutation 만, query invalidate 안 함 (debounce 후 자동 호출, 트리 갱신 불필요).
+ * my_memo autosave 는 invalidate 대신 **setQueryData 로 해당 노드만 패치**한다
+ * (2026-08-09 — 카드가 remount 되는 모바일 집중 화면에서 캐시가 낡으면 답변이 빈 칸으로 돌아온다).
  */
 
 const sessionListKey = (applicationId: string) =>
   ['interview-prep-sessions', applicationId] as const
-const sessionKey = (sessionId: string) =>
+/**
+ * 🔴 **키는 여기서만 만든다.** 화면에서 배열 리터럴을 복붙하면 오타가 나도
+ * `invalidateQueries` 는 **에러 없이 아무것도 안 한다** — 조용히 실패하는 종류라
+ * 테스트에도 안 걸린다 (실제로 한 번 그랬다).
+ */
+export const sessionKey = (sessionId: string) =>
   ['interview-prep-session', sessionId] as const
-const questionsKey = (sessionId: string) =>
+export const questionsKey = (sessionId: string) =>
   ['interview-prep-questions', sessionId] as const
 
 export function useInterviewPrepSessions(applicationId: string, enabled = true) {
@@ -158,7 +165,8 @@ export function useDeleteInterviewSession(
 export function useGenerateInterviewSession(sessionId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => interviewPrepApi.generate(sessionId),
+    mutationFn: (regenerate: boolean = false) =>
+      interviewPrepApi.generate(sessionId, regenerate),
     onSuccess: (result) => {
       if (result.status === 'ok') {
         qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
@@ -202,10 +210,38 @@ export function useRefetchQuestionsOnGenerationEnd(
 }
 
 /** my_memo autosave — invalidate 없음 (트리 구조 안 바뀜) */
-export function useUpdateInterviewQuestion() {
+/**
+ * 질문 1개 수정 (자동 저장되는 `내 답변` 이 유일한 사용처).
+ *
+ * 🔴 **저장 결과를 캐시에 반영한다** (2026-08-09). 예전엔 아무것도 안 했다 —
+ * 카드가 화면에 계속 살아 있어서 자기 `useState` 가 진실이었고 트리를 갱신할 이유가 없었다.
+ *
+ * 모바일 집중 화면이 그 전제를 깼다. 문항을 넘길 때마다 카드가 `key` 로 **remount** 되는데,
+ * 카드의 초기값은 `useState(question.myMemo ?? '')` — 즉 **캐시**다. 캐시가 낡아 있으면
+ * 방금 저장한 답이 **빈 칸으로 돌아온다.** 목록의 완료 점과 `답변 N개` 도 같은 이유로 안 올랐다.
+ *
+ * `invalidate` 가 아니라 `setQueryData` 인 이유 — 재조회는 낭비이고, 1.5초 debounce 로
+ * 계속 저장되는 칸이라 **입력 중 서버 응답이 덮어쓰는 경합**을 부른다. 바뀐 노드만 집어 고친다.
+ */
+export function useUpdateInterviewQuestion(sessionId?: string) {
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: (params: { questionId: string; dto: UpdateQuestionDto }) =>
       interviewPrepApi.updateQuestion(params.questionId, params.dto),
+    onSuccess: (updated, params) => {
+      if (!sessionId) return
+      const patch = (list: InterviewPrepQuestion[]): InterviewPrepQuestion[] =>
+        list.map((q) =>
+          q.id === params.questionId
+            ? { ...q, myMemo: updated?.myMemo ?? params.dto.myMemo ?? q.myMemo }
+            : q.children.length
+              ? { ...q, children: patch(q.children) }
+              : q,
+        )
+      qc.setQueryData<InterviewPrepQuestion[]>(questionsKey(sessionId), (old) =>
+        old ? patch(old) : old,
+      )
+    },
   })
 }
 
