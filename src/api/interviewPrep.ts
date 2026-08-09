@@ -65,11 +65,18 @@ export const interviewPrepApi = {
       )
       .then(unwrap),
 
-  /** AI 일괄 생성 (Hybrid main 5~8 + 각 main 의 꼬리 1~2) */
-  generate: (sessionId: string) =>
+  /**
+   * AI 일괄 생성 (메인 20개).
+   *
+   * 🔴 `regenerate` 는 **파괴적 의사표시**다. 생성은 기존 질문과 사용자가 쓴 답변을
+   * 전부 지우므로, 이미 질문이 있는 세션은 이 값 없이는 서버가 거절한다
+   * (`code: 'REGENERATE_REQUIRED'`).
+   */
+  generate: (sessionId: string, regenerate = false) =>
     apiClient
       .post<{ data: GenerateSessionResult }>(
         `/interview-prep-sessions/${sessionId}/generate`,
+        { regenerate },
       )
       .then(unwrap),
 

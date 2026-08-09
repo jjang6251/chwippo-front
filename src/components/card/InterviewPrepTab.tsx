@@ -16,7 +16,7 @@ import { Modal } from '@/components/common/Modal'
  *
  * **흐름**:
  * - 세션 목록 (createdAt DESC) — 없으면 빈 상태 + 첫 세션 만들기 CTA
- * - 세션 카드 클릭 → InterviewSessionDetail (인라인 펼침 또는 전체 화면 modal)
+ * - 세션 카드 클릭 → /interviews/:sessionId (InterviewSessionPage)
  * - 새 세션 → NewInterviewSessionModal (자소서·로그 선택)
  */
 export function InterviewPrepTab({
