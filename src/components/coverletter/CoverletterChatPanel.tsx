@@ -796,7 +796,13 @@ function EmptyState() {
 }
 
 // ── 메시지 bubble + suggestedUpdates inline ──
-function MessageBubble({
+/**
+ * 🔴 **랜딩이 이 컴포넌트를 그대로 쓴다** (2026-08-09). 예전엔 랜딩에 자소서 AI **스크린샷**을
+ * 깔았는데, 대화 UI 가 바뀌는 순간 랜딩이 조용히 낡았다. 이 컴포넌트는 **props 만 받고
+ * query 훅이 없어서**(패널 본체와 달리) 랜딩에서 안전하게 렌더된다.
+ * 여기 시그니처를 바꾸면 `Landing.tsx` 도 같이 고쳐야 한다.
+ */
+export function MessageBubble({
   message,
   clMap,
   appliedUpdateKeys,

@@ -256,7 +256,7 @@ export function InterviewSessionPage() {
               <button
                 onClick={handleDelete}
                 className="text-xs text-text-tertiary hover:text-danger border border-line hover:border-danger/40 bg-surface-2 px-3 py-1.5 rounded-md transition-colors"
-                title="세션 삭제 (질문·메모 모두 삭제, 회사 조사 캐시는 보존)"
+                title="세션 삭제 (질문·답변 모두 삭제, 회사 조사 캐시는 보존)"
               >
                 🗑️ 삭제
               </button>

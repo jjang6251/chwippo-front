@@ -16,8 +16,10 @@ import { CoverletterQuestionCard } from './CoverletterQuestionCard'
 import type { ApplicationCoverletter } from '@/types/coverletter'
 
 vi.mock('@/hooks/useAiEnabled', () => ({ useAiEnabled: () => false }))
+import { useCoverletterSourceRefs } from '@/hooks/useCoverletterSourceRefs'
+
 vi.mock('@/hooks/useCoverletterSourceRefs', () => ({
-  useCoverletterSourceRefs: () => ({ data: [] }),
+  useCoverletterSourceRefs: vi.fn(() => ({ data: [] })),
 }))
 vi.mock('@/hooks/useAutoResize', () => ({
   useAutoResize: () => ({ ref: { current: null }, autoResize: vi.fn() }),
@@ -38,6 +40,27 @@ const makeCl = (over: Partial<ApplicationCoverletter> = {}): ApplicationCoverlet
   }) as ApplicationCoverletter
 
 const ANSWER_PLACEHOLDER = /여기에 답변을 작성하세요/
+
+function renderReadOnly(
+  cl: ApplicationCoverletter,
+  readOnly = true,
+  opts: { preview?: boolean } = {},
+) {
+  return render(
+    <CoverletterQuestionCard
+      cl={cl}
+      number={1}
+      applicationId="app-1"
+      expanded
+      onToggle={vi.fn()}
+      onUpdate={vi.fn()}
+      onDelete={vi.fn()}
+      onAskAI={vi.fn()}
+      readOnly={readOnly}
+      preview={opts.preview}
+    />,
+  )
+}
 
 function renderCard(cl: ApplicationCoverletter, onUpdate = vi.fn()) {
   const props = {
@@ -125,21 +148,6 @@ describe('CoverletterQuestionCard — placeholder 잔존 경고', () => {
 })
 
 describe('CoverletterQuestionCard — 보기 전용(readOnly)', () => {
-  function renderReadOnly(cl: ApplicationCoverletter, readOnly = true) {
-    return render(
-      <CoverletterQuestionCard
-        cl={cl}
-        number={1}
-        applicationId="app-1"
-        expanded
-        onToggle={vi.fn()}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-        onAskAI={vi.fn()}
-        readOnly={readOnly}
-      />,
-    )
-  }
 
   it('1) readOnly 펼침 → 질문·답변 텍스트 표시 + textarea/삭제 버튼 부재', () => {
     renderReadOnly(makeCl())
@@ -167,5 +175,37 @@ describe('CoverletterQuestionCard — 보기 전용(readOnly)', () => {
     expect(screen.getByPlaceholderText(ANSWER_PLACEHOLDER)).toBeInTheDocument()
     expect(screen.getByText('삭제')).toBeInTheDocument()
     expect(screen.getByText(/자소서 검사/)).toBeInTheDocument()
+  })
+})
+
+/**
+ * 🔴 **`preview` — 랜딩 미리보기는 네트워크를 타지 않는다** (2026-08-09).
+ *
+ * 랜딩이 이 카드를 **실물로** 렌더하는데, 참조 경험 조회가 비로그인 방문자에게 401 을 낸다.
+ *
+ * 🔴 `readOnly` 로 대신하지 않은 이유가 이 spec 의 요점이다 — **참조 경험 칩은
+ * `readOnly`(모바일)에서도 보여야 한다.** 거기에 게이트를 걸면 모바일 동작이 조용히 바뀐다.
+ * 그래서 별도 플래그를 뒀고, **`readOnly` 만으로는 안 꺼지는 것**까지 확인한다.
+ */
+describe('CoverletterQuestionCard — preview 네트워크 차단', () => {
+  const refsMock = vi.mocked(useCoverletterSourceRefs)
+  const withAnswer = () => makeCl({ answer: '작성한 답변입니다.' })
+
+  beforeEach(() => refsMock.mockClear())
+
+  it('🔴 preview → 참조 경험 조회를 끈다', () => {
+    renderReadOnly(withAnswer(), false, { preview: true })
+    for (const call of refsMock.mock.calls) expect(call[1]).toBe(false)
+    expect(refsMock.mock.calls.length).toBeGreaterThan(0)
+  })
+
+  it('🔴 readOnly 만으로는 안 꺼진다 (모바일에서 칩이 보여야 한다)', () => {
+    renderReadOnly(withAnswer(), true)
+    expect(refsMock.mock.calls.some((c: unknown[]) => c[1] === true)).toBe(true)
+  })
+
+  it('답변이 없으면 원래도 안 부른다 (기존 조건 유지)', () => {
+    renderReadOnly(makeCl({ answer: null }), false)
+    for (const call of refsMock.mock.calls) expect(call[1]).toBe(false)
   })
 })

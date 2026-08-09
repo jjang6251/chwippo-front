@@ -48,6 +48,15 @@ interface Props {
    * **내 답변**을 앞세운다.
    */
   readOnly?: boolean
+  /**
+   * 🔴 **AI 답변을 펼친 채로 시작한다** (2026-08-09). 랜딩이 이 카드를 실물로 렌더하는데,
+   * 읽기 모드는 **내 답변이 있으면 AI 답변을 접는다**(면접 직전엔 내가 쓴 답이 우선).
+   * 그 판단은 제품에선 맞지만, **랜딩 방문자는 AI 가 무엇을 써주는지 봐야 한다.**
+   *
+   * 제품 규칙을 바꾸지 않고 예외를 명시적으로 연다. 기본 `false` — 기존 동작 무변경.
+   * 자식(꼬리질문)에게도 그대로 내려간다.
+   */
+  forceAnswerOpen?: boolean
 }
 
 /**
@@ -74,6 +83,7 @@ export function InterviewQuestionCard({
   collapseSignal = 0,
   collapseAll = false,
   readOnly = false,
+  forceAnswerOpen = false,
 }: Props) {
   const ensureJobTitle = useRequireJobTitle(applicationId)
   const [memo, setMemo] = useState(question.myMemo ?? '')
@@ -96,7 +106,7 @@ export function InterviewQuestionCard({
   const [answerOpen, setAnswerOpen] = useState(
     // 읽기 모드에서 외워야 할 건 **내가 쓴 답**이다. 메모가 있으면 AI 답변은 접고 시작한다
     // (참고 자료라 필요하면 펼친다). 메모가 없으면 볼 게 그것뿐이라 펼친다.
-    readOnly ? !(question.myMemo ?? '').trim() : true,
+    forceAnswerOpen || (readOnly ? !(question.myMemo ?? '').trim() : true),
   )
   const speakSec = useMemo(() => estimateSpeakingSeconds(memo), [memo])
   /**
@@ -127,7 +137,7 @@ export function InterviewQuestionCard({
   const { mutate: createFollowup, isPending: creatingFollowup } =
     useCreateInterviewFollowup(sessionId)
   const { blocked: followupBlocked, reason: followupReason } =
-    useAiQuotaBlocked('interview_prep_followup')
+    useAiQuotaBlocked('interview_prep_followup', { enabled: !readOnly })
 
   /**
    * v2 — 답변 on-demand 생성.
@@ -140,7 +150,7 @@ export function InterviewQuestionCard({
   const { mutate: generateAnswer, isPending: generatingAnswer } =
     useGenerateInterviewAnswer(sessionId)
   const { blocked: answerBlocked, reason: answerReason } =
-    useAiQuotaBlocked('interview_prep_answer')
+    useAiQuotaBlocked('interview_prep_answer', { enabled: !readOnly })
   const ensureAiConsent = useRequireAiConsent()
   // 생성 중 새로고침 = 코인만 차감되고 결과 유실
   // 생성 중 새로고침 = 코인만 차감되고 결과 유실. 꼬리질문도 같은 AI 호출이다
@@ -240,7 +250,7 @@ export function InterviewQuestionCard({
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
         aria-label={
-          expanded ? '질문 답변·메모 접기' : '질문 답변·메모 펼치기'
+          expanded ? '질문·답변 접기' : '질문·답변 펼치기'
         }
         className="w-full text-left flex items-start gap-2"
       >
@@ -347,7 +357,7 @@ export function InterviewQuestionCard({
           {/*
             v2 — 답변은 세션 생성 시 만들어지지 않는다. 4상태:
             ① 생성 중  ② 답변 있음(+다시 생성)  ③ 실패(+다시 시도)  ④ 없음(AI 도움 버튼)
-            주인공은 아래 "내 답변 메모" 다 — 여기는 막혔을 때 꺼내 쓰는 보조 도구라
+            주인공은 아래 "내 답변" 다 — 여기는 막혔을 때 꺼내 쓰는 보조 도구라
             brand 색을 쓰되 크기·비중을 낮춘다.
           */}
           {/*
@@ -381,7 +391,7 @@ export function InterviewQuestionCard({
             <div className="bg-surface border border-line rounded-lg p-3">
               {/*
                 🔴 AI 답변은 길다 (보통 5~10줄). 20문항이 다 펼쳐져 있으면 화면이
-                끝없이 늘어나 정작 **주인공인 "내 답변 메모"** 가 스크롤 밖으로 밀린다.
+                끝없이 늘어나 정작 **주인공인 "내 답변"** 가 스크롤 밖으로 밀린다.
                 답변은 한 번 읽고 참고하는 자료라 접어두는 게 기본 흐름에 맞다.
                 단 **처음 만든 직후엔 펼쳐** 둔다 — 눌렀는데 아무것도 안 보이면 실패로 읽힌다.
               */}
@@ -449,7 +459,7 @@ export function InterviewQuestionCard({
                       </p>
                     </div>
                   )}
-                  {/* AI 답변에도 같은 기준을 붙여 "내 메모가 긴가" 를 비교할 수 있게 한다 */}
+                  {/* AI 답변에도 같은 기준을 붙여 "내 답변이 긴가" 를 비교할 수 있게 한다 */}
                   {/* 내 메모 칩과 같은 형태 — 나란히 두고 길이를 비교하는 게 목적이다 */}
                   <p className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-info/8 border-info/20">
                     <Clock
@@ -514,7 +524,14 @@ export function InterviewQuestionCard({
                   : 'text-text-tertiary text-xs font-semibold'
               }`}
             >
-              {readOnly ? '내 답변' : '내 답변 메모 (자동 저장)'}
+              {/*
+                🔴 **"메모" 가 아니라 "답변" 이다** (2026-08-09 CEO). 여기서 사용자가 하는 일은
+                면접에서 말할 답을 **직접 써 보는 것**이다 — 플레이스홀더도 이미
+                `"이 질문에 본인이 어떻게 답할지 적어보세요…"` 로 그렇게 안내하고 있었다.
+                읽기 모드는 `내 답변`, 편집 모드만 `내 답변 메모` 라 **같은 칸을 두 이름으로**
+                부르고 있었다. 필드명 `myMemo` 는 DB·API 계약이라 그대로 둔다.
+              */}
+              {readOnly ? '내 답변' : '내 답변 (자동 저장)'}
             </label>
             {/*
               길어지면 자동으로 늘어난다 — 면접 답변은 보통 5~10줄이라 3줄 고정이면
@@ -628,6 +645,7 @@ export function InterviewQuestionCard({
                   sessionId={sessionId}
                   applicationId={applicationId}
                   readOnly={readOnly}
+                  forceAnswerOpen={forceAnswerOpen}
                 />
               ))}
             </div>
@@ -644,7 +662,7 @@ export function InterviewQuestionCard({
           */}
           {/*
             **보이되 조용하게.** 테두리·배경을 주면 20문항에 20개가 깔려 시끄럽고
-            주인공인 "내 답변 메모" 보다 튄다. 반대로 hover 로 숨기면 기능이 있는 줄도
+            주인공인 "내 답변" 보다 튄다. 반대로 hover 로 숨기면 기능이 있는 줄도
             모른다 (예전 `lg:opacity-0`). 그 사이가 이 자리다 —
             평상시 text-tertiary, hover 시 brand. `min-h-8` 은 모바일 터치 타겟.
           */}
