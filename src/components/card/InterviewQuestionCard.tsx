@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Clock, CornerDownRight, Info, Sparkles, Star } from 'lucide-react'
+import { Check, Clock, CornerDownRight, Info, Sparkles, Star } from 'lucide-react'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import {
@@ -12,6 +12,7 @@ import {
   useGenerateInterviewAnswer,
   useUpdateInterviewQuestion,
 } from '@/hooks/useInterviewPrep'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { useRequireJobTitle } from '@/hooks/useRequireJobTitle'
@@ -48,6 +49,15 @@ interface Props {
    * **내 답변**을 앞세운다.
    */
   readOnly?: boolean
+  /**
+   * 🔴 **AI 답변을 펼친 채로 시작한다** (2026-08-09). 랜딩이 이 카드를 실물로 렌더하는데,
+   * 읽기 모드는 **내 답변이 있으면 AI 답변을 접는다**(면접 직전엔 내가 쓴 답이 우선).
+   * 그 판단은 제품에선 맞지만, **랜딩 방문자는 AI 가 무엇을 써주는지 봐야 한다.**
+   *
+   * 제품 규칙을 바꾸지 않고 예외를 명시적으로 연다. 기본 `false` — 기존 동작 무변경.
+   * 자식(꼬리질문)에게도 그대로 내려간다.
+   */
+  forceAnswerOpen?: boolean
 }
 
 /**
@@ -74,6 +84,7 @@ export function InterviewQuestionCard({
   collapseSignal = 0,
   collapseAll = false,
   readOnly = false,
+  forceAnswerOpen = false,
 }: Props) {
   const ensureJobTitle = useRequireJobTitle(applicationId)
   const [memo, setMemo] = useState(question.myMemo ?? '')
@@ -90,13 +101,23 @@ export function InterviewQuestionCard({
    * 펼침을 부모가 통째로 소유하지 않는 이유는, 카드가 메모 입력 중 상태를 들고 있어서다.
    */
   /**
-   * AI 답변 펼침 — **기본 펼침**이다. 답변이 있다는 건 사용자가 직접 만든 것이라
-   * 감추고 시작할 이유가 없다. 길어서 거슬릴 때 접는 용도다 (`전체 닫기` 도 같이 접는다).
+   * 🔴 **좁은 화면에서만 기본 접힘** (2026-08-09).
+   *
+   * 실측: 390px 에서 자기소개 AI 답변 335자가 **12줄 벽**이 되고, 카드 하나(메인+꼬리)가
+   * **1,260px** — 뷰포트(844px)보다 크다. 한 질문을 보려고 화면을 1.5번 넘겨야 했다.
+   * 그 아래 있는 **주인공(내 답변)** 이 매번 스크롤 밖으로 밀린다.
+   *
+   * 넓은 화면은 **기존대로 펼친다.** 672px 폭에선 같은 답변이 7줄이라 벽이 아니고,
+   * 무엇보다 답변은 사용자가 **코인을 써서 만든 것**이라 감추고 시작할 이유가 없다
+   * (그게 원래 기본 펼침이었던 근거다). 화면 크기 때문에 생긴 문제를 화면 크기로만 푼다.
+   *
+   * 접어도 사라지지 않는다 — 첫 24자가 미리보기로 남아 무슨 답인지는 보인다.
    */
+  const narrow = useMediaQuery('(max-width: 639px)')
   const [answerOpen, setAnswerOpen] = useState(
     // 읽기 모드에서 외워야 할 건 **내가 쓴 답**이다. 메모가 있으면 AI 답변은 접고 시작한다
     // (참고 자료라 필요하면 펼친다). 메모가 없으면 볼 게 그것뿐이라 펼친다.
-    readOnly ? !(question.myMemo ?? '').trim() : true,
+    forceAnswerOpen || (readOnly ? !(question.myMemo ?? '').trim() : !narrow),
   )
   const speakSec = useMemo(() => estimateSpeakingSeconds(memo), [memo])
   /**
@@ -112,8 +133,17 @@ export function InterviewQuestionCard({
   const hasAnswerToProbe =
     probeableLen(memo) >= MIN_PROBEABLE_ANSWER_CHARS ||
     probeableLen(question.suggestedAnswer ?? '') >= MIN_PROBEABLE_ANSWER_CHARS
+  /*
+    🔴 **빈 칸이 4줄을 잡고 있었다** (2026-08-10 CEO: "기본 height 가 이렇게 높았었나?").
+
+    「답변 칸이 슴슴하다」를 고치면서 76 → 132px 로 올렸는데, 이미 **내용만큼 자라는**
+    입력칸이라 올릴 필요가 없던 건 **비어 있을 때의 높이**였다. 아무것도 안 썼는데
+    3.8줄이 비어 있고, 나란히 보기에선 열이 651px 뿐이라 그 여백이 그대로 손해다.
+
+    2줄(28.8px × 2 + 상하 여백 24)로 시작해서 쓰는 만큼 늘어난다.
+  */
   const { ref: memoRef, autoResize: autoResizeMemo } = useAutoResize(memo, {
-    min: 76,
+    min: 82,
     max: 420,
   })
 
@@ -123,11 +153,11 @@ export function InterviewQuestionCard({
     setExpanded(collapseAll ? false : question.depth === 0)
     if (collapseAll) setAnswerOpen(false)
   }
-  const { mutate: updateMemo } = useUpdateInterviewQuestion()
+  const { mutate: updateMemo } = useUpdateInterviewQuestion(sessionId)
   const { mutate: createFollowup, isPending: creatingFollowup } =
     useCreateInterviewFollowup(sessionId)
   const { blocked: followupBlocked, reason: followupReason } =
-    useAiQuotaBlocked('interview_prep_followup')
+    useAiQuotaBlocked('interview_prep_followup', { enabled: !readOnly })
 
   /**
    * v2 — 답변 on-demand 생성.
@@ -140,7 +170,7 @@ export function InterviewQuestionCard({
   const { mutate: generateAnswer, isPending: generatingAnswer } =
     useGenerateInterviewAnswer(sessionId)
   const { blocked: answerBlocked, reason: answerReason } =
-    useAiQuotaBlocked('interview_prep_answer')
+    useAiQuotaBlocked('interview_prep_answer', { enabled: !readOnly })
   const ensureAiConsent = useRequireAiConsent()
   // 생성 중 새로고침 = 코인만 차감되고 결과 유실
   // 생성 중 새로고침 = 코인만 차감되고 결과 유실. 꼬리질문도 같은 AI 호출이다
@@ -177,19 +207,79 @@ export function InterviewQuestionCard({
     })
   }
 
+  /**
+   * 서버값 → 로컬 동기화. **밖에서 바뀐 값**(다른 탭·재조회·꼬리질문 생성 후 invalidate)을 받는 자리다.
+   *
+   * 🔴 **내가 보낸 값이 돌아온 건 무시한다** (2026-08-09). 저장 성공 시 questions 캐시를
+   * 패치하도록 바꾸면서 `question.myMemo` 가 **저장할 때마다** 바뀌게 됐다. 그러면 이 effect 가
+   * 돌아 로컬을 덮는데, 응답이 오는 사이에 사용자가 더 쳤으면 **그 글자가 옛 값으로 되돌아간다.**
+   * 캐시를 안 고치던 시절엔 일어날 수 없던 경합이라, 캐시 패치와 짝으로 막아야 한다.
+   */
+  const lastSent = useRef<string | null>(null)
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (question.myMemo === lastSent.current) return
     setMemo(question.myMemo ?? '')
   }, [question.id, question.myMemo])
 
+  /**
+   * 🔴 **저장 상태를 눈에 보이게** (2026-08-09). 라벨에 `(자동 저장)` 이라고 적혀 있었지만
+   * 실제로 저장됐다는 신호가 없었다. 외울 답을 쓰는 칸에서 "지금 날아가는 거 아닌가" 를
+   * 확인할 방법이 없으면 사용자는 칸을 못 믿는다. 자소서 카드는 이미 이걸 하고 있다.
+   */
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 아직 서버로 안 나간 값 — 언마운트 시 이걸 흘려보낸다 (아래 cleanup) */
+  const pending = useRef<string | null>(null)
   const handleMemoChange = (val: string) => {
     setMemo(val)
+    setSaveState('saving')
+    pending.current = val
     if (saveTimer.current) clearTimeout(saveTimer.current)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
     saveTimer.current = setTimeout(() => {
-      updateMemo({ questionId: question.id, dto: { myMemo: val } })
+      pending.current = null
+      lastSent.current = val
+      updateMemo(
+        { questionId: question.id, dto: { myMemo: val } },
+        {
+          onSuccess: () => {
+            setSaveState('saved')
+            // 계속 떠 있으면 배경처럼 읽혀 신호 역할을 못 한다 — 잠깐 보이고 물러난다
+            savedTimer.current = setTimeout(() => setSaveState('idle'), 2200)
+          },
+          // 실패는 인터셉터가 토스트로 알린다. 여기서는 `저장 중…` 만 걷는다
+          onError: () => setSaveState('idle'),
+        },
+      )
     }, 1500)
   }
+
+  /**
+   * 🔴 **떠나기 전에 흘려보낸다 (flush).** 지우기만 하면 답이 날아간다.
+   *
+   * 저장은 1.5초 debounce 다. 모바일 집중 화면은 문항마다 `key` 로 remount 되므로
+   * **타이핑하다 바로 「다음」을 누르면 그 1.5초 안에 언마운트**된다. 타이머만 지우면
+   * 그 문항 답변이 통째로 사라지는데, 화면엔 `저장 중…` 이 떠 있었으니 사용자는 저장된 줄 안다.
+   *
+   * 여기 cleanup 이 없던 시절엔 타이머가 언마운트 뒤에도 살아 있어 결과적으로 저장됐다
+   * (mutation 은 컴포넌트가 아니라 QueryClient 에 매인다). cleanup 을 넣으면서 그 우연한
+   * 안전망을 끊었으므로, **명시적으로 저장하고 나간다.**
+   *
+   * 콜백을 안 붙이는 이유 — 언마운트 뒤 `setSaveState` 는 갈 곳이 없다. 저장만 시킨다.
+   */
+  useEffect(
+    () => () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      if (savedTimer.current) clearTimeout(savedTimer.current)
+      if (pending.current !== null) {
+        lastSent.current = pending.current
+        updateMemo({ questionId: question.id, dto: { myMemo: pending.current } })
+        pending.current = null
+      }
+    },
+    [question.id, updateMemo],
+  )
 
   const handleAddFollowup = () => {
     createFollowup(
@@ -197,7 +287,7 @@ export function InterviewQuestionCard({
       {
         onSuccess: (result) => {
           if (result.status === 'ok') {
-            toast.show('꼬리질문을 추가했어요.')
+            toast.show(`${childLabel}을 추가했어요.`)
           } else {
             toast.error(result.reason ?? '생성에 실패했어요.')
           }
@@ -215,12 +305,35 @@ export function InterviewQuestionCard({
   // depth 별 컨테이너 스타일
   // - depth 0: 강한 박스 (border + bg-surface-2) — 메인 질문은 카드처럼 도드라지게
   // - depth 1·2: 좌측 connector line 만 (Linear/Twitter 패턴) — 부모 카드 안에 가볍게
+  /**
+   * 🔴 **좁은 화면에선 들여쓰기를 아예 뗀다** (2026-08-09 CEO).
+   *
+   * 재귀라 레벨마다 곱해진다 — 390px 실측에서 재꼬리 답변이 갖는 폭이 **198px** 였다
+   * (메인 298px 대비 34% 손실). 들여쓰기 26px 와 펼침 본문 `pl-6`(24px)가 레벨마다
+   * **50px 씩** 겹쳐 깎아서다.
+   *
+   * 그런데 소속은 **`꼬리`·`재꼬리` 배지가 이미 말하고 있다.** 좁은 화면에서 같은 말을
+   * 여백으로 한 번 더 하는 건 폭만 먹는다. 그래서 모바일은 **본 질문과 같은 x 위치**에 두고
+   * 관계는 배지에 맡긴다 (재꼬리 답변 폭 198 → **322px**, 메인과 동일).
+   *
+   * 넓은 화면은 좌측 connector line 을 유지한다 — 폭이 남아서 여백이 비용이 아니고,
+   * 20문항이 세로로 늘어설 땐 선이 있는 편이 계층을 빨리 읽게 한다 (Linear/Twitter 패턴).
+   */
   const isRoot = question.depth === 0
   const containerClass = isRoot
     ? 'border border-line bg-surface-2 rounded-xl p-4'
-    : `border-l-2 ${
-        question.depth === 1 ? 'border-info/40' : 'border-warning/40'
-      } pl-4 py-2 ml-2`
+    : `py-2 sm:ml-1 sm:pl-3 sm:border-l-2 ${
+        question.depth === 1 ? 'sm:border-info/40' : 'sm:border-warning/40'
+      }`
+
+  /**
+   * 🔴 **버튼 이름은 「무엇이 만들어지는가」로 짓는다** (2026-08-09 CEO).
+   *
+   * 모바일에서 들여쓰기를 떼자 메인의 버튼과 꼬리의 버튼이 **같은 x 에 같은 문구**로
+   * 나란히 놓였다 — 어느 질문에 다는 건지 구분이 안 된다. 들여쓰기가 하던 설명을
+   * 문구가 대신해야 한다. `꼬리`·`재꼬리` 는 배지가 이미 쓰는 말이라 새 어휘도 아니다.
+   */
+  const childLabel = question.depth === 0 ? '꼬리질문' : '재꼬리질문'
 
   const depthLabel: Record<number, string> = {
     0: '메인',
@@ -240,7 +353,7 @@ export function InterviewQuestionCard({
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
         aria-label={
-          expanded ? '질문 답변·메모 접기' : '질문 답변·메모 펼치기'
+          expanded ? '질문·답변 접기' : '질문·답변 펼치기'
         }
         className="w-full text-left flex items-start gap-2"
       >
@@ -342,12 +455,17 @@ export function InterviewQuestionCard({
         </span>
       </button>
 
+      {/*
+        🔴 **좁은 화면에선 이 들여쓰기를 뗀다** (2026-08-09). 24px 는 본문을 질문 텍스트
+        아래로 맞추는 정렬용인데, 재귀라 **레벨마다 또 붙는다.** 390px 에서는 그 정렬보다
+        읽을 폭이 급하다 (재꼬리 답변 198px). 넓은 화면은 정렬을 유지한다.
+      */}
       {expanded && (
-        <div className="mt-3 space-y-3 pl-6">
+        <div className="mt-3 space-y-3 pl-0 sm:pl-6">
           {/*
             v2 — 답변은 세션 생성 시 만들어지지 않는다. 4상태:
             ① 생성 중  ② 답변 있음(+다시 생성)  ③ 실패(+다시 시도)  ④ 없음(AI 도움 버튼)
-            주인공은 아래 "내 답변 메모" 다 — 여기는 막혔을 때 꺼내 쓰는 보조 도구라
+            주인공은 아래 "내 답변" 다 — 여기는 막혔을 때 꺼내 쓰는 보조 도구라
             brand 색을 쓰되 크기·비중을 낮춘다.
           */}
           {/*
@@ -381,7 +499,7 @@ export function InterviewQuestionCard({
             <div className="bg-surface border border-line rounded-lg p-3">
               {/*
                 🔴 AI 답변은 길다 (보통 5~10줄). 20문항이 다 펼쳐져 있으면 화면이
-                끝없이 늘어나 정작 **주인공인 "내 답변 메모"** 가 스크롤 밖으로 밀린다.
+                끝없이 늘어나 정작 **주인공인 "내 답변"** 가 스크롤 밖으로 밀린다.
                 답변은 한 번 읽고 참고하는 자료라 접어두는 게 기본 흐름에 맞다.
                 단 **처음 만든 직후엔 펼쳐** 둔다 — 눌렀는데 아무것도 안 보이면 실패로 읽힌다.
               */}
@@ -449,7 +567,7 @@ export function InterviewQuestionCard({
                       </p>
                     </div>
                   )}
-                  {/* AI 답변에도 같은 기준을 붙여 "내 메모가 긴가" 를 비교할 수 있게 한다 */}
+                  {/* AI 답변에도 같은 기준을 붙여 "내 답변이 긴가" 를 비교할 수 있게 한다 */}
                   {/* 내 메모 칩과 같은 형태 — 나란히 두고 길이를 비교하는 게 목적이다 */}
                   <p className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-info/8 border-info/20">
                     <Clock
@@ -505,39 +623,135 @@ export function InterviewQuestionCard({
             </div>
           )}
 
-          <div>
-            <label
-              htmlFor={`memo-${question.id}`}
-              className={`block mb-1.5 ${
-                readOnly
-                  ? 'text-text-quaternary text-[11px] font-medium'
-                  : 'text-text-tertiary text-xs font-semibold'
-              }`}
-            >
-              {readOnly ? '내 답변' : '내 답변 메모 (자동 저장)'}
-            </label>
-            {/*
-              길어지면 자동으로 늘어난다 — 면접 답변은 보통 5~10줄이라 3줄 고정이면
-              **자기가 쓴 글을 한눈에 못 본다** (베타 피드백으로 나왔던 문제).
-              상한 420px 은 카드가 화면을 다 먹지 않게 두는 선이고, 넘으면 스크롤된다.
-            */}
-            {/*
-              🔴 읽기 모드에선 **입력칸이 아니라 글**로 보여준다. 면접 직전에 필요한 건
-              고쳐 쓰는 게 아니라 외우는 것이고, textarea 는 탭하면 키보드가 올라와
-              화면 절반을 먹는다. 비어 있으면 "안 썼다" 를 조용히 넘기지 않고 말해 준다 —
-              그게 지금 준비가 덜 된 지점이다.
-            */}
-            {readOnly ? (
-              memo.trim() ? (
-                <p className="text-text-primary text-[16px] leading-[1.75] whitespace-pre-wrap">
+          {/*
+            🔴 **입력칸이 아니라 「구역」이다** (2026-08-09 CEO: "슴슴하다").
+
+            예전엔 `bg-input border-line rounded-lg` — **앱의 모든 입력칸과 같은 옷**이었다
+            (회사명·검색·설정 폼과 구분이 안 된다). 그런데 이 카드에서 사용자가 실제로
+            일하는 곳은 여기 하나고, 주변은 전부 차려입고 있었다 (AI 도움 버튼·유형 배지·
+            시간 칩). **주인공만 기본값**이라 눈이 안 갔다.
+
+            그래서 자기 배경(`card-solid`)과 라벨 바를 준다. 라벨 바에 말하기 시간을 올려
+            **쓰는 동안 차오르게** 했다 — 30자 쓸 때와 300자 쓸 때 화면이 똑같던 게
+            매력 없던 진짜 이유다.
+
+            읽기 모드는 이 구역을 쓰지 않는다 — 거기는 입력이 아니라 **문서**다.
+          */}
+          {readOnly ? (
+            <div>
+              <label
+                htmlFor={`memo-${question.id}`}
+                className="block mb-1.5 text-text-quaternary text-[11px] font-medium"
+              >
+                내 답변
+              </label>
+              {/*
+                🔴 읽기 모드에선 **입력칸이 아니라 글**로 보여준다. 면접 직전에 필요한 건
+                고쳐 쓰는 게 아니라 외우는 것이고, textarea 는 탭하면 키보드가 올라와
+                화면 절반을 먹는다. 비어 있으면 "안 썼다" 를 조용히 넘기지 않고 말해 준다 —
+                그게 지금 준비가 덜 된 지점이다.
+              */}
+              {memo.trim() ? (
+                <p className="text-text-primary text-[16px] leading-[1.75] whitespace-pre-wrap break-words">
                   {memo}
                 </p>
               ) : (
                 <p className="text-text-quaternary text-[13px] leading-relaxed">
                   아직 안 썼어요. 이 문항은 답을 준비하지 못한 상태예요.
                 </p>
-              )
-            ) : (
+              )}
+              {speakSec > 0 && (
+                <p className="mt-1.5 text-text-quaternary text-[11px]">
+                  말하면 약{' '}
+                  <span className="font-mono tabular-nums font-semibold text-info">
+                    {formatSpeakingTime(speakSec)}
+                  </span>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-line-strong bg-card-solid overflow-hidden focus-within:border-brand/50 focus-within:ring-1 focus-within:ring-brand/20 transition-colors">
+              {/* 라벨 바 — 이름 · 저장 상태 · 말하는 시간 */}
+              <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-line">
+                {/*
+                  🔴 **"메모" 가 아니라 "답변" 이다** (2026-08-09 CEO). 여기서 사용자가 하는 일은
+                  면접에서 말할 답을 **직접 써 보는 것**이다. 필드명 `myMemo` 는 DB·API 계약이라
+                  그대로 둔다.
+                */}
+                <label
+                  htmlFor={`memo-${question.id}`}
+                  className="text-[13px] font-bold text-text-primary cursor-text"
+                >
+                  내 답변
+                </label>
+                {/*
+                  저장 신호 — `(자동 저장)` 이라고 적어만 두면 정말 저장됐는지는 알 수 없다.
+                  `aria-live` 로 화면 낭독기에도 알린다 (조용히 바뀌면 안 보이는 사람에겐 없는 것).
+                */}
+                <span
+                  aria-live="polite"
+                  className="text-[11px] text-text-quaternary inline-flex items-center gap-1"
+                >
+                  {saveState === 'saving' ? (
+                    '저장 중…'
+                  ) : saveState === 'saved' ? (
+                    <>
+                      <Check size={11} strokeWidth={3} aria-hidden="true" />
+                      저장됨
+                    </>
+                  ) : (
+                    '자동 저장'
+                  )}
+                </span>
+                {/*
+                  🔴 글자수보다 **말하는 시간**이 실제 제약이다. 면접은 답변 하나에 1분 남짓인데
+                  글자수만 보면 "5000자 중 800자" 라 여유로워 보인다 — 800자는 소리 내면 2분이 넘는다.
+                  막대를 둔 이유는 **쓰는 동안 차오르는 게 보여야** 하기 때문이다.
+                */}
+                {speakSec > 0 && (
+                  <span
+                    title="또박또박 말하는 발표 속도(분당 350자) 기준 추정치예요"
+                    className="ml-auto flex items-center gap-1.5"
+                  >
+                    <span className="w-10 sm:w-14 h-1.5 rounded-full bg-surface-3 overflow-hidden">
+                      <span
+                        className={`block h-full rounded-full transition-[width] duration-200 ${
+                          speakSec > ANSWER_LONG_SECONDS ? 'bg-warning' : 'bg-info'
+                        }`}
+                        style={{
+                          width: `${Math.min(speakSec / ANSWER_LONG_SECONDS, 1) * 100}%`,
+                        }}
+                      />
+                    </span>
+                    <span
+                      className={`font-mono tabular-nums font-bold text-[12px] ${
+                        speakSec > ANSWER_LONG_SECONDS ? 'text-warning' : 'text-info'
+                      }`}
+                    >
+                      {formatSpeakingTime(speakSec)}
+                    </span>
+                    {speakSec > ANSWER_LONG_SECONDS && (
+                      <span className="hidden sm:inline text-warning text-[11px] font-medium whitespace-nowrap">
+                        조금 길어요
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+              {/*
+                길어지면 자동으로 늘어난다 — 면접 답변은 보통 5~10줄이라 3줄 고정이면
+                **자기가 쓴 글을 한눈에 못 본다** (베타 피드백). 시작 높이를 4줄로 올린 건
+                76px(2.8줄)이 "짧게 쓰라" 는 신호로 읽혔기 때문이다.
+
+                🔴 **폭 상한을 두지 않는다** (2026-08-09 CEO). 틀은 카드 폭을 다 쓰고
+                입력칸이 그 틀을 꽉 채운다 — 어디를 눌러도 커서가 들어간다.
+
+                한때 줄길이 때문에 상한을 걸었다가 두 번 되돌렸다.
+                ① 입력칸에만 걸었더니 **틀 안 오른쪽이 죽은 공간**이 됐고(눌러도 입력 안 됨),
+                ② 틀에 걸었더니 이번엔 틀이 카드보다 좁아 어긋나 보였다.
+                줄길이(PC 42자·사이드바 접으면 60자)는 알고 감수한 트레이드오프다 —
+                다시 손댈 거면 입력칸만 좁히지 말고 **카드 전체의 읽기 폭**을 정할 것.
+              */}
               <textarea
                 id={`memo-${question.id}`}
                 ref={memoRef}
@@ -548,75 +762,17 @@ export function InterviewQuestionCard({
                 }}
                 placeholder="이 질문에 본인이 어떻게 답할지 적어보세요…"
                 maxLength={5000}
-                style={{ minHeight: 76 }}
-                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
+                style={{ minHeight: 82 }}
+                /* 손으로 끄는 손잡이는 두지 않는다 — 다음 글자를 치는 순간 자동 높이가 덮어써서 싸운다 */
+                className="w-full bg-transparent px-3.5 py-3 text-[16px] text-text-primary placeholder:text-text-quaternary focus:outline-none resize-none leading-[1.8]"
               />
-            )}
-            {/*
-              🔴 글자수보다 **말하는 시간**이 실제 제약이다. 면접은 답변 하나에
-              1분 남짓밖에 못 쓰는데, 글자수만 보면 "5000자 중 800자" 라 여유로워 보인다.
-              800자는 소리 내면 2분이 넘는다.
-            */}
-            <div className="flex items-center justify-between gap-2 mt-1.5">
-              {/*
-                글자수보다 이쪽이 중요한 정보라 **칩으로 올린다.** faint 회색 10px 로는
-                눈에 안 들어와서 있으나 마나였다. 길어지면 warning 으로 바뀌어
-                "줄여야 한다" 가 색만으로 읽힌다.
-              */}
-              {/*
-                카테고리 칩과 **형태로** 구분한다 — 그쪽은 글자만 든 작은 pill(rounded),
-                이건 아이콘이 앞장서고 숫자가 주인공인 chip(rounded-lg)이다.
-                형태가 다르면 같은 계열 색이어도 "저건 유형, 이건 수치" 로 읽힌다.
-                한 번 무채색으로 뺐더니 밋밋했는데, 문제는 색이 아니라
-                **색도 같고 형태도 같았던 것**이었다.
-              */}
-              {speakSec > 0 ? (
-                <span
-                  title="또박또박 말하는 발표 속도(분당 350자) 기준 추정치예요"
-                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border ${
-                    speakSec > ANSWER_LONG_SECONDS
-                      ? 'bg-warning/10 border-warning/30'
-                      : 'bg-info/8 border-info/20'
-                  }`}
-                >
-                  <Clock
-                    size={12}
-                    strokeWidth={2.25}
-                    aria-hidden="true"
-                    className={
-                      speakSec > ANSWER_LONG_SECONDS
-                        ? 'text-warning'
-                        : 'text-info'
-                    }
-                  />
-                  <span className="text-text-tertiary text-[10px]">
-                    말하면 약
-                  </span>
-                  <span
-                    className={`font-mono tabular-nums font-bold text-[12px] leading-none ${
-                      speakSec > ANSWER_LONG_SECONDS
-                        ? 'text-warning'
-                        : 'text-info'
-                    }`}
-                  >
-                    {formatSpeakingTime(speakSec)}
-                  </span>
-                  {speakSec > ANSWER_LONG_SECONDS && (
-                    <span className="text-warning text-[10px] font-medium">
-                      · 조금 길어요
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span />
-              )}
               <p
-                className={`text-[10px] ${memo.length >= 5000 ? 'text-danger' : memo.length >= 4500 ? 'text-warning' : 'text-text-quaternary'}`}
+                className={`px-3.5 pb-2.5 text-right text-[11px] ${memo.length >= 5000 ? 'text-danger' : memo.length >= 4500 ? 'text-warning' : 'text-text-quaternary'}`}
               >
                 {memo.length} / 5000
               </p>
             </div>
-          </div>
+          )}
 
           {/* 자식 질문 — 부모 카드 안 nested (GitHub PR review 패턴) */}
           {question.children.length > 0 && (
@@ -628,6 +784,7 @@ export function InterviewQuestionCard({
                   sessionId={sessionId}
                   applicationId={applicationId}
                   readOnly={readOnly}
+                  forceAnswerOpen={forceAnswerOpen}
                 />
               ))}
             </div>
@@ -644,7 +801,7 @@ export function InterviewQuestionCard({
           */}
           {/*
             **보이되 조용하게.** 테두리·배경을 주면 20문항에 20개가 깔려 시끄럽고
-            주인공인 "내 답변 메모" 보다 튄다. 반대로 hover 로 숨기면 기능이 있는 줄도
+            주인공인 "내 답변" 보다 튄다. 반대로 hover 로 숨기면 기능이 있는 줄도
             모른다 (예전 `lg:opacity-0`). 그 사이가 이 자리다 —
             평상시 text-tertiary, hover 시 brand. `min-h-8` 은 모바일 터치 타겟.
           */}
@@ -655,13 +812,13 @@ export function InterviewQuestionCard({
               className="min-h-8 inline-flex items-center gap-1 text-xs font-medium text-text-tertiary hover:text-brand transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={
                 followupReason ??
-                '면접관이 "그럼 왜 그렇게 했나요?" 하고 더 파고드는 질문을 만들어요 (코인이 차감됩니다)'
+                `이 ${question.depth === 0 ? '질문' : '꼬리질문'}에 대해 면접관이 "그럼 왜 그렇게 했나요?" 하고 더 파고드는 ${childLabel}을 만들어요 (코인이 차감됩니다)`
               }
             >
               {creatingFollowup ? (
                 <>
                   <Sparkles size={13} strokeWidth={1.75} aria-hidden="true" />
-                  꼬리질문 만드는 중…
+                  {childLabel} 만드는 중…
                 </>
               ) : (
                 <>
@@ -670,7 +827,7 @@ export function InterviewQuestionCard({
                     strokeWidth={2}
                     aria-hidden="true"
                   />
-                  꼬리질문 추가
+                  {childLabel} 추가
                   {/*
                     🔴 답변이 없으면 꼬리질문은 **질문 심화**로만 나온다 — 실제 면접의
                     꼬리질문("그럼 왜 그렇게 했나요?")과 가장 먼 형태다. 막지는 않되

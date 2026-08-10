@@ -177,9 +177,17 @@ export interface CreateFollowupDto {
   hint?: string
 }
 
+/**
+ * 🔴 파괴적 재생성 차단 코드 (2026-08-09). **문구가 아니라 코드로 분기한다** —
+ * 문구로 분기하면 카피를 다듬는 순간 조용히 깨진다.
+ */
+export type GenerateBlockCode = 'REGENERATE_REQUIRED'
+
 export interface GenerateSessionResult {
   status: 'ok' | 'blocked'
   reason?: string
+  /** `blocked` 일 때만. 없으면 쿼터·동의 등 기존 차단 */
+  code?: GenerateBlockCode
   meta?: {
     callLogId: string
     coverlettersUsed: number

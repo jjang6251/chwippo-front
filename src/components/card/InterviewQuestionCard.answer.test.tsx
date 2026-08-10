@@ -154,7 +154,7 @@ describe('InterviewQuestionCard — AI 답변 생성 (v2)', () => {
 
   /**
    * 접었다 펼치기 (2026-08-07) — 답변은 보통 5~10줄이라 여러 문항에 쌓이면
-   * **주인공인 "내 답변 메모"** 가 스크롤 밖으로 밀린다. 기본은 펼침이고, 접는 건 선택.
+   * **주인공인 "내 답변"** 가 스크롤 밖으로 밀린다. 기본은 펼침이고, 접는 건 선택.
    */
   it('7) AI 답변을 접었다 펼칠 수 있다 (기본 펼침)', () => {
     renderCard(makeQuestion({ suggestedAnswer: '저는 백엔드 개발자입니다.' }))
@@ -258,5 +258,34 @@ describe('InterviewQuestionCard — 꼬리질문 안내·근거', () => {
   it('메인 질문(근거 null)에는 배지가 없다', () => {
     renderCard(makeQuestion())
     expect(screen.queryByText('질문 심화')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * 🔴 **빈 칸이 자리를 차지하지 않는다** (2026-08-10 CEO: "기본 height 가 이렇게 높았었나?").
+ *
+ * 입력칸은 이미 **내용만큼 자란다**(`useAutoResize`). 그런데 「답변 칸이 슴슴하다」를
+ * 고치면서 76 → 132px 로 올린 게 **비어 있을 때의 높이**였다 — 아무것도 안 썼는데
+ * 3.8줄이 비어 있었고, 나란히 보기에선 열이 651px 뿐이라 그 여백이 그대로 손해다.
+ *
+ * jsdom 은 레이아웃을 안 하므로 자라는 것 자체는 못 잰다. 대신 **시작 높이의 상한**을
+ * 잠근다 — 다시 올리는 변경이 조용히 들어오는 걸 막는 게 이 spec 의 목적이다.
+ */
+describe('답변 칸 시작 높이', () => {
+  it('🔴 빈 칸은 3줄을 넘지 않는다', () => {
+    renderCard(makeQuestion())
+    const ta = screen.getByPlaceholderText(
+      /어떻게 답할지 적어보세요/,
+    ) as HTMLTextAreaElement
+    // 16px · leading 1.8 = 28.8px/줄 + 상하 여백 24px → 3줄이면 110px
+    expect(parseInt(ta.style.minHeight, 10)).toBeLessThanOrEqual(110)
+  })
+
+  /** 손으로 끄는 손잡이는 다음 글자를 치는 순간 자동 높이에 덮어써져 서로 싸운다 */
+  it('손으로 늘리는 손잡이를 두지 않는다', () => {
+    renderCard(makeQuestion())
+    const ta = screen.getByPlaceholderText(/어떻게 답할지 적어보세요/)
+    expect(ta.className).toContain('resize-none')
+    expect(ta.className).not.toContain('resize-y')
   })
 })

@@ -101,8 +101,10 @@ describe('AI mutation → ai-quotas invalidate (5.6.6 검증)', () => {
       () => useGenerateInterviewSession('session-1'),
       { wrapper: Wrap },
     )
-    result.current.mutate()
-    await waitFor(() => expect(generateMock).toHaveBeenCalled())
+    result.current.mutate(false)
+    await waitFor(() =>
+      expect(generateMock).toHaveBeenCalledWith('session-1', false),
+    )
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['me', 'ai-quotas'],
     })

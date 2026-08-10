@@ -192,6 +192,14 @@
     @apply bg-bg text-text-primary;
   }
 
+  /* 나란히 보기(분할) 동안 페이지 스크롤을 잠근다 — 스크롤은 두 열이 각자 갖는다.
+     🔴 인라인 style 이 아니라 **클래스**인 이유: 모달도 `body.style.overflow` 를 쓰는데,
+     닫을 때 `''` 로 되돌리면서 분할 잠금까지 함께 풀어버린다. 클래스로 두면 모달의
+     인라인 값이 열려 있는 동안만 이기고, 닫혀서 인라인이 사라지면 이 규칙이 다시 산다. */
+  body.split-locked {
+    overflow: hidden;
+  }
+
   /* 순수 흰색 금지 — text-white 사용 시 text-text-primary 로 오버라이드 */
   * {
     color: inherit;
