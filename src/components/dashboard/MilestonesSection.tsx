@@ -124,7 +124,7 @@ function Skeleton() {
   return (
     <section className="border border-line bg-surface-2 rounded-xl p-5">
       <div className="h-4 w-24 bg-line rounded animate-pulse mb-4" />
-      <div className="mb-4 rounded-lg bg-line/40 h-16 animate-pulse" />
+      <div className="mb-4 rounded-lg bg-surface-3 h-16 animate-pulse" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-card border border-line rounded-lg h-16 animate-pulse" />

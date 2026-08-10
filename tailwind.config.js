@@ -41,6 +41,16 @@ export default {
         violet: 'rgb(var(--violet) / <alpha-value>)',
 
         // 의미 토큰 — `bg-white/N`·`text-white/N` 대체용. alpha 미리 박혀있는 완전한 값.
+        //
+        // 🔴 `line`·`line-strong` 은 오랫동안 **`borderColor`·`divideColor` 에만** 있었다.
+        //    그래서 `bg-line` 은 클래스만 쓰이고 **CSS 가 생성되지 않아 아무것도 안 그려졌다** —
+        //    바텀시트 손잡이·대시보드 스켈레톤·진행바 트랙·캘린더 점 22곳이 통째로 투명이었다.
+        //    빌드 CSS 전수 확인: `.border-line` 은 있고 `.bg-line*` 은 0건 (2026-08-11).
+        //
+        //    ⚠️ 여기 값들은 `rgba()` 통값이라 **투명도 수식(`bg-line/40`)이 안 먹는다.**
+        //    반투명이 필요하면 이 토큰 말고 채널 토큰(`bg-surface-3` 등)을 쓸 것.
+        line: 'var(--line)',
+        'line-strong': 'var(--line-strong)',
         card: 'var(--card)',
         'card-solid': 'var(--card-solid)',
         'card-hover': 'var(--card-hover)',

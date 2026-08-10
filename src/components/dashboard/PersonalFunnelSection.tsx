@@ -100,7 +100,7 @@ function Skeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i}>
             <div className="h-3 w-full bg-line rounded animate-pulse mb-1.5" />
-            <div className="h-2 w-full bg-line/60 rounded-full animate-pulse" />
+            <div className="h-2 w-full bg-surface-3 rounded-full animate-pulse" />
           </div>
         ))}
       </div>

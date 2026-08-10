@@ -314,7 +314,7 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
             className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[92dvh] flex flex-col shadow-2xl outline-none"
           >
             <Drawer.Title className="sr-only">{isEdit ? '학력 편집' : '학력 추가'}</Drawer.Title>
-            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line shrink-0" aria-hidden="true" />
+            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line-strong shrink-0" aria-hidden="true" />
             {modalContent}
           </Drawer.Content>
         </Drawer.Portal>

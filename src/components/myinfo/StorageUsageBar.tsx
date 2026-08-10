@@ -11,8 +11,11 @@ export function StorageUsageBar() {
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-line bg-surface px-4 py-3">
-        <div className="h-3 w-32 animate-pulse rounded bg-card" />
+      /* 🔴 실제 카드와 **같은 구조**로 자리를 잡는다 (텍스트 줄 + 막대).
+         전엔 줄 하나뿐이라 38px 이었는데 실제는 56px — 18px 이 자라며 아래를 밀었다. */
+      <div className="h-[56px] rounded-lg border border-line bg-surface px-4 py-3">
+        <div className="h-3 w-32 mb-2 animate-pulse rounded bg-card" />
+        <div className="h-2 w-full animate-pulse rounded-full bg-card" />
       </div>
     )
   }
