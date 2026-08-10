@@ -9,6 +9,7 @@ import { apiClient } from '@/api/client'
 import { postToNative } from '@/utils/nativeBridge'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
+import { useNavCollapsedStore } from '@/stores/navCollapsedStore'
 import { NotificationBell } from '@/components/notification/NotificationBell'
 
 interface NavItem {
@@ -72,6 +73,30 @@ export function Sidebar() {
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
+  /*
+    🔴 **데모에서는 접지 않는다.** 접힌 레일에서 「가입하고 시작하기 →」 는 화살표 한 개가
+    되는데, 그건 데모 화면에서 가장 중요한 버튼이다. 저장된 값이 접힘이어도 무시한다 —
+    안 그러면 로그인 상태에서 접어둔 사람이 데모에 들어왔을 때 **펼 방법 없이** 접힌 채 본다.
+  */
+  const storedCollapsed = useNavCollapsedStore((st) => st.collapsed)
+  const setCollapsed = useNavCollapsedStore((st) => st.setCollapsed)
+  const collapsed = storedCollapsed && !isDemo
+
+  /**
+   * 접혔을 때 라벨 자리를 없애고 아이콘만 남긴다 — 이름은 `aria-label` 로 계속 읽힌다.
+   *
+   * 🔴 포커스 링은 **여기 있어야 한다** — 접기 버튼에만 있고 항목엔 없어서, 레일 안에서
+   * 키보드로 이동하면 **어디에 있는지 보이는 칸과 안 보이는 칸이 섞였다.**
+   */
+  const itemCls = (active: boolean, activeCls = 'bg-brand/10 text-brand') =>
+    `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-surface relative flex items-center rounded-lg text-sm font-medium transition-colors ${
+      collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2'
+    } ${
+      active
+        ? activeCls
+        : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
+    }`
+
   const isActive = (path: string) => {
     const target = link(path)
     // 자소서 문서는 URL 이 /board/:id/coverletter 지만 맥락은 자소서 — 보드 아닌 자소서 하이라이트 (데모 접두어 포함)
@@ -102,17 +127,57 @@ export function Sidebar() {
 
   return (
     <>
-      <aside data-nav className="hidden lg:flex flex-col w-56 shrink-0 bg-surface border-r border-line min-h-screen sticky top-0 h-screen">
-        {/* Logo */}
-        <div className="px-5 py-4 border-b border-line flex items-center justify-between">
-          <Link to={link('/dashboard')} className="text-lg font-bold text-brand tracking-tight">
-            치뽀{isDemo && <span className="ml-1.5 text-[10px] font-medium text-text-quaternary align-middle">데모</span>}
+      <aside
+        data-nav
+        className={`hidden lg:flex flex-col shrink-0 bg-surface border-r border-line min-h-screen sticky top-0 h-screen transition-[width] duration-[240ms] ease-[cubic-bezier(.32,.72,0,1)] ${
+          collapsed ? 'w-14' : 'w-56'
+        }`}
+      >
+        {/*
+          Logo — 접히면 세로로 쌓는다. 종은 **읽지 않은 알림 배지**를 달고 있어 못 숨기고,
+          브랜드를 통째로 지우면 레일이 어느 서비스인지 모르는 아이콘 띠가 된다.
+        */}
+        <div
+          className={`border-b border-line ${
+            collapsed
+              ? 'px-0 py-3 flex flex-col items-center gap-2'
+              : 'px-5 py-4 flex items-center justify-between'
+          }`}
+        >
+          <Link
+            to={link('/dashboard')}
+            className="text-lg font-bold text-brand tracking-tight"
+            aria-label="치뽀 홈"
+          >
+            {collapsed ? '치' : '치뽀'}
+            {!collapsed && isDemo && <span className="ml-1.5 text-[10px] font-medium text-text-quaternary align-middle">데모</span>}
           </Link>
           {!isDemo && <NotificationBell size={18} />}
         </div>
 
         {/* Main nav */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
+        <nav className={`flex-1 py-4 flex flex-col gap-0.5 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
+          {/*
+            🔴 **화살표가 가리키는 방향 = 메뉴가 밀려갈 방향.** 눌러보지 않아도 읽힌다
+            (Notion·Linear·VSCode 패턴). 면접 화면의 자료 사이드바 접기와 같은 문법이다.
+            데모에선 렌더하지 않는다 — 접을 수 없는 상태에서 접기 버튼은 거짓 어포던스다.
+          */}
+          {!isDemo && (
+            <button
+              type="button"
+              onClick={() => setCollapsed(!collapsed)}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? '메뉴 펼치기' : '메뉴 접기'}
+              title={collapsed ? '메뉴 펼치기' : '메뉴 접기'}
+              className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-surface w-full min-h-8 mb-1 flex items-center rounded-lg text-[11px] text-text-tertiary hover:text-text-primary hover:bg-card transition-colors ${
+                collapsed ? 'justify-center px-0' : 'justify-end gap-1 px-1'
+              }`}
+            >
+              <ChevronIcon size={14} dir={collapsed ? 'right' : 'left'} />
+              {!collapsed && '접기'}
+            </button>
+          )}
+
           {visibleNavItems.map(({ label, path, icon: Icon }) => {
             const showStreak = path === '/dashboard' && streakDays >= 2
             return (
@@ -122,22 +187,49 @@ export function Sidebar() {
                 {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
                 {...(path === '/activity' ? { 'data-tour': 'activity-nav' } : {})}
                 aria-current={isActive(path) ? 'page' : undefined}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(path)
-                    ? 'bg-brand/10 text-brand'
-                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-                }`}
+                /*
+                  🔴 접히면 링크의 이름이 안쪽 점의 `aria-label` 을 **덮는다** — 연속 기록이
+                  화면 낭독기에 아예 안 들린다. 눈에는 점이 보이는데 귀에는 없는 상태라
+                  사람 눈으로는 안 잡힌다. 이름에 합쳐 넣는다.
+                */
+                aria-label={
+                  collapsed
+                    ? showStreak
+                      ? `${label} — 활동 ${streakDays}일 연속`
+                      : label
+                    : undefined
+                }
+                title={
+                  collapsed && showStreak
+                    ? `${label} · 🔥 ${streakDays}일 연속`
+                    : collapsed
+                      ? label
+                      : undefined
+                }
+                className={itemCls(isActive(path))}
               >
                 <Icon size={16} />
-                <span className="flex-1">{label}</span>
-                {showStreak && (
-                  <span
-                    className="text-[10px] font-semibold text-brand tabular-nums"
-                    aria-label={`활동 ${streakDays}일 연속`}
-                  >
-                    🔥 {streakDays}
-                  </span>
-                )}
+                {!collapsed && <span className="flex-1">{label}</span>}
+                {/*
+                  🔴 접히면 숫자가 들어갈 자리가 없다. 그렇다고 지우면 **연속 기록이 끊긴 걸
+                  모르고 지나간다** — 이 배지는 장식이 아니라 되돌아올 이유다.
+                  점 하나로 「볼 게 있다」만 남기고, 정확한 값은 `aria-label` 과 툴팁이 갖는다.
+                */}
+                {showStreak &&
+                  (collapsed ? (
+                    <span
+                      className="absolute top-1 right-1.5 w-1.5 h-1.5 rounded-full bg-brand"
+                      aria-label={`활동 ${streakDays}일 연속`}
+                      title={`🔥 ${streakDays}일 연속`}
+                    />
+                  ) : (
+                    <span
+                      className="text-[10px] font-semibold text-brand tabular-nums"
+                      aria-label={`활동 ${streakDays}일 연속`}
+                    >
+                      🔥 {streakDays}
+                    </span>
+                  ))}
               </Link>
             )
           })}
@@ -146,14 +238,12 @@ export function Sidebar() {
           {!isDemo && (
             <Link
               to="/settings"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isSettingsActive
-                  ? 'bg-brand/10 text-brand'
-                  : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-              }`}
+              aria-label={collapsed ? '설정' : undefined}
+              title={collapsed ? '설정' : undefined}
+              className={itemCls(isSettingsActive)}
             >
               <SettingsIcon size={16} />
-              설정
+              {!collapsed && '설정'}
             </Link>
           )}
 
@@ -161,14 +251,15 @@ export function Sidebar() {
           {!isDemo && user?.role === 'admin' && (
             <Link
               to="/ops"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                location.pathname.startsWith('/ops')
-                  ? 'bg-warning/10 text-warning'
-                  : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-              }`}
+              aria-label={collapsed ? '관리자' : undefined}
+              title={collapsed ? '관리자' : undefined}
+              className={itemCls(
+                location.pathname.startsWith('/ops'),
+                'bg-warning/10 text-warning',
+              )}
             >
               <AdminIcon size={16} />
-              관리자
+              {!collapsed && '관리자'}
             </Link>
           )}
 
@@ -182,30 +273,30 @@ export function Sidebar() {
               {/* 도움말 */}
               <Link
                 to="/settings/help"
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname === '/settings/help'
-                    ? 'bg-brand/10 text-brand'
-                    : 'text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary'
-                }`}
+                aria-label={collapsed ? '도움말' : undefined}
+                title={collapsed ? '도움말' : undefined}
+                className={itemCls(location.pathname === '/settings/help')}
               >
                 <HelpIcon size={16} />
-                도움말
+                {!collapsed && '도움말'}
               </Link>
 
               {/* 로그아웃 */}
               <button
                 onClick={() => setShowLogoutModal(true)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-card active:bg-card-strong hover:text-text-primary transition-colors text-left"
+                aria-label={collapsed ? '로그아웃' : undefined}
+                title={collapsed ? '로그아웃' : undefined}
+                className={`${itemCls(false)} text-left`}
               >
                 <LogoutIcon size={16} />
-                로그아웃
+                {!collapsed && '로그아웃'}
               </button>
             </>
           )}
         </nav>
 
         {/* 하단 CTA */}
-        <div className="px-3 py-4 border-t border-line">
+        <div className={`py-4 border-t border-line ${collapsed ? 'px-2' : 'px-3'}`}>
           {isDemo ? (
             <button
               onClick={showLogin}
@@ -216,14 +307,18 @@ export function Sidebar() {
           ) : (
             <Link
               to="/inquiry"
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+              aria-label={collapsed ? '문의하기' : undefined}
+              title={collapsed ? '문의하기' : undefined}
+              className={`flex items-center py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                collapsed ? 'justify-center px-0' : 'gap-2 px-3'
+              } ${
                 location.pathname === '/inquiry'
                   ? 'bg-brand text-text-primary'
                   : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
               }`}
             >
               <ChatIcon size={16} />
-              문의하기
+              {!collapsed && '문의하기'}
             </Link>
           )}
         </div>
@@ -257,6 +352,14 @@ export function Sidebar() {
 }
 
 /* ─── Icons ─── */
+/** 접기·펼치기 화살표 — 가리키는 쪽이 메뉴가 움직일 방향 */
+function ChevronIcon({ size, dir }: { size: number; dir: 'left' | 'right' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={dir === 'left' ? 'M10 3 L5 8 L10 13' : 'M6 3 L11 8 L6 13'} />
+    </svg>
+  )
+}
 function GridIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="5.5" height="5.5" rx="1" /><rect x="9.5" y="1" width="5.5" height="5.5" rx="1" /><rect x="1" y="9.5" width="5.5" height="5.5" rx="1" /><rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1" /></svg>
 }

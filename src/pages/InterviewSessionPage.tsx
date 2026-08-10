@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, Star } from 'lucide-react'
+import { ChevronLeft, FileText, Star } from 'lucide-react'
 import { CompanyResearchCard } from '@/components/card/CompanyResearchCard'
 import { JobTitleField } from '@/components/common/JobTitleField'
 import { useRequireJobTitle } from '@/hooks/useRequireJobTitle'
@@ -11,6 +11,8 @@ import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { useCoverletters, useUpdateCoverletter } from '@/hooks/useApplicationCoverletters'
+import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
 import { useApplication } from '@/hooks/useApplications'
 import {
   useDeleteInterviewSession,
@@ -40,6 +42,10 @@ import {
   INTERVIEW_TYPE_LABEL,
   INTERVIEW_TYPE_STYLE,
 } from '@/types/interviewPrep'
+import type {
+  ApplicationCoverletter,
+  UpdateCoverletterDto,
+} from '@/types/coverletter'
 import type { InterviewPrepQuestion } from '@/types/interviewPrep'
 
 /**
@@ -48,6 +54,9 @@ import type { InterviewPrepQuestion } from '@/types/interviewPrep'
  * 라우트: `/interviews/:sessionId` — 사이드바 "면접 준비" active 유지.
  * applicationId 는 session 응답으로부터 추출 (백엔드 user_id 가드 보장).
  */
+/** 두 열이 나눠 갖지 **못하는** 폭 — `gap-5` 두 곳(40) + 구분선 열(22). grid 정의와 짝이다 */
+const SPLIT_CHROME = 62
+
 export function InterviewSessionPage() {
   const { sessionId = '' } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
@@ -104,6 +113,71 @@ export function InterviewSessionPage() {
    */
   const [readMode, setReadMode] = useState(false)
   /**
+   * 🔴 **면접 ↔ 자소서 나란히 보기** (2026-08-10).
+   *
+   * 면접 질문은 **자소서에서 나온 것**인데(모델을 「자료 밀착도」로 골랐다), 답을 쓸 때
+   * 그 자소서를 볼 수가 없어 `/board/:id/coverletter` 로 나갔다 돌아와야 했다.
+   *
+   * 3단으로 둔 이유 — 반반은 참고하며 쓸 때, 한쪽만은 그 일에 집중할 때다.
+   * 접힌 쪽은 44px 세로 탭으로 **남긴다.** 완전히 없애면 되돌리는 법을 기억에 맡기게 된다.
+   * 좁은 화면은 나란히가 불가능해 이동 버튼으로 대신한다 (아래 `narrow`).
+   */
+  const [split, setSplit] = useState<'iv' | 'both' | 'cl'>('iv')
+  /** 자소서 열의 편집 여부 — 기본은 읽기. 보러 온 거지 고치러 온 게 아니다 */
+  const [clEditing, setClEditing] = useState(false)
+  const [openClId, setOpenClId] = useState<string | null>(null)
+  /** 면접 열이 차지하는 비율 (C안 — 경계를 끌어서 정한다) */
+  const [ratio, setRatio] = useState(0.5)
+  /**
+   * 🔴 **`useRef` + `useLayoutEffect([])` 로는 못 붙는다** (2026-08-10 실사고).
+   *
+   * 첫 렌더는 세션 로딩 **스켈레톤**이라 그 시점 `ref.current` 는 `null` 이다.
+   * deps 가 `[]` 면 다시 실행되지 않으므로 **ResizeObserver 가 영원히 부착되지 않고**
+   * `contentW` 가 0 에 머문다 — 새로고침(cold load)에서만 그렇고 HMR·재방문에서는
+   * effect 가 다시 돌아 **개발자와 사용자가 서로 다른 화면을 봤다.**
+   *
+   * 콜백 ref(상태)로 두면 **요소가 실제로 붙는 순간** 재실행된다.
+   */
+  const [splitEl, setSplitEl] = useState<HTMLDivElement | null>(null)
+  /**
+   * 🔴 **뷰포트가 아니라 「실제 쓸 수 있는 폭」으로 판정한다** (2026-08-10).
+   *
+   * 예전엔 `useMediaQuery('(max-width: 1023px)')` 였는데 두 가지가 틀렸다.
+   *
+   * ① **스크롤바가 경계를 넘긴다.** `window.innerWidth` 는 스크롤바를 포함하지만
+   *    미디어 쿼리는 제외한다. 창이 1024px 이면 로드 직후엔 스크롤바가 없어 2열이 뜨고,
+   *    질문이 채워져 스크롤바가 생기는 순간 1009px 이 되어 **손잡이가 사라졌다.**
+   * ② **뷰포트가 넓어도 쓸 수 있는 폭은 훨씬 좁다.** 창 1024 − 전역 사이드바 224 −
+   *    좌우 여백 72 = 콘텐츠 728px, 반반이면 열당 353px 다. 자소서 본문을 읽을 폭이 아니다.
+   *
+   * 컨테이너를 직접 재면 스크롤바도 사이드바 접기도 자동으로 반영된다.
+   * 960px = 열당 약 460px + 구분선 22 + 여백 40 — 명조 16px 본문이 읽히는 최소선.
+   */
+  const [contentW, setContentW] = useState(0)
+  /**
+   * 🔴 **기준은 「열당 폭」에서 역산한다** — 컨테이너 폭 자체엔 의미가 없다.
+   *
+   *   열당 400px  ⇔  contentW 862 = 400×2 + gap 40 + 구분선 22
+   *
+   * 400px 은 16px 한글 기준 **약 25자/행**이다. 라틴 45~75 CPL(이상 66)을 전각 한글로
+   * 환산하면 23~38자이므로 하한선에 해당한다 — 참고용 열이라 하한을 취한다.
+   * 1024px 창(콘텐츠 720px · 열당 329px ≈ 20자)은 폰 폭이라 나란히가 성립하지 않는다.
+   *
+   * ⚠️ **`contentW === 0` 은 「측정 전」이라 넓다고 본다.** 콜백 ref 라 마운트 직후
+   * `useLayoutEffect` 에서 재므로 화면에 그려지기 전에 확정된다. RO 자체가 없는 환경
+   * (아주 오래된 브라우저)에서만 0 이 유지되고, 그때는 기존처럼 2열로 떨어진다.
+   */
+  const narrow = contentW > 0 && contentW < 862
+  /* 나란히 열었을 때만 가져온다 — 안 쓰는 화면에서 자소서까지 조회할 이유가 없다 */
+  const {
+    data: coverletters = [],
+    isLoading: clLoading,
+    isError: clError,
+  } = useCoverletters(applicationId, !!applicationId && !narrow && split !== 'iv')
+  const { mutate: updateCl } = useUpdateCoverletter(applicationId)
+  /** 좁은 화면은 나란히가 불가능 — 상태와 무관하게 면접만 */
+  const view = narrow ? 'iv' : split
+  /**
    * 전체 접기·펼치기 — **목록 전체를 다루는 동작**이라 `↻ 다시 생성` 과 같은 줄에 둔다.
    * 예전엔 필터 바 안에 `ml-auto` 로 있었는데, 뒤에 카테고리 칩이 더 붙어 줄바꿈되면
    * 목록 한가운데 놓였다.
@@ -139,6 +213,294 @@ export function InterviewSessionPage() {
     }
     return true
   })
+  /**
+   * 🔴 **반반일 땐 자료 사이드바를 접는다.** 열이 504px 인데 280px 을 사이드바가 먹으면
+   * 질문에 224px 밖에 안 남는다. 다만 `sidebarExpanded`(저장값)를 **바꾸지는 않는다** —
+   * 사용자가 고른 설정이고, 「면접만」으로 돌아오면 그대로 복원돼야 한다.
+   */
+  const sidebarOn = sidebarExpanded && view !== 'both'
+
+  /**
+   * 🔴 **경계를 끌어 비율을 정한다** (2026-08-10 · C안).
+   *
+   * 헤더에 `면접 / 반반 / 자소서` 세그먼트를 뒀다가 뺐다 — 셋이 **대등해 보이는데**
+   * 실제로는 면접이 주(主)고 자소서는 참조다. 의미와 형태가 어긋나 어색했다.
+   * 컨트롤을 **경계로 내리면** 헤더도 비고, 화살표를 읽을 필요 없이 위치가 곧 설명이 된다
+   * (VSCode·Figma·IntelliJ splitter 관용구).
+   *
+   * 🔴 **`pointerdown` 에서 `preventDefault()` 를 부르면 click 이 안 난다.**
+   * 그래서 처음엔 아무것도 막지 않고 **4px 넘게 움직인 뒤에야** 드래그로 전환한다.
+   * 안 움직였으면 그냥 클릭 — 손잡이는 누르면 면접 ↔ 자소서를 번갈아 편다.
+   */
+  /**
+   * 🔴 **분할일 땐 바깥 스크롤을 없앤다** (2026-08-10).
+   *
+   * 열마다 스크롤을 주고 페이지 스크롤을 그대로 두면 **스크롤이 셋**이 된다.
+   * 바깥을 내리면 두 열이 통째로 밀려 올라가 어느 것을 움직이는지 알 수 없다.
+   *
+   * 높이는 **재서 정한다** — 헤더 높이를 상수로 박으면 헤더가 바뀔 때 조용히 어긋난다.
+   * 컨테이너의 문서상 위치를 알면 남은 높이는 `뷰포트 − 그 위치 − 아래 여백` 이다.
+   * 페이지가 안 늘어나므로 `scrollY` 는 0 에 머물고 이 계산은 스스로 유지된다.
+   */
+  const [splitTop, setSplitTop] = useState(0)
+  useLayoutEffect(() => {
+    if (!splitEl || typeof ResizeObserver === 'undefined') return
+    /* 위치만 rect 로 잰다 — 폭은 관찰자가 주는 값을 쓴다 (그게 실제 콘텐츠 폭이다) */
+    const measureTop = () =>
+      setSplitTop(splitEl.getBoundingClientRect().top + window.scrollY)
+    const ro = new ResizeObserver(([entry]) => {
+      setContentW(entry.contentRect.width)
+      measureTop()
+    })
+    ro.observe(splitEl)
+    window.addEventListener('resize', measureTop)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', measureTop)
+    }
+  }, [splitEl])
+
+  /**
+   * 🔴 **분할 동안엔 페이지 스크롤을 잠근다** (2026-08-10).
+   *
+   * 열 높이를 뷰포트에 맞춰도 배너·공지·폰트 로딩처럼 **높이를 바꾸는 요소가 위에 있으면**
+   * 몇 px 이 남아 바깥 스크롤이 되살아난다. 계산으로 그걸 전부 쫓는 대신 아예 잠근다 —
+   * 스크롤은 두 열이 각자 갖고 있으므로 잠가도 못 보는 내용이 생기지 않는다.
+   *
+   * 🔴 `body.style.overflow` 가 아니라 **클래스**다. 모달이 같은 인라인 자리를 쓰는데,
+   * 닫을 때 `''` 로 되돌리면서 이 잠금까지 풀어버린다 (`index.css` 의 `body.split-locked` 참고).
+   *
+   * 반드시 풀어야 한다 — 다른 화면에서 스크롤이 죽어 있으면 앱이 멈춘 것처럼 보인다.
+   */
+  const splitLocked = view === 'both' && !narrow
+  useEffect(() => {
+    if (!splitLocked) return
+    document.body.classList.add('split-locked')
+    return () => {
+      document.body.classList.remove('split-locked')
+    }
+  }, [splitLocked])
+
+  /**
+   * 🔴 **손잡이는 세 상태를 순환한다** (2026-08-10 CEO: "한쪽만 펼치려면 꼭 드래그해야
+   * 하는 것 같은데 이건 아닌 것 같아").
+   *
+   * 클릭을 전부 「반반」에 몰아주는 바람에 **한쪽만 보려면 드래그밖에 없게** 됐다.
+   * 그래서 손잡이가 세 상태를 다 돈다 — 버튼을 늘리지 않고 클릭만으로 닿는다.
+   *
+   * 🔴 순서는 **구분선이 한 칸씩 움직이는 방향**이다:
+   *
+   *     면접만 ──▶ 반반 ──▶ 자소서만 ──▶ 반반 ──▶ 면접만
+   *
+   * 「반반 → 면접만 → 자소서만」 처럼 돌면 **면접만에서 누를 때 반반을 건너뛴다** —
+   * 그건 CEO 가 이미 좋다고 한 동작이라 없애면 안 된다. 반반에서 어느 쪽으로 갈지는
+   * **직전에 보던 한쪽의 반대**로 정한다 (`lastSingle`). 다음에 무엇이 되는지는
+   * 툴팁·`aria-label` 이 매번 말한다.
+   */
+  /* 렌더에서 읽어 라벨을 만든다 — ref 를 렌더 중 읽는 건 React 규칙 위반이라 state 로 둔다 */
+  const [lastSingle, setLastSingle] = useState<'iv' | 'cl'>('iv')
+  const goSplit = (next: 'iv' | 'both' | 'cl') => {
+    if (next === 'both') {
+      ratioRef.current = 0.5
+      setRatio(0.5)
+    } else {
+      setLastSingle(next)
+    }
+    setSplit(next)
+  }
+  /**
+   * 🔴 **키보드로도 비율을 조정할 수 있어야 한다** (2026-08-10 점검).
+   *
+   * `aria-label` 은 「끌면 비율 조정」이라고 **말하고 있었는데 실행 수단이 없었다** —
+   * 비율은 드래그 전용이라 마우스가 없으면 반반과 한쪽만 보기 사이만 오갈 수 있었다.
+   * 화살표 키로 한 번에 5%씩 움직인다. 한계(15%·85%)를 넘겨 밀면 그쪽이 접힌다 —
+   * 드래그를 끝까지 미는 것과 같은 규칙이라 배울 게 하나뿐이다.
+   */
+  const nudgeRatio = (delta: number) => {
+    if (view !== 'both') {
+      goSplit('both')
+      return
+    }
+    const next = ratioRef.current + delta
+    if (next <= 0.18) return goSplit('cl')
+    if (next >= 0.82) return goSplit('iv')
+    ratioRef.current = next
+    setRatio(next)
+  }
+
+  /** 손잡이를 누르면 갈 곳 */
+  const nextSplit: 'iv' | 'both' | 'cl' =
+    view === 'both' ? (lastSingle === 'iv' ? 'cl' : 'iv') : 'both'
+  const SPLIT_LABEL = { iv: '면접만', both: '반반', cl: '자소서만' } as const
+
+  const ivColRef = useRef<HTMLDivElement | null>(null)
+  /**
+   * 언마운트 때는 스크롤을 건드리면 안 된다 — 이미 다음 화면이 그려지고 있다.
+   *
+   * 🔴 **`useLayoutEffect` 여야 한다.** 레이아웃 effect 의 cleanup 은 일반 effect 의
+   * cleanup 보다 **먼저** 돈다. 이걸 `useEffect` 로 두면 아래 스크롤 effect 가 정리될 때
+   * 이 깃발이 아직 `true` 라서 가드가 통째로 무력해진다 — 화면을 떠나는 중에
+   * `scrollTo` 가 나가 **다음 화면이 튄다.**
+   */
+  const alive = useRef(true)
+  useLayoutEffect(() => () => {
+    alive.current = false
+  }, [])
+
+  /**
+   * 🔴 **분할로 들어갈 때 읽던 자리를 열 안으로 옮긴다** (2026-08-10 CEO 실기 지적:
+   * "아래로 스크롤한 다음 손잡이를 클릭하면 오류가 발생해").
+   *
+   * 분할이 되면 페이지 스크롤을 잠근다. 그런데 **잠그기만 하고 위치를 안 되돌렸다** —
+   * 스크롤이 1200 인 채로 분할 영역이 문서 213px 지점에 651px 로 줄어드니 내용이 전부
+   * 화면 위로 밀려나고, 방금 잠근 탓에 **되돌릴 수도 없다.** 빈 배경만 남는 막다른 길이었다.
+   *
+   * 0 으로 되돌리기만 해도 막다른 길은 없어지지만, 그러면 20번째 질문을 보다 나란히 열었을 때
+   * 1번으로 튕긴다. 페이지 스크롤에 있던 양을 **열 스크롤로 옮겨** 보던 자리를 유지한다.
+   * 나갈 때는 반대로 옮긴다 — 안 그러면 이번엔 나가면서 맨 위로 튄다.
+   */
+  useLayoutEffect(() => {
+    if (!splitLocked || splitTop <= 0) return
+    const carried = Math.max(0, window.scrollY - splitTop)
+    window.scrollTo(0, 0)
+    const col = ivColRef.current
+    if (col) col.scrollTop = carried
+    return () => {
+      if (!alive.current) return
+      const back = col ? col.scrollTop : 0
+      window.scrollTo(0, splitTop + back)
+    }
+  }, [splitLocked, splitTop])
+
+  const drag = useRef({ down: false, moved: false, raf: 0, justDragged: false })
+  /** 끄는 동안의 최신 비율 — 창 리스너 클로저는 렌더 시점 state 를 못 본다 */
+  const ratioRef = useRef(0.5)
+
+  /**
+   * 🔴 **끄는 동안엔 애니메이션을 끈다** (2026-08-10 CEO: "사이즈 조절할 때 버벅거리나?").
+   *
+   * 240ms 전환은 **세 단계 전환**(탭 클릭·두 번 누르기)을 위한 것이다. 드래그에도 켜져 있으면
+   * 움직일 때마다 새 전환이 시작돼 열이 커서를 뒤늦게 따라온다 —
+   * **실측: 손잡이가 커서에서 평균 79px, 최대 219px 떨어졌다.** 프레임이 밀린 게 아니라
+   * (평균 8.6ms) 애니메이션이 드래그와 싸운 것이라, 최적화가 아니라 **끄는 게** 답이다.
+   */
+  const [dragging, setDragging] = useState(false)
+
+  /* 끄는 중에 화면을 떠나면 선택 금지가 앱 전체에 남는다 — 글자를 못 긁게 된다 */
+  useEffect(
+    () => () => {
+      document.body.style.userSelect = ''
+    },
+    [],
+  )
+
+  /**
+   * 🔴 **이벤트를 창에서 받는다** (같은 날 실측에서 드러난 진짜 버그).
+   *
+   * 전에는 구분선 엘리먼트의 `onPointerMove` 로 받고, 4px 을 넘긴 **뒤에야**
+   * `setPointerCapture` 를 했다. 그런데 구분선은 **22px 폭**이다 — 손잡이를 잡고 빠르게
+   * 그으면 **첫 이동이 이미 그 밖**이라 이벤트가 안 오고, 그래서 4px 판정도 캡처도 못 한다.
+   * 결과는 **잡았는데 안 따라오는 것.** 천천히 끌면 중간 이벤트가 안에 떨어져 되살아나므로
+   * 「될 때도 있고 안 될 때도 있다」로 보인다.
+   *
+   * 캡처를 pointerdown 으로 앞당기는 방법도 있지만, 캡처 중엔 `click` 이 캡처 대상으로
+   * 옮겨가 **손잡이 버튼의 click 이 죽는다** (한 번 눌러 펼치기가 그 버튼이다).
+   * 창 리스너는 그 부작용이 없다.
+   */
+  const onDividerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const startX = e.clientX
+    const box = splitEl?.getBoundingClientRect()
+    const wasBoth = view === 'both'
+    drag.current = { down: true, moved: false, raf: 0, justDragged: false }
+
+    const onMove = (ev: PointerEvent) => {
+      const d = drag.current
+      if (!d.down) return
+      if (!d.moved) {
+        if (Math.abs(ev.clientX - startX) <= 4) return
+        d.moved = true
+        document.body.style.userSelect = 'none'
+        setDragging(true)
+        // 접힌 상태에서 끌면 되살아난다 — 되돌리는 길이 손잡이에도 있어야 한다
+        if (!wasBoth) setSplit('both')
+      }
+      if (!box) return
+      /*
+        포인터는 화면보다 자주 온다 (고주사율·정밀 마우스는 120~240Hz). 그대로 setState 하면
+        **그릴 수도 없는 횟수**만큼 질문 카드 20여 개를 다시 렌더한다. 프레임당 한 번으로 묶는다.
+      */
+      const x = ev.clientX
+      if (d.raf) return
+      d.raf = requestAnimationFrame(() => {
+        d.raf = 0
+        /*
+          🔴 `fr` 이 나눠 갖는 건 전체 폭이 아니라 **간격과 구분선을 뺀 나머지**다.
+          전체 폭으로 나누면 손잡이가 가장자리로 갈수록 커서에서 최대 21px 어긋난다 —
+          잡고 있는데 미끄러지는 느낌이 된다.
+        */
+        const track = box.width - SPLIT_CHROME
+        if (track <= 0) return
+        const r = Math.min(
+          0.85,
+          Math.max(0.15, (x - box.left - SPLIT_CHROME / 2) / track),
+        )
+        ratioRef.current = r
+        setRatio(r)
+      })
+    }
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      const d = drag.current
+      if (!d.down) return
+      d.down = false
+      document.body.style.userSelect = ''
+      if (d.raf) {
+        cancelAnimationFrame(d.raf)
+        d.raf = 0
+      }
+      setDragging(false)
+      if (!d.moved) return // 안 움직였으면 onClick 이 처리한다
+
+      /*
+        🔴 **끌고 나서 놓으면 그 자리에 `click` 이 따라온다** (2026-08-10 CEO 실기 지적:
+        "고정될 때도 있고 갑자기 면접이 펼쳐진다").
+
+        손잡이가 커서를 정확히 따라가므로 **놓는 지점은 거의 항상 버튼 위**다. 그러면
+        브라우저가 click 을 발행하고, 그 핸들러는 「한 번 누르면 반반」이다 — 방금 맞춘
+        비율이 통째로 날아간다. 비율이 한계에 걸려 손잡이가 멈춘 경우엔 커서가 버튼을
+        벗어나 클릭 대상이 달라지므로, **될 때도 있고 안 될 때도 있는** 것처럼 보인다.
+
+        예전엔 `setPointerCapture` 가 이걸 우연히 막고 있었다 — 캡처 중 click 은 캡처
+        대상(구분선 div)으로 옮겨가 버튼까지 오지 않았다. 캡처를 걷어내면서 그 방패도
+        같이 사라졌다. 이제는 **의도한 자리에서 명시적으로** 막는다.
+
+        되돌리는 건 `setTimeout(0)` 이다 — click 은 pointerup 과 같은 처리 순번에 오므로
+        그 뒤에 풀린다. 이게 없으면 **다음 진짜 클릭 한 번**이 통째로 먹힌다.
+      */
+      d.justDragged = true
+      setTimeout(() => {
+        drag.current.justDragged = false
+      }, 0)
+      // 끝까지 밀면 접는다 — 15% 는 읽을 수 없는 폭이라 그 의도로 본다
+      if (ratioRef.current <= 0.18) {
+        goSplit('cl')
+        ratioRef.current = 0.5
+        setRatio(0.5)
+      } else if (ratioRef.current >= 0.82) {
+        goSplit('iv')
+        ratioRef.current = 0.5
+        setRatio(0.5)
+      }
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+  }
+
   const toggleSidebar = () =>
     setSidebarExpanded((prev) => {
       const next = !prev
@@ -276,7 +638,15 @@ export function InterviewSessionPage() {
   )
 
   return (
-    <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
+    /*
+      🔴 분할일 땐 **아래 여백도 뺀다.** 열 높이를 뷰포트에 맞춰도 `pb-[88px]` 이 남아 있으면
+      그만큼 페이지가 스크롤돼 「바깥 스크롤」이 되살아난다.
+    */
+    <div
+      className={`w-full mx-auto px-[18px] pt-6 lg:max-w-[1100px] lg:px-9 lg:py-9 ${
+        splitLocked ? 'pb-0 lg:pb-9' : 'pb-[88px]'
+      }`}
+    >
       <>
         {/* 헤더 — breadcrumb + 차수 */}
         <header className="mb-5 space-y-2">
@@ -337,7 +707,12 @@ export function InterviewSessionPage() {
               맡는다. 같은 일을 하는 버튼이 둘 다 보이면 어느 쪽이 무엇인지 흐려진다.
               접히면 사이드바가 통째로 사라지므로 여는 수단은 여기밖에 없다.
             */}
-            {!sidebarExpanded && (
+            {/*
+              🔴 반반에선 렌더하지 않는다 (2026-08-10 점검). `sidebarOn` 이 항상 false 라
+              버튼이 늘 보였는데, 눌러도 화면은 그대로이고 **저장값만 뒤집혔다** —
+              「면접만」으로 돌아오면 사이드바가 사용자가 둔 것과 반대가 돼 있었다.
+            */}
+            {!sidebarOn && view !== 'both' && (
               <button
                 onClick={toggleSidebar}
                 aria-expanded={false}
@@ -350,16 +725,72 @@ export function InterviewSessionPage() {
           </div>
         </header>
 
+        {/*
+          🔴 **면접 ↔ 자소서 2열.** 열 비율만 240ms 로 움직인다 (앱 `slideUp` 곡선).
+          접힌 쪽은 44px 세로 탭으로 남는다 — 없애면 되돌리는 법을 기억에 맡기게 된다.
+        */}
+        <div
+          className={
+            narrow
+              ? ''
+              : `grid gap-5 ${
+                  dragging
+                    ? ''
+                    : 'transition-[grid-template-columns] duration-[240ms] ease-[cubic-bezier(.32,.72,0,1)]'
+                }`
+          }
+          ref={setSplitEl}
+          style={
+            narrow
+              ? undefined
+              : {
+                  // 분할일 때만 뷰포트에 맞춘다 — 한쪽만 볼 땐 페이지 스크롤이 자연스럽다
+                  height:
+                    view === 'both' && splitTop > 0
+                      ? `calc(100dvh - ${Math.round(splitTop)}px - 36px)`
+                      : undefined,
+                  gridTemplateColumns:
+                    view === 'both'
+                      ? `${ratio}fr 22px ${1 - ratio}fr`
+                      : view === 'iv'
+                        ? '1fr 22px 44px'
+                        : '44px 22px 1fr',
+                }
+          }
+        >
+        {/* 🔴 좁은 화면엔 2열 자체가 없다 — 세로 탭도 렌더하지 않는다 */}
+        {!narrow && view === 'cl' ? (
+          <SplitTab side="iv" onClick={() => goSplit('iv')} />
+        ) : (
+        /*
+          🔴 **반반일 땐 열이 각자 스크롤한다** (2026-08-10).
+
+          페이지 스크롤 하나를 공유하면 15번 질문에 답할 때쯤 **자소서 열은 이미 끝나
+          옆이 빈 공간**이다 — 「보면서 쓴다」가 그 지점에서 무효가 된다.
+          시안이 성립했던 건 열마다 고정 높이 + 자기 스크롤이었기 때문인데, 그 조건을
+          옮기지 않아 손잡이만 따라오고 **내용은 안 따라왔다.**
+
+          한쪽만 볼 때(면접만·자소서만)는 페이지 스크롤 그대로 둔다 — 나란히 볼 이유가
+          없는 상태에서 뷰포트를 잘라 쓸 필요가 없다.
+        */
+        <div
+          ref={ivColRef}
+          className={`min-w-0 ${
+            view === 'both'
+              ? 'h-full overflow-y-auto overscroll-contain pr-1'
+              : ''
+          }`}
+        >
         {/* 접으면 열이 사라져 질문 목록이 전체 폭을 쓴다 */}
         <div
-          className={`grid grid-cols-1 gap-5 ${sidebarExpanded ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-1'}`}
+          className={`grid grid-cols-1 gap-5 ${sidebarOn ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-1'}`}
         >
           {/* 좌측: 메타 사이드바 — 그룹화 (Linear 패턴) + 시각 위계 */}
           {/* 🔴 모바일에는 사이드바가 없다 (`hidden md:block`) — 세로로 쌓이면 카드 8개가
               질문 위를 덮어 한참 스크롤해야 질문이 나온다. 모바일에서 자료는
               `세션 자료` 모달이 전담하고, 그래서 그 모달은 사이드바의 **상위집합**이다. */}
           <aside
-            className={`hidden ${sidebarExpanded ? 'md:block' : 'md:hidden'} space-y-5`}
+            className={`hidden ${sidebarOn ? 'md:block' : 'md:hidden'} space-y-5`}
           >
             {/*
               접기 손잡이 — 사이드바 맨 위, 본문 경계 쪽(오른쪽 정렬)에 둔다.
@@ -428,7 +859,7 @@ export function InterviewSessionPage() {
               </h2>
 
               <CollapsibleMetaCard
-                title={`📄 자소서 문항 · ${session.coverletterIds.length}개`}
+                title={`자소서 문항 · ${session.coverletterIds.length}개`}
                 defaultOpen={false}
               >
                 {session.coverletterIds.length === 0 ? (
@@ -685,6 +1116,28 @@ export function InterviewSessionPage() {
               </div>
             ) : (
               <>
+                {/*
+                  🔴 **좁은 화면 전용 — 나란히가 안 되니 건너간다** (2026-08-10).
+                  1024px 미만에서는 2열이 열당 250px 도 안 나온다. 대신 자소서로 가는 길을
+                  **「↻ 다시 생성」 바로 위**에 둔다 — 답을 쓰다 "내가 뭐라고 썼더라" 가
+                  떠오르는 자리가 여기다.
+
+                  문구가 「자소서 보기」가 아니라 **「이 면접의 바탕이 된」** 인 이유 —
+                  왜 면접 화면에 자소서 링크가 있는지를 한 줄로 말해 준다.
+                  답변은 자동 저장되므로(2026-08-09 flush) 나갔다 와도 글자를 잃지 않는다.
+                */}
+                {narrow && (
+                  <Link
+                    to={`/board/${applicationId}/coverletter`}
+                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg mb-2 w-full min-h-[44px] inline-flex items-center gap-2 text-xs font-medium text-text-secondary bg-card border border-line hover:border-line-strong rounded-lg px-3.5 py-3 transition-colors"
+                  >
+                    <FileText size={14} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+                    이 면접의 바탕이 된 자소서 보기
+                    <span className="ml-auto text-text-quaternary" aria-hidden="true">
+                      →
+                    </span>
+                  </Link>
+                )}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <p className="text-text-tertiary text-xs">
@@ -734,6 +1187,118 @@ export function InterviewSessionPage() {
             )}
           </main>
         </div>
+        </div>
+        )}
+
+        {/*
+          🔴 **손잡이는 방향을 말하지 않는다.** 화살표를 두면 「이 화살표를 눌러 저쪽으로」로
+          읽혀 누를 때마다 방향을 판단하게 된다. 잡는 곳 표시만 둔다.
+
+          🔴 **누르면 반반이다** (2026-08-10 점검에서 뒤집음). 전에는 전면 스왑이었고
+          반반은 **더블클릭 전용**이었는데, 실측해 보니 **사람 속도에서 아예 안 됐다** —
+          첫 클릭이 즉시 스왑하면서 구분선이 240ms 에 걸쳐 반대편으로 **이동**해,
+          두 번째 클릭이 그 자리에 없는 손잡이 대신 밑에 깔린 카드를 누른다
+          (0·120·250·400ms 전부 반반에 도달하지 못했다). 그래서 나란히 보기로 가는 길이
+          사실상 드래그 하나뿐이었다 — **이 화면을 만든 이유가 숨어 있었던 셈**이다.
+          내 e2e 는 `dblclick()` 이 기계 속도라 전환 전에 두 번째 클릭이 꽂혀 통과했다.
+
+          지금은 역할이 갈린다 (2026-08-10 CEO: "이거 분할이 아니라 서로 펼치는 걸로") —
+          **세로 탭은 「펼치기」라고 쓰여 있으니 그 말대로** 그쪽만 펼치고, **반반은 손잡이**가
+          맡는다. 한쪽만 보기는 손잡이를 계속 눌러도, 드래그를 끝까지 밀어도
+          (`ratio ≤ 0.18` · `≥ 0.82`) 된다. 더블클릭 핸들러는 지웠다 —
+          남겨두면 두 번째 클릭이 이동해버린 손잡이 대신 엉뚱한 카드에 떨어진다.
+        */}
+        {!narrow && (
+          <div
+            onPointerDown={onDividerDown}
+            /*
+              🔴 **`items-center` 면 손잡이가 문서 한가운데로 간다.** 구분선은 열 전체 높이만큼
+              늘어나는데, 질문 20개가 펼쳐지면 수천 px 이 되어 손잡이가 화면 밖으로 나간다 —
+              「잠깐 있다가 없어진다」의 정체가 이것이었다. 접힌 세로 탭이 이미 `sticky` 인 것과
+              같은 이유로, 손잡이도 화면에 붙어 따라와야 한다.
+
+              🔴 붙이는 위치는 **화면 세로 중앙**(`50vh − 손잡이 절반`)이다. `top-[88px]` 로
+              두면 화면 꼭대기에 붙어 두 열의 경계라기보다 헤더의 일부처럼 읽힌다.
+              sticky 는 자연 위치가 `top` 보다 위면 아래로 밀어주므로, 스크롤 0 에서도
+              중앙에 온다. 열이 짧으면 구분선 박스 안으로 제한돼 알아서 위로 붙는다.
+            */
+            /*
+              🔴 **`touch-none` 없이는 터치 화면에서 드래그가 성립하지 않는다** (2026-08-10 점검).
+              브라우저는 터치 제스처를 기본적으로 **스크롤로 가져간다** — 손잡이를 잡고 그으면
+              몇 px 만에 `pointercancel` 이 날아와 끊긴다. 터치 노트북·아이패드 가로(1024+)가
+              분할이 뜨는 폭이라 실제로 닿는 조합이다.
+            */
+            className="relative flex items-start justify-center cursor-col-resize group touch-none"
+          >
+            {/*
+              🔴 세로선을 **실제 요소**로 그린다. `before:bg-line` 은 빌드에서 생성되지 않아
+              (`line` 이 borderColor·divideColor 쪽 토큰이라 `before:` 조합이 안 나왔다)
+              선이 통째로 안 보였다 — 손잡이만 공중에 뜬 상태였다.
+            */}
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-0 border-l border-line group-hover:border-line-strong transition-colors"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (drag.current.justDragged) return // 방금 끈 것 — 클릭이 아니다
+                goSplit(nextSplit)
+              }}
+              title={`${SPLIT_LABEL[nextSplit]} 보기 · 끌면 비율 조정`}
+              /*
+                🔴 접힌 열의 세로 탭도 「자소서 펼치기」다 — 이름이 같으면 화면 낭독기에서
+                두 컨트롤이 구분되지 않는다. 여기는 **구분선**임을 이름에 넣는다.
+              */
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowLeft') {
+                  e.preventDefault()
+                  nudgeRatio(-0.05)
+                } else if (e.key === 'ArrowRight') {
+                  e.preventDefault()
+                  nudgeRatio(0.05)
+                }
+              }}
+              /*
+                🔴 `aria-valuenow` 류는 **`role="button"` 에서 무시된다** — 값을 알리려면
+                `role="separator"`(WAI window splitter) 로 바꿔야 하는데, 그러면 이 손잡이의
+                **주 동작인 클릭이 안 읽힌다.** 여기선 누르는 게 먼저고 비율은 부가라,
+                무효 속성을 지우고 **현재 비율을 이름에 담는다.**
+              */
+              aria-label={`구분선 — 누르면 ${SPLIT_LABEL[nextSplit]}, 화살표 키로 비율 조정${
+                view === 'both' ? ` (현재 ${Math.round(ratio * 100)}%)` : ''
+              }`}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg sticky top-[calc(50vh-28px)] flex flex-col gap-[3px] px-1 py-2.5 rounded-md bg-surface-2 border border-line hover:bg-surface-3 hover:border-line-strong transition-colors cursor-col-resize"
+            >
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  aria-hidden="true"
+                  className="w-0.5 h-[9px] rounded-sm bg-text-quaternary/60 group-hover:bg-text-tertiary transition-colors"
+                />
+              ))}
+            </button>
+          </div>
+        )}
+
+        {/* ── 자소서 열 ── */}
+        {narrow ? null : view === 'iv' ? (
+          <SplitTab side="cl" onClick={() => goSplit('cl')} />
+        ) : (
+          <CoverletterPane
+            loading={clLoading}
+            error={clError}
+            scrollable={view === 'both'}
+            coverletters={coverletters}
+            applicationId={applicationId}
+            editing={clEditing}
+            onEditingChange={setClEditing}
+            openId={openClId}
+            onOpen={setOpenClId}
+            onUpdate={(clId, dto) => updateCl({ clId, dto })}
+          />
+        )}
+        </div>
       </>
 
       {editing && (
@@ -759,6 +1324,229 @@ export function InterviewSessionPage() {
         />
       )}
     </div>
+  )
+}
+
+/**
+ * 접힌 열 — 44px 세로 탭.
+ *
+ * 🔴 **완전히 없애지 않는다.** 사라지면 되돌리는 법을 기억에 맡기게 되고, 한 번 접은
+ * 사용자는 다시 안 켠다. 같은 판단을 면접 카드의 AI 답변 접기에서도 했다.
+ */
+function SplitTab({ side, onClick }: { side: 'iv' | 'cl'; onClick: () => void }) {
+  const label = side === 'iv' ? '면접' : '자소서'
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={false}
+      aria-label={`${label} 펼치기`}
+      title={`${label} 펼치기`}
+      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg min-w-0 w-11 rounded-xl border border-line bg-card hover:bg-surface-3 transition-colors flex flex-col items-center gap-2 py-4 self-start sticky top-[88px]"
+    >
+      {/*
+        🔴 **텍스트 문자 chevron 금지** (memory `feedback_collapsible_chevron`).
+        `‹` `›` 는 폰트마다 크기·baseline 이 달라 다른 chevron 들과 안 맞고 토큰 색 제어도
+        어긋난다. 같은 파일이 이미 lucide `ChevronLeft` 를 쓰고 있어 그걸 재사용한다 —
+        오른쪽 방향은 뒤집는다 (`ChevronRight` 를 새로 들일 이유가 없다).
+      */}
+      <ChevronLeft
+        size={14}
+        strokeWidth={2}
+        aria-hidden="true"
+        className={`text-text-quaternary ${side === 'iv' ? '' : 'rotate-180'}`}
+      />
+      <span
+        className="text-[11px] font-semibold text-text-tertiary [writing-mode:vertical-rl]"
+      >
+        {label}
+      </span>
+    </button>
+  )
+}
+
+/**
+ * 자소서 열 — **실제 자소서 화면 그대로** (AI 채팅 패널만 제외).
+ *
+ * 🔴 **왜 여기 있나** — 면접 질문은 자소서에서 나온 것인데(모델을 「자료 밀착도」로 골랐다),
+ * 답을 쓸 때 그 자소서를 볼 수가 없어 화면을 나갔다 돌아와야 했다. 재료를 안 보여주고
+ * 요리를 시키는 구조였다.
+ *
+ * 🔴 **읽기가 기본이고 편집은 `simpleEdit`** — 여기서 하는 일은 참고지 자소서 작업이 아니다.
+ * 유형·글자수 제한·AI·가져오기·정리·삭제는 감추고 **답변 글자만** 고치게 한다.
+ * 그 기능들이 어디 있는지는 헤더의 조용한 링크가 알려 준다.
+ */
+function CoverletterPane({
+  loading,
+  error,
+  scrollable,
+  coverletters,
+  applicationId,
+  editing,
+  onEditingChange,
+  openId,
+  onOpen,
+  onUpdate,
+}: {
+  /** 반반일 때만 자기 스크롤 — 한쪽만 볼 땐 페이지 스크롤이 자연스럽다 */
+  loading: boolean
+  error: boolean
+  scrollable: boolean
+  coverletters: ApplicationCoverletter[]
+  applicationId: string
+  editing: boolean
+  onEditingChange: (v: boolean) => void
+  openId: string | null
+  onOpen: (id: string | null) => void
+  onUpdate: (clId: string, dto: UpdateCoverletterDto) => void
+}) {
+  // 아무것도 안 열려 있으면 첫 문항 — 빈 열을 보여줄 이유가 없다
+  const activeId = openId ?? coverletters[0]?.id ?? null
+
+  return (
+    <section
+      className={`min-w-0 ${
+        scrollable
+          ? 'h-full overflow-y-auto overscroll-contain pr-1 flex flex-col'
+          : ''
+      }`}
+      aria-label="자기소개서"
+    >
+      <div className="shrink-0 flex items-start gap-2 mb-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-text-primary text-lg font-bold">자기소개서</h2>
+          <p className="text-[11px] text-text-tertiary mt-0.5">
+            문항 {coverletters.length}개 · 면접 질문이 여기서 나왔어요
+          </p>
+        </div>
+        {/*
+          🔴 **조용한 출구.** 여기선 글자만 고친다 — AI·답변 가져오기·정리·삭제는 감춰져 있다.
+          그걸 아는 사람이 「어디 갔지」 하지 않게 **어디 있는지**를 말해 준다.
+          다만 왔다갔다를 없애려고 만든 화면이라 버튼이 아니라 **링크**로 둔다.
+        */}
+        <Link
+          to={`/board/${applicationId}/coverletter`}
+          title="AI 도움 · 답변 가져오기 · 정리 · 문항 추가는 자소서 화면에서"
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg shrink-0 text-[11px] text-text-tertiary hover:text-text-secondary underline underline-offset-2 decoration-text-quaternary/50 whitespace-nowrap"
+        >
+          자소서 화면에서 열기 ↗
+        </Link>
+        <div className="shrink-0 flex items-center gap-0.5 p-0.5 rounded-lg bg-surface-2 border border-line">
+          {([[false, '읽기'], [true, '편집']] as const).map(([v, label]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onEditingChange(v)}
+              aria-pressed={editing === v}
+              className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg text-[11px] font-medium px-2.5 py-1.5 rounded-md transition-colors ${
+                editing === v
+                  ? 'bg-card-solid text-text-primary shadow-sm'
+                  : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/*
+        🔴 **모르는 상태를 「없음」으로 말하지 않는다** (2026-08-10 점검).
+        이 쿼리는 나란히 열 때 **처음** 켜지므로, 가르지 않으면 여는 순간마다
+        「문항이 없어요」가 번쩍이고 조회가 실패하면 **그 거짓말이 영구 고정**된다 —
+        세션이 참조하는 자소서가 실제로 있는데도.
+      */}
+      {loading ? (
+        <div className="space-y-3" aria-busy="true">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="bg-card border border-line rounded-[14px] p-4 space-y-2.5"
+            >
+              <div className="h-3 w-24 bg-surface-3 rounded animate-pulse" />
+              <div className="h-4 w-3/4 bg-surface-3 rounded animate-pulse" />
+              <div className="h-3 w-full bg-surface-3 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="bg-surface-2 border border-line rounded-xl p-8 text-center">
+          <p className="text-text-secondary text-sm font-medium mb-1.5">
+            자소서를 불러오지 못했어요
+          </p>
+          <p className="text-text-quaternary text-xs leading-relaxed mb-4">
+            잠시 후 다시 시도해 주세요.
+          </p>
+          <Link
+            to={`/board/${applicationId}/coverletter`}
+            className="inline-flex items-center justify-center min-h-[44px] text-xs font-semibold text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-4 py-3 rounded-lg transition-colors"
+          >
+            자소서 화면에서 보기
+          </Link>
+        </div>
+      ) : coverletters.length === 0 ? (
+        <div className="bg-surface-2 border border-dashed border-line rounded-xl p-8 text-center">
+          <p className="text-text-secondary text-sm font-medium mb-1.5">
+            아직 작성된 자소서 문항이 없어요
+          </p>
+          <p className="text-text-quaternary text-xs leading-relaxed mb-4">
+            면접 질문은 자소서를 바탕으로 만들어져요.
+          </p>
+          <Link
+            to={`/board/${applicationId}/coverletter`}
+            className="inline-block min-h-[44px] text-xs font-semibold text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-4 py-3 rounded-lg transition-colors"
+          >
+            자소서 쓰러 가기
+          </Link>
+        </div>
+      ) : (
+        <div className="shrink-0 space-y-3">
+          {coverletters.map((cl, i) => (
+            <CoverletterQuestionCard
+              key={cl.id}
+              cl={cl}
+              number={i + 1}
+              applicationId={applicationId}
+              expanded={cl.id === activeId}
+              onToggle={() => onOpen(cl.id === activeId ? null : cl.id)}
+              onUpdate={(dto) => onUpdate(cl.id, dto)}
+              /* simpleEdit 이면 삭제·AI 는 렌더되지 않는다 — 호출될 일이 없다 */
+              onDelete={() => {}}
+              onAskAI={() => {}}
+              readOnly={!editing}
+              simpleEdit={editing}
+            />
+          ))}
+        </div>
+      )}
+
+      {/*
+        🔴 **바닥 마무리 줄** (2026-08-10 CEO 실기 지적 — "분할되면 아래가 좀 비어보인다").
+
+        열 높이를 뷰포트에 고정했더니 자소서 문항이 적을 때 아래가 통째로 빈 배경이 됐다
+        (실측: 문항 2개 = 174px). 배경 패널로 덮는 방법은 접었다 — 라이트 모드에서
+        카드(`bg-card` 크림)와 `surface`(흰색)가 거의 붙어 **카드가 묻힌다.**
+
+        대신 **바닥에 붙는 한 줄**로 끝을 만든다. 문항이 많아 열이 넘치면 `mt-auto` 는
+        0 이 되어 내용 뒤에 그냥 따라붙는다 — 짧을 때만 바닥으로 내려간다.
+
+        문구는 헤더가 안 하는 말을 한다: **여기선 왜 버튼이 적은지.** 지금 그 설명은
+        헤더 링크의 `title` 에만 있어 마우스를 올려야 보인다.
+      */}
+      {!loading && !error && coverletters.length > 0 && (
+        <div className="mt-auto shrink-0 pt-6">
+          <div className="border-t border-line pt-3 flex items-center gap-3 text-[11px] text-text-quaternary">
+            <span>여기선 글자만 고쳐요</span>
+            <Link
+              to={`/board/${applicationId}/coverletter`}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg ml-auto py-2 text-text-tertiary hover:text-text-secondary underline underline-offset-2 decoration-text-quaternary/50 whitespace-nowrap"
+            >
+              AI · 문항 추가는 자소서 화면에서 ↗
+            </Link>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 

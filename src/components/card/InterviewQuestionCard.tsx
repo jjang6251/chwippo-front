@@ -133,8 +133,17 @@ export function InterviewQuestionCard({
   const hasAnswerToProbe =
     probeableLen(memo) >= MIN_PROBEABLE_ANSWER_CHARS ||
     probeableLen(question.suggestedAnswer ?? '') >= MIN_PROBEABLE_ANSWER_CHARS
+  /*
+    🔴 **빈 칸이 4줄을 잡고 있었다** (2026-08-10 CEO: "기본 height 가 이렇게 높았었나?").
+
+    「답변 칸이 슴슴하다」를 고치면서 76 → 132px 로 올렸는데, 이미 **내용만큼 자라는**
+    입력칸이라 올릴 필요가 없던 건 **비어 있을 때의 높이**였다. 아무것도 안 썼는데
+    3.8줄이 비어 있고, 나란히 보기에선 열이 651px 뿐이라 그 여백이 그대로 손해다.
+
+    2줄(28.8px × 2 + 상하 여백 24)로 시작해서 쓰는 만큼 늘어난다.
+  */
   const { ref: memoRef, autoResize: autoResizeMemo } = useAutoResize(memo, {
-    min: 132,
+    min: 82,
     max: 420,
   })
 
@@ -753,8 +762,9 @@ export function InterviewQuestionCard({
                 }}
                 placeholder="이 질문에 본인이 어떻게 답할지 적어보세요…"
                 maxLength={5000}
-                style={{ minHeight: 132 }}
-                className="w-full bg-transparent px-3.5 py-3 text-[16px] text-text-primary placeholder:text-text-quaternary focus:outline-none resize-y leading-[1.8]"
+                style={{ minHeight: 82 }}
+                /* 손으로 끄는 손잡이는 두지 않는다 — 다음 글자를 치는 순간 자동 높이가 덮어써서 싸운다 */
+                className="w-full bg-transparent px-3.5 py-3 text-[16px] text-text-primary placeholder:text-text-quaternary focus:outline-none resize-none leading-[1.8]"
               />
               <p
                 className={`px-3.5 pb-2.5 text-right text-[11px] ${memo.length >= 5000 ? 'text-danger' : memo.length >= 4500 ? 'text-warning' : 'text-text-quaternary'}`}
