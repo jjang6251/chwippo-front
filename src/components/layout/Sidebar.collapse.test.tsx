@@ -228,3 +228,31 @@ describe('키보드 포커스', () => {
     ).toContain('focus-visible:ring-2')
   })
 })
+
+/**
+ * 🔴 **서버 응답 모양 하나에 앱 전체가 걸려 있으면 안 된다** (2026-08-11).
+ *
+ * `streak?.streak.current` 는 옵셔널이 **한 겹만** 걸려 있어, 응답에 `streak` 키가 없으면
+ * 그 자리에서 던진다. 사이드바는 **모든 화면의 껍데기**라 그 순간 화면이 통째로
+ * 「화면을 불러오지 못했어요」가 된다 — 캘린더도 보드도 자소서도 전부.
+ *
+ * 타입은 `streak` 가 항상 있다고 말하지만 **타입은 런타임을 보증하지 않는다.**
+ * 프로젝트 규칙: 프론트는 서버를 신뢰하지 않는다.
+ */
+describe('🔴 서버 응답이 예상과 달라도 살아남는다', () => {
+  beforeEach(() => {
+    demoMock.mockReturnValue(false)
+    localStorage.clear()
+    useNavCollapsedStore.setState({ collapsed: false })
+  })
+
+  it('🔴 streak 키가 없어도 사이드바가 죽지 않는다', async () => {
+    const mod = await import('@/hooks/useDashboardStreak')
+    const spy = vi
+      .spyOn(mod, 'useDashboardStreak')
+      .mockReturnValue({ data: {} } as ReturnType<typeof mod.useDashboardStreak>)
+    expect(() => draw()).not.toThrow()
+    expect(screen.getByText('지원 현황 보드')).toBeTruthy()
+    spy.mockRestore()
+  })
+})

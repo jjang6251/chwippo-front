@@ -137,7 +137,7 @@ export function InfoModal({
             className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[92dvh] flex flex-col shadow-2xl outline-none"
           >
             <Drawer.Title className="sr-only">{title}</Drawer.Title>
-            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line shrink-0" aria-hidden="true" />
+            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line-strong shrink-0" aria-hidden="true" />
             {header}
             {body}
             {footer}

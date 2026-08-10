@@ -67,9 +67,17 @@ export function Sidebar() {
       (interviewAiEnabled || !item.interviewAi) &&
       (item.demoReady !== false || !isDemo),
   )
-  // 캘린더 UX 재구성 — 회고 nav 옆 streak 배지 (>=2 조건, 1일 이하는 상처 방지 hide)
+  /*
+    캘린더 UX 재구성 — 회고 nav 옆 streak 배지 (>=2 조건, 1일 이하는 상처 방지 hide)
+
+    🔴 **옵셔널이 한 겹만 걸려 있으면 앱 전체가 죽는다** (2026-08-11).
+    `streak?.streak.current` 는 응답에 `streak` 키가 없을 때 그 자리에서 던지고,
+    사이드바는 **모든 화면의 껍데기**라 화면이 통째로 「불러오지 못했어요」가 된다.
+    실제로 스크린샷을 찍다 밟았다 — 서버 응답 모양 하나에 앱 전부가 걸려 있으면 안 된다.
+    타입은 `streak` 가 항상 있다고 말하지만, **타입은 런타임을 보증하지 않는다.**
+  */
   const { data: streak } = useDashboardStreak()
-  const streakDays = streak?.streak.current ?? 0
+  const streakDays = streak?.streak?.current ?? 0
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
