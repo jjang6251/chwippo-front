@@ -38,6 +38,20 @@ interface Props {
   onAskAI: () => void
   /** 보기 전용 — 모바일·RN 네이티브. 편집·AI 요소 미노출 (CEO 결정 2026-07-09) */
   readOnly?: boolean
+  /**
+   * 🔴 **간단 편집 — 글자만 고친다** (2026-08-10). 면접 세션의 「나란히 보기」 전용.
+   *
+   * 거기서 자소서는 **답을 쓰는 동안 참고하는 자료**다. 문항 유형을 바꾸거나 AI 를 부르거나
+   * 문항을 지우는 건 그 맥락이 아니다 — 504px 열에서 모달이 뜨는 것도 어색하고,
+   * 실수로 지우면 되돌릴 수도 없다. **답변 textarea 하나만 살리고 나머지는 읽기 표시로** 둔다.
+   *
+   * `readOnly` 로 대신할 수 없다 — 그건 **아무것도 못 고친다.** 오타 하나 고치려고
+   * 자소서 화면까지 가야 하면 이 화면을 만든 이유가 없어진다.
+   *
+   * 감추는 것: 유형 select · 글자수 제한 · 문항 편집 · AI 에게 묻기 · 답변 가져오기 · 정리 · 삭제.
+   * 그 기능들이 어디 있는지는 부모(자소서 열 헤더)가 링크로 알려 준다.
+   */
+  simpleEdit?: boolean
   /** AI 적용 직후 강조 플래시 (부모가 1.2s 후 해제) */
   flash?: boolean
   /** 펼친 카드 루트 ref — 부모가 적용 시 scrollIntoView 대상 등록 */
@@ -65,11 +79,17 @@ export function CoverletterQuestionCard({
   onDelete,
   onAskAI,
   readOnly = false,
+  simpleEdit = false,
   preview = false,
   flash = false,
   containerRef,
 }: Props) {
   const aiEnabled = useAiEnabled()
+  /**
+   * 구조를 바꾸는 조작(유형·글자수 제한·문항·삭제)과 부가 도구(AI·가져오기·정리)를 감출지.
+   * `readOnly` 는 답변까지 못 고치고, `simpleEdit` 은 **답변만** 고친다.
+   */
+  const chromeless = readOnly || simpleEdit
   const [question, setQuestion] = useState(cl.question)
   // 문항 인라인 편집 — 새 문항(비어 있음)은 바로 편집 모드, 기존 문항은 읽기 뷰(클릭 시 편집)
   const [editingQuestion, setEditingQuestion] = useState(!cl.question)
@@ -99,6 +119,34 @@ export function CoverletterQuestionCard({
 
   const initialized = useRef(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /**
+   * 🔴 **아직 서버로 안 나간 답변** — 떠날 때 이걸 내보낸다 (2026-08-10 점검에서 발견).
+   *
+   * 저장은 1.5초 debounce 인데 cleanup 은 타이머를 **지우기만** 했다. 예전엔 언마운트
+   * 경로가 「자소서 화면을 떠난다」 뿐이라 잘 안 드러났는데, 면접 화면의 나란히 보기가
+   * 경로를 크게 늘렸다 — **손잡이를 눌러 열을 접기**·끝까지 끌어 접기·창을 줄이기.
+   * 타이핑하고 바로 접으면 마지막 1.5초가 사라지는데, 화면엔 「자동 저장돼요」가 떠 있었다.
+   *
+   * 같은 사고를 면접 카드가 먼저 겪고 flush 로 막아 뒀다 (`InterviewQuestionCard`, 2026-08-09).
+   * 그 패턴을 여기로 옮긴다.
+   */
+  const pendingRef = useRef<string | null>(null)
+  /* 부모가 인라인 람다를 넘겨 매 렌더 신원이 바뀐다 — deps 에 넣으면 cleanup 이 매번 돈다.
+     렌더 중에 ref 를 쓰는 건 React 규칙 위반이라 effect 에서 갱신한다 (최신값 보관 표준 패턴). */
+  const onUpdateRef = useRef(onUpdate)
+  useEffect(() => {
+    onUpdateRef.current = onUpdate
+  })
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (pendingRef.current !== null) {
+        onUpdateRef.current({ answer: pendingRef.current })
+        pendingRef.current = null
+      }
+    },
+    [],
+  )
 
   // 저장 발화 시점에 footer 문구를 "저장됨 ✓" 로 2초간 전환 (자동저장 피드백)
   const [justSaved, setJustSaved] = useState(false)
@@ -134,13 +182,16 @@ export function CoverletterQuestionCard({
       // 동기화가 재개됨. cleanup 에서 해제하면 안 됨 — cleanup 은 sync effect 보다
       // 먼저 돌아서 "사용자 편집 중" 보호가 깨짐.
       saveTimerRef.current = null
+      pendingRef.current = null
       return
     }
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    pendingRef.current = answer // 아직 안 나간 값 — 언마운트 때 이걸 내보낸다
     saveTimerRef.current = setTimeout(() => {
       // 발화 후 ref 해제 필수 — 남겨두면 외부 변경 동기화가 영구 skip 되고,
       // 이 effect 가 stale 로컬 답변을 재저장해 적용 내용을 롤백시킴
       saveTimerRef.current = null
+      pendingRef.current = null
       onUpdate({ answer })
       flagSaved()
     }, 1500)
@@ -237,7 +288,7 @@ export function CoverletterQuestionCard({
         >
           Q{number}
         </span>
-        {readOnly ? (
+        {chromeless ? (
           <span
             className={`inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-md border ${categoryStyle}`}
           >
@@ -270,7 +321,7 @@ export function CoverletterQuestionCard({
             </span>
           </label>
         )}
-        {readOnly ? (
+        {chromeless ? (
           cl.charLimit != null && (
             <span className="font-mono text-text-quaternary">
               제한 {cl.charLimit}자
@@ -317,8 +368,8 @@ export function CoverletterQuestionCard({
         </button>
       </div>
 
-      {/* question */}
-      {readOnly ? (
+      {/* question — simpleEdit 은 읽기. 회사가 준 문항이라 답을 쓰다 고칠 대상이 아니다 */}
+      {chromeless ? (
         <p className="w-full font-serif text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words mb-4">
           {cl.question || (
             <span className="text-text-quaternary font-sans text-sm">
@@ -399,7 +450,16 @@ export function CoverletterQuestionCard({
           setAnswer(e.target.value)
           autoResizeAnswer()
         }}
-        placeholder={aiEnabled ? "여기에 답변을 작성하세요. 또는 우측 AI 채팅으로 초안 생성. (자동 저장)" : "여기에 답변을 작성하세요. (자동 저장)"}
+        /*
+          🔴 **없는 것을 가리키지 않는다** (2026-08-10 점검). `simpleEdit`(면접 화면의
+          나란히 보기)은 AI 채팅을 의도적으로 뺀 화면인데, 안내는 "우측 AI 채팅" 을
+          계속 가리키고 있었다 — 게다가 거기 오른쪽엔 채팅이 아니라 면접 열이 있다.
+        */
+        placeholder={
+          aiEnabled && !simpleEdit
+            ? '여기에 답변을 작성하세요. 또는 우측 AI 채팅으로 초안 생성. (자동 저장)'
+            : '여기에 답변을 작성하세요. (자동 저장)'
+        }
         style={{ minHeight: 80, lineHeight: 1.65 }}
         className="w-full bg-input border border-line rounded-[11px] px-3.5 py-3 text-sm text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
       />
@@ -437,7 +497,12 @@ export function CoverletterQuestionCard({
           <span className="font-mono text-text-quaternary">
             · {byteCount.toLocaleString()}byte
           </span>
-          {overLimit && !readOnly && (
+          {/*
+            🔴 `readOnly` 가 아니라 `chromeless` 로 가른다 (2026-08-10 점검) —
+            이 문구가 가리키는 [검사] 버튼은 `simpleEdit` 에서도 감춰져 있다.
+            안내만 남으면 없는 버튼을 찾게 된다.
+          */}
+          {overLimit && !chromeless && (
             <span className="text-[10px] text-text-quaternary">
               · [검사]의 AI 심층 점검이 줄일 문장을 짚어드려요
             </span>
@@ -445,8 +510,8 @@ export function CoverletterQuestionCard({
         </div>
       </div>
 
-      {/* 액션 — readOnly(모바일·네이티브)에선 편집·AI 미노출 */}
-      {!readOnly && (
+      {/* 액션 — readOnly(모바일·네이티브)·simpleEdit(나란히 보기)에선 미노출 */}
+      {!chromeless && (
       <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-line">
         {aiEnabled && (
           <button

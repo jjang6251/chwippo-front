@@ -106,3 +106,85 @@ describe('useAutoResize', () => {
     expect(remounted.style.height).toBe('300px')
   })
 })
+
+/**
+ * 🔴 **폭이 바뀌면 다시 잰다** (2026-08-10 CEO 실기 지적).
+ *
+ * 높이는 줄 수에서, 줄 수는 폭에서 나온다. 재는 시점이 마운트와 입력뿐이라
+ * **그 뒤에 폭이 바뀌면 옛 폭에서 센 줄 수가 그대로 남았다.**
+ *
+ * 나란히 보기에서 드러났다 — 자소서만 보다 반반으로 돌아오면 면접 열이 새로 마운트되는데
+ * 그 순간 열은 아직 **44px**(세로 탭 폭)이다. 거기서 줄 수를 세니 `max` 까지 부풀고,
+ * 폭이 넓어져도 다시 재지 않아 계속 커진 채 남았다. 글자를 치면 멀쩡해져서
+ * 「썼더니 돌아왔다」로 보였다.
+ */
+describe('폭 변화 재측정', () => {
+  /** 폭에 따라 scrollHeight 가 달라지는 요소 — 좁으면 줄이 늘어난다 */
+  function makeEl(width: number) {
+    const el = {
+      style: { height: '' },
+      clientWidth: width,
+      get scrollHeight() {
+        return Math.round(4000 / (this as unknown as { clientWidth: number }).clientWidth) * 20
+      },
+    }
+    return el as unknown as HTMLTextAreaElement & { clientWidth: number }
+  }
+
+  function stubRO() {
+    const cbs: ResizeObserverCallback[] = []
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        cb: ResizeObserverCallback
+        constructor(cb: ResizeObserverCallback) {
+          this.cb = cb
+          cbs.push(cb)
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+    return {
+      resizeTo(el: HTMLTextAreaElement & { clientWidth: number }, w: number) {
+        el.clientWidth = w
+        cbs.forEach((cb) =>
+          cb(
+            [{ contentRect: { width: w } } as ResizeObserverEntry],
+            null as unknown as ResizeObserver,
+          ),
+        )
+      },
+    }
+  }
+
+  it('🔴 좁을 때 붙었어도 넓어지면 다시 잰다', () => {
+    const ro = stubRO()
+    const { result } = renderHook(() =>
+      useAutoResize('text', { min: 80, max: 420 }),
+    )
+    const el = makeEl(44) // 세로 탭 폭에서 마운트 — 줄이 폭발한다
+    act(() => result.current.ref(el))
+    expect(el.style.height).toBe('420px') // max 까지 부푼 상태
+
+    act(() => ro.resizeTo(el, 480)) // 전환이 끝나 열이 넓어짐
+    expect(el.style.height).toBe('160px') // 제 크기로 돌아온다
+  })
+
+  /** 🔴 높이는 우리가 방금 바꾼 것 — 그걸로 다시 재면 서로 물린다 */
+  it('🔴 폭이 그대로면 다시 재지 않는다', () => {
+    const ro = stubRO()
+    const { result } = renderHook(() =>
+      useAutoResize('text', { min: 80, max: 420 }),
+    )
+    const el = makeEl(480)
+    act(() => result.current.ref(el))
+    const settled = el.style.height
+
+    el.style.height = 'SENTINEL' // 다시 쟀는지 확인용
+    act(() => ro.resizeTo(el, 480)) // 높이만 바뀌어 온 알림
+    expect(el.style.height).toBe('SENTINEL')
+    expect(settled).toBe('160px')
+  })
+})
