@@ -23,8 +23,6 @@ import { DemoModeContextProvider } from '@/contexts/demoMode'
 import type { ApplicationStep } from '@/types/application'
 import { InterviewSessionPage } from './InterviewSessionPage'
 
-const SAVED_JSON = '{"type":"doc","content":[]}'
-
 /** 나란히 보기는 **컨테이너 폭**으로 판정한다 — 뷰포트가 아니다 (split.test 와 같은 스텁) */
 const box = vi.hoisted(() => ({ width: 1200 }))
 const h = vi.hoisted(() => ({
@@ -129,32 +127,32 @@ vi.mock('@/components/coverletter/CoverletterQuestionCard', () => ({
 }))
 vi.mock('@/components/common/AiQuotaChip', () => ({ AiQuotaChip: () => null }))
 /*
-  tiptap 은 jsdom 에 안 올라간다 — StepPage spec 들과 같은 대역을 쓴다.
+  tiptap·시트 조회는 jsdom 에 안 올라간다 — StepPage spec 들과 같은 대역을 쓴다.
   받은 prop 을 그대로 드러내야 「어느 스텝의 노트인가」를 잴 수 있다.
 */
-vi.mock('@/components/editor/StepNoteEditor', () => ({
+vi.mock('@/components/editor/SheetedNoteEditor', () => ({
   /*
     🔴 목이 tiptap 의 **init-only 의미론**을 흉내 내야 한다 (2026-08-13 뮤테이션 감사).
     최신 prop 을 그대로 비추는 목으로는 `key={step.id}` 를 지워도 통과했다 — 실제
     tiptap 은 `content` 를 초기화 때만 읽어서, key 없이 prop 만 갈리면 직전 노트를
-    보여주며 새 스텝에 저장한다. 그래서 initialContent 는 **첫 렌더 값을 박제**한다
+    보여주며 새 스텝에 저장한다. 그래서 fallbackContent 는 **첫 렌더 값을 박제**한다
     (React.useState 초기화 — remount 돼야만 새 값이 잡힌다).
   */
-  StepNoteEditor: ({
+  SheetedNoteEditor: ({
+    stepId,
     stepName,
-    initialContent,
-    onSave,
+    fallbackContent,
   }: {
+    stepId: string
     stepName: string
-    initialContent: string | null
-    onSave: (j: string) => Promise<void>
+    fallbackContent: string | null
   }) => {
-    const [frozen] = ReactForMock.useState(initialContent)
+    const [frozen] = ReactForMock.useState(fallbackContent)
     return (
       <div>
         <div data-testid="note-step">{stepName}</div>
+        <div data-testid="note-step-id">{stepId}</div>
         <div data-testid="note-init">{frozen ?? 'NULL'}</div>
-        <button onClick={() => onSave(SAVED_JSON)}>저장노트</button>
       </div>
     )
   },
@@ -335,15 +333,13 @@ describe('면접 스텝이 여러 개', () => {
     expect(screen.getByTestId('note-init').textContent).toBe('NOTE_ST3')
   })
 
-  it('저장은 고른 스텝으로 나간다', () => {
+  /** 저장은 시트 컨테이너 몫이라, 여기서 잠글 것은 **어느 스텝을 넘겼는가** 다 */
+  it('고른 스텝 id 가 시트 컨테이너로 간다 (남의 스텝 시트에 저장 방지)', () => {
     draw()
     fireEvent.click(noteTab()!)
+    expect(screen.getByTestId('note-step-id').textContent).toBe('st-2')
     fireEvent.change(picker(), { target: { value: 'st-3' } })
-    fireEvent.click(screen.getByText('저장노트'))
-    expect(h.updateStep.mock.calls[0][0]).toMatchObject({
-      stepId: 'st-3',
-      notes: SAVED_JSON,
-    })
+    expect(screen.getByTestId('note-step-id').textContent).toBe('st-3')
   })
 
   /** 선택지가 하나뿐인 select 는 잡음이다 */
@@ -377,31 +373,30 @@ describe('전체 화면으로 가는 길', () => {
 })
 
 /**
- * 🔴 **죽은 `pinnedContent` 는 저장할 때 함께 비운다** (`StepPage.handleSaveNotes` 와 같은 규칙).
- * 화면에는 `mergePinnedIntoNotes` 로 📌 문단이 앞에 붙는데, 그걸 본문에 넣어 저장하면서
- * 원본을 안 지우면 **스텝 화면에서 또 붙어 중복**이 된다.
+ * 죽은 `pinnedContent` 는 **폴백에 병합돼** 첫 시트로 승격될 때 함께 넘어간다
+ * (`StepPage` 와 같은 규칙). 승격·저장 자체는 `SheetedNoteEditor` 몫이고, 이 열이 잠글 것은
+ * **무엇을 넘기는가** 다.
+ *
+ * 🔴 원본 `notes`·`pinnedContent` 를 갱신하는 저장 경로는 이 화면에서 사라졌다 —
+ * 승격은 복사라 원본이 남아 있어야 되돌릴 자리가 있다.
  */
-describe('핵심 메모 이관', () => {
-  it('🔴 병합해 보여주고, 저장하면서 원본을 비운다', () => {
+describe('핵심 메모 · 폴백', () => {
+  it('🔴 📌 가 병합된 폴백이 컨테이너로 간다', () => {
     h.steps = [
       step({ id: 'st-2', name: '1차 실무 면접', pinnedContent: '신분증 지참' }),
     ]
     draw()
     fireEvent.click(noteTab()!)
-    expect(screen.getByTestId('note-init').textContent).toContain('신분증 지참')
-    fireEvent.click(screen.getByText('저장노트'))
-    expect(h.updateStep.mock.calls[0][0]).toMatchObject({
-      stepId: 'st-2',
-      notes: SAVED_JSON,
-      pinnedContent: null,
-    })
+    expect(screen.getByTestId('note-init').textContent).toContain('📌 신분증 지참')
   })
 
-  it('핵심 메모가 없으면 동봉하지 않는다', () => {
+  it('🔴 원본 노트 저장 API(updateStep)를 부르지 않는다', () => {
+    h.steps = [
+      step({ id: 'st-2', name: '1차 실무 면접', pinnedContent: '신분증 지참' }),
+    ]
     draw()
     fireEvent.click(noteTab()!)
-    fireEvent.click(screen.getByText('저장노트'))
-    expect(h.updateStep.mock.calls[0][0]).not.toHaveProperty('pinnedContent')
+    expect(h.updateStep).not.toHaveBeenCalled()
   })
 })
 

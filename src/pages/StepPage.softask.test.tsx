@@ -42,8 +42,8 @@ vi.mock('@/hooks/useStepDetail', () => ({
 }))
 vi.mock('@/hooks/useDemoNavigate', () => ({ useDemoNavigate: () => h.navigate }))
 vi.mock('@/utils/nativeBridge', () => ({ postToNative: h.postToNative }))
-vi.mock('@/components/editor/StepNoteEditor', () => ({
-  StepNoteEditor: () => <div data-testid="note-editor" />,
+vi.mock('@/components/editor/SheetedNoteEditor', () => ({
+  SheetedNoteEditor: () => <div data-testid="note-editor" />,
 }))
 
 import { StepPage } from './StepPage'

@@ -1,3 +1,5 @@
+import type { RefObject } from 'react'
+import type { Editor } from '@tiptap/react'
 import { RichTextEditor } from './RichTextEditor'
 import { getDefaultTemplate } from '@/utils/stepTemplates'
 
@@ -7,6 +9,16 @@ interface Props {
   onSave: (json: string) => Promise<void>
   /** 저장 전 본문(plain text) — 면접 스텝의 「이 내용으로 면접 질문 만들기」가 쓴다 */
   onTextChange?: (plainText: string) => void
+  /**
+   * tiptap Editor 손잡이 — **시트 전환·언마운트 시 미저장분 flush** 를 위해 바깥이 요청한다
+   * (`SheetedNoteEditor`).
+   *
+   * 🔴 `onTextChange` 로는 부족하다. 그건 plain text 라 **저장 형태(tiptap JSON)로 되돌릴 수
+   * 없다** — 그걸로 저장하면 서식이 통째로 날아간다. 저장 직전 값을 만들려면 doc 자체가
+   * 필요하고, 공용 `RichTextEditor` 를 건드리지 않고 doc 에 닿는 길은 `header` 슬롯뿐이다
+   * (렌더물은 없다 — 손잡이만 받는다).
+   */
+  editorRef?: RefObject<Editor | null>
 }
 
 /**
@@ -19,6 +31,7 @@ export function StepNoteEditor({
   initialContent,
   onSave,
   onTextChange,
+  editorRef,
 }: Props) {
   return (
     // card-solid 승격 — 준비 체크리스트 카드와 동급 시인성
@@ -30,6 +43,14 @@ export function StepNoteEditor({
         minHeightClass="min-h-[360px]"
         template={getDefaultTemplate(stepName)}
         onTextChange={onTextChange}
+        header={
+          editorRef
+            ? (editor) => {
+                editorRef.current = editor
+                return null
+              }
+            : undefined
+        }
       />
     </div>
   )
