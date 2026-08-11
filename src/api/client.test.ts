@@ -9,6 +9,7 @@
  * - 실패 시 handleAuthFailure 1번만 호출 (catch 단일성)
  * - handleAuthFailure: 정지 메시지 / 만료 메시지 분기
  * - handleAuthFailure: clearAuth + redirect 호출
+ * - handleAuthFailure: 네트워크(응답 없음)·5xx → 비파괴 (콜드스타트 랜딩 flash 수리)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios from 'axios'
@@ -75,6 +76,31 @@ describe('performRefresh', () => {
     expect(result.user).toBeNull()
     expect(useAuthStore.getState().accessToken).toBe('new-token')
     expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * 🔴 refresh 단일 주체화 (plan refresh-single-writer, 2026-08-13).
+   * 앱에선 웹뷰가 유일 회전자 — 회전 성공마다 네이티브에 새 access 를 밀어줘야
+   * 네이티브(푸시 등록·배지 폴링)가 만료 토큰으로 401 을 맞지 않는다.
+   * 실패 시엔 보내지 않는다 — 죽은 토큰을 SecureStore 에 밀어넣으면 안 된다.
+   */
+  it('🔴 회전 성공 → 네이티브에 token 브리지 발신', async () => {
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'new-token' }, message: 'ok' },
+    })
+    await performRefresh()
+    expect(mockedPostToNative).toHaveBeenCalledWith({
+      type: 'token',
+      accessToken: 'new-token',
+    })
+  })
+
+  it('🔴 회전 실패(401) → token 브리지 미발신', async () => {
+    mockedAxiosPost.mockRejectedValueOnce({ response: { status: 401 } })
+    await expect(performRefresh()).rejects.toBeTruthy()
+    expect(mockedPostToNative).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'token' }),
+    )
   })
 
   it('user 포함 응답 → setUser도 호출 + 반환값에 user 포함', async () => {
@@ -183,9 +209,10 @@ describe('performRefresh', () => {
   })
 
   it('실패 시 동시 caller 모두 reject + handleAuthFailure 1번만 호출', async () => {
+    // status 401 명시 — 부수효과(토스트)는 세션 만료 확정일 때만 발생한다.
     mockedAxiosPost.mockRejectedValueOnce(
       Object.assign(new Error('refresh fail'), {
-        response: { data: { message: '로그인이 만료되었습니다.' } },
+        response: { status: 401, data: { message: '로그인이 만료되었습니다.' } },
       }),
     )
     const results = await Promise.allSettled([
@@ -202,21 +229,23 @@ describe('performRefresh', () => {
 })
 
 describe('handleAuthFailure', () => {
-  it("'정지' 메시지 포함 → 정지 toast", () => {
+  // 🔴 status 401 을 명시한다 — 백엔드 jwt-refresh.strategy 는 정지 계정에도
+  // UnauthorizedException(401) 을 던진다. status 없는 에러는 "판정 불가" 경로라 조용하다.
+  it("'정지' 메시지 포함(401) → 정지 toast", () => {
     handleAuthFailure({
-      response: { data: { message: '계정이 정지되었습니다.' } },
+      response: { status: 401, data: { message: '계정이 정지되었습니다.' } },
     })
     expect(toast.error).toHaveBeenCalledWith(
       expect.stringContaining('정지'),
     )
   })
 
-  it('일반 에러 (메시지 없음) → 만료 toast', () => {
-    handleAuthFailure(new Error('network'))
+  it('401 (메시지 없음) → 만료 toast', () => {
+    handleAuthFailure({ response: { status: 401 } })
     expect(toast.error).toHaveBeenCalledWith('로그인이 만료되었습니다.')
   })
 
-  it('clearAuth 호출 + window.location.href 갱신', () => {
+  it('401 → clearAuth 호출 + window.location.href 갱신', () => {
     useAuthStore.setState({
       accessToken: 'some',
       user: {
@@ -230,7 +259,7 @@ describe('handleAuthFailure', () => {
     alarmPromptedAt: null,
       },
     })
-    handleAuthFailure(new Error('x'))
+    handleAuthFailure({ response: { status: 401 } })
     expect(useAuthStore.getState().accessToken).toBeNull()
     expect(useAuthStore.getState().user).toBeNull()
     expect(window.location.href).toBe('/')
@@ -267,11 +296,76 @@ describe('handleAuthFailure', () => {
     expect(window.location.href).toBe('')
   })
 
-  it('429가 아닌 모든 status는 기존 로직 (401, 500 등) — clearAuth + redirect', () => {
+  it('401 = 세션 만료 확정 → clearAuth + redirect (파괴 경로 유지)', () => {
     useAuthStore.setState({ accessToken: 'a', user: null })
     handleAuthFailure({ response: { status: 401 } })
     expect(useAuthStore.getState().accessToken).toBeNull()
     expect(window.location.href).toBe('/')
+  })
+})
+
+/**
+ * 🔴 네트워크(응답 없음)·5xx = 세션 판정 불가 → 부수효과 전부 금지.
+ *
+ * 실기 증상 (2026-08-12): iOS 콜드스타트에서 네트워크 준비 전 첫 refresh 가 실패하면
+ * 여기서 clearAuth + href='/' 를 타 랜딩이 깜빡 떴다 앱으로 복귀했다.
+ * 서버가 "세션 죽었다"고 말한 적이 없는 실패는 로그아웃 근거가 못 된다.
+ */
+describe('handleAuthFailure — 네트워크·5xx 비파괴', () => {
+  const keepUser = {
+    id: 'u',
+    nickname: 'n',
+    email: null,
+    role: 'user' as const,
+    onboardedAt: null,
+    termsAgreedAt: null,
+    aiConsentAt: null,
+    aiConsentVersion: null,
+    onboardedCoinAt: null,
+    signupJobCategories: null,
+    signupOtherText: null,
+    sampleCardsDismissedAt: null,
+    calendarHomeIntroDismissedAt: null,
+    alarmPromptedAt: null,
+  }
+
+  it.each([
+    ['네트워크 오류 (response 없음)', new Error('Network Error')],
+    ['axios 타임아웃 (response 없음)', { code: 'ECONNABORTED', message: 'timeout' }],
+    ['500 Internal Server Error', { response: { status: 500 } }],
+    ['502 Bad Gateway', { response: { status: 502 } }],
+    ['503 Service Unavailable', { response: { status: 503 } }],
+    ['504 Gateway Timeout', { response: { status: 504 } }],
+  ])(
+    '%s → clearAuth 미호출 · location 미변경 · 토스트 없음 · logout 브리지 미발신',
+    (_label, err) => {
+      useAuthStore.setState({ accessToken: 'keep-me', user: keepUser })
+      handleAuthFailure(err)
+      expect(useAuthStore.getState().accessToken).toBe('keep-me')
+      expect(useAuthStore.getState().user).toEqual(keepUser)
+      expect(window.location.href).toBe('')
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(mockedPostToNative).not.toHaveBeenCalled()
+    },
+  )
+
+  it('5xx 메시지에 "정지" 가 들어 있어도 로그아웃하지 않는다 (판정은 401 만)', () => {
+    useAuthStore.setState({ accessToken: 'keep-me', user: null })
+    handleAuthFailure({
+      response: { status: 503, data: { message: '정지된 계정입니다.' } },
+    })
+    expect(useAuthStore.getState().accessToken).toBe('keep-me')
+    expect(window.location.href).toBe('')
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('performRefresh 네트워크 실패 → reject 되지만 세션은 그대로 (caller 가 재시도)', async () => {
+    useAuthStore.setState({ accessToken: 'keep-me', user: null })
+    mockedAxiosPost.mockRejectedValueOnce(new Error('Network Error'))
+    await expect(performRefresh()).rejects.toBeDefined()
+    expect(useAuthStore.getState().accessToken).toBe('keep-me')
+    expect(window.location.href).toBe('')
+    expect(toast.error).not.toHaveBeenCalled()
   })
 })
 
