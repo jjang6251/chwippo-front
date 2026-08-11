@@ -6,7 +6,7 @@ import { useAiFeedbackStore } from '@/stores/aiFeedbackStore'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useLoginModalStore } from '@/stores/loginModalStore'
 import { apiClient } from '@/api/client'
-import { postToNative } from '@/utils/nativeBridge'
+import { isInNativeApp, postToNative } from '@/utils/nativeBridge'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useDashboardStreak } from '@/hooks/useDashboardStreak'
 import { useNavCollapsedStore } from '@/stores/navCollapsedStore'
@@ -130,7 +130,8 @@ export function Sidebar() {
     queryClient.clear()
     useAiFeedbackStore.getState().resetAll()
     postToNative({ type: 'logout' })
-    navigate('/')
+    // 앱에선 화면 전환이 네이티브 소유 — 랜딩을 그리면 네이티브 전환 대기 동안 그대로 보인다
+    if (!isInNativeApp()) navigate('/')
   }
 
   return (

@@ -42,6 +42,21 @@ interface RNWindow {
   }
 }
 
+/**
+ * 앱 웹뷰 안 여부 — 앱에선 화면 전환(로그인/랜딩 이동)을 네이티브가 소유하므로
+ * 웹 측 랜딩 이동을 생략할 때 사용.
+ *
+ * 판정 기준은 `postToNative` 와 동일하다 (`window.ReactNativeWebView` 존재).
+ *
+ * 🔴 왜 필요한가 (2026-08-12 실기): 네이티브는 `logout` 브리지를 받고 **푸시 기기 해제를
+ * 먼저** 시도한 뒤(오프라인 대비 1.5s 상한) 화면을 바꾼다. 그동안 웹뷰는 계속 보이는데,
+ * 웹이 랜딩으로 이동해두면 그 랜딩이 그대로 노출됐다가 로그인 화면으로 넘어간다.
+ */
+export function isInNativeApp(): boolean {
+  if (typeof window === 'undefined') return false
+  return Boolean((window as unknown as RNWindow).ReactNativeWebView)
+}
+
 export function postToNative(msg: NativeMessage): void {
   if (typeof window === 'undefined') return
   const rn = (window as unknown as RNWindow).ReactNativeWebView

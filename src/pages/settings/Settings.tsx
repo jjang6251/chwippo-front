@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useTourStore } from '@/stores/tourStore'
 import { useThemeStore, type Theme } from '@/stores/themeStore'
 import { apiClient } from '@/api/client'
-import { postToNative } from '@/utils/nativeBridge'
+import { isInNativeApp, postToNative } from '@/utils/nativeBridge'
 import { AppLockSection } from '@/pages/settings/AppLockSection'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useDemoSignupStore } from '@/stores/demoSignupStore'
@@ -38,7 +38,8 @@ export function Settings() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
     postToNative({ type: 'logout' })
-    navigate('/')
+    // 앱에선 화면 전환이 네이티브 소유 — 랜딩을 그리면 네이티브 전환 대기 동안 그대로 보인다
+    if (!isInNativeApp()) navigate('/')
   }
 
   return (
