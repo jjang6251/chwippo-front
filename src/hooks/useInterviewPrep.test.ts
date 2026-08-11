@@ -17,19 +17,25 @@ vi.mock('@/api/interviewPrep', () => ({
     remove: vi.fn(),
     generate: vi.fn(),
     createFollowup: vi.fn(),
+    deleteQuestion: vi.fn(),
+    regenerateQuestion: vi.fn(),
   },
 }))
 
 import { interviewPrepApi } from '@/api/interviewPrep'
 import {
   useCreateInterviewFollowup,
+  useDeleteInterviewQuestion,
   useDeleteInterviewSession,
   useGenerateInterviewSession,
+  useRegenerateInterviewQuestion,
 } from './useInterviewPrep'
 
 const removeMock = vi.mocked(interviewPrepApi.remove)
 const generateMock = vi.mocked(interviewPrepApi.generate)
 const followupMock = vi.mocked(interviewPrepApi.createFollowup)
+const deleteQuestionMock = vi.mocked(interviewPrepApi.deleteQuestion)
+const regenerateMock = vi.mocked(interviewPrepApi.regenerateQuestion)
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -101,9 +107,12 @@ describe('AI mutation → ai-quotas invalidate (5.6.6 검증)', () => {
       () => useGenerateInterviewSession('session-1'),
       { wrapper: Wrap },
     )
-    result.current.mutate(false)
+    result.current.mutate({ count: 10, category: 'self_intro' })
     await waitFor(() =>
-      expect(generateMock).toHaveBeenCalledWith('session-1', false),
+      expect(generateMock).toHaveBeenCalledWith('session-1', {
+        count: 10,
+        category: 'self_intro',
+      }),
     )
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['me', 'ai-quotas'],
@@ -124,4 +133,72 @@ describe('AI mutation → ai-quotas invalidate (5.6.6 검증)', () => {
     })
   })
 
+  /**
+   * 질문 은행 D2b — ↻ 낱개 교체는 **AI 호출**이라 하우스 3종 세트를 전부 무효화한다.
+   */
+  it('6) useRegenerateInterviewQuestion onSuccess → questions·session·quota·coin invalidate', async () => {
+    regenerateMock.mockResolvedValue({
+      status: 'ok',
+      question: { id: 'q-new' },
+    } as never)
+    const { invalidateSpy, Wrap } = makeWrapper()
+    const { result } = renderHook(
+      () => useRegenerateInterviewQuestion('session-1'),
+      { wrapper: Wrap },
+    )
+    result.current.mutate('q-old')
+    await waitFor(() => expect(regenerateMock).toHaveBeenCalledWith('q-old'))
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['interview-prep-questions', 'session-1'],
+    })
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['interview-prep-session', 'session-1'],
+    })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['me', 'ai-quotas'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['me', 'coin-balance'],
+    })
+  })
+})
+
+/**
+ * 질문 은행 D2b — 질문 삭제는 **AI 무관**이다.
+ *
+ * 🔴 쿼터를 건드리지 않는 것까지가 계약이다. 같은 파일의 AI mutation 을 복사하면
+ * `['me','ai-quotas']` 가 딸려 오는데, 그러면 질문 하나 지울 때마다 쓰지도 않은 쿼터를
+ * 다시 조회하고 사용량 칩이 깜빡인다.
+ */
+describe('useDeleteInterviewQuestion (질문 은행 D2b)', () => {
+  beforeEach(() => deleteQuestionMock.mockReset())
+
+  it('7) 정상 삭제 → questions 트리만 invalidate', async () => {
+    deleteQuestionMock.mockResolvedValue({} as never)
+    const { invalidateSpy, Wrap } = makeWrapper()
+    const { result } = renderHook(
+      () => useDeleteInterviewQuestion('session-1'),
+      { wrapper: Wrap },
+    )
+    result.current.mutate('q-1')
+    await waitFor(() => expect(deleteQuestionMock).toHaveBeenCalledWith('q-1'))
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['interview-prep-questions', 'session-1'],
+    })
+  })
+
+  it('8) 🔴 삭제는 quota·coin 을 invalidate 하지 않는다 (AI 호출이 아니다)', async () => {
+    deleteQuestionMock.mockResolvedValue({} as never)
+    const { invalidateSpy, Wrap } = makeWrapper()
+    const { result } = renderHook(
+      () => useDeleteInterviewQuestion('session-1'),
+      { wrapper: Wrap },
+    )
+    result.current.mutate('q-1')
+    await waitFor(() => expect(deleteQuestionMock).toHaveBeenCalled())
+    expect(invalidateSpy).not.toHaveBeenCalledWith({
+      queryKey: ['me', 'ai-quotas'],
+    })
+    expect(invalidateSpy).not.toHaveBeenCalledWith({
+      queryKey: ['me', 'coin-balance'],
+    })
+  })
 })

@@ -30,6 +30,26 @@ export function useMyAiQuotas(options?: { enabled?: boolean }) {
   })
 }
 
+/**
+ * 질문 은행 D2b — feature 1개의 **예상 코인(예약치)**.
+ *
+ * 🔴 **실패해도 조용하다.** 이 값은 "약 N코인이 예약돼요" 라는 **정보 제공용**이라,
+ * 못 불러왔다고 생성 자체를 막거나 에러를 띄우면 본래 하려던 일이 막힌다.
+ * 호출부는 `data` 가 없으면 문구를 **생략**한다 (틀린 숫자를 보여주느니 안 보여준다).
+ *
+ * `staleTime` 5분 — 원가 테이블은 admin 이 가끔 고치는 값이라 모달 열 때마다 칠 이유가 없다.
+ * `retry: false` — 400(화이트리스트 밖 feature)은 재시도해도 같은 답이다.
+ */
+export function useMyAiCosts(feature: LlmFeature, enabled = true) {
+  return useQuery({
+    queryKey: ['me', 'ai-costs', feature] as const,
+    queryFn: () => aiQuotaApi.getMyAiCosts(feature),
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+}
+
 /** 단일 feature 의 quota row 추출 (없으면 undefined) */
 export function useMyAiQuota(
   feature: LlmFeature,

@@ -905,6 +905,8 @@ function iq(
     answer?: string
     memo?: string
     gap?: string
+    /** 질문 은행 — 사용자가 직접 적은 질문 (「내 질문」 배지). 기본은 AI 생성 */
+    source?: 'ai' | 'user'
     children?: InterviewPrepQuestion[]
   } = {},
 ): InterviewPrepQuestion {
@@ -913,6 +915,7 @@ function iq(
     orderIndex: i, category, mustPrepare: opts.must ?? false, followupBasis: null,
     questionText, suggestedAnswer: opts.answer ?? null, materialGap: opts.gap ?? null,
     sourceLogIds: [], myMemo: opts.memo ?? null,
+    source: opts.source ?? 'ai', lastPracticedAt: null, lastPracticeResult: null,
     createdAt: d(-4) + 'T09:00:00Z', updatedAt: d(-4) + 'T09:00:00Z',
     children: opts.children ?? [],
   }
@@ -927,6 +930,7 @@ function ifu(
     id, sessionId: sid, parentQuestionId: parentId, depth: 1, orderIndex: 0,
     category: null, mustPrepare: false, followupBasis: basis, questionText,
     suggestedAnswer: null, materialGap: null, sourceLogIds: [], myMemo: null,
+    source: 'ai', lastPracticedAt: null, lastPracticeResult: null,
     createdAt: d(-3) + 'T11:00:00Z', updatedAt: d(-3) + 'T11:00:00Z', children: [],
   }
 }
@@ -994,6 +998,16 @@ const IQ_KAKAO: InterviewPrepQuestion[] = [
   }),
   iq('demo-is1', 19, 'reverse_question', '마지막으로, 백엔드 개발 업무나 팀 운영 방식과 관련해 면접관에게 궁금한 점을 질문해 주세요.'),
   iq('demo-is1', 20, 'closing_remark', '마지막으로 본인의 기술 역량이나 경험 중 추가로 강조하고 싶은 내용을 말씀해 주세요.'),
+  /*
+    🔴 **직접 모은 기출 2개** (질문 은행 D2). 데모에 AI 질문만 있으면 「내 질문」 배지가
+    한 번도 안 보이고, 그러면 이 기능이 존재한다는 걸 알 방법이 없다.
+    실제 1차 면접에서 흔히 나오는 문장을 쓴다 — AI 가 만든 긴 질문과 **문장 길이부터 다르다**.
+  */
+  iq('demo-is1', 21, 'self_intro', '1분 자기소개 해주세요.', { source: 'user' }),
+  iq('demo-is1', 22, 'company_industry', '우리 회사 서비스에서 개선하고 싶은 점 하나를 꼽는다면?', {
+    source: 'user',
+    memo: '알림 설정이 전부/끄기 둘뿐인 점 — 중요한 것만 받고 싶다고 말하기',
+  }),
 ]
 
 /** 📋 네이버 · 서비스 기획 — job_fit (business_reasoning fork) */

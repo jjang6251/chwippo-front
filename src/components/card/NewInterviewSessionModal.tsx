@@ -100,12 +100,6 @@ export function NewInterviewSessionModal({
       toast.error('면접 차수를 선택하거나 입력해 주세요.')
       return
     }
-    // v2 — 자소서가 이 기능의 재료다. 서버도 같은 조건으로 막지만(우회 방어),
-    //   버튼 disabled 로 먼저 알려 사용자가 제출 후에 알게 되지 않도록 한다.
-    if (selectedClIds.size === 0) {
-      toast.error('자소서를 1개 이상 선택해 주세요.')
-      return
-    }
     const newJobTitle = jobTitleDraft.trim()
     if (!resolvedJob && !newJobTitle) {
       toast.error('지원 직무를 입력해 주세요. 직무별 질문의 기준이 됩니다.')
@@ -223,7 +217,8 @@ export function NewInterviewSessionModal({
                 <select
                   value={roundChoice}
                   onChange={(e) => setRoundChoice(e.target.value)}
-                  className="w-full appearance-none bg-input border border-line rounded-lg pl-3 pr-8 py-2 text-sm text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                  /* iOS 포커스 줌 방지 — 모바일 노출 select 는 16px 이상 */
+                  className="w-full appearance-none bg-input border border-line rounded-lg pl-3 pr-8 py-2 text-base sm:text-sm text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
                 >
                   <option value="" disabled>
                     전형 단계를 선택하세요
@@ -259,7 +254,8 @@ export function NewInterviewSessionModal({
                   maxLength={40}
                   placeholder="예: 모의 면접 / 코딩테스트 회고"
                   autoFocus
-                  className="mt-2 w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none"
+                  /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
+                  className="mt-2 w-full bg-surface border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none"
                 />
               )}
               {steps.length === 0 && roundChoice !== CUSTOM_ROUND && (
@@ -320,17 +316,18 @@ export function NewInterviewSessionModal({
             </label>
             {clList.length === 0 ? (
               /*
-                v2 — 자소서가 없으면 세션을 못 만든다. 단순 차단으로 끝내면 사용자는
-                막다른 길에 서므로, **왜 필요한지 + 어디로 가면 되는지**를 같이 준다.
-                (자소서 등록 동기를 만드는 게 이 차단의 목적이기도 하다)
+                🔴 **차단이 아니라 권장이다** (질문 은행 D2a). 예전엔 자소서 0건이면 세션
+                자체를 못 만들었다 — AI 생성이 유일한 입구였을 때의 규칙이다.
+                지금은 **직접 적은 질문을 모으는 것**이 기본 동선이라, 자소서가 없어도
+                세션을 만들어 기출을 쌓을 수 있어야 한다. 자소서는 AI 생성의 재료로만 남는다.
+
+                「자소서 등록하러 가기」는 지운 게 아니라 이 안내 안으로 옮겼다 —
+                강제는 없애되 길은 남긴다.
               */
-              <div className="border border-warning/30 bg-warning/8 rounded-lg p-3">
-                <p className="text-text-secondary text-xs leading-relaxed">
-                  이 카드에 등록된 자소서가 없어요. 면접 질문은{' '}
-                  <strong className="text-text-primary font-semibold">
-                    내가 쓴 자소서를 파고드는 방식
-                  </strong>
-                  이라 자소서가 있어야 만들 수 있어요.
+              <div className="bg-info/10 border border-info/25 text-text-secondary text-xs rounded-lg p-3">
+                <p className="leading-relaxed">
+                  자소서는 AI 질문 생성에 필요해요. 직접 질문은 세션을 만든 뒤 바로
+                  추가할 수 있어요.
                 </p>
                 <button
                   type="button"
@@ -468,16 +465,10 @@ export function NewInterviewSessionModal({
         </button>
         <button
           onClick={() => void handleSubmit()}
-          // v2 — 자소서가 재료다. 0개면 만들 수 없다 (서버도 같은 조건으로 막는다)
-          //   직무는 직무별 질문의 기준이라 비어 있으면 위 칸에서 고르게 한다
-          disabled={isPending || !round || selectedClIds.size === 0 || !jobReady}
-          title={
-            selectedClIds.size === 0
-              ? '자소서를 1개 이상 선택해 주세요'
-              : !jobReady
-                ? '지원 직무를 입력해 주세요'
-                : undefined
-          }
+          // 직무는 직무별 질문의 기준이라 비어 있으면 위 칸에서 고르게 한다.
+          // 자소서는 더 이상 조건이 아니다 — 직접 적은 질문만으로도 세션이 성립한다.
+          disabled={isPending || !round || !jobReady}
+          title={!jobReady ? '지원 직무를 입력해 주세요' : undefined}
           className="px-4 py-1.5 text-xs bg-brand hover:bg-brand-hover text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? '생성 중…' : '세션 만들기'}

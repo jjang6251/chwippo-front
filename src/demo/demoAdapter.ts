@@ -172,8 +172,13 @@ function resolveMutation(method: string, url: string, body: Record<string, unkno
   /**
    * 면접 메모 — **자소서 답변 저장과 같은 성격**(비 AI 텍스트)이라 허용한다.
    * 데모에서 실제로 써볼 수 있어야 기능을 이해한다. 인메모리라 새로고침하면 사라진다.
-   * 🔴 반면 `POST .../answer`·`/followups`·`/generate` 는 **AI 호출**이라 화이트리스트에
-   * 넣지 않는다 — 아래 기본 분기가 가입 모달을 띄운다.
+   * 🔴 반면 `POST .../answer`·`/followups`·`/generate`·`/regenerate` 는 **AI 호출**이라
+   * 화이트리스트에 넣지 않는다 — 아래 기본 분기가 가입 모달을 띄운다.
+   *
+   * 질문 은행 D2b — 이 경로가 `mustPrepare`·`questionText`·`category` 도 나른다.
+   * body 를 그대로 되비추므로(`{ ...body }`) 훅의 캐시 패치가 **보낸 필드만** 반영해
+   * 데모에서도 ⭐ 토글과 인라인 편집이 실제로 움직인다. `DELETE` 는 넣지 않는다 —
+   * 질문이 사라지는 건 되돌릴 수 없어 둘러보기에서 보여줄 동작이 아니다.
    */
   if (
     method === 'patch' &&
@@ -249,8 +254,22 @@ function envelope(config: Parameters<AxiosAdapter>[0], payload: unknown): AxiosR
  * 여기서 못 알아본 경로는 `default` 로 떨어지고, 그때도 문구는 어색하지 않아야 한다.
  */
 function blockReason(path: string): DemoBlockReason {
+  /*
+    🔴 **AI 생성과 갈라 놓는다** (질문 은행 D2). 직접 적은 질문은 AI 가 아니라 **내가 모은
+    자산**이라 "예상 질문을 뽑아드릴게요" 가 나가면 방금 한 행동과 어긋난다.
+    `/generate` 보다 **먼저** 판정한다 — 두 경로가 같은 접두사(`/interview-prep-sessions/…`)다.
+  */
+  if (/^\/interview-prep-sessions\/[^/]+\/questions\/bulk$/.test(path))
+    return 'custom_question'
   if (/^\/interview-prep-questions\/[^/]+\/answer$/.test(path)) return 'ai_answer'
   if (/^\/interview-prep-questions\/[^/]+\/followups$/.test(path)) return 'ai_followup'
+  /*
+    ↻ 낱개 교체 — **생성과 같은 사유**를 쓴다 (질문 은행 D2b). 하는 일이 "AI 가 질문을
+    만든다" 로 같아서 새 문구를 만들 이유가 없다. 개수가 1개인 것은 가입 전 사용자에게
+    설명할 차이가 아니다.
+  */
+  if (/^\/interview-prep-questions\/[^/]+\/regenerate$/.test(path))
+    return 'ai_generate'
   if (/^\/interview-prep-sessions\/[^/]+\/generate$/.test(path)) return 'ai_generate'
   // 🔴 자소서는 **AI 경로와 문항 추가를 구분**한다 (2026-08-08 QA 발견).
   //    `/coverletter/` 하나로 뭉치면 `+ 지원 동기`(문항 추가)에도 "초안을 만들어드릴게요" 가
