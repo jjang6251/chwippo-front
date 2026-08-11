@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
 import { deleteAccount } from '@/api/users'
 import { apiClient } from '@/api/client'
-import { postToNative } from '@/utils/nativeBridge'
+import { isInNativeApp, postToNative } from '@/utils/nativeBridge'
 
 const PROVIDER_LABEL: Record<'kakao' | 'apple', string> = {
   kakao: '카카오',
@@ -34,7 +34,8 @@ export function ProfileSettings() {
       clearAuth()
       // chwippo-mobile 즉시 clearAll + login redirect
       postToNative({ type: 'account-deleted' })
-      navigate('/')
+      // 앱에선 화면 전환이 네이티브 소유 — 랜딩을 그리면 네이티브 전환 대기 동안 그대로 보인다
+      if (!isInNativeApp()) navigate('/')
     },
     onError: () => toast.error('오류가 발생했습니다. 다시 시도해주세요.'),
   })
@@ -43,7 +44,8 @@ export function ProfileSettings() {
     try { await apiClient.post('/auth/logout') } catch { /* 로그아웃 실패해도 클라이언트는 정리 */ }
     clearAuth()
     postToNative({ type: 'logout' })
-    navigate('/')
+    // 앱에선 화면 전환이 네이티브 소유 — 랜딩을 그리면 네이티브 전환 대기 동안 그대로 보인다
+    if (!isInNativeApp()) navigate('/')
   }
 
   return (

@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { performRefresh } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
 import { resolvePostLoginDestination } from '@/utils/authRouting'
+import { isInNativeApp } from '@/utils/nativeBridge'
 
 /** 부팅 refresh 가 막힌 사유 — 랜딩으로 튕기는 대신 안내 카드로 받는다 */
 type BlockedReason = 'rate-limit' | 'network'
@@ -121,7 +122,16 @@ export function AuthGuard() {
       </div>
     )
   }
-  if (!accessToken) return <Navigate to="/" replace />
+  /*
+    🔴 **앱 웹뷰에선 랜딩을 그리지 않는다** (2026-08-12 로그아웃 깜빡임 수리).
+
+    로그아웃 핸들러가 `navigate('/')` 를 안 해도, `clearAuth()` 구독 재렌더가 이 줄을
+    통과시켜 랜딩을 그린다 — 핸들러 수정만으로는 절대 안 막힌다.
+    앱 안에서 화면 전환은 네이티브 소유다. 네이티브는 logout 브리지를 받고 푸시 기기
+    해제(오프라인 대비 1.5s 상한)를 마친 뒤 `/login` 으로 바꾼다. 그동안 웹뷰는 보이므로
+    여기서 빈 화면으로 버틴다 — 웹뷰 unmount 는 네이티브가 곧 처리한다.
+  */
+  if (!accessToken) return isInNativeApp() ? null : <Navigate to="/" replace />
   // /terms-agreement 자체는 제외 — 리다이렉트 루프 방지
   if (user && location.pathname !== '/terms-agreement') {
     const dest = resolvePostLoginDestination(user.termsAgreedAt)

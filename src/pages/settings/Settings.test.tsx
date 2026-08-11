@@ -7,7 +7,7 @@
  * - 모달의 "취소" → 모달 닫힘, logout API 미호출, 인증 유지
  * - 모달의 "로그아웃" → /auth/logout 호출 + clearAuth + / 로 navigate
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Settings } from './Settings'
@@ -120,6 +120,42 @@ describe('Settings — 로그아웃 확인 모달', () => {
       expect(useAuthStore.getState().accessToken).toBeNull()
     })
     expect(mockNavigate).toHaveBeenCalledWith('/')
+  })
+})
+
+/**
+ * 🔴 앱 웹뷰 로그아웃 랜딩 깜빡임 (2026-08-12).
+ *
+ * 앱 안에서 화면 전환은 네이티브 소유다. 네이티브가 푸시 기기 해제를 마치고 로그인
+ * 화면으로 바꾸는 동안 웹뷰는 계속 보이므로, 웹이 랜딩으로 이동해두면 그게 그대로 보인다.
+ * 서버 로그아웃·clearAuth·브리지 발신은 **그대로 유지**하고 이동만 생략한다.
+ */
+describe('Settings — 앱 웹뷰 로그아웃', () => {
+  interface RNWindowMock {
+    ReactNativeWebView?: { postMessage: (data: string) => void }
+  }
+
+  afterEach(() => {
+    // 모드 누수 금지 — 앱 판정이 남으면 다른 케이스가 엉뚱한 이유로 통과한다
+    delete (window as unknown as RNWindowMock).ReactNativeWebView
+  })
+
+  it('앱: navigate 미호출 · /auth/logout + clearAuth + 브리지는 유지', async () => {
+    const postMessage = vi.fn()
+    ;(window as unknown as RNWindowMock).ReactNativeWebView = { postMessage }
+    vi.mocked(apiClient.post).mockResolvedValueOnce({} as never)
+    renderSettings()
+
+    fireEvent.click(screen.getByRole('button', { name: /로그아웃/ }))
+    const buttons = screen.getAllByRole('button', { name: '로그아웃' })
+    fireEvent.click(buttons[buttons.length - 1])
+
+    await waitFor(() => {
+      expect(useAuthStore.getState().accessToken).toBeNull()
+    })
+    expect(apiClient.post).toHaveBeenCalledWith('/auth/logout')
+    expect(postMessage).toHaveBeenCalledWith('{"type":"logout"}')
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 })
 

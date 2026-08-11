@@ -44,9 +44,15 @@ vi.mock('@/stores/toastStore', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }))
 
-vi.mock('@/utils/nativeBridge', () => ({
-  postToNative: vi.fn(),
-}))
+// postToNative 만 관찰용으로 바꾸고 isInNativeApp 은 **실제 구현**을 쓴다 —
+// 앱 판정은 window.ReactNativeWebView 주입/제거로 재현해야 실제 계약을 검증한다.
+vi.mock('@/utils/nativeBridge', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/utils/nativeBridge')>(
+      '@/utils/nativeBridge',
+    )
+  return { ...actual, postToNative: vi.fn() }
+})
 
 const mockedAxiosPost = vi.mocked(axios.post)
 const mockedPostToNative = vi.mocked(postToNative)
@@ -64,7 +70,13 @@ beforeEach(() => {
 
 afterEach(() => {
   __resetRefreshPromiseForTest()
+  // 모드 누수 금지 — 앱 판정이 남으면 다른 케이스가 엉뚱한 이유로 통과한다
+  delete (window as unknown as RNWindowMock).ReactNativeWebView
 })
+
+interface RNWindowMock {
+  ReactNativeWebView?: { postMessage: (data: string) => void }
+}
 
 describe('performRefresh', () => {
   it('정상 응답 → setAccessToken + accessToken 반환', async () => {
@@ -404,6 +416,58 @@ describe('handleAuthFailure — 네이티브 로그아웃 전파 (401 한정)', 
       writable: true,
     })
     handleAuthFailure({ response: { status: 401 } })
+    expect(mockedPostToNative).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * 🔴 앱 웹뷰 랜딩 깜빡임 — 세션 만료(401) 경로 (2026-08-12).
+ *
+ * 401 확정이면 브리지를 보내고 네이티브가 로그인 화면으로 바꾼다. 그동안 웹뷰는 계속
+ * 보이므로 여기서 랜딩으로 밀면 안 된다. 사용자 로그아웃과 같은 증상을 세션 만료도 겪었다.
+ *
+ * 시나리오:
+ * - 앱 + 401 → href 미변경 · logout 브리지 발신 · clearAuth · 토스트는 그대로
+ * - 브라우저 + 401 → 기존대로 href='/'
+ * - 앱 + 429/네트워크 → 애초에 파괴 경로 아님 (앱 분기가 이 판정을 흔들지 않는다)
+ */
+describe('handleAuthFailure — 앱 웹뷰에서는 랜딩으로 밀지 않는다', () => {
+  const enterApp = () => {
+    ;(window as unknown as RNWindowMock).ReactNativeWebView = {
+      postMessage: vi.fn(),
+    }
+  }
+
+  it('앱 + 401 → href 미변경 · logout 브리지 발신 · clearAuth 는 그대로', () => {
+    enterApp()
+    useAuthStore.setState({ accessToken: 'dying', user: null })
+
+    handleAuthFailure({ response: { status: 401 } })
+
+    expect(window.location.href).toBe('')
+    expect(mockedPostToNative).toHaveBeenCalledWith({ type: 'logout' })
+    expect(useAuthStore.getState().accessToken).toBeNull()
+    expect(toast.error).toHaveBeenCalledWith('로그인이 만료되었습니다.')
+  })
+
+  it('브라우저 + 401 → 기존대로 href=/ (웹 경로 무손상)', () => {
+    useAuthStore.setState({ accessToken: 'dying', user: null })
+
+    handleAuthFailure({ response: { status: 401 } })
+
+    expect(window.location.href).toBe('/')
+    expect(mockedPostToNative).toHaveBeenCalledWith({ type: 'logout' })
+  })
+
+  it('앱 + 429·네트워크 → 세션 유지 판정은 그대로 (브리지·href 모두 없음)', () => {
+    enterApp()
+    useAuthStore.setState({ accessToken: 'keep-me', user: null })
+
+    handleAuthFailure({ response: { status: 429 } })
+    handleAuthFailure(new Error('Network Error'))
+
+    expect(useAuthStore.getState().accessToken).toBe('keep-me')
+    expect(window.location.href).toBe('')
     expect(mockedPostToNative).not.toHaveBeenCalled()
   })
 })

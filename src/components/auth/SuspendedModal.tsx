@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { isInNativeApp, postToNative } from '@/utils/nativeBridge'
 
 /**
  * PR_B2 Phase 1 — Q13 정지된 사용자 로그인 시 표시되는 모달.
@@ -38,7 +39,14 @@ export function SuspendedModal({
 }: Props) {
   const handleLogout = () => {
     useAuthStore.getState().clearAuth()
-    window.location.href = '/'
+    /*
+      🔴 브리지 발신이 여기만 빠져 있었다. 앱에서 정지 로그아웃을 하면 네이티브
+      SecureStore 가 안 지워져, 재시작 때 토큰이 있다고 낙관 진입했다가 401 을 맞고
+      나서야 정리됐다. 다른 로그아웃 경로와 같은 계약으로 맞춘다.
+    */
+    postToNative({ type: 'logout' })
+    // 앱에선 화면 전환이 네이티브 소유 — 랜딩을 그리면 네이티브 전환 대기 동안 그대로 보인다
+    if (!isInNativeApp()) window.location.href = '/'
   }
 
   return (
