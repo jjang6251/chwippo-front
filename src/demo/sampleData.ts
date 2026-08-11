@@ -907,6 +907,8 @@ function iq(
     gap?: string
     /** 질문 은행 — 사용자가 직접 적은 질문 (「내 질문」 배지). 기본은 AI 생성 */
     source?: 'ai' | 'user'
+    /** 「면접 보기」 지난 연습 결과. 설정 화면의 「다시 볼 것만」이 이 값으로 거른다 */
+    practice?: NonNullable<InterviewPrepQuestion['lastPracticeResult']>
     children?: InterviewPrepQuestion[]
   } = {},
 ): InterviewPrepQuestion {
@@ -915,7 +917,9 @@ function iq(
     orderIndex: i, category, mustPrepare: opts.must ?? false, followupBasis: null,
     questionText, suggestedAnswer: opts.answer ?? null, materialGap: opts.gap ?? null,
     sourceLogIds: [], myMemo: opts.memo ?? null,
-    source: opts.source ?? 'ai', lastPracticedAt: null, lastPracticeResult: null,
+    source: opts.source ?? 'ai',
+    lastPracticedAt: opts.practice ? d(-1) + 'T22:10:00Z' : null,
+    lastPracticeResult: opts.practice ?? null,
     createdAt: d(-4) + 'T09:00:00Z', updatedAt: d(-4) + 'T09:00:00Z',
     children: opts.children ?? [],
   }
@@ -977,7 +981,13 @@ const IQ_KAKAO: InterviewPrepQuestion[] = [
     answer:
       '추가 전에 실행 계획을 먼저 보고 그 인덱스가 실제로 쓰이는지, 기존 인덱스로 대체할 수 없는지 확인했어야 했습니다. 당시에는 조회가 느리다는 이유만으로 추가했고 쓰기 경로에 미칠 영향을 재지 않았습니다. 인덱스는 쓰기마다 갱신 비용이 붙으므로, 해당 테이블의 읽기와 쓰기 비율을 먼저 확인하겠습니다. 쓰기가 많은 테이블이면 인덱스를 늘리기보다 쿼리나 조회 시점을 바꾸는 쪽을 먼저 보고, 꼭 필요하면 추가 후 쓰기 지연을 함께 측정해 되돌릴 기준을 미리 정해 두겠습니다.',
   }),
-  iq('demo-is1', 5, 'cs_tech', '트래픽이 몰릴 때 특정 API의 응답이 느려진다면 애플리케이션 로그, DB 실행 계획, 인프라 자원 중 무엇을 어떤 순서로 확인하시겠습니까?', { must: true }),
+  /*
+    🔴 **지난 연습에서 「다시」로 찍힌 2개** (질문 은행 D3). 없으면 설정 화면의
+    「다시 볼 것만」이 데모에서 항상 0개라, 그 범위가 무엇인지 보여줄 방법이 없다.
+    답변이 아직 없는 것(5번)과 메모만 있는 것(14번)을 섞는다 — 실제로 「다시」가 찍히는
+    자리가 그 둘이다.
+  */
+  iq('demo-is1', 5, 'cs_tech', '트래픽이 몰릴 때 특정 API의 응답이 느려진다면 애플리케이션 로그, DB 실행 계획, 인프라 자원 중 무엇을 어떤 순서로 확인하시겠습니까?', { must: true, practice: 'again' }),
   iq('demo-is1', 6, 'cs_tech', '캐시를 도입해 조회 성능을 높인다고 할 때 만료 정책은 어떤 기준으로 정하고, 원본 데이터가 바뀌었는데 캐시가 남아 있는 상황은 어떻게 막으시겠습니까?', { must: true }),
   iq('demo-is1', 7, 'cs_tech', '데이터베이스 트랜잭션 격리 수준을 설명하고, 결제나 정산처럼 정확성이 중요한 작업에서 어떤 수준을 선택하시겠습니까? 그 선택의 대가도 함께 말씀해 주세요.'),
   iq('demo-is1', 8, 'cs_tech', 'REST API를 설계할 때 멱등성이 필요한 메서드와 그렇지 않은 메서드를 구분해 설명하고, 클라이언트가 같은 요청을 재시도해도 안전하려면 서버가 무엇을 보장해야 합니까?'),
@@ -988,6 +998,7 @@ const IQ_KAKAO: InterviewPrepQuestion[] = [
   iq('demo-is1', 13, 'cs_tech', '프로세스와 스레드의 차이를 설명하고, 백엔드 서버에서 스레드 풀 크기를 정할 때 무엇을 고려해야 하는지 말씀해 주세요.'),
   iq('demo-is1', 14, 'coverletter_based', '정산 배치의 병목이 트래픽 총량이 아니라 커넥션 풀 구조에 있었다고 했는데, 처음에 서버 증설을 제안했다가 방향을 바꾼 판단은 어떤 근거로 이뤄졌습니까?', {
     must: true,
+    practice: 'again',
     memo: 'APM 프로파일링 결과 — 전체 시간의 70%가 건별 단건 조회. 증설해도 그 비율은 그대로라 효과가 없다고 판단.\n(면접에서 "왜 증설이 답이 아니라고 봤나"를 먼저 말하기)',
   }),
   iq('demo-is1', 15, 'coverletter_based', '개선 전후를 그래프로 남겨 팀에 "측정 없이 개선 없다"는 공감대를 만들었다고 했습니다. 팀이 기존 통념을 유지하려 했다면 어떤 근거로 설득하시겠습니까?', { must: true }),

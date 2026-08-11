@@ -55,3 +55,44 @@ export function mergePinnedIntoNotes(notes: string | null, pinned: string | null
 
   return JSON.stringify({ type: 'doc', content: [...pinnedParagraphs, ...baseContent] })
 }
+
+/**
+ * 줄이 끊기는 노드. `bulletList`·`listItem` 은 **컨테이너라 제외** — 안의 `paragraph` 가
+ * 이미 끊는다. 여기에 넣으면 항목마다 빈 줄이 하나씩 더 생긴다.
+ */
+const LINE_BREAKING = new Set(['paragraph', 'heading', 'codeBlock'])
+
+function nodeToText(node: TiptapNode): string {
+  if (node.type === 'text') return node.text ?? ''
+  if (node.type === 'hardBreak') return '\n'
+  const inner = (node.content ?? [])
+    .map((child) => nodeToText(child as TiptapNode))
+    .join('')
+  return LINE_BREAKING.has(node.type) ? `${inner}\n` : inner
+}
+
+/**
+ * 준비 노트(tiptap doc JSON) → plain text (순수).
+ *
+ * 노트 → 면접 질문 은행 다리가 쓴다. 붙여넣기 파서가 **줄 단위**로 쪼개므로
+ * 블록마다 `\n` 하나만 넣는다 (tiptap 기본 `getText()` 는 `\n\n` 이라 빈 줄이 생긴다).
+ *
+ * 🔴 **heading 도 함께 뽑는다.** 면접 스텝 기본 포맷의 `예상 질문 & 답변` 같은 제목이
+ * 질문 후보로 섞이지만, 붙여넣기 미리보기가 체크박스로 걸러 낸다 — 여기서 몰래 빼면
+ * 제목처럼 적은 **진짜 질문**이 소리 없이 사라진다.
+ *
+ * 레거시 plain text notes(=JSON 아님)·`null` 도 안전 처리.
+ */
+export function notesToPlainText(notes: string | null): string {
+  if (!notes) return ''
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(notes)
+  } catch {
+    return notes.trim() // 레거시 plain text
+  }
+  // 따옴표로 감싼 레거시 문자열
+  if (typeof parsed === 'string') return parsed.trim()
+  if (!parsed || typeof parsed !== 'object') return ''
+  return nodeToText(parsed as TiptapNode).trim()
+}

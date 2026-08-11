@@ -7,6 +7,7 @@ import type {
   CreateSessionDto,
   GenerateSessionDto,
   InterviewPrepQuestion,
+  RecordPracticeDto,
   UpdateQuestionDto,
   UpdateSessionDto,
 } from '@/types/interviewPrep'
@@ -256,6 +257,51 @@ export function useUpdateInterviewQuestion(sessionId?: string) {
         }
         return next
       }
+      const patch = (list: InterviewPrepQuestion[]): InterviewPrepQuestion[] =>
+        list.map((q) =>
+          q.id === params.questionId
+            ? merge(q)
+            : q.children.length
+              ? { ...q, children: patch(q.children) }
+              : q,
+        )
+      qc.setQueryData<InterviewPrepQuestion[]>(questionsKey(sessionId), (old) =>
+        old ? patch(old) : old,
+      )
+    },
+  })
+}
+
+/**
+ * 「면접 보기」 D3 — 연습 자가평가 저장 (잘함/애매/다시).
+ *
+ * 🔴 **`invalidate` 가 아니라 `setQueryData` 다.** 재조회하면 목록이 새로 내려오고,
+ * 「다시 볼 것만」 같은 조건으로 시작한 시험이 **연습 도중 재정렬·재필터**된다 —
+ * 방금 「다시」로 찍은 문항이 목록에서 사라지거나 순서가 밀린다. 시험 순서는 시작 시
+ * 고정이므로(`buildExamQuestions` 결과를 state 로 보관) 캐시도 바뀐 두 필드만 집어 고친다.
+ *
+ * 🔴 **AI 무관이라 쿼터·코인을 건드리지 않는다** (`useBulkCreateQuestions` 와 같은 이유).
+ */
+export function useRecordPractice(sessionId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: {
+      questionId: string
+      result: RecordPracticeDto['result']
+    }) =>
+      interviewPrepApi.recordPractice(params.questionId, {
+        result: params.result,
+      }),
+    onSuccess: (updated, params) => {
+      /*
+        시각은 **서버가 찍은 값**을 쓴다 — 기기 시계로 만들어 넣으면 다음 조회에서
+        서버 값으로 바뀌며 화면이 튄다. 응답이 없는 환경(데모 어댑터)에서만 보낸 값으로 떨어진다.
+      */
+      const merge = (q: InterviewPrepQuestion): InterviewPrepQuestion => ({
+        ...q,
+        lastPracticeResult: updated?.lastPracticeResult ?? params.result,
+        lastPracticedAt: updated?.lastPracticedAt ?? q.lastPracticedAt,
+      })
       const patch = (list: InterviewPrepQuestion[]): InterviewPrepQuestion[] =>
         list.map((q) =>
           q.id === params.questionId

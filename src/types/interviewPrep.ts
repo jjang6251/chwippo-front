@@ -161,6 +161,16 @@ export interface InterviewPrepQuestion {
   children: InterviewPrepQuestion[]
 }
 
+/**
+ * 「면접 보기」 자가평가 저장 body — 백엔드 `PracticeQuestionDto` 와 1:1.
+ *
+ * 🔴 **시각 필드가 없다.** `lastPracticedAt` 은 서버 `now()` 로만 찍힌다 — 임의 필드를
+ * 보내면 전역 `forbidNonWhitelisted` 가 400 으로 되돌린다.
+ */
+export interface RecordPracticeDto {
+  result: NonNullable<InterviewPrepQuestion['lastPracticeResult']>
+}
+
 /** 질문 은행 D1 — 내가 직접 적은 질문 1건 (`POST .../questions/bulk` items 원소) */
 export interface BulkQuestionItem {
   questionText: string

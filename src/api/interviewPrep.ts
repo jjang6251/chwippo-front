@@ -10,6 +10,7 @@ import type {
   GenerateSessionResult,
   InterviewPrepQuestion,
   InterviewPrepSession,
+  RecordPracticeDto,
   RegenerateQuestionResult,
   SessionRefsExpanded,
   UpdateQuestionDto,
@@ -143,6 +144,20 @@ export const interviewPrepApi = {
     apiClient
       .post<{ data: RegenerateQuestionResult }>(
         `/interview-prep-questions/${questionId}/regenerate`,
+      )
+      .then(unwrap),
+
+  /**
+   * 「면접 보기」 D3 — 연습 자가평가 저장 (잘함/애매/다시).
+   *
+   * 🔴 **AI 무관이다** — 코인·쿼터를 건드리지 않는다. 연습 중 문항마다 즉시 부르므로
+   * 가볍게 유지한다. 응답은 갱신된 질문 1건(꼬리 없이 `children: []`).
+   */
+  recordPractice: (questionId: string, dto: RecordPracticeDto) =>
+    apiClient
+      .post<{ data: InterviewPrepQuestion }>(
+        `/interview-prep-questions/${questionId}/practice`,
+        dto,
       )
       .then(unwrap),
 

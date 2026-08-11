@@ -11,6 +11,7 @@ import {
 } from '@/stores/demoSignupStore'
 import * as S from './sampleData'
 import * as store from './demoStore'
+import type { InterviewPrepQuestion } from '@/types/interviewPrep'
 
 /** resolveGet 이 "미등록 경로" 임을 알리는 sentinel (null 은 '등록됐고 값이 null' 과 구분해야 함) */
 const UNREGISTERED = Symbol('unregistered')
@@ -50,8 +51,9 @@ function resolveGet(url: string, params: Record<string, unknown>): unknown {
       undefined
     return appId ? (S.DEMO_INTERVIEW_SESSIONS[appId] ?? []) : []
   }
+  // 「면접 보기」 자가평가가 남는 리소스라 store 를 거친다 (재조회가 결과를 덮지 않게)
   m = path.match(/^\/interview-prep-sessions\/([^/]+)\/questions$/)
-  if (m) return S.DEMO_INTERVIEW_QUESTIONS[m[1]] ?? []
+  if (m) return store.getInterviewQuestions(m[1])
   m = path.match(/^\/interview-prep-sessions\/([^/]+)\/refs$/)
   if (m) return S.DEMO_INTERVIEW_REFS[m[1]] ?? { coverletters: [], logs: [] }
   /**
@@ -161,6 +163,7 @@ function parseBody(data: unknown): Record<string, unknown> {
  *   POST/PATCH/DELETE /calendar/daily-notes          (데일리 노트 추가·토글·삭제)
  *   PATCH /applications/:id/coverletters/:clId       (자소서 답변 텍스트 저장 — 비 AI)
  *   PATCH /interview-prep-questions/:id              (면접 내 답변 메모 — 비 AI)
+ *   POST  /interview-prep-questions/:id/practice     (「면접 보기」 자가평가 — 비 AI)
  *   PATCH /interview-prep-sessions/:id/user-notes    (면접 자료 메모 — 비 AI)
  *
  * 그 외 전부(AI 호출·카드 생성/삭제·파일 업로드·계정/설정 등) = 차단 → 가입 모달.
@@ -191,6 +194,25 @@ function resolveMutation(method: string, url: string, body: Record<string, unkno
     path.match(/^\/interview-prep-sessions\/[^/]+\/user-notes$/)
   ) {
     return { payload: body }
+  }
+  /**
+   * 「면접 보기」 자가평가 — **AI 도 아니고 코인도 안 쓴다.** 차단할 이유가 없고,
+   * 막으면 연습 도중 문항마다 가입 모달이 떠서 데모에서 이 기능을 끝까지 볼 수 없다
+   * (연습이 끝까지 도는 걸 보여주는 게 시연 가치다).
+   *
+   * 메모(PATCH)와 달리 store 에 실제로 남긴다 — 재조회가 결과를 덮으면 「다시 볼 것만」이
+   * 빈 채로 돌아온다. 새로고침하면 초기화되는 건 데모 전체와 같다.
+   */
+  if (
+    method === 'post' &&
+    (m = path.match(/^\/interview-prep-questions\/([^/]+)\/practice$/))
+  ) {
+    return {
+      payload: store.recordInterviewPractice(
+        m[1],
+        body.result as InterviewPrepQuestion['lastPracticeResult'],
+      ),
+    }
   }
 
   if (method === 'patch' && (m = path.match(/^\/applications\/([^/]+)\/step$/))) {

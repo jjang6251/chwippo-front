@@ -81,8 +81,14 @@ vi.mock('@/components/coverletter/CoverletterQuestionCard', () => ({
 vi.mock('@/components/card/EditInterviewSessionModal', () => ({
   EditInterviewSessionModal: () => null,
 }))
+/**
+ * 카드 본체는 이 spec 의 관심사가 아니지만 **몇 개가 남았는지**는 관심사다
+ * (필터 칩이 실제로 거르는지를 다른 방법으로 볼 수가 없다) — 표식만 남긴다.
+ */
 vi.mock('@/components/card/InterviewQuestionCard', () => ({
-  InterviewQuestionCard: () => null,
+  InterviewQuestionCard: ({ question }: { question: { id: string } }) => (
+    <div data-testid={`card-${question.id}`} />
+  ),
 }))
 vi.mock('@/components/common/AiQuotaChip', () => ({ AiQuotaChip: () => null }))
 
@@ -330,5 +336,129 @@ describe('추가 직후 — 어디로 들어갔는지 알려준다', () => {
     expect(toast.show).toHaveBeenCalledWith(
       '질문 2개를 추가했어요 (면접 흐름 순서로 배치돼요)',
     )
+  })
+})
+
+/**
+ * 「면접 보기」 진입 (D3).
+ *
+ * 🔴 **질문이 없으면 숨긴다** — 빈 시험은 설정 화면까지 갔다가 "조건에 맞는 질문이 없어요"
+ * 로 끝나는 막다른 길이다. 반대로 **읽기 모드에서는 남는다**: 코인을 쓰지 않고, 이 버튼이
+ * 가는 곳이 바로 "면접 직전에 훑어보는" 자리다.
+ */
+describe('면접 보기 — 세션 헤더 진입', () => {
+  const micButton = () => screen.queryByRole('button', { name: /면접 보기/ })
+
+  beforeEach(() => {
+    Object.assign(sessionQuery, { data: session, isLoading: false, isError: false })
+  })
+
+  it('질문이 있으면 헤더에 [면접 보기] 가 뜨고, 읽기 모드에서도 남는다', () => {
+    Object.assign(questionsQuery, {
+      data: [question],
+      isLoading: false,
+      isError: false,
+    })
+    draw()
+    expect(micButton()).not.toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: '📖 읽기 모드' }))
+    expect(micButton()).not.toBeNull()
+  })
+
+  it('🔴 질문이 0개면 숨는다 (빈 시험으로 데려가지 않는다)', () => {
+    Object.assign(questionsQuery, { data: [], isLoading: false, isError: false })
+    draw()
+    expect(micButton()).toBeNull()
+  })
+})
+
+/**
+ * 🔁 **「다시 볼 것」 필터** (질문 은행 D3).
+ *
+ * 🔴 연습에서 「다시」로 찍은 결과가 **여기로 이어져야** 한다. 연습 화면은 답을 고쳐 쓸 수
+ * 없으니, 찍고 나서 할 일은 결국 세션으로 돌아와 그 문항들만 다시 보는 것이다.
+ *
+ * 🔴 **0개면 칩 자체가 없다.** 연습 전 세션은 전부 `null` 이라, 안 그러면 모든 세션의
+ * 필터 줄 맨 앞에 영원히 눌러도 아무 일 없는 칩이 하나 붙는다 (⭐ 와 같은 규칙).
+ */
+describe('🔁 다시 볼 것 필터', () => {
+  const againChip = () => screen.queryByRole('button', { name: /다시 볼 것/ })
+  const cards = () => screen.queryAllByTestId(/^card-/)
+
+  const practiced = (
+    id: string,
+    lastPracticeResult: 'good' | 'soso' | 'again' | null,
+    over: Record<string, unknown> = {},
+  ) => ({ ...question, id, lastPracticeResult, ...over })
+
+  beforeEach(() => {
+    Object.assign(sessionQuery, { data: session, isLoading: false, isError: false })
+  })
+
+  it('🔴 「다시」가 0개면 칩이 아예 없다 (연습 전 세션의 소음 방지)', () => {
+    Object.assign(questionsQuery, {
+      data: [practiced('q-a', null), practiced('q-b', 'good')],
+      isLoading: false,
+      isError: false,
+    })
+    draw()
+    expect(againChip()).toBeNull()
+  })
+
+  it('개수를 세어 보여주고, 누르면 「다시」만 남는다', () => {
+    Object.assign(questionsQuery, {
+      data: [
+        practiced('q-a', 'again'),
+        practiced('q-b', 'good'),
+        practiced('q-c', 'again', { orderIndex: 2 }),
+        practiced('q-d', null),
+      ],
+      isLoading: false,
+      isError: false,
+    })
+    draw()
+
+    const chip = againChip()!
+    expect(chip.textContent).toContain('다시 볼 것 (2)')
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+    expect(cards()).toHaveLength(4)
+
+    fireEvent.click(chip)
+    expect(againChip()).toHaveAttribute('aria-pressed', 'true')
+    expect(cards().map((c) => c.getAttribute('data-testid'))).toEqual([
+      'card-q-a',
+      'card-q-c',
+    ])
+  })
+
+  it('다시 누르면 풀린다 (⭐ 와 같은 토글 문법)', () => {
+    Object.assign(questionsQuery, {
+      data: [practiced('q-a', 'again'), practiced('q-b', 'soso')],
+      isLoading: false,
+      isError: false,
+    })
+    draw()
+    fireEvent.click(againChip()!)
+    expect(cards()).toHaveLength(1)
+    fireEvent.click(againChip()!)
+    expect(cards()).toHaveLength(2)
+  })
+
+  /** ⭐ 와 AND 로 겹친다 — 둘 다 켜면 "먼저 할 것 중 아직 안 되는 것" 이 남는다 */
+  it('⭐ 우선과 AND 로 겹쳐 걸린다', () => {
+    Object.assign(questionsQuery, {
+      data: [
+        practiced('q-a', 'again', { mustPrepare: true }),
+        practiced('q-b', 'again'),
+        practiced('q-c', 'good', { mustPrepare: true }),
+      ],
+      isLoading: false,
+      isError: false,
+    })
+    draw()
+    fireEvent.click(againChip()!)
+    fireEvent.click(screen.getByRole('button', { name: /우선 \(/ }))
+    expect(cards().map((c) => c.getAttribute('data-testid'))).toEqual(['card-q-a'])
   })
 })

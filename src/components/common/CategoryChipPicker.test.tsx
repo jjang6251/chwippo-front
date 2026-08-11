@@ -12,6 +12,8 @@
  *   A2. 미분류 다음 첫 칩은 `self_intro`(흐름 10) — 흐름 순 정렬
  *   A3. 더보기 라벨이 숨긴 개수를 말한다
  *   A4. 🔴 `마지막 한마디`(흐름 99)가 접힘 상태에서 **맨 뒤 칩**이다 — 흐름이 닫힌다
+ *   A5. 🔴 `nullLabel` 로 첫 칩 이름을 바꾼다 — 거르는 자리(「면접 보기」 설정)에선
+ *     `null` 이 「미분류」가 아니라 **「전체」**다 (그대로 두면 미분류만 나오는 줄 안다)
  *  B. 더보기 펼침·접기
  *   B1. 펼치면 24종 전부 + 앞 10개(미분류+9종) 위치가 그대로다 (재정렬 없음)
  *   B2. 접으면 다시 기본만
@@ -119,6 +121,21 @@ describe('A. 기본(접힘) 노출', () => {
     const labels = chipLabels()
     expect(labels).toContain('마지막 한마디')
     expect(labels[labels.length - 1]).toBe('마지막 한마디')
+  })
+
+  /** 🔴 필터로 쓰는 화면에서 첫 칩이 「미분류」면 *미분류 질문만* 나오는 줄 알고 시작한다 */
+  it('A5. nullLabel 을 주면 첫 칩 이름만 바뀐다 (동작은 그대로 null)', () => {
+    const onChange = vi.fn()
+    render(
+      <CategoryChipPicker value={null} onChange={onChange} nullLabel="전체" />,
+    )
+    expect(chipLabels()[0]).toBe('전체')
+    expect(screen.queryByRole('button', { name: '미분류' })).toBeNull()
+
+    const all = screen.getByRole('button', { name: '전체' })
+    expect(all).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: '자기소개' }))
+    expect(onChange).toHaveBeenCalledWith('self_intro')
   })
 })
 
