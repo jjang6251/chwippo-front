@@ -12,8 +12,19 @@
  * 7. 토큰 있고 user.termsAgreedAt null → /terms-agreement 강제 redirect
  *    (단, 이미 /terms-agreement 경로면 redirect 안 함 — 루프 방지)
  * 8. 토큰 있고 user.termsAgreedAt 있음 → 보호 페이지 정상 렌더
+ *
+ * 네트워크 실패 자동 재시도 (콜드스타트 랜딩 flash 수리, 2026-08-12) — 케이스 먼저:
+ * 9.  네트워크 실패 → 700ms 백오프 뒤 자동 재시도 → 성공하면 앱 진입 (랜딩 안 거침)
+ * 10. 재시도 대기 중엔 빈 화면 유지 — 랜딩이 절대 안 보임 (이게 실기 증상 그 자체)
+ * 11. 백오프 값 고정 — 699ms 에선 아직 재시도 안 하고 700ms 에 한다
+ * 12. 재시도 2회까지 (700 → 1500), 전부 실패하면 네트워크 카드. 그 뒤엔 더 안 부름
+ * 13. 5xx(503)도 같은 재시도 경로 (서버 순단 = 세션 판정 불가)
+ * 14. 네트워크 카드 "다시 시도" → window.location.reload
+ * 15. 401 은 재시도 대상 아님 — 즉시 랜딩 (재호출 없음)
+ * 16. 429 도 재시도 대상 아님 — 즉시 rate limit 카드
+ * 17. 언마운트되면 예약된 재시도 타이머는 발사되지 않는다
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { AuthGuard } from './AuthGuard'
@@ -152,5 +163,156 @@ describe('AuthGuard', () => {
     useAuthStore.setState({ accessToken: 'existing', user: sampleUser })
     renderApp('/dashboard')
     expect(screen.getByText('DASHBOARD_PAGE')).toBeTruthy()
+  })
+})
+
+/**
+ * 🔴 콜드스타트 랜딩 flash 수리 (2026-08-12).
+ *
+ * iOS 콜드스타트 직후 네트워크가 준비되기 전 수백 ms 창에서 부팅 refresh 가 네트워크
+ * 실패하면, 예전엔 토큰이 없다는 이유로 <Navigate to="/" /> 가 랜딩을 깜빡 띄웠다.
+ * 세션이 죽었다는 증거가 없는 실패는 재시도 대상이지 로그아웃 근거가 아니다.
+ */
+describe('AuthGuard — 네트워크·5xx 자동 재시도', () => {
+  const networkError = new Error('Network Error') // axios: response 없음
+
+  beforeEach(() => {
+    // 🔴 mockReset — clearAllMocks 는 호출 기록만 지우고 mockImplementationOnce 큐는
+    // 남긴다. 소비되지 않은 once 구현이 다음 케이스로 새면 그 케이스가 엉뚱한 이유로
+    // 통과한다 (뮤테이션 검증 중 실측).
+    mockedPerformRefresh.mockReset()
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  /** 대기 중인 timer + promise 체인을 함께 흘려보낸다 */
+  const advance = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms)
+    })
+
+  const succeedOnce = () =>
+    mockedPerformRefresh.mockImplementationOnce(async () => {
+      useAuthStore.setState({ accessToken: 'fresh', user: sampleUser })
+      return { accessToken: 'fresh', user: sampleUser }
+    })
+
+  it('9·10. 네트워크 실패 → 자동 재시도 성공 → 앱 진입 (그 사이 랜딩 없음)', async () => {
+    mockedPerformRefresh.mockRejectedValueOnce(networkError)
+    succeedOnce()
+
+    renderApp('/dashboard')
+    await advance(0)
+
+    // 재시도 대기 중 — 빈 화면(checking). 랜딩도 앱도 아직 아님
+    expect(screen.queryByText('LANDING_PAGE')).toBeNull()
+    expect(screen.queryByText('DASHBOARD_PAGE')).toBeNull()
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(1)
+
+    await advance(700)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(2)
+    expect(screen.getByText('DASHBOARD_PAGE')).toBeTruthy()
+    expect(screen.queryByText('LANDING_PAGE')).toBeNull()
+  })
+
+  it('11. 첫 백오프는 700ms — 699ms 에선 아직 재시도 안 함', async () => {
+    mockedPerformRefresh.mockRejectedValueOnce(networkError)
+    succeedOnce()
+
+    renderApp('/dashboard')
+    await advance(0)
+    await advance(699)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(1)
+
+    await advance(1)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(2)
+  })
+
+  it('12. 재시도 2회(700→1500) 전부 실패 → 네트워크 카드 (랜딩 아님) + 이후 재호출 없음', async () => {
+    mockedPerformRefresh.mockRejectedValue(networkError)
+
+    renderApp('/dashboard')
+    await advance(0)
+    await advance(700)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(2)
+    // 아직 재시도가 남아 있으므로 카드도 랜딩도 안 보인다
+    expect(screen.queryByText('연결이 불안정해요')).toBeNull()
+    expect(screen.queryByText('LANDING_PAGE')).toBeNull()
+
+    await advance(1500)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(3)
+    expect(screen.getByText('연결이 불안정해요')).toBeTruthy()
+    expect(screen.getByText(/잠시 후 다시 시도해 주세요/)).toBeTruthy()
+    expect(screen.queryByText('LANDING_PAGE')).toBeNull()
+
+    // 무한 재시도 금지
+    await advance(30_000)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(3)
+  })
+
+  it('13. 503(서버 순단)도 같은 재시도 경로 → 성공하면 앱 진입', async () => {
+    mockedPerformRefresh.mockRejectedValueOnce({ response: { status: 503 } })
+    succeedOnce()
+
+    renderApp('/dashboard')
+    await advance(0)
+    expect(screen.queryByText('LANDING_PAGE')).toBeNull()
+
+    await advance(700)
+    expect(screen.getByText('DASHBOARD_PAGE')).toBeTruthy()
+  })
+
+  it('14. 네트워크 카드 "다시 시도" → window.location.reload', async () => {
+    mockedPerformRefresh.mockRejectedValue(networkError)
+
+    renderApp('/dashboard')
+    await advance(0)
+    await advance(700)
+    await advance(1500)
+
+    const retryBtn = screen.getByRole('button', { name: '다시 시도' })
+    await act(async () => {
+      retryBtn.click()
+    })
+    expect(window.location.reload).toHaveBeenCalledTimes(1)
+  })
+
+  it('15. 401 은 재시도 대상 아님 — 즉시 랜딩, 재호출 없음', async () => {
+    mockedPerformRefresh.mockRejectedValue({ response: { status: 401 } })
+
+    renderApp('/dashboard')
+    await advance(0)
+    expect(screen.getByText('LANDING_PAGE')).toBeTruthy()
+
+    await advance(30_000)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('16. 429 는 재시도 대상 아님 — 즉시 rate limit 카드 (문구 그대로)', async () => {
+    mockedPerformRefresh.mockRejectedValue({ response: { status: 429 } })
+
+    renderApp('/dashboard')
+    await advance(0)
+    expect(
+      screen.getByText('많은 새로고침 요청에 잠시 제한되었습니다'),
+    ).toBeTruthy()
+    expect(screen.getByText(/60초 뒤에 다시 시도/)).toBeTruthy()
+
+    await advance(30_000)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('17. 언마운트 → 예약된 재시도 타이머 발사 안 됨', async () => {
+    mockedPerformRefresh.mockRejectedValue(networkError)
+
+    const { unmount } = renderApp('/dashboard')
+    await advance(0)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(1)
+
+    unmount()
+    await advance(30_000)
+    expect(mockedPerformRefresh).toHaveBeenCalledTimes(1)
   })
 })

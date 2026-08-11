@@ -124,6 +124,7 @@ async function doRefresh(): Promise<RefreshResult> {
  * 분기:
  * - 429 Too Many Requests: rate limit 도달 — 세션 유효, logout/redirect 금지. 토스트만.
  * - 409 Conflict: 동시 refresh 경합 (재시도 소진) — 세션 유효, logout/redirect 금지.
+ * - 응답 없음(네트워크)·5xx: 세션 판정 불가 — 부수효과 전부 금지 (아래 🔴 참조).
  * - 401 등 인증 실패: 세션 만료 — clearAuth + 랜딩 redirect.
  */
 export function handleAuthFailure(err: unknown): void {
@@ -141,10 +142,20 @@ export function handleAuthFailure(err: unknown): void {
   // 409 = refresh 경합 재시도 소진 (극히 드묾) — 세션 유효하므로 로그아웃·랜딩 금지.
   // 다음 사용자 액션·새로고침이 갱신된 쿠키로 복구한다.
   if (status === 409) return
+  /*
+    🔴 응답 없음(status undefined = 네트워크 실패)·5xx(서버 순단)는 **세션 판정 불가**다.
+    서버가 "이 세션 죽었다"고 말한 적이 없으므로 clearAuth·랜딩 redirect·토스트·네이티브
+    logout 전파를 전부 하지 않고 조용히 빠진다. 회복은 caller 몫 —
+    AuthGuard 는 짧은 백오프로 자동 재시도하고, 그 밖에선 다음 사용자 액션이 다시 태운다.
+
+    실측 (2026-08-12): iOS 콜드스타트 직후 네트워크가 준비되기 전 수백 ms 창에서 웹뷰
+    AuthGuard 의 첫 refresh 가 네트워크 실패 → 이 아래 fallthrough 로 clearAuth + href='/'
+    를 타면서 랜딩이 깜빡 떴다 앱으로 복귀했다. 예전엔 네이티브 선회전이 이 창을 가렸는데
+    refresh 단일 주체화(웹뷰 즉시 부팅)로 드러났다.
+  */
+  if (status === undefined || status >= 500) return
   // 네이티브(WebView) 세션만료 동기화 — 401 확정일 때만 전파.
-  // 이 아래는 401 전용이 아니라 네트워크 오류(response 없음)·5xx도 흘러드는 fallthrough라,
-  // 명시 가드 없이 전파하면 오프라인·백엔드 순단이 네이티브 로그아웃으로 새어나간다.
-  // 네트워크·5xx·409·429는 세션 유효 가능성이 있어 전파 금지(계정 교차·오프라인 로그아웃 방지).
+  // 네트워크·5xx·409·429는 위에서 걸러진다 (계정 교차·오프라인 로그아웃 방지).
   if (status === 401) postToNative({ type: 'logout' })
   useAuthStore.getState().clearAuth()
   const msg = ((err as { response?: { data?: { message?: string } } })
