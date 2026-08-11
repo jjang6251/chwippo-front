@@ -75,17 +75,27 @@ const CHIP_BASE =
 const CHIP_ON = 'bg-brand text-text-primary border-brand font-medium'
 
 interface Props {
-  /** `null` = 미분류 */
+  /** `null` = 미분류 (필터로 쓰는 화면에선 「전체」 — `nullLabel` 참조) */
   value: string | null
   onChange: (v: string | null) => void
   /** 한 화면에 피커가 둘 이상 뜰 때 칩 id 가 겹치지 않게 */
   idPrefix?: string
+  /**
+   * 첫 칩(`null`)의 라벨.
+   *
+   * 🔴 **고르는 자리와 거르는 자리에서 `null` 의 뜻이 다르다.** 질문을 적을 땐 「미분류」
+   * (이 질문엔 유형이 없다)지만, 「면접 보기」 설정처럼 **필터**로 쓰면 「전체」
+   * (유형을 안 가린다)다. 같은 칩에 「미분류」라고 쓰면 사용자는 *미분류 질문만* 나오는
+   * 줄 알고 시험을 시작한다.
+   */
+  nullLabel?: string
 }
 
 export function CategoryChipPicker({
   value,
   onChange,
   idPrefix = 'cat',
+  nullLabel = '미분류',
 }: Props) {
   const [expanded, setExpanded] = useState(false)
 
@@ -116,7 +126,7 @@ export function CategoryChipPicker({
             : `${CATEGORY_STYLE_FALLBACK} hover:brightness-110`
         }`}
       >
-        미분류
+        {nullLabel}
       </button>
 
       {visible.map((slug) => {

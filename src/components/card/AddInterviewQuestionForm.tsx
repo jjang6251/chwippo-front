@@ -63,14 +63,23 @@ interface Props {
    * 어디로 갔는지 알 수 없어, 번호를 아는 부모(목록)가 위치까지 함께 알린다.
    */
   onAdded?: (created: InterviewPrepQuestion[]) => void
+  /**
+   * 준비 노트에서 건너온 본문. 있으면 **📋 붙여넣기로 열고** 그 자리에 채운다 —
+   * 파서가 그대로 돌아 미리보기가 뜨므로, 사용자는 지울 줄만 끄면 된다.
+   * 폼이 닫힐 때 부모가 값을 버리므로 다시 열면 빈 폼이다.
+   */
+  initialPasteText?: string
 }
 
 export function AddInterviewQuestionForm({
   sessionId,
   onClose,
   onAdded,
+  initialPasteText,
 }: Props) {
-  const [mode, setMode] = useState<'single' | 'paste'>('single')
+  const [mode, setMode] = useState<'single' | 'paste'>(
+    initialPasteText ? 'paste' : 'single',
+  )
   const { mutate: bulkCreate, isPending } = useBulkCreateQuestions(sessionId)
 
   // ── ✍️ 직접 적기 ──
@@ -79,7 +88,7 @@ export function AddInterviewQuestionForm({
   const textRef = useRef<HTMLTextAreaElement>(null)
 
   // ── 📋 붙여넣기 ──
-  const [raw, setRaw] = useState('')
+  const [raw, setRaw] = useState(initialPasteText ?? '')
   const [pasteCategory, setPasteCategory] = useState<string | null>(null)
   /**
    * 사용자가 **직접 끈 줄.** 인덱스가 아니라 본문으로 들고 있다 — 위에 한 줄을 더 붙여넣으면

@@ -667,6 +667,24 @@ export function InterviewQuestionCard({
                 </span>
               </button>
             )}
+            {/*
+              🔁 **지난 「면접 보기」에서 「다시」로 찍은 질문** (질문 은행 D3).
+
+              연습에서 찍은 결과가 세션 목록에 안 비치면, 「다시 볼 것」은 연습 화면을 다시
+              열어야만 볼 수 있는 값이 된다 — 정작 답을 고쳐 쓰는 자리는 여기다.
+              ⭐ 와 같은 리듬(작은 배지)이되 색은 danger 다: ⭐ 는 「먼저 할 것」, 이건
+              「아직 안 되는 것」이라 축이 다르다.
+
+              **메인만** 붙인다 — 연습 루프가 메인 질문만 돌므로 꼬리에는 값이 안 쌓인다.
+            */}
+            {question.depth === 0 && question.lastPracticeResult === 'again' && (
+              <span
+                className="text-[10px] font-medium px-1.5 rounded bg-danger/10 text-danger border border-danger/25"
+                title="지난 연습에서 「다시」로 표시한 질문이에요"
+              >
+                🔁 다시 볼 것
+              </span>
+            )}
             {question.category && (
               <span
                 className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${

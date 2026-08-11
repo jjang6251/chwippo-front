@@ -9,13 +9,15 @@
  * 🔴 **5개사 전수로 검사한다.** 하나만 보면 나머지 넷이 조용히 비어도 통과한다 —
  * 직군마다 사람이 손으로 쓴 데이터라 빠뜨리기 쉽다.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { demoAdapter } from './demoAdapter'
+import { resetDemoStore } from './demoStore'
 import {
   DEMO_COVERLETTERS,
   DEMO_INTERVIEW_QUESTIONS,
   DEMO_INTERVIEW_SESSIONS,
 } from './sampleData'
+import type { InterviewPrepQuestion } from '@/types/interviewPrep'
 import type { InternalAxiosRequestConfig } from 'axios'
 
 async function get(url: string, params?: Record<string, unknown>) {
@@ -23,6 +25,15 @@ async function get(url: string, params?: Record<string, unknown>) {
     method: 'get',
     url,
     params,
+  } as InternalAxiosRequestConfig)
+  return (res.data as { data: unknown }).data
+}
+
+async function post(url: string, body: unknown) {
+  const res = await demoAdapter({
+    method: 'post',
+    url,
+    data: JSON.stringify(body),
   } as InternalAxiosRequestConfig)
   return (res.data as { data: unknown }).data
 }
@@ -220,10 +231,80 @@ describe('데모 면접 — 데이터가 화면 요구를 만족하는가', () =
     expect(all.filter((q) => q.source === 'user')).toHaveLength(2)
   })
 
+  /**
+   * 🔴 **지난 연습 기록이 없으면 「다시 볼 것만」은 데모에서 영원히 0개다** (질문 은행 D3).
+   * 설정 화면의 범위 세 칸 중 하나가 항상 빈 채로 보이고, 그게 무슨 뜻인지 알 방법이 없다.
+   */
+  it('🔴 demo-a1 세션에 지난 연습에서 「다시」로 찍힌 질문이 있다', () => {
+    const again = DEMO_INTERVIEW_QUESTIONS['demo-is1'].filter(
+      (q) => q.lastPracticeResult === 'again',
+    )
+    expect(again.length).toBe(2)
+    /* 시각이 비면 "언제 찍었는지" 를 못 보여준다 — 결과만 남는 데이터는 없다 */
+    for (const q of again) expect(q.lastPracticedAt).toBeTruthy()
+  })
+
   it('🔴 질문 id 가 전 세션에서 유일하다 (React key 충돌 방지)', () => {
     const ids = Object.values(DEMO_INTERVIEW_QUESTIONS)
       .flat()
       .flatMap((q) => [q.id, ...q.children.map((c) => c.id)])
     expect(new Set(ids).size).toBe(ids.length)
+  })
+})
+
+/**
+ * 「면접 보기」 연습이 **데모에서 끝까지 도는가** (질문 은행 D3).
+ *
+ * 🔴 **자가평가는 차단 대상이 아니다** — AI 도 코인도 아니고, 막으면 문항마다 가입 모달이
+ * 떠서 루프를 한 바퀴도 못 돈다. 그런데 통과시키기만 하면 또 다른 방식으로 조용히 깨진다:
+ * 응답만 되비추고 **로컬 데이터를 안 고치면**, 화면을 나갔다 오는 순간(staleTime 0 → 재조회)
+ * 방금 찍은 결과가 사라져 「다시 볼 것만」이 빈 채로 돌아온다.
+ */
+describe('데모 면접 — 「면접 보기」 자가평가', () => {
+  beforeEach(() => resetDemoStore())
+
+  const questions = () =>
+    get('/interview-prep-sessions/demo-is1/questions') as Promise<
+      InterviewPrepQuestion[]
+    >
+
+  it('🔴 채점이 로컬 데이터에 남는다 (재조회가 결과를 덮지 않는다)', async () => {
+    const target = (await questions()).find((q) => q.lastPracticeResult === null)
+    expect(target).toBeTruthy()
+
+    await post(`/interview-prep-questions/${target!.id}/practice`, {
+      result: 'again',
+    })
+
+    const after = (await questions()).find((q) => q.id === target!.id)
+    expect(after?.lastPracticeResult).toBe('again')
+    expect(after?.lastPracticedAt).toBeTruthy()
+  })
+
+  it('갱신된 질문을 응답으로 되돌려준다 (훅이 서버 시각을 그대로 쓴다)', async () => {
+    const payload = (await post(
+      '/interview-prep-questions/demo-is1-q7/practice',
+      { result: 'good' },
+    )) as InterviewPrepQuestion
+    expect(payload.id).toBe('demo-is1-q7')
+    expect(payload.lastPracticeResult).toBe('good')
+  })
+
+  /** 실서버의 404 자리 — 던지면 데모에서만 루프가 멈춘다 (루프는 조용히 넘기도록 돼 있다) */
+  it('없는 질문 id 는 null 이다 (던지지 않는다)', async () => {
+    expect(await post('/interview-prep-questions/nope/practice', { result: 'good' })).toBeNull()
+  })
+
+  it('🔴 리셋하면 지난 연습 seed 상태로 돌아간다 (데모 진입마다 같은 화면)', async () => {
+    await post('/interview-prep-questions/demo-is1-q7/practice', { result: 'good' })
+    resetDemoStore()
+    const again = (await questions()).filter(
+      (q) => q.lastPracticeResult === 'again',
+    )
+    expect(again.length).toBe(2)
+    expect(
+      (await questions()).find((q) => q.id === 'demo-is1-q7')
+        ?.lastPracticeResult,
+    ).toBeNull()
   })
 })

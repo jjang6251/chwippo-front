@@ -43,6 +43,12 @@
  *  22. 🔴 답변 NEED_COVERLETTER → 모달 + 인라인 `다시 시도` 없음 (재시도가 답이 아니다)
  *  23. 🔴 꼬리질문 NEED_COVERLETTER → 모달
  *  24. 🔴 code 없는 blocked(쿼터·장애)는 **기존 UI 그대로** — 모달이 뜨면 안 된다
+ *
+ * 🔁 다시 볼 것 배지 (D3 — 연습 결과가 목록으로 이어진다)
+ *  26. `lastPracticeResult === 'again'` → 배지가 뜬다
+ *  27. good·soso·미연습 → 안 뜬다 (「다시」만이다)
+ *  28. 🔴 꼬리질문(depth>0)에는 안 뜬다 — 연습 루프가 메인만 돌아 값이 쌓이지 않는다
+ *  29. 읽기 모드에도 남는다 — 면접 직전에 가장 필요한 표시다
  */
 import {
   fireEvent,
@@ -169,6 +175,44 @@ describe('⭐ 우선 준비 토글', () => {
   it('4) 🔴 읽기 모드 + 꺼짐 → 배지 자체가 없다', () => {
     renderCard(makeQuestion({ mustPrepare: false }), true)
     expect(screen.queryByText('우선')).toBeNull()
+  })
+})
+
+/**
+ * 🔁 **연습에서 「다시」로 찍은 질문**. 이 배지가 없으면 연습 결과는 연습 화면 안에만
+ * 남고, 정작 답을 고쳐 쓰는 자리(이 카드)에서는 보이지 않는다.
+ */
+describe('🔁 다시 볼 것 배지', () => {
+  const badge = () => screen.queryByText('🔁 다시 볼 것')
+
+  it('26) again 이면 배지가 뜬다', () => {
+    renderCard(makeQuestion({ lastPracticeResult: 'again' }))
+    expect(badge()).toBeInTheDocument()
+    expect(badge()?.className).toContain('text-danger')
+  })
+
+  it('27) good·soso·미연습에는 안 뜬다', () => {
+    const { unmount } = renderCard(makeQuestion({ lastPracticeResult: 'good' }))
+    expect(badge()).toBeNull()
+    unmount()
+
+    const second = renderCard(makeQuestion({ lastPracticeResult: 'soso' }))
+    expect(badge()).toBeNull()
+    second.unmount()
+
+    renderCard(makeQuestion({ lastPracticeResult: null }))
+    expect(badge()).toBeNull()
+  })
+
+  /** 연습 루프는 메인 질문만 돈다 — 꼬리에 이 값이 있으면 그게 데이터 사고다 */
+  it('28) 🔴 꼬리질문에는 안 뜬다', () => {
+    renderCard(makeQuestion({ depth: 1, lastPracticeResult: 'again' }))
+    expect(badge()).toBeNull()
+  })
+
+  it('29) 읽기 모드에도 남는다', () => {
+    renderCard(makeQuestion({ lastPracticeResult: 'again' }), true)
+    expect(badge()).toBeInTheDocument()
   })
 })
 

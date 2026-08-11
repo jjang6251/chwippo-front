@@ -9,10 +9,11 @@ import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/ho
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
 import { StepNoteEditor } from '@/components/editor/StepNoteEditor'
 import { Modal } from '@/components/common/Modal'
+import { GoToInterviewButton } from '@/components/card/GoToInterviewButton'
 import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTemplates'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
 import { postToNative } from '@/utils/nativeBridge'
-import { mergePinnedIntoNotes } from '@/utils/stepNotes'
+import { mergePinnedIntoNotes, notesToPlainText } from '@/utils/stepNotes'
 import { Calendar, MapPin } from 'lucide-react'
 
 export function StepPage() {
@@ -36,6 +37,12 @@ export function StepPage() {
   const [editingField, setEditingField] = useState<'date' | 'location' | null>(null)
   const [showPassedModal, setShowPassedModal] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  /**
+   * 편집 중인 준비 노트의 plain text. **`null` 은 "이번 방문에서 아직 안 건드림"** 이라
+   * 서버 값에서 뽑는다 — 저장·refetch 로 서버 값이 바뀌면 그게 그대로 최신이다.
+   * 한 글자라도 치면 그 뒤로는 화면의 값이 이긴다 (저장은 1.5s debounce).
+   */
+  const [liveNoteText, setLiveNoteText] = useState<string | null>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
   const locationInputRef = useRef<HTMLInputElement>(null)
 
@@ -156,6 +163,12 @@ export function StepPage() {
   // 준비 노트 초기 콘텐츠 — 죽은 pinnedContent 가 있으면 맨 앞에 "📌 …" 문단으로 병합해 표시.
   // 서버 이관은 저장 시(handleSaveNotes)에 1회. pinned 이관 후엔 null 이라 병합 없음(idempotent).
   const initialNotes = mergePinnedIntoNotes(step.notes, step.pinnedContent)
+
+  // 면접 스텝에서만 질문 은행으로 건너간다 — 판정은 `getStepType` 단일 구현
+  // (스텝명에 '면접' 이 없는 'PT·토론'·'컬처핏'도 면접형이다)
+  const isInterviewStep = stepType === 'interview'
+  const noteText = liveNoteText ?? notesToPlainText(initialNotes)
+  const hasNoteText = noteText.trim().length > 0
 
   return (
     <div className="w-full mx-auto px-[18px] pt-6 pb-[160px] lg:max-w-[1100px] lg:px-9 lg:py-9 lg:pb-28">
@@ -417,7 +430,35 @@ export function StepPage() {
           stepName={step.name}
           initialContent={initialNotes}
           onSave={handleSaveNotes}
+          onTextChange={isInterviewStep ? setLiveNoteText : undefined}
         />
+
+        {/*
+          🔴 **노트 → 면접 질문 은행.** 이 기능의 출발점이 "준비 노트에 기출을 적던
+          사람" 인데, 정작 노트에서 은행으로 가는 길이 없었다 (공통 조상인 카드 상세뿐).
+          기본 포맷의 첫 칸이 「예상 질문 & 답변」이라 **여기 적힌 게 곧 질문 목록**이다.
+
+          자리가 에디터 바로 아래인 이유 — 방금 적은 내용을 넘기는 동작이라
+          그 내용이 눈에 있는 동안에 버튼이 보여야 한다.
+          비었으면 잠근다: 빈 채로 넘어가면 세션 생성(코인)만 쓰고 빈 폼을 만난다.
+        */}
+        {isInterviewStep && appId && (
+          <div className="mt-2.5 flex justify-end">
+            <GoToInterviewButton
+              applicationId={appId}
+              label="이 내용으로 면접 질문 만들기"
+              navState={{ bridgeText: noteText }}
+              disabled={!hasNoteText}
+              title={
+                hasNoteText
+                  ? '준비 노트를 붙여넣기 칸에 채워서 질문으로 만들어요'
+                  : '준비 노트가 비어 있어요 — 예상 질문·기출을 먼저 적어 주세요'
+              }
+              /* 자소서 화면이 아니다 — 닫기만 하면 갈 곳이 없다 */
+              onNeedCoverletter={() => navigate(`/board/${appId}/coverletter`)}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── 이 단계 완료하기 버튼 (fixed bottom) ───────
