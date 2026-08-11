@@ -48,21 +48,24 @@ vi.mock('@/components/card/NewInterviewSessionModal', () => ({
   NewInterviewSessionModal: () => <div>새 면접 준비 만들기 모달</div>,
 }))
 /**
- * tiptap 은 jsdom 에 올리지 않는다 (이 spec 의 관심사가 아니다).
- * 대신 **저장 전 편집**을 흉내 낼 손잡이를 둔다 — 실제 에디터의 `onTextChange` 자리다.
+ * tiptap·시트 조회는 jsdom 에 올리지 않는다 (이 spec 의 관심사가 아니다).
+ * 대신 **저장 전 편집**을 흉내 낼 손잡이를 둔다 — 실제 컨테이너의 `onActiveTextChange` 자리다.
+ *
+ * 🔴 목이 콜백을 **스스로 부르지 않는다**는 게 중요하다. 시트가 안 온 동안 다리가 무엇을
+ * 넘기는지(= 폴백인 기존 노트)를 그대로 재는 상태다.
  */
-vi.mock('@/components/editor/StepNoteEditor', () => ({
-  StepNoteEditor: ({
-    initialContent,
-    onTextChange,
+vi.mock('@/components/editor/SheetedNoteEditor', () => ({
+  SheetedNoteEditor: ({
+    fallbackContent,
+    onActiveTextChange,
   }: {
-    initialContent: string | null
-    onTextChange?: (t: string) => void
+    fallbackContent: string | null
+    onActiveTextChange?: (t: string) => void
   }) => (
     <div>
-      <div data-testid="note-init">{initialContent ?? 'NULL'}</div>
-      <button onClick={() => onTextChange?.('방금 친 질문')}>편집흉내</button>
-      <span data-testid="has-textchange">{onTextChange ? 'yes' : 'no'}</span>
+      <div data-testid="note-init">{fallbackContent ?? 'NULL'}</div>
+      <button onClick={() => onActiveTextChange?.('방금 친 질문')}>편집흉내</button>
+      <span data-testid="has-textchange">{onActiveTextChange ? 'yes' : 'no'}</span>
     </div>
   ),
 }))
@@ -154,6 +157,30 @@ describe('🎤 다리는 면접 스텝에만 놓인다', () => {
     setApp([step(0, '서류 제출')])
     draw()
     expect(screen.getByTestId('has-textchange').textContent).toBe('no')
+  })
+})
+
+/**
+ * 🔴 **버튼 자리 = 「준비 노트」 섹션 라벨 행의 우측** (CEO 실기 판단 2026-08-11 —
+ * 에디터 아래에서 옮겼다). 노트는 세로로 긴 문서라 아래에 두면 길게 쓸수록 버튼이
+ * 화면 밖으로 밀려난다(시트 탭 줄을 위로 올린 것과 같은 이유).
+ * 형제인 「준비 체크리스트」 라벨 행이 이미 쓰는 문법이라 자리 자체는 새것이 아니다.
+ */
+describe('🎤 버튼 자리 — 준비 노트 라벨 행 우측', () => {
+  it('🔴 라벨과 같은 행(같은 부모) 안에 있다', () => {
+    setApp([step(0, '1차 면접', { notes: DOC(['1분 자기소개']) })])
+    draw()
+    const labelRow = screen.getByText('준비 노트', { selector: 'span' }).parentElement!
+    expect(labelRow.contains(bridgeBtn()!)).toBe(true)
+  })
+
+  it('🔴 에디터보다 DOM 앞에 온다 (= 화면 위)', () => {
+    setApp([step(0, '1차 면접', { notes: DOC(['1분 자기소개']) })])
+    draw()
+    const editor = screen.getByTestId('note-init')
+    expect(
+      bridgeBtn()!.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 })
 

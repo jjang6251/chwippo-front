@@ -1,20 +1,27 @@
 /**
- * card-detail-remodel — 핵심 메모(pinnedContent) → 준비 노트 lazy 이관 (StepPage 통합).
+ * 준비 노트 **폴백** — 시트가 0장인 스텝에서 첫 탭이 무엇을 보여주는가 (StepPage 몫).
+ *
+ * 원래 이 spec 은 "핵심 메모(pinnedContent) → 준비 노트 lazy 이관" 을 잠갔다. 다중 시트가
+ * 들어오면서 **저장 주체가 바뀌었다**: StepPage 는 폴백 콘텐츠를 계산해 넘기기만 하고,
+ * 승격(`POST … ifEmpty`)·저장은 `SheetedNoteEditor` 가 한다.
+ *
+ * 🔴 **그래서 이 화면은 `notes`·`pinnedContent` 를 더 이상 쓰지 않는다.** 원본을 남겨 두는
+ * 게 다중 시트 설계의 최상위 불변식이라(복구 자리), 여기에 저장 경로가 되살아나면
+ * 승격본과 원본이 각자 갈라진다. 그 회귀를 이 파일이 잡는다.
  *
  * 시나리오:
- *   pinned 있는 스텝 로드 → 노트 초기 콘텐츠 앞에 📌 문단
- *   저장 → updateStep 에 notes(병합본) + pinnedContent:null 한 요청
- *   pinned 없는 스텝 → 병합 없음 + 저장 시 pinnedContent 미동봉
- *   노트도 pinned 도 없음 → 빈(=null) 초기 콘텐츠
- *   저장 전(마운트만) → updateStep 미호출 (서버 무변경)
+ *   pinned 있는 스텝 → 폴백 앞에 📌 문단
+ *   pinned + 기존 notes → 📌 가 기존 내용 앞에 병합
+ *   pinned 없음 → 병합 없이 notes 그대로
+ *   둘 다 없음 → 빈(null) 폴백
+ *   🔴 어떤 조작을 해도 `updateStep` 에 notes·pinnedContent 가 실리지 않는다
+ *   핵심 메모 섹션(📌 라벨·textarea)은 여전히 없다
  */
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { Application, ApplicationStep } from '@/types/application'
-
-const SAVED_JSON = '{"type":"doc","content":[]}'
 
 const h = vi.hoisted(() => ({
   app: null as Application | null,
@@ -38,13 +45,10 @@ vi.mock('@/hooks/useStepDetail', () => ({
 }))
 vi.mock('@/hooks/useDemoNavigate', () => ({ useDemoNavigate: () => h.navigate }))
 vi.mock('@/utils/nativeBridge', () => ({ postToNative: vi.fn() }))
-// StepNoteEditor 를 initialContent 노출 + 저장 트리거 버튼으로 대체 (tiptap 미탑재)
-vi.mock('@/components/editor/StepNoteEditor', () => ({
-  StepNoteEditor: ({ initialContent, onSave }: { initialContent: string | null; onSave: (j: string) => Promise<void> }) => (
-    <div>
-      <div data-testid="note-init">{initialContent ?? 'NULL'}</div>
-      <button onClick={() => onSave(SAVED_JSON)}>저장노트</button>
-    </div>
+// 시트 컨테이너를 폴백 노출 창구로 대체 (tiptap·시트 조회 미탑재)
+vi.mock('@/components/editor/SheetedNoteEditor', () => ({
+  SheetedNoteEditor: ({ fallbackContent }: { fallbackContent: string | null }) => (
+    <div data-testid="note-init">{fallbackContent ?? 'NULL'}</div>
   ),
 }))
 
@@ -85,12 +89,11 @@ beforeEach(() => {
   h.updateStep.mockClear()
 })
 
-describe('StepPage — 핵심 메모 → 준비 노트 이관', () => {
-  it('pinned 있는 스텝 로드 → 노트 초기 콘텐츠 앞에 📌 문단', () => {
+describe('StepPage — 준비 노트 폴백 (시트 0장일 때 첫 탭 내용)', () => {
+  it('pinned 있는 스텝 로드 → 폴백 앞에 📌 문단', () => {
     h.app = makeApp({ pinnedContent: '예상 질문 대비' })
     renderStep()
-    const init = screen.getByTestId('note-init').textContent!
-    const doc = JSON.parse(init)
+    const doc = JSON.parse(screen.getByTestId('note-init').textContent!)
     expect(doc.content[0]).toEqual({ type: 'paragraph', content: [{ type: 'text', text: '📌 예상 질문 대비' }] })
   })
 
@@ -104,36 +107,40 @@ describe('StepPage — 핵심 메모 → 준비 노트 이관', () => {
     expect(doc.content.map((n: { content?: { text: string }[] }) => n.content?.[0]?.text)).toEqual(['📌 복장 자유', '기존'])
   })
 
-  it('저장 → updateStep 에 notes(병합본) + pinnedContent:null 한 요청', () => {
-    h.app = makeApp({ pinnedContent: '핵심' })
-    renderStep()
-    fireEvent.click(screen.getByRole('button', { name: '저장노트' }))
-    expect(h.updateStep).toHaveBeenCalledTimes(1)
-    expect(h.updateStep).toHaveBeenCalledWith(
-      { stepId: 's0', notes: SAVED_JSON, pinnedContent: null },
-      expect.anything(),
-    )
-  })
-
-  it('pinned 없는 스텝 → 병합 없음 (초기 콘텐츠 = 기존 notes) + 저장 시 pinnedContent 미동봉', () => {
+  it('pinned 없는 스텝 → 병합 없음 (폴백 = 기존 notes 그대로)', () => {
     const notes = '{"type":"doc","content":[{"type":"paragraph"}]}'
     h.app = makeApp({ notes })
     renderStep()
     expect(screen.getByTestId('note-init').textContent).toBe(notes)
-    fireEvent.click(screen.getByRole('button', { name: '저장노트' }))
-    expect(h.updateStep).toHaveBeenCalledWith(
-      { stepId: 's0', notes: SAVED_JSON },
-      expect.anything(),
-    )
   })
 
-  it('노트도 pinned 도 없음 → 빈(null) 초기 콘텐츠', () => {
+  it('노트도 pinned 도 없음 → 빈(null) 폴백', () => {
     h.app = makeApp()
     renderStep()
     expect(screen.getByTestId('note-init').textContent).toBe('NULL')
   })
 
-  it('저장 전(마운트만) → updateStep 미호출 (서버 무변경)', () => {
+  /**
+   * 🔴 **원본은 이 화면에서 갱신되지 않는다.** 승격은 `notes` 를 **복사**하는 것이라
+   * 원본이 남아 있어야 되돌릴 자리가 있는데, 여기에 저장 경로가 하나라도 되살아나면
+   * 시트와 원본이 각자 갈라진 채 둘 다 "진짜" 가 된다.
+   */
+  it('🔴 다른 필드를 저장해도 updateStep 에 notes·pinnedContent 가 실리지 않는다', () => {
+    h.app = makeApp({ pinnedContent: '핵심', notes: '{"type":"doc","content":[]}' })
+    renderStep()
+
+    // 장소 저장 — 이 화면에 남아 있는 updateStep 소비처
+    fireEvent.click(screen.getByText('장소', { selector: 'span' }).closest('button')!)
+    fireEvent.blur(screen.getByLabelText('면접 장소'))
+
+    expect(h.updateStep).toHaveBeenCalled()
+    for (const [vars] of h.updateStep.mock.calls) {
+      expect(vars).not.toHaveProperty('notes')
+      expect(vars).not.toHaveProperty('pinnedContent')
+    }
+  })
+
+  it('마운트만으로는 updateStep 을 부르지 않는다 (서버 무변경)', () => {
     h.app = makeApp({ pinnedContent: '핵심', notes: '{"type":"doc","content":[]}' })
     renderStep()
     expect(h.updateStep).not.toHaveBeenCalled()

@@ -7,7 +7,7 @@ import type {
   DashboardStats, DdayItem, InterviewReviewItem, GrowthMetricsResponse,
 } from '@/api/dashboard'
 import type { CalendarEvent, DailyNote } from '@/api/calendar'
-import type { ChecklistItem } from '@/api/stepDetail'
+import type { ChecklistItem, StepNoteSheet } from '@/api/stepDetail'
 import type { CoverletterChatMessage } from '@/api/coverletterDoc'
 import type {
   UserProfile, LanguageCert, Cert, Award, Experience, CoverletterData, StorageUsage,
@@ -528,6 +528,67 @@ export const DEMO_CHECKLISTS: Record<string, ChecklistItem[]> = {
   ],
 }
 export const getDemoChecklist = (stepId: string): ChecklistItem[] => DEMO_CHECKLISTS[stepId] ?? []
+
+// ── 준비 노트 시트 (엑셀 탭) ─────────────────────────────────
+/**
+ * 🔴 **시트가 2장이어야 기능이 보인다.** 1장짜리 스텝은 지금까지의 준비 노트와 화면이
+ * 같아서, 둘러보기 사용자는 탭 줄이 있는지도 모르고 지나간다. 카카오 1차 기술면접
+ * (데모에서 가장 깊게 들어가는 스텝)에 서로 **성격이 다른** 두 장을 둔다 —
+ * 「예상 질문」은 면접장에서 꺼낼 것, 「기업 분석」은 그전에 외워 둘 것. 한 장에 섞어
+ * 적기 애매하다는 게 이 기능의 이유이므로, 시연 데이터가 그 이유를 보여줘야 한다.
+ */
+type SheetNode = { type: string; attrs?: Record<string, unknown>; content?: unknown[] }
+const para = (text: string): SheetNode =>
+  text ? { type: 'paragraph', content: [{ type: 'text', text }] } : { type: 'paragraph' }
+const head = (text: string): SheetNode => ({
+  type: 'heading',
+  attrs: { level: 3 },
+  content: [{ type: 'text', text }],
+})
+const sheetDoc = (...nodes: SheetNode[]) => JSON.stringify({ type: 'doc', content: nodes })
+
+export const DEMO_NOTE_SHEETS: Record<string, StepNoteSheet[]> = {
+  'demo-a1-s2': [
+    {
+      id: 'demo-ns1',
+      stepId: 'demo-a1-s2',
+      name: '예상 질문',
+      content: sheetDoc(
+        head('예상 질문 & 답변'),
+        para('Q. 정산 배치를 4시간 → 40분으로 줄인 과정을 설명해 주세요.'),
+        para('→ 증설이 아니라 커넥션 풀 분리 + 청크 처리. APM 으로 병목을 먼저 측정한 게 핵심.'),
+        para('Q. 인덱스를 추가했다가 되돌린 이유는?'),
+        para('→ 읽기는 빨라졌지만 쓰기가 20% 느려짐. 개선 전후를 지표로 비교하는 습관의 계기.'),
+        para('Q. 대용량 트래픽에서 캐시 전략을 어떻게 가져가시겠어요?'),
+        para('→ (아직 정리 못 함 — 무효화 시점 위주로 준비하기)'),
+        para(''),
+        head('역질문'),
+        para('- 팀에서 기술 부채를 다루는 주기가 따로 있나요?'),
+      ),
+      orderIndex: 0,
+      createdAt: d(-5) + 'T02:00:00Z',
+      updatedAt: d(-1) + 'T08:20:00Z',
+    },
+    {
+      id: 'demo-ns2',
+      stepId: 'demo-a1-s2',
+      name: '기업 분석',
+      content: sheetDoc(
+        head('직무 요건에서 겹치는 것'),
+        para('- Kotlin·Spring Boot: 인턴 때 정산 서버가 정확히 이 스택'),
+        para('- MSA/대용량: 사이드 프로젝트에서 Kafka 로 이벤트 분리해 본 경험'),
+        para('- 부족한 것: Redis 운영 경험 (캐시는 읽기만 써 봄)'),
+        para(''),
+        head('면접장 정보'),
+        para('판교 아지트 · 10:00 · 엘리베이터 5층 · 신분증 지참'),
+        para('면접관 2명 · 기술 면접 위주 · 시스템 설계 비중 높다고 들음'),
+      ),
+      orderIndex: 1,
+      createdAt: d(-5) + 'T02:04:00Z',
+      updatedAt: d(-2) + 'T11:00:00Z',
+    },
+  ],
+}
 
 // ── 대시보드 ────────────────────────────────────────────────
 // total = PLANNED 제외(IN_PROGRESS 7 + PASSED 1 + FAILED 1 = 9). interviewsAttended = 과거 면접 스텝(신규 카드는 전부 미래 일정이라 불변).

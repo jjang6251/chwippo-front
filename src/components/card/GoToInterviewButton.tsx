@@ -94,7 +94,12 @@ export function GoToInterviewButton({
         type="button"
         onClick={go}
         disabled={sessUnknown || disabled}
-        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg shrink-0 min-h-[44px] inline-flex items-center gap-1.5 text-xs font-semibold text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 disabled:opacity-50 disabled:cursor-default px-3 py-2.5 rounded-lg transition-colors"
+        /*
+          🔴 「이 단계 완료하기」와 같은 레시피 (2026-08-13 CEO 실기 3차 확정) —
+          `bg-brand hover:bg-accent text-text-primary`. 저알파 틴트(어두움)→ghost(오독)→
+          text-white 채움을 거쳐, 같은 화면 CTA 의 색을 그대로 복사하는 것으로 확정.
+        */
+        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg shrink-0 min-h-[44px] inline-flex items-center gap-1.5 text-xs font-semibold bg-brand hover:bg-accent active:bg-accent-hover text-text-primary disabled:opacity-50 disabled:cursor-default px-3 py-2.5 rounded-lg transition-colors"
         title={
           sessError
             ? '면접 준비 목록을 불러오지 못했어요'

@@ -79,6 +79,62 @@ describe('demoStore — 체크리스트', () => {
   })
 })
 
+/**
+ * 서버 규칙을 데모에서도 그대로 지킨다 — 여기서만 무르면 둘러보기에서 되던 게
+ * 가입 후엔 막혀, 데모가 거짓말을 한 셈이 된다.
+ */
+describe('demoStore — 준비 노트 시트', () => {
+  it('시드: 카카오 1차 기술면접에 시트 2장', () => {
+    expect(store.getNoteSheets('demo-a1-s2').map((s) => s.name)).toEqual(['예상 질문', '기업 분석'])
+    expect(store.getNoteSheets('demo-a1-s0')).toEqual([])
+  })
+
+  it('추가·이름 변경·본문 저장·삭제', () => {
+    const created = store.createNoteSheet('demo-a1-s2', { name: '시트 3' })
+    expect(created.orderIndex).toBe(2)
+    expect(store.getNoteSheets('demo-a1-s2')).toHaveLength(3)
+
+    const renamed = store.updateNoteSheet('demo-a1-s2', created.id, { name: '역질문' })
+    expect(renamed.name).toBe('역질문')
+
+    const saved = store.updateNoteSheet('demo-a1-s2', created.id, { content: '{"type":"doc"}' })
+    expect(saved.content).toBe('{"type":"doc"}')
+
+    store.deleteNoteSheet('demo-a1-s2', created.id)
+    expect(store.getNoteSheets('demo-a1-s2')).toHaveLength(2)
+  })
+
+  /** 🔴 승격 멱등 — 이미 있으면 첫 시트를 돌려준다 (시트가 2장이 되지 않는다) */
+  it('ifEmpty: 이미 시트가 있으면 첫 시트를 그대로 돌려준다', () => {
+    const res = store.createNoteSheet('demo-a1-s2', { name: '준비 노트', content: 'x', ifEmpty: true })
+    expect(res.id).toBe('demo-ns1')
+    expect(store.getNoteSheets('demo-a1-s2')).toHaveLength(2)
+  })
+
+  it('ifEmpty: 0장이면 실제로 만든다 (승격)', () => {
+    const res = store.createNoteSheet('demo-a1-s0', { name: '준비 노트', content: 'x', ifEmpty: true })
+    expect(res.name).toBe('준비 노트')
+    expect(store.getNoteSheets('demo-a1-s0')).toHaveLength(1)
+  })
+
+  it('🔴 마지막 1장은 지워지지 않는다', () => {
+    store.createNoteSheet('demo-a1-s0', { name: '준비 노트' })
+    const only = store.getNoteSheets('demo-a1-s0')[0]
+    store.deleteNoteSheet('demo-a1-s0', only.id)
+    expect(store.getNoteSheets('demo-a1-s0')).toHaveLength(1)
+  })
+
+  it('🔴 캡 10장을 넘기면 던진다 (서버 400 자리)', () => {
+    for (let i = 0; i < 10; i++) store.createNoteSheet('demo-a1-s0', { name: `시트 ${i + 1}` })
+    expect(() => store.createNoteSheet('demo-a1-s0', { name: '11번째' })).toThrow(/상한/)
+  })
+
+  it('store mutation 은 sampleData 상수를 오염시키지 않는다', () => {
+    store.updateNoteSheet('demo-a1-s2', 'demo-ns1', { name: '오염' })
+    expect(S.DEMO_NOTE_SHEETS['demo-a1-s2'][0].name).toBe('예상 질문')
+  })
+})
+
 describe('demoStore — 데일리 노트', () => {
   it('추가·토글·삭제', () => {
     const before = store.getDailyNotes().length
