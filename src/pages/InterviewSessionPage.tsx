@@ -22,9 +22,8 @@ import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useCoverletters, useUpdateCoverletter } from '@/hooks/useApplicationCoverletters'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
-import { StepNoteEditor } from '@/components/editor/StepNoteEditor'
+import { SheetedNoteEditor } from '@/components/editor/SheetedNoteEditor'
 import { useApplication } from '@/hooks/useApplications'
-import { useUpdateStep } from '@/hooks/useStepDetail'
 import { useDemoLink } from '@/hooks/useDemoLink'
 import { pickInterviewSteps } from '@/utils/stepTemplates'
 import { mergePinnedIntoNotes } from '@/utils/stepNotes'
@@ -1779,26 +1778,13 @@ function StepNotePane({
   switcher: React.ReactNode
 }) {
   const link = useDemoLink()
-  const { mutate: updateStep } = useUpdateStep(applicationId)
 
   /*
-    🔴 **`StepPage.handleSaveNotes` 와 같은 규칙이어야 한다.** 죽은 `pinnedContent` 는
-    화면에 보일 때 `mergePinnedIntoNotes` 로 앞에 붙는데, 저장하면서 그걸 안 지우면
-    **본문에 들어간 📌 문단 위에 또 붙는다** — 스텝 페이지에 가서야 중복이 드러난다.
+    시트가 0장인 스텝에서만 첫 탭에 보이는 **폴백**이다 (`StepPage` 와 같은 규칙).
+    죽은 `pinnedContent` 는 여기서 📌 문단으로 앞에 붙고, 승격될 때 시트로 함께 복사된다.
+    원본 `notes`·`pinnedContent` 는 이 화면에서 갱신하지 않는다 — 저장은 전부 시트 API 다.
   */
   const initialNotes = mergePinnedIntoNotes(step.notes, step.pinnedContent)
-  const clearPinned = !!step.pinnedContent
-  const handleSave = (json: string) =>
-    new Promise<void>((resolve, reject) =>
-      updateStep(
-        {
-          stepId: step.id,
-          notes: json,
-          ...(clearPinned ? { pinnedContent: null } : {}),
-        },
-        { onSuccess: () => resolve(), onError: () => reject() },
-      ),
-    )
 
   return (
     <section
@@ -1874,12 +1860,15 @@ function StepNotePane({
         🔴 **`key` 가 없으면 스텝을 바꿔도 글이 안 바뀐다.** tiptap 은 `content` 를 초기화
         시점에만 읽으므로, 같은 자리에서 prop 만 갈아끼우면 **직전 스텝의 노트를 그대로
         보여주면서 새 스텝에 저장한다** — 조용히 남의 노트를 덮어쓰는 경로다.
+        시트 컨테이너도 같은 이유로 통째 remount 한다 (고른 탭·미저장분이 스텝을 넘어가면
+        남의 스텝 시트에 저장된다).
       */}
-      <StepNoteEditor
+      <SheetedNoteEditor
         key={step.id}
+        appId={applicationId}
+        stepId={step.id}
         stepName={step.name}
-        initialContent={initialNotes}
-        onSave={handleSave}
+        fallbackContent={initialNotes}
       />
     </section>
   )

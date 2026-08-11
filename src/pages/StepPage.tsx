@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useDemoMode } from '@/contexts/demoMode'
@@ -7,14 +7,15 @@ import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/hooks/useApplications'
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
-import { StepNoteEditor } from '@/components/editor/StepNoteEditor'
+import { SheetedNoteEditor } from '@/components/editor/SheetedNoteEditor'
 import { Modal } from '@/components/common/Modal'
 import { GoToInterviewButton } from '@/components/card/GoToInterviewButton'
 import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTemplates'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
 import { postToNative } from '@/utils/nativeBridge'
 import { mergePinnedIntoNotes, notesToPlainText } from '@/utils/stepNotes'
-import { Calendar, MapPin } from 'lucide-react'
+import { Calendar, Check, MapPin, PartyPopper } from 'lucide-react'
+import { useNavCollapsedStore } from '@/stores/navCollapsedStore'
 
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
@@ -38,9 +39,12 @@ export function StepPage() {
   const [showPassedModal, setShowPassedModal] = useState(false)
   const [initialized, setInitialized] = useState(false)
   /**
-   * 편집 중인 준비 노트의 plain text. **`null` 은 "이번 방문에서 아직 안 건드림"** 이라
-   * 서버 값에서 뽑는다 — 저장·refetch 로 서버 값이 바뀌면 그게 그대로 최신이다.
-   * 한 글자라도 치면 그 뒤로는 화면의 값이 이긴다 (저장은 1.5s debounce).
+   * **지금 보고 있는 시트**의 plain text. `null` 은 "시트 목록이 아직 안 왔다" 라 폴백
+   * (기존 노트)에서 뽑는다. 시트가 오면 에디터가 곧바로 활성 시트 본문을 흘려보내고,
+   * 그 뒤로는 전환·입력마다 갱신된다 (저장은 1.5s debounce라 서버 값은 늘 한 박자 뒤).
+   *
+   * 🔴 **활성 시트만**이다 (CEO 결정). 시트 전부를 합쳐 넘기면, 「예상 질문」 탭을 보며
+   * 누른 사용자가 「기업 분석」 문장까지 질문 후보로 받게 된다 — 눈앞에 없는 내용이다.
    */
   const [liveNoteText, setLiveNoteText] = useState<string | null>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
@@ -75,17 +79,6 @@ export function StepPage() {
   function handleLocationBlur() {
     setEditingField(null)
     updateStep({ stepId: stepId!, location: location || null })
-  }
-  async function handleSaveNotes(json: string) {
-    // card-detail-remodel — 핵심 메모 통합: 병합된 notes 저장 시 죽은 pinnedContent 를 1회 이관(null).
-    // step.pinnedContent 가 있을 때만 동봉 → 저장 성공 후 refetch 로 null 이 되면 이후 저장엔 미동봉.
-    const clearPinned = !!step?.pinnedContent
-    await new Promise<void>((resolve, reject) =>
-      updateStep(
-        { stepId: stepId!, notes: json, ...(clearPinned ? { pinnedContent: null } : {}) },
-        { onSuccess: () => resolve(), onError: () => reject() },
-      ),
-    )
   }
   function handleAddItem() {
     if (!inputText.trim()) return
@@ -160,8 +153,13 @@ export function StepPage() {
     dday === 0 ? 'bg-danger/5' :
     dday === 1 ? 'bg-warning/5' : ''
 
-  // 준비 노트 초기 콘텐츠 — 죽은 pinnedContent 가 있으면 맨 앞에 "📌 …" 문단으로 병합해 표시.
-  // 서버 이관은 저장 시(handleSaveNotes)에 1회. pinned 이관 후엔 null 이라 병합 없음(idempotent).
+  /*
+    준비 노트 **폴백** 콘텐츠 — 시트가 0장인 스텝에서만 첫 탭에 보인다.
+    죽은 pinnedContent 는 여기서 맨 앞 "📌 …" 문단으로 병합돼 **승격 시 함께 시트로 복사**된다.
+
+    🔴 이 화면은 더 이상 `notes`·`pinnedContent` 를 **쓰지 않는다** (읽기 폴백 전용).
+    저장은 전부 시트 API 로 나가고 원본은 그대로 남는다 — 되돌릴 자리를 지우지 않기 위해서다.
+  */
   const initialNotes = mergePinnedIntoNotes(step.notes, step.pinnedContent)
 
   // 면접 스텝에서만 질문 은행으로 건너간다 — 판정은 `getStepType` 단일 구현
@@ -422,28 +420,22 @@ export function StepPage() {
 
       {/* ── 준비 노트 (핵심 메모 통합) ─────────────────── */}
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-xs text-text-quaternary shrink-0">준비 노트</span>
-          <div className="flex-1 h-px bg-card-strong" />
-        </div>
-        <StepNoteEditor
-          stepName={step.name}
-          initialContent={initialNotes}
-          onSave={handleSaveNotes}
-          onTextChange={isInterviewStep ? setLiveNoteText : undefined}
-        />
-
         {/*
           🔴 **노트 → 면접 질문 은행.** 이 기능의 출발점이 "준비 노트에 기출을 적던
           사람" 인데, 정작 노트에서 은행으로 가는 길이 없었다 (공통 조상인 카드 상세뿐).
           기본 포맷의 첫 칸이 「예상 질문 & 답변」이라 **여기 적힌 게 곧 질문 목록**이다.
 
-          자리가 에디터 바로 아래인 이유 — 방금 적은 내용을 넘기는 동작이라
-          그 내용이 눈에 있는 동안에 버튼이 보여야 한다.
+          자리가 **섹션 라벨 행 우측**이다 (CEO 실기 판단 2026-08-11 — 에디터 아래에서
+          옮겼다). 노트는 세로로 긴 문서라 아래에 두면 길게 쓸수록 버튼이 화면 밖으로
+          밀려난다 — 시트 탭 줄을 위로 올린 것과 같은 이유다. 형제인 「준비 체크리스트」
+          라벨 행이 이미 쓰는 문법(라벨 · 하이라인 · 우측 액션)이라 새로 만드는 자리도 아니다.
+
           비었으면 잠근다: 빈 채로 넘어가면 세션 생성(코인)만 쓰고 빈 폼을 만난다.
         */}
-        {isInterviewStep && appId && (
-          <div className="mt-2.5 flex justify-end">
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-xs text-text-quaternary shrink-0">준비 노트</span>
+          <div className="flex-1 h-px bg-card-strong" />
+          {isInterviewStep && appId && (
             <GoToInterviewButton
               applicationId={appId}
               label="이 내용으로 면접 질문 만들기"
@@ -457,27 +449,23 @@ export function StepPage() {
               /* 자소서 화면이 아니다 — 닫기만 하면 갈 곳이 없다 */
               onNeedCoverletter={() => navigate(`/board/${appId}/coverletter`)}
             />
-          </div>
-        )}
+          )}
+        </div>
+        <SheetedNoteEditor
+          appId={appId!}
+          stepId={stepId!}
+          stepName={step.name}
+          fallbackContent={initialNotes}
+          onActiveTextChange={isInterviewStep ? setLiveNoteText : undefined}
+        />
       </div>
 
-      {/* ── 이 단계 완료하기 버튼 (fixed bottom) ───────
-          웹 모바일은 MobileNav(실측 60px·z-50) 바로 위에 붙임: pb = 60 + 8(간격) + safe-area.
-          그라데이션이 탭바까지 이어져 버튼 아래 틈으로 콘텐츠가 비치지 않음. 네이티브는 탭바가 숨겨져 pb-4 로 바닥 밀착 */}
       {isCurrentStep && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none">
-          <div className={`max-w-2xl mx-auto px-4 sm:px-6 pt-8 ${isNative ? 'pb-4' : 'pb-[calc(68px+env(safe-area-inset-bottom,0px))] lg:pb-4'} bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-auto`}>
-            <button
-              onClick={handleCompleteStep}
-              className="w-full bg-brand hover:bg-accent active:bg-accent-hover text-text-primary font-semibold text-sm py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              {isLastStep ? '🎉 최종 합격 처리하기' : '이 단계 완료하기'}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <StepCompleteCta
+          isLastStep={isLastStep}
+          isNative={isNative}
+          onComplete={handleCompleteStep}
+        />
       )}
 
       {/* 최종 합격 확인 모달 */}
@@ -502,6 +490,119 @@ export function StepPage() {
         </div>
       </Modal>
     </div>
+  )
+}
+
+/**
+ * 「이 단계 완료하기」 — **축소형 CTA** (CEO 결정 2026-08-11).
+ *
+ * 🔴 **왜 줄였나.** 이 바는 화면 하단을 **항상** 가로막고 있었다. 스텝 페이지는 노트가
+ * 길어질수록 세로로 자라는데, 정작 이 버튼은 노트를 다 쓴 **뒤에** 한 번 누르는 것이다.
+ * 쓰는 내내 화면 한 줄을 내주고 있을 이유가 없다. 그래서 평소엔 우하단 원형으로 물러나
+ * 있다가, **페이지 끝에 닿으면** 원래의 풀폭 바로 돌아온다 — 누를 때가 됐을 때만 커진다.
+ *
+ * 판정은 콘텐츠 끝의 sentinel + `IntersectionObserver`(`rootMargin` 하단 160px = "근처").
+ *
+ * 🔴 **관측 전 기본값**이 함정이다. 스크롤이 없을 만큼 짧은 스텝(체크리스트도 노트도 빈
+ * 새 카드)은 sentinel 이 처음부터 보이므로 IO 의 **최초 콜백**이 곧바로 확장시킨다 —
+ * 그래서 기본값을 축소로 두어도 "짧은 페이지인데 영영 작은 버튼" 이 되지 않는다.
+ * 다만 IO 자체가 없는 환경에선 콜백이 아예 안 와서 축소인 채로 굳는다. 그 경우는
+ * **오늘의 풀폭 바로 퇴화**시킨다 — 기능이 줄지언정 낯설어지지는 않게.
+ *
+ * 전환은 `animate-fadeIn`(앱이 이미 쓰는 진입 애니메이션) 하나뿐이다. morph 는 없다.
+ * 모션 최소화는 `index.css` 의 전역 `prefers-reduced-motion: reduce` 규칙이 이미 잡는다
+ * (animation/transition-duration 0.01ms) — 개별 `motion-reduce:` 를 덧댈 필요가 없음을 실측 확인.
+ */
+function StepCompleteCta({
+  isLastStep,
+  isNative,
+  onComplete,
+}: {
+  isLastStep: boolean
+  isNative: boolean
+  onComplete: () => void
+}) {
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const [atEnd, setAtEnd] = useState(false)
+  // FAB 좌하단 오프셋 — 데스크탑 사이드바 폭(펼침/접힘)만큼 비켜 앉는다
+  const navCollapsed = useNavCollapsedStore((s) => s.collapsed)
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || typeof IntersectionObserver !== 'function') {
+      setAtEnd(true) // 관측할 수 없으면 기존 풀폭 바 (오늘 동작으로 퇴화)
+      return
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => setAtEnd(entry.isIntersecting),
+      // 아래로 160px 넓혀 본다 — 끝에 "닿기 직전" 부터 커져야 손이 먼저 가 있다
+      { rootMargin: '0px 0px 160px 0px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  /* 화면에 보이는 문구는 그대로 둔다 (🎉 포함). 아이콘 전용 축소형에서만 이모지를 뺀다 —
+     낭독기가 "파티 크래커" 를 먼저 읽어 버려 무슨 버튼인지가 뒤로 밀린다. */
+  const barLabel = isLastStep ? '🎉 최종 합격 처리하기' : '이 단계 완료하기'
+  const a11yLabel = isLastStep ? '최종 합격 처리하기' : '이 단계 완료하기'
+  /* 웹 모바일은 MobileNav(실측 60px·z-50) 위로 띄운다: 60 + 8(간격) + safe-area.
+     네이티브는 탭바가 숨겨져 바닥 밀착 — 기존 바가 쓰던 계산 그대로다. */
+  const liftCls = isNative
+    ? 'pb-4'
+    : 'pb-[calc(68px+env(safe-area-inset-bottom,0px))] lg:pb-4'
+  const fabLiftCls = isNative
+    ? 'bottom-4'
+    : 'bottom-[calc(68px+env(safe-area-inset-bottom,0px))] lg:bottom-4'
+  const CTA_COLOR =
+    'bg-brand hover:bg-accent active:bg-accent-hover text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
+
+  return (
+    <>
+      {/* 콘텐츠 끝 표식 — 보이지 않지만 자리를 차지해야 관측된다 */}
+      <div ref={sentinelRef} aria-hidden="true" className="h-px w-full" />
+
+      {atEnd ? (
+        /* 그라데이션이 탭바까지 이어져 버튼 아래 틈으로 콘텐츠가 비치지 않음 */
+        <div className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none animate-fadeIn">
+          <div
+            className={`max-w-2xl mx-auto px-4 sm:px-6 pt-8 ${liftCls} bg-gradient-to-t from-bg via-bg/95 to-transparent pointer-events-auto`}
+          >
+            <button
+              onClick={onComplete}
+              className={`w-full ${CTA_COLOR} font-semibold text-sm py-3 rounded-xl flex items-center justify-center gap-2`}
+            >
+              {barLabel}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={`fixed left-4 ${navCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-[15.5rem]'} z-20 ${fabLiftCls} animate-fadeIn`}>
+          {/*
+            🔴 좌하단이다 (2026-08-13 실측). 우하단에 두면 「이 내용으로 면접 질문 만들기」와
+            특정 스크롤 구간에서 겹쳐 — 같은 sage 두 컨트롤이 한 덩어리로 융합되고 버튼
+            우측 1/4 이 탭을 강탈당했다. 좌측 밴드의 인터랙티브는 체크박스뿐이라 오탭
+            결과가 가역 1탭 — 위험 순위가 압도적으로 낮다.
+            데스크탑 좌측은 사이드바(펼침 224px·접힘 56px) 폭만큼 비켜 앉는다 — 상태 구독.
+          */}
+          <button
+            onClick={onComplete}
+            aria-label={a11yLabel}
+            title={a11yLabel}
+            className={`w-12 h-12 rounded-full shadow-md flex items-center justify-center ${CTA_COLOR}`}
+          >
+            {isLastStep ? (
+              <PartyPopper size={20} strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <Check size={22} strokeWidth={2.25} aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      )}
+    </>
   )
 }
 

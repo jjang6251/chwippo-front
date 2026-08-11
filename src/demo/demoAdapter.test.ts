@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { InternalAxiosRequestConfig } from 'axios'
 import { demoAdapter } from './demoAdapter'
-import { resetDemoStore, getApplication, getChecklist, getDailyNotes } from './demoStore'
+import { resetDemoStore, getApplication, getChecklist, getDailyNotes, getNoteSheets } from './demoStore'
 import { useDemoSignupStore } from '@/stores/demoSignupStore'
 
 const call = (method: string, url: string, body?: unknown) =>
@@ -37,6 +37,18 @@ describe('demoAdapter — 기존 GET 계약', () => {
   it('GET /calendar/events — 이벤트 샘플 반환', async () => {
     const res = await get('/calendar/events?year=2026&month=7')
     expect(Array.isArray(res.data.data)).toBe(true)
+  })
+
+  /** 🔴 시트가 2장이어야 탭 줄이 보인다 — 1장이면 기존 준비 노트와 화면이 같아 기능을 못 알아본다 */
+  it('GET note-sheets — 카카오 1차 기술면접에 시트 2장', async () => {
+    const res = await get('/applications/demo-a1/steps/demo-a1-s2/note-sheets')
+    expect(res.data.data.map((s: { name: string }) => s.name)).toEqual(['예상 질문', '기업 분석'])
+  })
+
+  /** 시트가 없는 스텝은 `[]` — 프론트가 기존 notes 를 첫 탭으로 보여주는 폴백을 탄다 */
+  it('GET note-sheets — 시트 없는 스텝은 빈 배열', async () => {
+    const res = await get('/applications/demo-a1/steps/demo-a1-s0/note-sheets')
+    expect(res.data.data).toEqual([])
   })
 })
 
@@ -160,6 +172,37 @@ describe('demoAdapter — mutation 화이트리스트 (인메모리 반영 + 정
   it('PATCH /applications/:id/coverletters/:clId — 답변 저장 반영', async () => {
     const res = await call('patch', '/applications/demo-a1/coverletters/demo-a1-cl2', { answer: '초안' })
     expect(res.data.data.answer).toBe('초안')
+  })
+
+  /*
+    준비 노트 시트 — 탭을 눌러보고 늘려보는 게 이 기능의 시연 가치 전부라
+    체크리스트와 같은 등급으로 통과시킨다 (비 AI · 인메모리).
+  */
+  it('POST note-sheets — 시트 추가 반영', async () => {
+    const before = getNoteSheets('demo-a1-s2').length
+    const res = await call('post', '/applications/demo-a1/steps/demo-a1-s2/note-sheets', { name: '시트 3' })
+    expect(res.data.data.name).toBe('시트 3')
+    expect(getNoteSheets('demo-a1-s2')).toHaveLength(before + 1)
+  })
+
+  it('PATCH note-sheets/:sheetId — 이름·본문 저장 반영', async () => {
+    const res = await call('patch', '/applications/demo-a1/steps/demo-a1-s2/note-sheets/demo-ns1', { name: '1차 기출' })
+    expect(res.data.data.name).toBe('1차 기출')
+    expect(getNoteSheets('demo-a1-s2')[0].name).toBe('1차 기출')
+  })
+
+  it('DELETE note-sheets/:sheetId — 시트 삭제 반영', async () => {
+    await call('delete', '/applications/demo-a1/steps/demo-a1-s2/note-sheets/demo-ns2')
+    expect(getNoteSheets('demo-a1-s2').map((s) => s.id)).toEqual(['demo-ns1'])
+  })
+
+  /** 🔴 승격 멱등 — 이미 시트가 있으면 첫 시트를 돌려준다 (탭이 복제되지 않는다) */
+  it('POST note-sheets { ifEmpty } — 이미 있으면 첫 시트 반환', async () => {
+    const res = await call('post', '/applications/demo-a1/steps/demo-a1-s2/note-sheets', {
+      name: '준비 노트', content: 'x', ifEmpty: true,
+    })
+    expect(res.data.data.id).toBe('demo-ns1')
+    expect(getNoteSheets('demo-a1-s2')).toHaveLength(2)
   })
 })
 

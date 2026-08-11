@@ -8,7 +8,14 @@
 // streak·growth 등)는 sampleData 상수를 adapter 가 직접 읽는다.
 import * as S from './sampleData'
 import type { Application, UpdateApplicationDto } from '@/types/application'
-import type { ChecklistItem, StepDetail, UpdateStepBody } from '@/api/stepDetail'
+import type {
+  ChecklistItem,
+  CreateNoteSheetBody,
+  StepDetail,
+  StepNoteSheet,
+  UpdateNoteSheetBody,
+  UpdateStepBody,
+} from '@/api/stepDetail'
 import type { CalendarEvent, DailyNote } from '@/api/calendar'
 import type { ApplicationCoverletter, UpdateCoverletterDto } from '@/types/coverletter'
 import type { InterviewPrepQuestion } from '@/types/interviewPrep'
@@ -17,6 +24,13 @@ interface DemoState {
   applications: Application[]
   /** stepId → 체크리스트 */
   checklists: Record<string, ChecklistItem[]>
+  /**
+   * stepId → 준비 노트 시트.
+   *
+   * 🔴 **읽기 상수로 둘 수 없다.** 탭 추가·이름 변경·삭제가 이 기능의 시연 가치인데,
+   * 재조회가 상수를 다시 내려주면 방금 만든 탭이 사라진다 (면접 자가평가와 같은 이유).
+   */
+  noteSheets: Record<string, StepNoteSheet[]>
   dailyNotes: DailyNote[]
   /** applicationId → 자소서 문항 */
   coverletters: Record<string, ApplicationCoverletter[]>
@@ -44,6 +58,7 @@ function init(): DemoState {
   return {
     applications: clone(S.DEMO_APPLICATIONS),
     checklists: clone(S.DEMO_CHECKLISTS),
+    noteSheets: clone(S.DEMO_NOTE_SHEETS),
     dailyNotes: clone(S.DEMO_DAILY_NOTES),
     coverletters: clone(S.DEMO_COVERLETTERS),
     calendarEvents: clone(S.DEMO_CALENDAR_EVENTS),
@@ -142,6 +157,56 @@ export function updateChecklistItem(
 export function deleteChecklistItem(stepId: string, itemId: string): void {
   const list = state.checklists[stepId]
   if (list) state.checklists[stepId] = list.filter((i) => i.id !== itemId)
+}
+
+// ── 준비 노트 시트 ───────────────────────────────────────────
+/**
+ * 서버 규칙을 **데모에서도 그대로** 지킨다 — 캡 10장·마지막 1장 삭제 불가·`ifEmpty` 승격 멱등.
+ * 여기서만 무르게 두면 둘러보기에서 되는 게 가입 후엔 막혀, 데모가 거짓말을 한 셈이 된다.
+ */
+const MAX_SHEETS = 10
+
+export const getNoteSheets = (stepId: string): StepNoteSheet[] =>
+  state.noteSheets[stepId] ?? []
+
+export function createNoteSheet(stepId: string, body: CreateNoteSheetBody): StepNoteSheet {
+  const list = (state.noteSheets[stepId] ??= [])
+  // 승격 멱등 — 캡보다 먼저 본다 (10장 꽉 찬 스텝에 승격이 와도 첫 시트를 돌려줘야 화면이 뜬다)
+  if (body.ifEmpty && list.length > 0) return list[0]
+  if (list.length >= MAX_SHEETS) {
+    throw new Error(`[demo] createNoteSheet: 시트 상한 ${MAX_SHEETS}장 초과`)
+  }
+  const sheet: StepNoteSheet = {
+    id: genId('ns'),
+    stepId,
+    name: body.name,
+    content: body.content || null,
+    orderIndex: list.reduce((max, s) => Math.max(max, s.orderIndex), -1) + 1,
+    createdAt: now(),
+    updatedAt: now(),
+  }
+  list.push(sheet)
+  return sheet
+}
+
+export function updateNoteSheet(
+  stepId: string,
+  sheetId: string,
+  patch: UpdateNoteSheetBody,
+): StepNoteSheet {
+  const sheet = state.noteSheets[stepId]?.find((s) => s.id === sheetId)
+  if (!sheet) throw new Error(`[demo] updateNoteSheet: 미존재 시트 ${stepId}/${sheetId}`)
+  if (patch.name !== undefined) sheet.name = patch.name
+  if (patch.content !== undefined) sheet.content = patch.content || null
+  if (patch.orderIndex !== undefined) sheet.orderIndex = patch.orderIndex
+  sheet.updatedAt = now()
+  return sheet
+}
+
+export function deleteNoteSheet(stepId: string, sheetId: string): void {
+  const list = state.noteSheets[stepId]
+  if (!list || list.length <= 1) return // 마지막 1장은 서버도 막는다
+  state.noteSheets[stepId] = list.filter((s) => s.id !== sheetId)
 }
 
 // ── 캘린더 데일리 노트 ───────────────────────────────────────

@@ -28,6 +28,9 @@ function resolveGet(url: string, params: Record<string, unknown>): unknown {
   if (m) return store.getCoverletters(m[1])
   m = path.match(/^\/applications\/[^/]+\/steps\/([^/]+)\/checklist$/)
   if (m) return store.getChecklist(m[1])
+  // 준비 노트 시트 — 0장이면 `[]`. 프론트가 기존 notes 를 첫 탭으로 보여주는 폴백을 탄다
+  m = path.match(/^\/applications\/[^/]+\/steps\/([^/]+)\/note-sheets$/)
+  if (m) return store.getNoteSheets(m[1])
   // 회사 조사 캐시 — 실존 회사 허위사실 방지로 null(배너 미노출). sampleData 판단 근거 참조.
   m = path.match(/^\/applications\/[^/]+\/coverletter\/research$/)
   if (m) return S.DEMO_COMPANY_RESEARCH
@@ -160,6 +163,7 @@ function parseBody(data: unknown): Record<string, unknown> {
  *   PATCH /applications/:id/step                     (현재 스텝=노드 이동)
  *   PATCH /applications/:id/steps/:stepId            (스텝 날짜·장소·메모·핀)
  *   POST/PATCH/DELETE .../steps/:stepId/checklist    (체크리스트 추가·토글·삭제)
+ *   POST/PATCH/DELETE .../steps/:stepId/note-sheets  (준비 노트 시트 추가·이름·본문·삭제)
  *   POST/PATCH/DELETE /calendar/daily-notes          (데일리 노트 추가·토글·삭제)
  *   PATCH /applications/:id/coverletters/:clId       (자소서 답변 텍스트 저장 — 비 AI)
  *   PATCH /interview-prep-questions/:id              (면접 내 답변 메모 — 비 AI)
@@ -228,6 +232,29 @@ function resolveMutation(method: string, url: string, body: Record<string, unkno
     if (method === 'patch') return { payload: store.updateChecklistItem(m[1], m[2], body) }
     if (method === 'delete') {
       store.deleteChecklistItem(m[1], m[2])
+      return { payload: null }
+    }
+  }
+  /*
+    준비 노트 시트 — **체크리스트와 같은 성격**(비 AI·되돌릴 수 있는 텍스트)이라 허용한다.
+    탭을 눌러보고 늘려보는 게 이 기능의 시연 가치 전부다. `DELETE` 도 넣는다 —
+    질문 삭제와 달리 시트는 사용자가 방금 만든 것이고, 마지막 1장은 store 가 지킨다.
+  */
+  if ((m = path.match(/^\/applications\/[^/]+\/steps\/([^/]+)\/note-sheets$/))) {
+    if (method === 'post') {
+      return {
+        payload: store.createNoteSheet(m[1], {
+          name: String(body.name ?? ''),
+          content: body.content as string | undefined,
+          ifEmpty: body.ifEmpty === true,
+        }),
+      }
+    }
+  }
+  if ((m = path.match(/^\/applications\/[^/]+\/steps\/([^/]+)\/note-sheets\/([^/]+)$/))) {
+    if (method === 'patch') return { payload: store.updateNoteSheet(m[1], m[2], body) }
+    if (method === 'delete') {
+      store.deleteNoteSheet(m[1], m[2])
       return { payload: null }
     }
   }
