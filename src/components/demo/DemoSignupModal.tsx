@@ -40,6 +40,10 @@ const COPY: Record<DemoBlockReason, { title: string; body: string }> = {
     title: '문항을 더 추가할 수 있어요',
     body: '회사마다 묻는 게 다릅니다. 문항을 추가해 답변을 써두면 비슷한 문항이 나왔을 때 다시 꺼내 쓸 수 있어요.',
   },
+  custom_question: {
+    title: '내가 모은 기출 질문, 저장해 둘까요',
+    body: '직접 모은 기출 질문을 저장하려면 가입이 필요해요. 한 번 적어두면 다음 차수·다른 회사 면접에서 그대로 다시 꺼내 쓸 수 있어요.',
+  },
   create: {
     title: '내 지원 현황으로 시작해볼까요',
     body: '지원한 회사를 추가하면 마감 D-day와 전형 단계를 한 곳에서 볼 수 있어요.',

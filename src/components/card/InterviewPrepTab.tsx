@@ -2,14 +2,27 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mic } from 'lucide-react'
 import {
+  useInterviewPrepQuestions,
   useInterviewPrepSessions,
   useRemoveInterviewPrepSession,
 } from '@/hooks/useInterviewPrep'
 import { toast } from '@/stores/toastStore'
-import type { InterviewPrepSession } from '@/types/interviewPrep'
+import type {
+  InterviewPrepQuestion,
+  InterviewPrepSession,
+} from '@/types/interviewPrep'
 import { INTERVIEW_TYPE_LABEL } from '@/types/interviewPrep'
 import { NewInterviewSessionModal } from './NewInterviewSessionModal'
 import { Modal } from '@/components/common/Modal'
+
+/** 트리 전체에서 **내가 직접 적은** 질문 수 — 꼬리 자리에 적은 것도 함께 센다 */
+function countUserQuestions(nodes: InterviewPrepQuestion[]): number {
+  return nodes.reduce(
+    (sum, n) =>
+      sum + (n.source === 'user' ? 1 : 0) + countUserQuestions(n.children),
+    0,
+  )
+}
 
 /**
  * F6 PR 2 Phase 4 — 면접 준비 탭 (BoardDetail tab content).
@@ -45,6 +58,17 @@ export function InterviewPrepTab({
   const [pendingDelete, setPendingDelete] = useState<InterviewPrepSession | null>(
     null,
   )
+
+  /**
+   * 🔴 **확인 모달이 열릴 때만 조회한다.** 탭에 세션이 5개 있으면 목록을 그리는 것만으로
+   * 질문 트리 5벌을 받아 오는 셈이라, 지우지도 않을 데이터를 매번 끌고 온다.
+   * 지울 세션 하나가 정해진 뒤에 그 세션만 본다.
+   */
+  const { data: pendingQuestions = [] } = useInterviewPrepQuestions(
+    pendingDelete?.id ?? '',
+    !!pendingDelete,
+  )
+  const userQuestionCount = countUserQuestions(pendingQuestions)
 
   const confirmDelete = () => {
     if (!pendingDelete) return
@@ -168,6 +192,22 @@ export function InterviewPrepTab({
             <span className="text-text-quaternary text-xs">
               생성된 질문·내 메모도 함께 사라집니다.
             </span>
+            {/*
+              🔴 **직접 적은 질문은 따로 말한다** (질문 은행 D2b). AI 질문은 다시 만들면
+              되지만 내가 모은 기출은 어디에도 없다 — 면접 다녀와 복기한 것들이다.
+
+              🔴 **로드를 기다리지 않는다.** 질문 목록은 모달이 열릴 때 처음 조회하는데,
+              그 응답을 기다리느라 [삭제] 를 막으면 멀쩡한 세션을 지우려던 사람이 붙잡힌다.
+              도착하면 한 줄이 더해질 뿐이고, 그 전에도 위 문구가 이미 경고하고 있다.
+            */}
+            {userQuestionCount > 0 && (
+              <>
+                <br />
+                <span className="text-warning text-xs">
+                  직접 추가한 질문 {userQuestionCount}개도 함께 삭제돼요.
+                </span>
+              </>
+            )}
           </p>
           <div className="flex justify-end gap-2">
             <button

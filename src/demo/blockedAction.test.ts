@@ -86,6 +86,9 @@ describe('데모 — 모달이 맥락을 받는다', () => {
     ['/interview-prep-questions/q1/answer', 'ai_answer'],
     ['/interview-prep-questions/q1/followups', 'ai_followup'],
     ['/interview-prep-sessions/s1/generate', 'ai_generate'],
+    // 🔴 직접 적은 질문은 AI 가 아니다 — "예상 질문을 뽑아드릴게요" 가 뜨면 방금 한
+    //    행동과 어긋난다. `/generate` 와 접두사가 같아 순서가 뒤집히면 조용히 섞인다
+    ['/interview-prep-sessions/s1/questions/bulk', 'custom_question'],
     // 🔴 세션 생성 = 질문 생성이다. 예전엔 'create'(지원 카드 추가) 로 떨어져
     //    "지원한 회사를 추가하면 마감 D-day 를…" 이 떴다 (2026-08-08 QA)
     ['/interview-prep-sessions', 'ai_generate'],

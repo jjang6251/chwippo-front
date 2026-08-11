@@ -200,6 +200,26 @@ describe('데모 면접 — 데이터가 화면 요구를 만족하는가', () =
     },
   )
 
+  /**
+   * 🔴 **질문 은행 D2 — 데모에 「내 질문」이 하나도 없으면 그 기능은 없는 것과 같다.**
+   * 데모를 보는 사람은 전부 AI 생성물로 읽고, 직접 모을 수 있다는 걸 알 방법이 없다.
+   * 카카오 세션 하나에만 둔다 (다섯 세션 전부면 AI 생성이 주인공이 아닌 것처럼 보인다).
+   */
+  it('🔴 demo-a1 세션에 직접 추가한 질문(source=user)이 있다', () => {
+    const mine = DEMO_INTERVIEW_QUESTIONS['demo-is1'].filter(
+      (q) => q.source === 'user',
+    )
+    expect(mine.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('나머지 질문은 AI 출처다 (기본값이 뒤집히면 배지가 전부 붙는다)', () => {
+    const all = Object.values(DEMO_INTERVIEW_QUESTIONS)
+      .flat()
+      .flatMap((q) => [q, ...q.children])
+    expect(all.every((q) => q.source === 'ai' || q.source === 'user')).toBe(true)
+    expect(all.filter((q) => q.source === 'user')).toHaveLength(2)
+  })
+
   it('🔴 질문 id 가 전 세션에서 유일하다 (React key 충돌 방지)', () => {
     const ids = Object.values(DEMO_INTERVIEW_QUESTIONS)
       .flat()

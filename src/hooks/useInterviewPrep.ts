@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { interviewPrepApi } from '@/api/interviewPrep'
 import type {
+  BulkCreateQuestionsDto,
   CreateFollowupDto,
   CreateSessionDto,
+  GenerateSessionDto,
   InterviewPrepQuestion,
   UpdateQuestionDto,
   UpdateSessionDto,
@@ -161,12 +163,12 @@ export function useDeleteInterviewSession(
   })
 }
 
-/** AI 일괄 생성 — 성공 시 questions 트리 invalidate (기존 트리 전체 교체) */
+/** AI 질문 생성 — 성공 시 questions 트리 invalidate (기존 질문에 **추가**된다) */
 export function useGenerateInterviewSession(sessionId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (regenerate: boolean = false) =>
-      interviewPrepApi.generate(sessionId, regenerate),
+    mutationFn: (dto: GenerateSessionDto = {}) =>
+      interviewPrepApi.generate(sessionId, dto),
     onSuccess: (result) => {
       if (result.status === 'ok') {
         qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
@@ -230,10 +232,34 @@ export function useUpdateInterviewQuestion(sessionId?: string) {
       interviewPrepApi.updateQuestion(params.questionId, params.dto),
     onSuccess: (updated, params) => {
       if (!sessionId) return
+      /**
+       * 🔴 **보낸 필드만 반영한다** (질문 은행 D2b). `dto` 에 없는 키를 건드리면
+       * ⭐ 토글이 방금 저장한 메모를 되돌리는 식의 교차 오염이 난다.
+       *
+       * 서버 응답(`updated`)을 먼저 보고, 없으면 보낸 값으로 떨어진다 — 데모 어댑터처럼
+       * 응답이 body 를 그대로 되비추는 환경과 실서버 양쪽에서 같게 동작한다.
+       * `??` 라 `false`·`''`·`null` 도 그대로 살아남는다 (`||` 였으면 ⭐ 끄기가 안 먹는다).
+       */
+      const merge = (q: InterviewPrepQuestion): InterviewPrepQuestion => {
+        const next = { ...q }
+        if (params.dto.myMemo !== undefined) {
+          next.myMemo = updated?.myMemo ?? params.dto.myMemo ?? q.myMemo
+        }
+        if (params.dto.mustPrepare !== undefined) {
+          next.mustPrepare = updated?.mustPrepare ?? params.dto.mustPrepare
+        }
+        if (params.dto.questionText !== undefined) {
+          next.questionText = updated?.questionText ?? params.dto.questionText
+        }
+        if (params.dto.category !== undefined) {
+          next.category = updated?.category ?? params.dto.category
+        }
+        return next
+      }
       const patch = (list: InterviewPrepQuestion[]): InterviewPrepQuestion[] =>
         list.map((q) =>
           q.id === params.questionId
-            ? { ...q, myMemo: updated?.myMemo ?? params.dto.myMemo ?? q.myMemo }
+            ? merge(q)
             : q.children.length
               ? { ...q, children: patch(q.children) }
               : q,
@@ -259,6 +285,70 @@ export function useGenerateInterviewAnswer(sessionId: string) {
     onSuccess: (result) => {
       if (result.status === 'ok') {
         qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+      }
+      qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
+      qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
+    },
+  })
+}
+
+/**
+ * 질문 은행 D1 — 내가 직접 적은 질문 N개 추가.
+ *
+ * 🔴 **AI 무관이라 쿼터·코인을 건드리지 않는다.** 같은 파일의 생성 mutation 들을 복사하면
+ * `['me','ai-quotas']` 까지 따라오는데, 그러면 질문 하나 적을 때마다 쓰지도 않은 쿼터를
+ * 다시 조회하고 화면의 사용량 칩이 깜빡인다.
+ */
+export function useBulkCreateQuestions(sessionId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (dto: BulkCreateQuestionsDto) =>
+      interviewPrepApi.bulkCreateQuestions(sessionId, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+    },
+  })
+}
+
+/**
+ * 질문 은행 D2b — 질문 1개 삭제 (자손 CASCADE).
+ *
+ * 🔴 **AI 무관이라 쿼터·코인을 건드리지 않는다** (`useBulkCreateQuestions` 와 같은 이유).
+ * 같은 파일의 AI mutation 을 복사하면 `['me','ai-quotas']` 까지 따라오는데, 그러면 질문
+ * 하나 지울 때마다 쓰지도 않은 쿼터를 다시 조회하고 사용량 칩이 깜빡인다.
+ *
+ * `setQueryData` 가 아니라 `invalidate` 인 이유 — 자손이 함께 사라져 **트리 구조가 바뀐다.**
+ * 메모 저장(구조 불변)과 달리 서버가 준 모양을 다시 받는 게 맞다.
+ */
+export function useDeleteInterviewQuestion(sessionId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (questionId: string) =>
+      interviewPrepApi.deleteQuestion(questionId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+    },
+  })
+}
+
+/**
+ * 질문 은행 D2b — ↻ 낱개 교체 (AI 호출).
+ *
+ * 성공·실패와 무관하게 쿼터·코인을 invalidate 한다 — 차단으로 끝났어도 사용량 표시는
+ * 최신이어야 하고, 실패해도 시도 자체가 기록될 수 있다 (`useGenerateInterviewAnswer` 와 동일).
+ *
+ * `sessionKey` 까지 무효화하는 이유 — 교체는 세션 선점(`generationStatus`)을 잡았다 놓는다.
+ * 캐시에 `in_progress` 가 남으면 화면이 폴링 주기만큼 "만들고 있어요" 를 더 띄운다.
+ */
+export function useRegenerateInterviewQuestion(sessionId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (questionId: string) =>
+      interviewPrepApi.regenerateQuestion(questionId),
+    onSuccess: (result) => {
+      if (result.status === 'ok') {
+        qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
+        qc.invalidateQueries({ queryKey: sessionKey(sessionId) })
       }
       qc.invalidateQueries({ queryKey: ['me', 'ai-quotas'] })
       qc.invalidateQueries({ queryKey: ['me', 'coin-balance'] })
