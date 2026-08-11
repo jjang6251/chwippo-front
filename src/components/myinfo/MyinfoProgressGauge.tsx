@@ -35,7 +35,13 @@ export function MyinfoProgressGauge() {
   }
 
   if (isLoading) {
-    return <div className="h-28 bg-surface-2 border border-line rounded-xl animate-pulse" />
+    /*
+      🔴 **로딩 자리는 실제 카드와 같은 높이여야 한다** (2026-08-11).
+      `h-28`(112px)로 잡아뒀는데 실제 카드는 118px 이라, 데이터가 도착하는 순간
+      6px 자라며 **아래 화면 전체를 밀어냈다.** 아래 저장용량 바의 18px 과 합쳐 24px.
+      `/myinfo` 의 화면 튐(CLS 0.179) 대부분이 이 둘이었다.
+    */
+    return <div className="h-[118px] bg-surface-2 border border-line rounded-xl animate-pulse" />
   }
 
   return (
@@ -45,7 +51,7 @@ export function MyinfoProgressGauge() {
       tabIndex={!isComplete && firstEmptyId ? 0 : undefined}
       onKeyDown={(e) => { if (!isComplete && firstEmptyId && (e.key === 'Enter' || e.key === ' ')) handleClick() }}
       aria-label={`내 정보 작성 완성도 ${percent}%`}
-      className={`bg-surface-2 border border-line rounded-xl p-4 flex items-center gap-4 transition-all ${!isComplete && firstEmptyId ? 'hover:border-line-strong hover:bg-surface-3 cursor-pointer' : ''}`}
+      className={`bg-surface-2 border border-line rounded-xl p-4 flex items-center gap-4 transition-colors ${!isComplete && firstEmptyId ? 'hover:border-line-strong hover:bg-surface-3 cursor-pointer' : ''}`}
     >
       {/* 원형 게이지 */}
       <div className="relative flex-none" style={{ width: SIZE, height: SIZE }}>

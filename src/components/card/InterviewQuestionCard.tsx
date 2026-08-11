@@ -1,7 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Clock, CornerDownRight, Info, Sparkles, Star } from 'lucide-react'
+import {
+  Check,
+  Clock,
+  CornerDownRight,
+  Info,
+  Pencil,
+  RefreshCw,
+  Sparkles,
+  Star,
+  Trash2,
+} from 'lucide-react'
+import { CategoryChipPicker } from '@/components/common/CategoryChipPicker'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
+import { Modal } from '@/components/common/Modal'
+import { NeedCoverletterModal } from '@/components/card/NeedCoverletterModal'
+import { isNeedCoverletterBlocked } from '@/api/interviewPrep'
 import { useAutoResize } from '@/hooks/useAutoResize'
+import { QUESTION_MAX_CHARS } from '@/utils/interviewQuestionParse'
 import {
   ANSWER_LONG_SECONDS,
   estimateSpeakingSeconds,
@@ -9,7 +24,9 @@ import {
 } from '@/utils/speakingTime'
 import {
   useCreateInterviewFollowup,
+  useDeleteInterviewQuestion,
   useGenerateInterviewAnswer,
+  useRegenerateInterviewQuestion,
   useUpdateInterviewQuestion,
 } from '@/hooks/useInterviewPrep'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -24,8 +41,18 @@ import {
   CATEGORY_STYLE,
   CATEGORY_STYLE_FALLBACK,
   FOLLOWUP_BASIS_LABEL,
+  GENERATION_IN_PROGRESS_CODE,
   MIN_PROBEABLE_ANSWER_CHARS,
 } from '@/types/interviewPrep'
+
+/** 질문 단위 액션 아이콘 — 존재는 알리되 질문 텍스트보다 앞서지 않게 (중립색 + hover 로 승격) */
+const ICON_BTN =
+  'w-8 h-8 inline-flex items-center justify-center rounded-md text-text-quaternary hover:text-text-secondary hover:bg-card active:bg-card-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60'
+
+/** 자손(꼬리·재꼬리) 총 개수 — 삭제·교체가 **함께 지우는 것**을 세어 확인 문구에 쓴다 */
+function countDescendants(nodes: InterviewPrepQuestion[]): number {
+  return nodes.reduce((sum, n) => sum + 1 + countDescendants(n.children), 0)
+}
 
 interface Props {
   question: InterviewPrepQuestion
@@ -172,9 +199,31 @@ export function InterviewQuestionCard({
   const { blocked: answerBlocked, reason: answerReason } =
     useAiQuotaBlocked('interview_prep_answer', { enabled: !readOnly })
   const ensureAiConsent = useRequireAiConsent()
+
+  /**
+   * 자소서가 없어 막혔을 때의 **서버 문구** — 답변·꼬리질문·↻ 세 경로가 **하나를 나눠 쓴다.**
+   * 상태를 경로별로 두면 같은 안내가 셋으로 갈라지고, 그중 하나만 고치는 실수가 생긴다.
+   * `null` = 닫힘 / `''` = 막혔는데 서버 문구가 없음(모달이 기본 문구로 채운다).
+   */
+  const [needClReason, setNeedClReason] = useState<string | null>(null)
+
+  /* ── 질문 은행 D2b — ⭐ 토글 · 인라인 편집 · 삭제 · ↻ 낱개 교체 ────────────── */
+
+  /**
+   * 🔴 메모 autosave(`updateMemo`)와 **별개의 mutation 인스턴스**다. 같은 훅을 두 번
+   * 부르는 건 낭비처럼 보이지만, 하나로 합치면 편집 저장의 `isPending` 이 1.5초마다 도는
+   * 메모 저장에 물들어 [저장] 버튼이 제멋대로 깜빡인다. React Query 는 인스턴스별로
+   * 상태를 들고 캐시는 공유하므로 이게 정석이다.
+   */
+  const { mutate: updateQuestionFields, isPending: savingEdit } =
+    useUpdateInterviewQuestion(sessionId)
+  const { mutate: deleteQuestion } = useDeleteInterviewQuestion(sessionId)
+  const { mutate: regenerateQuestion, isPending: regenerating } =
+    useRegenerateInterviewQuestion(sessionId)
+
   // 생성 중 새로고침 = 코인만 차감되고 결과 유실
-  // 생성 중 새로고침 = 코인만 차감되고 결과 유실. 꼬리질문도 같은 AI 호출이다
-  useUnloadGuard(generatingAnswer || creatingFollowup)
+  // 생성 중 새로고침 = 코인만 차감되고 결과 유실. 꼬리질문·↻ 교체도 같은 AI 호출이다
+  useUnloadGuard(generatingAnswer || creatingFollowup || regenerating)
 
   const runGenerateAnswer = async () => {
     // 사전 게이트 — 동의 없으면 호출 자체를 안 한다 (코인·쿼터 소모 방지)
@@ -185,6 +234,16 @@ export function InterviewQuestionCard({
     generateAnswer(question.id, {
       onSuccess: (result) => {
         if (result.status !== 'ok') {
+          /*
+            🔴 **자소서 없음만 모달로 갈라진다.** 인라인 에러는 다음 행동이 **카드 안에**
+            있을 때 맞는 자리다(`다시 시도`). 자소서는 다른 화면에 있어서 인라인으로는
+            길이 안 열리고, 사용자는 `다시 시도` 를 눌러 같은 벽에 다시 부딪힌다.
+            나머지 blocked(동의·코인·장애)는 그대로 인라인 — 그건 재시도가 답이다.
+          */
+          if (isNeedCoverletterBlocked(result)) {
+            setNeedClReason(result.reason ?? '')
+            return
+          }
           setAnswerError(result.reason ?? '답변 생성에 실패했어요.')
           return
         }
@@ -281,6 +340,150 @@ export function InterviewQuestionCard({
     [question.id, updateMemo],
   )
 
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(question.questionText)
+  /** `null` = 미분류. 칩 피커의 값 표현과 DTO(`category: string | null`)가 그대로 같다 */
+  const [editCategory, setEditCategory] = useState<string | null>(
+    question.category ?? null,
+  )
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmRegen, setConfirmRegen] = useState(false)
+
+  const descendantCount = useMemo(
+    () => countDescendants(question.children),
+    [question.children],
+  )
+  const hasMemo = !!(question.myMemo ?? '').trim()
+  /** 지우면 **되찾을 수 없는 것**이 있는가 — 있으면 확인을 받고, 없으면 바로 실행한다 */
+  const hasContent = hasMemo || !!question.suggestedAnswer || descendantCount > 0
+
+  /**
+   * 🔴 **연필은 모든 질문에 있다** (2026-08-12). 예전엔 `source==='user'` 전용이었는데,
+   * 그 문이 닫고 있던 건 본문 수정 하나가 아니라 **유형 수정까지**였다. AI 가 유형을
+   * 애매하게 붙이면 흐름 정렬(카테고리 순)과 유형 필터가 그대로 어긋난 채 굳는다 —
+   * 고칠 방법이 ↻(코인)·삭제뿐이라 "유형 하나 바꾸려고 질문을 버리는" 선택이 됐다.
+   */
+  const canEdit = !readOnly
+  /**
+   * 본문까지 고칠 수 있는가. AI 질문은 **유형만** 열려 있다 (서버도 `questionText` 하나만
+   * user 전용이다). 본문을 고칠 수 있게 하면 ↻ 의 기준이 사라진다 — "AI 가 준 질문" 이
+   * 아니게 된 것을 무엇을 근거로 다시 뽑겠는가.
+   */
+  const canEditText = question.source === 'user'
+  const canRegenerate =
+    !readOnly && question.source === 'ai' && question.depth === 0
+
+  /** 편집 시작 — 서버값으로 되돌린다 (이전에 취소한 입력이 남아 있지 않게) */
+  const openEdit = () => {
+    setEditText(question.questionText)
+    setEditCategory(question.category ?? null)
+    setEditing(true)
+  }
+
+  const saveEdit = () => {
+    const trimmed = editText.trim()
+    if (savingEdit || (canEditText && !trimmed)) return
+    /*
+      🔴 **AI 질문엔 `questionText` 키를 아예 넣지 않는다.** 서버는 그 키가 `undefined`
+      가 아니기만 하면 400 을 던지고, 그 던짐이 저장보다 **먼저** 일어나 같이 보낸
+      `category` 까지 통째로 날아간다 (부분 반영이 없다). 값이 안 바뀌었으니 보내도
+      된다는 판단이 여기서 정확히 틀린다 — 키의 유무가 계약이다.
+    */
+    updateQuestionFields(
+      {
+        questionId: question.id,
+        dto: canEditText
+          ? { questionText: trimmed, category: editCategory }
+          : { category: editCategory },
+      },
+      {
+        /*
+          🔴 **성공 토스트가 없다.** 같은 카드의 메모가 조용히 자동 저장되는데 질문만
+          "저장했어요" 를 띄우면 두 저장이 다른 일처럼 보인다. 닫히는 것 자체가 신호다.
+          실패는 인터셉터가 서버 메시지로 토스트하고 **폼은 열어 둔다** — 방금 쓴 문장을
+          다시 치게 하지 않는다.
+        */
+        onSuccess: () => setEditing(false),
+      },
+    )
+  }
+
+  const toggleMustPrepare = () => {
+    updateQuestionFields({
+      questionId: question.id,
+      dto: { mustPrepare: !question.mustPrepare },
+    })
+  }
+
+  const runDelete = () => {
+    setConfirmDelete(false)
+    deleteQuestion(question.id, {
+      onSuccess: () => toast.show('질문을 삭제했어요.'),
+      onError: () => toast.error('삭제에 실패했어요.'),
+    })
+  }
+
+  /** 내용이 없으면 확인 없이 지운다 — 저위험 동작은 즉시 실행이 하우스 AI UX 원칙이다 */
+  const requestDelete = () => {
+    if (hasContent) setConfirmDelete(true)
+    else runDelete()
+  }
+
+  const runRegenerate = () => {
+    setConfirmRegen(false)
+    regenerateQuestion(question.id, {
+      onSuccess: (result) => {
+        /*
+          ② `status: 'blocked'` — 자소서 없음·쿼터·동의·장애를 서버가 `reason` 으로
+             구분해 준다. 고정 문구로 덮으면 진짜 이유가 사라져 막다른 길이 된다.
+        */
+        if (result.status !== 'ok') {
+          // 자소서 없음은 토스트로 끝내지 않는다 — 몇 초 뒤 사라지면 쓰러 갈 길도 사라진다
+          if (isNeedCoverletterBlocked(result)) {
+            setNeedClReason(result.reason ?? '')
+            return
+          }
+          toast.error(result.reason ?? '질문 교체에 실패했어요.')
+          return
+        }
+        toast.show('새 질문으로 교체했어요.')
+      },
+      onError: (err) => {
+        const res = (
+          err as {
+            response?: {
+              status?: number
+              data?: { code?: string; message?: string }
+            }
+          }
+        )?.response
+        /*
+          ① 409 — 세션 생성과 겹쳤다. **인터셉터는 409 를 토스트하지 않으므로**
+             (400 만 띄운다) 여기서 말하지 않으면 아무 일도 안 일어난 것처럼 보인다.
+             실패가 아니라 "순서를 기다리면 되는" 상황이라 error 가 아닌 안내 톤이다.
+        */
+        if (
+          res?.status === 409 ||
+          res?.data?.code === GENERATION_IN_PROGRESS_CODE
+        ) {
+          toast.show(
+            '지금 다른 생성이 진행 중이에요. 끝나면 다시 시도해 주세요.',
+          )
+          return
+        }
+        // ③ 그 외 — 인터셉터가 이미 띄웠으면(400 서버 메시지) 두 번 말하지 않는다
+        const cfg = (err as { config?: { _toastShown?: boolean } })?.config
+        if (cfg?._toastShown) return
+        toast.error(res?.data?.message ?? '질문 교체에 실패했어요.')
+      },
+    })
+  }
+
+  const requestRegenerate = () => {
+    if (hasContent) setConfirmRegen(true)
+    else runRegenerate()
+  }
+
   const handleAddFollowup = () => {
     createFollowup(
       { parentQuestionId: question.id },
@@ -288,9 +491,14 @@ export function InterviewQuestionCard({
         onSuccess: (result) => {
           if (result.status === 'ok') {
             toast.show(`${childLabel}을 추가했어요.`)
-          } else {
-            toast.error(result.reason ?? '생성에 실패했어요.')
+            return
           }
+          // ↻ 와 같은 판단 — 자소서 게이트만 모달로, 나머지 사유는 서버 문구 그대로 토스트
+          if (isNeedCoverletterBlocked(result)) {
+            setNeedClReason(result.reason ?? '')
+            return
+          }
+          toast.error(result.reason ?? '생성에 실패했어요.')
         },
         onError: (err) => {
           const serverMsg = (
@@ -349,17 +557,14 @@ export function InterviewQuestionCard({
   return (
     <div className={containerClass}>
       {/* 헤더 — chevron 좌측 (Notion 패턴) */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        aria-expanded={expanded}
-        aria-label={
-          expanded ? '질문·답변 접기' : '질문·답변 펼치기'
-        }
-        className="w-full text-left flex items-start gap-2"
-      >
-        <span className="shrink-0 mt-1">
-          <CollapsibleChevron open={expanded} />
-        </span>
+      {/*
+        🔴 **배지 줄이 토글 버튼 밖으로 나왔다** (질문 은행 D2b). ⭐ 가 정적 배지에서
+        **버튼**이 되면서, 배지 줄이 접기 버튼 안에 있으면 `<button>` 중첩이 된다 —
+        무효 HTML 이고 클릭이 접기로 새어 나간다. 토글은 chevron + 질문 텍스트가 맡고,
+        배지 줄은 chevron 폭(`pl-5`)만큼 들여써서 **보이는 자리는 그대로** 둔다.
+      */}
+      <div className="flex items-start gap-1">
+        <div className="flex-1 min-w-0">
         {/*
           🔴 태그를 질문 **왼쪽 위**로 올린다 (2026-08-07).
 
@@ -367,8 +572,7 @@ export function InterviewQuestionCard({
           오른쪽에서 시작하고 줄바꿈될 때마다 시작점이 들쭉날쭉해진다. 문항이 20개
           쌓이면 읽기 리듬이 깨진다. 배지는 위 줄, 질문은 아래 줄이 자연스럽다.
         */}
-        <span className="flex-1 min-w-0">
-          <span className="flex flex-wrap items-center gap-1 mb-1.5">
+          <div className="flex flex-wrap items-center gap-1 mb-1.5 pl-5">
             {questionNo !== undefined && (
               <span className="text-text-tertiary text-[11px] font-mono font-semibold tabular-nums">
                 {questionNo}.
@@ -410,14 +614,75 @@ export function InterviewQuestionCard({
               우선 준비 표시 — 실제 신입 면접은 20~30분이라 **받는 질문이 5개 안팎**이다.
               20문항을 다 준비하라는 건 현실과 맞지 않아, 먼저 할 5~7개를 눈에 띄게 둔다.
               accent(coral)는 "진짜 특별한 것" 에만 쓰는 색이라 이 자리에 맞다.
+
+              🔴 **D2b — AI 가 고른 5~7개를 내가 고쳐 잡을 수 있어야 한다.** 모델이 꼽은
+              우선순위가 내 면접과 어긋나는 건 흔한 일인데, 예전엔 표시가 **읽기 전용**이라
+              「⭐만」 필터가 영영 모델 의견만 비췄다. 직접 적은 질문은 아예 켤 수도 없었다.
+              그래서 `mustPrepare` 는 AI·내 질문 **모두**에서 열려 있다 (서버도 같은 규칙).
+
+              읽기 모드는 면접 직전 화면이라 **끄고 켜지 않는다** — 켜져 있으면 그대로 보여
+              주고, 꺼져 있으면 아예 안 보인다 (지금까지와 같다).
             */}
-            {question.mustPrepare && (
-              <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/25 inline-flex items-center gap-0.5"
-                title="이 면접에서 나올 확률이 높아요 — 먼저 준비하세요"
+            {readOnly ? (
+              question.mustPrepare && (
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/25 inline-flex items-center gap-0.5"
+                  title="이 면접에서 나올 확률이 높아요 — 먼저 준비하세요"
+                >
+                  <Star size={9} strokeWidth={2.5} aria-hidden="true" />
+                  우선
+                </span>
+              )
+            ) : (
+              <button
+                type="button"
+                onClick={toggleMustPrepare}
+                aria-pressed={question.mustPrepare}
+                aria-label={
+                  question.mustPrepare
+                    ? '우선 준비 표시 끄기'
+                    : '우선 준비 표시 켜기'
+                }
+                title={
+                  question.mustPrepare
+                    ? '먼저 준비할 질문으로 표시돼 있어요 — 누르면 해제돼요'
+                    : '먼저 준비할 질문으로 표시해요'
+                }
+                /*
+                  터치 타겟은 `min-h-8`(32px)로 잡되 **보이는 크기는 배지 그대로**다.
+                  여백(`py-*`)을 키우면 배지가 커져 옆 배지들과 높이가 어긋난다 —
+                  hitbox 만 세로로 넓히고 시각 크기는 안쪽 span 이 들고 있다.
+                */
+                className="min-h-8 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 rounded"
               >
-                <Star size={9} strokeWidth={2.5} aria-hidden="true" />
-                우선
+                <span
+                  className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border inline-flex items-center gap-0.5 transition-colors ${
+                    question.mustPrepare
+                      ? 'bg-accent/10 text-accent border-accent/25'
+                      : 'text-text-quaternary border-line hover:text-text-secondary'
+                  }`}
+                >
+                  <Star size={9} strokeWidth={2.5} aria-hidden="true" />
+                  우선
+                </span>
+              </button>
+            )}
+            {/*
+              🔁 **지난 「면접 보기」에서 「다시」로 찍은 질문** (질문 은행 D3).
+
+              연습에서 찍은 결과가 세션 목록에 안 비치면, 「다시 볼 것」은 연습 화면을 다시
+              열어야만 볼 수 있는 값이 된다 — 정작 답을 고쳐 쓰는 자리는 여기다.
+              ⭐ 와 같은 리듬(작은 배지)이되 색은 danger 다: ⭐ 는 「먼저 할 것」, 이건
+              「아직 안 되는 것」이라 축이 다르다.
+
+              **메인만** 붙인다 — 연습 루프가 메인 질문만 돌므로 꼬리에는 값이 안 쌓인다.
+            */}
+            {question.depth === 0 && question.lastPracticeResult === 'again' && (
+              <span
+                className="text-[10px] font-medium px-1.5 rounded bg-danger/10 text-danger border border-danger/25"
+                title="지난 연습에서 「다시」로 표시한 질문이에요"
+              >
+                🔁 다시 볼 것
               </span>
             )}
             {question.category && (
@@ -430,30 +695,185 @@ export function InterviewQuestionCard({
                 {CATEGORY_LABEL[question.category] ?? question.category}
               </span>
             )}
-          </span>
-          {/*
-            🔴 **읽기 모드에선 질문이 소제목이다.** 편집 모드의 15px/medium 은 목록을
-            훑기엔 맞지만, 문서로 읽을 땐 본문(13px)과 2px 차이라 **위계가 안 보인다** —
-            라벨을 안 읽으면 질문인지 답인지 구분이 안 됐다. 크기와 굵기를 함께 올린다
-            (둘 중 하나만 올리면 여전히 애매하다).
-          */}
-          <span
-            className={`block text-text-primary ${
-              readOnly
-                ? // 16 × 1.25 — 레벨 간 1.2배 미만은 사용자가 구분하지 못한다 (모듈러 스케일).
-                  // leading 은 한글 최소 150% (국문은 글자 폭이 균일해 충분한 행간이 필요하다).
-                  'text-[20px] font-semibold leading-[1.5]'
-                : // 편집 모드는 20문항을 훑는 **목록**이라 읽기 모드(20px)만큼 키우면
-                  // 한 화면에 들어오는 문항이 준다. 대신 본문(13px) 대비 **1.23배**로
-                  // 임계(1.2)는 넘긴다. `text-base` 는 하우스 스케일 —
-                  // 기존 `text-[15px]` 은 프로젝트 통틀어 이 카드에만 있던 예외값이었다.
-                  'text-base font-semibold leading-normal'
-            }`}
-          >
-            {question.questionText}
-          </span>
-        </span>
-      </button>
+            {/*
+              질문 은행 D2 — **내가 직접 모은 질문**. 색을 쓰지 않는 건 의도다:
+              ⭐ 우선(accent)·카테고리(5색)가 이미 두 축을 쓰고 있어서, 여기까지 색을 더하면
+              무엇이 중요한지가 흐려진다. 출처는 훑을 때 필요한 정보가 아니라 **확인용**이다.
+            */}
+            {question.source === 'user' && (
+              <span
+                className="text-[10px] font-medium px-1.5 rounded bg-surface-3 text-text-tertiary border border-line"
+                title="직접 추가한 질문이에요 (AI 재생성으로 지워지지 않아요)"
+              >
+                내 질문
+              </span>
+            )}
+          </div>
+          {editing ? (
+            /*
+              인라인 편집 — 모달을 띄우지 않는 이유는 추가 폼(`AddInterviewQuestionForm`)과
+              같다: 이 화면은 자소서와 나란히 볼 수 있고(열당 400px), 모달은 그 순간 옆의
+              자소서를 가린다.
+
+              🔴 **AI 질문은 유형만 고친다.** 그래서 입력칸 자리에 질문이 **글로** 남는다 —
+              편집 중엔 이 자리가 질문 텍스트를 대신하는 곳이라, 안 그리면 20문항 목록에서
+              "무슨 질문을 분류하는 중인지" 가 화면에서 사라진다.
+            */
+            <div className="space-y-2">
+              {canEditText ? (
+                <textarea
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  maxLength={QUESTION_MAX_CHARS}
+                  rows={2}
+                  aria-label="질문 내용 수정"
+                  /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
+                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none leading-relaxed"
+                />
+              ) : (
+                <>
+                  {/* 접힘 상태의 질문과 같은 활자 — 편집이 열려도 질문 위치가 안 튄다 */}
+                  <p className="text-base font-semibold leading-normal text-text-primary">
+                    {question.questionText}
+                  </p>
+                  <p className="text-[11px] text-text-faint">
+                    AI 질문은 내용 대신 유형만 고칠 수 있어요 — 내용을 바꾸려면 ↻ 또는
+                    삭제
+                  </p>
+                </>
+              )}
+              {/*
+                🔴 select → **칩 피커.** 추가 폼과 같은 컴포넌트라 고르는 자리가 앱 전체에서
+                하나의 문법이 된다. 이 카드에서 특히 맞는 이유는 **여기가 유형을 고치는
+                자리**라서다 — 지금 붙은 유형이 회색 select 안에 접혀 있으면 "무엇에서
+                무엇으로 바꾸는지" 가 안 보인다. 칩 줄은 현재 유형이 brand 로 켜진 채 옆에
+                후보들이 제 색으로 늘어서서, 바꾸는 행위 자체가 화면에 있다.
+
+                TAIL(더보기 뒤) 유형이 붙어 있어도 접힘 상태에서 그 칩은 남는다 (피커가
+                보장) — AI 가 붙인 유형은 9종 밖일 때가 많아 여기서 그 동작이 꼭 필요하다.
+              */}
+              <CategoryChipPicker
+                value={editCategory}
+                onChange={setEditCategory}
+                /* 카드마다 인스턴스라 칩 id 가 겹치면 안 된다 (한 화면에 20문항) */
+                idPrefix={`edit-cat-${question.id}`}
+              />
+              {/*
+                칩 줄은 여러 줄로 감싸므로 버튼과 한 행에 둘 수 없다 — 추가 폼과 같은
+                리듬으로 아래 행에 오른쪽 정렬한다.
+              */}
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={saveEdit}
+                  disabled={(canEditText && !editText.trim()) || savingEdit}
+                  className="shrink-0 min-h-9 bg-brand hover:bg-brand-hover text-white text-xs font-medium px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  저장
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  className="shrink-0 text-xs text-text-tertiary hover:text-text-primary transition-colors px-2 py-1"
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              aria-expanded={expanded}
+              aria-label={expanded ? '질문·답변 접기' : '질문·답변 펼치기'}
+              className="w-full text-left flex items-start gap-2"
+            >
+              <span className="shrink-0 mt-1">
+                <CollapsibleChevron open={expanded} />
+              </span>
+              {/*
+                🔴 **읽기 모드에선 질문이 소제목이다.** 편집 모드의 15px/medium 은 목록을
+                훑기엔 맞지만, 문서로 읽을 땐 본문(13px)과 2px 차이라 **위계가 안 보인다** —
+                라벨을 안 읽으면 질문인지 답인지 구분이 안 됐다. 크기와 굵기를 함께 올린다
+                (둘 중 하나만 올리면 여전히 애매하다).
+              */}
+              <span
+                className={`flex-1 min-w-0 block text-text-primary ${
+                  readOnly
+                    ? // 16 × 1.25 — 레벨 간 1.2배 미만은 사용자가 구분하지 못한다 (모듈러 스케일).
+                      // leading 은 한글 최소 150% (국문은 글자 폭이 균일해 충분한 행간이 필요하다).
+                      'text-[20px] font-semibold leading-[1.5]'
+                    : // 편집 모드는 20문항을 훑는 **목록**이라 읽기 모드(20px)만큼 키우면
+                      // 한 화면에 들어오는 문항이 준다. 대신 본문(13px) 대비 **1.23배**로
+                      // 임계(1.2)는 넘긴다. `text-base` 는 하우스 스케일 —
+                      // 기존 `text-[15px]` 은 프로젝트 통틀어 이 카드에만 있던 예외값이었다.
+                      'text-base font-semibold leading-normal'
+                }`}
+              >
+                {question.questionText}
+              </span>
+            </button>
+          )}
+        </div>
+        {/*
+          질문 단위 액션 — **읽기 모드엔 없다.** 면접 직전에 스크롤하다 잘못 누르면
+          질문이 사라지거나(삭제·교체) 코인이 나간다(↻). D2a 의 `＋ 질문 추가` 와 같은 조건.
+        */}
+        {!readOnly && !editing && (
+          <div className="shrink-0 flex items-center">
+            {/*
+              연필은 **모든 질문에** 있되, 여는 것이 다르다 — 내 질문은 내용+유형,
+              AI 질문은 유형만이다. 이름도 그렇게 갈라 적는다: 화면을 못 보는 사용자에게
+              둘 다 「질문 수정」이면 눌러 본 뒤에야 본문이 안 열린다는 걸 알게 된다.
+            */}
+            {canEdit && (
+              <button
+                type="button"
+                onClick={openEdit}
+                aria-label={canEditText ? '질문 수정' : '유형 수정'}
+                title={
+                  canEditText
+                    ? '질문 수정'
+                    : '질문 유형 수정 (AI 질문은 내용을 고칠 수 없어요)'
+                }
+                className={ICON_BTN}
+              >
+                <Pencil size={14} strokeWidth={2} aria-hidden="true" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={requestDelete}
+              aria-label="질문 삭제"
+              title="질문 삭제"
+              className={`${ICON_BTN} hover:text-danger`}
+            >
+              <Trash2 size={14} strokeWidth={2} aria-hidden="true" />
+            </button>
+            {/*
+              ↻ 는 **AI 메인 질문에만.** 꼬리질문은 부모 맥락에서 나온 것이라 "같은 자리에
+              새로" 가 성립하지 않고(삭제 후 다시 파고들면 된다), 내가 적은 질문은 교체가
+              아니라 수정·삭제가 맞는 동작이다. 서버도 둘 다 400 으로 막는다.
+            */}
+            {canRegenerate && (
+              <button
+                type="button"
+                onClick={requestRegenerate}
+                disabled={regenerating}
+                aria-label="새 질문으로 교체"
+                title="이 질문을 새 AI 질문으로 교체해요 (코인이 차감됩니다)"
+                className={`${ICON_BTN} disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <RefreshCw
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                  className={regenerating ? 'animate-spin' : undefined}
+                />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/*
         🔴 **좁은 화면에선 이 들여쓰기를 뗀다** (2026-08-09). 24px 는 본문을 질문 텍스트
@@ -843,6 +1263,91 @@ export function InterviewQuestionCard({
             </button>
           )}
         </div>
+      )}
+
+      {/*
+        🔴 **확인은 지울 게 있을 때만 뜬다.** 빈 질문에까지 모달을 세우면 20문항을
+        정리하는 동안 모달을 20번 닫아야 한다 — 그러면 사용자는 문구를 안 읽고 누르게 되고,
+        정작 답변이 걸린 순간에도 안 읽는다. 확인은 아껴 써야 확인으로 작동한다.
+      */}
+      {confirmDelete && (
+        <Modal open onClose={() => setConfirmDelete(false)} title="질문 삭제">
+          <p className="text-text-secondary text-sm mb-4 leading-relaxed">
+            이 질문을 삭제하면 되돌릴 수 없어요.
+            {descendantCount > 0 && (
+              <>
+                <br />
+                <span className="text-text-quaternary text-xs">
+                  꼬리질문 {descendantCount}개가 함께 삭제돼요.
+                </span>
+              </>
+            )}
+            {hasMemo && (
+              <>
+                <br />
+                <span className="text-text-quaternary text-xs">
+                  작성한 답변도 사라져요.
+                </span>
+              </>
+            )}
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-3 py-1.5 text-xs text-text-tertiary hover:text-text-primary"
+            >
+              취소
+            </button>
+            <button
+              onClick={runDelete}
+              className="px-3 py-1.5 text-xs bg-danger/15 text-danger hover:bg-danger/25 rounded-md font-medium"
+            >
+              삭제
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmRegen && (
+        <Modal open onClose={() => setConfirmRegen(false)} title="질문 교체">
+          <p className="text-text-secondary text-sm mb-4 leading-relaxed">
+            새 질문으로 교체해요.
+            <br />
+            <span className="text-text-quaternary text-xs">
+              지금 답변과 꼬리질문 {descendantCount}개는 함께 삭제돼요.
+            </span>
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmRegen(false)}
+              className="px-3 py-1.5 text-xs text-text-tertiary hover:text-text-primary"
+            >
+              취소
+            </button>
+            <button
+              onClick={runRegenerate}
+              className="px-3 py-1.5 text-xs bg-danger/15 text-danger hover:bg-danger/25 rounded-md font-medium"
+            >
+              교체
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/*
+        자소서 게이트 — 답변·꼬리질문·↻ 가 **같은 모달 하나**를 쓴다. 세 경로 모두
+        "지금 필요한 건 재시도가 아니라 자소서" 라서 안내도 하나여야 한다.
+
+        🔴 **막혔을 때만 마운트한다.** 항상 두면 `useNavigate` 가 카드마다 돌아,
+        라우터 없이 렌더되는 자리(테스트·랜딩 프리뷰)가 통째로 깨진다.
+      */}
+      {needClReason !== null && (
+        <NeedCoverletterModal
+          open
+          onClose={() => setNeedClReason(null)}
+          applicationId={applicationId}
+          reason={needClReason}
+        />
       )}
     </div>
   )

@@ -32,6 +32,28 @@ export interface MyAiQuotaRow {
   nextAvailableAt: string | null
 }
 
+/**
+ * GET /me/ai-costs 응답 — 백엔드 `src/ai/my-ai-costs.controller.ts` `AiCostEstimate` 와 1:1.
+ *
+ * 🔴 **단가를 프론트에 박지 않으려고 있는 API 다.** admin 이 `feature_coin_meta` 를 고치면
+ * 화면 숫자도 같이 움직여야 한다.
+ */
+export interface AiCostEstimate {
+  feature: LlmFeature
+  /** false = 우리 부담 (차감 0) */
+  chargesCoins: boolean
+  /**
+   * 🔴 **예약치이지 청구액이 아니다.** 실제 차감은 끝난 뒤 토큰 실비로 환산하므로
+   * 보통 이보다 적다. 화면 문구도 "약 N코인" 처럼 근사로 쓴다.
+   */
+  estimatedCoins: number
+  /**
+   * 예약치가 `count` 에 따라 달라지는가. 지금은 항상 false —
+   * false 면 슬라이더를 움직여도 **재조회할 필요가 없다.**
+   */
+  countSensitive: boolean
+}
+
 /** admin 통제 가능 tier. PR_B2 Phase 0 — CoinTier 통일 ('pro'→'lite', 'enterprise'→'standard') */
 export type QuotaTier = 'free' | 'lite' | 'standard'
 

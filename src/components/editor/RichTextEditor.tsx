@@ -44,6 +44,14 @@ interface Props {
   template?: object | null
   /** 툴바 위 헤더 슬롯 (editor 접근) — 회사 메모 라벨·칩 */
   header?: (editor: Editor) => ReactNode
+  /**
+   * 편집할 때마다 **아직 저장되지 않은** 본문을 plain text 로 흘려보낸다.
+   *
+   * 준비 노트 → 면접 질문 다리가 쓴다. 저장은 1.5s debounce 라, 방금 적은 기출을
+   * 바로 넘기려는 사람은 서버 값만 보면 **직전 상태**를 가져가게 된다.
+   * 블록 구분은 `\n` — 붙여넣기 파서가 줄 단위로 쪼갠다 (기본 `\n\n` 이면 빈 줄이 낀다).
+   */
+  onTextChange?: (plainText: string) => void
 }
 
 function parseContent(raw: string | null): object | string | null {
@@ -63,6 +71,7 @@ export function RichTextEditor({
   characterLimit,
   template,
   header,
+  onTextChange,
 }: Props) {
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -85,6 +94,7 @@ export function RichTextEditor({
     },
     onUpdate: ({ editor }) => {
       forceRender()
+      onTextChange?.(editor.getText({ blockSeparator: '\n' }))
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(async () => {
         setSaveState('saving')

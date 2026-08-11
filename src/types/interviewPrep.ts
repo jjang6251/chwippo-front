@@ -145,10 +145,41 @@ export interface InterviewPrepQuestion {
   materialGap: string | null
   sourceLogIds: string[]
   myMemo: string | null
+  /**
+   * 질문 은행 D1 — **누가 만든 질문인가.** `user` 는 사용자가 직접 적거나 붙여넣은 것이라
+   * AI 재생성(전량 삭제)의 대상이 아니고, 화면에도 「내 질문」 배지가 붙는다.
+   * 옛 질문은 서버가 `ai` 로 내려준다.
+   */
+  source: 'ai' | 'user'
+  /** 연습(자문자답) 마지막 시각. 아직 안 했으면 null */
+  lastPracticedAt: string | null
+  /** 연습 자기평가 — `good`(잘함) / `soso`(애매) / `again`(다시). 안 했으면 null */
+  lastPracticeResult: 'good' | 'soso' | 'again' | null
   createdAt: string
   updatedAt: string
   /** recursive CTE 결과를 client-side 트리화한 자식 노드 */
   children: InterviewPrepQuestion[]
+}
+
+/**
+ * 「면접 보기」 자가평가 저장 body — 백엔드 `PracticeQuestionDto` 와 1:1.
+ *
+ * 🔴 **시각 필드가 없다.** `lastPracticedAt` 은 서버 `now()` 로만 찍힌다 — 임의 필드를
+ * 보내면 전역 `forbidNonWhitelisted` 가 400 으로 되돌린다.
+ */
+export interface RecordPracticeDto {
+  result: NonNullable<InterviewPrepQuestion['lastPracticeResult']>
+}
+
+/** 질문 은행 D1 — 내가 직접 적은 질문 1건 (`POST .../questions/bulk` items 원소) */
+export interface BulkQuestionItem {
+  questionText: string
+  category?: string | null
+  parentQuestionId?: string
+}
+
+export interface BulkCreateQuestionsDto {
+  items: BulkQuestionItem[]
 }
 
 export interface CreateSessionDto {
@@ -169,8 +200,35 @@ export interface UpdateSessionDto {
   emphasisPoints?: string | null
 }
 
+/**
+ * 질문 단건 patch. 백엔드 `dto/update-question.dto.ts` 와 1:1.
+ *
+ * 🔴 **`source: 'user'` 전용은 `questionText` 하나뿐이다.** AI 질문에 보내면 서버가
+ * **400** 을 던진다(`'AI 가 만든 질문은 내용을 고칠 수 없어요…'`). 화면은 AI 질문 편집에서
+ * 이 키를 **아예 빼서** 그 400 에 도달하지 않게 한다 — 서버 가드는 최후의 방어선이지
+ * 사용자가 만나는 문이 아니다.
+ *
+ * 🔴 **값이 안 바뀌었어도 키를 넣으면 안 된다.** 서버는 `undefined` 여부만 보고 던지고,
+ * 그 던짐이 저장보다 먼저라 **같이 보낸 `category` 까지 통째로 날아간다** (부분 반영 없음).
+ *
+ * `myMemo`·`mustPrepare`·`category` 는 **모든 질문**에서 열려 있다. 셋 다 "AI 가 만든
+ * 것인지" 와 무관한 **내가 이 질문을 어떻게 두는가**라서다 — user 전용으로 묶으면
+ * 「⭐만」 필터가 직접 추가한 질문에서 영원히 비고, AI 가 잘못 붙인 유형은 흐름 정렬·유형
+ * 필터를 어긋난 채 굳힌다 (2026-08-12 백엔드에서 `category` 가 가드 밖으로 나왔다).
+ */
 export interface UpdateQuestionDto {
   myMemo?: string | null
+  questionText?: string
+  category?: string | null
+  mustPrepare?: boolean
+}
+
+/** `POST /interview-prep-sessions/:id/generate` body (질문 은행 D1b) */
+export interface GenerateSessionDto {
+  /** 이번에 만들 질문 수. 미지정이면 서버 기본 20 */
+  count?: number
+  /** 지정하면 그 카테고리로 조준 사격. 미지정이면 "부족한 카테고리 위주" */
+  category?: string | null
 }
 
 export interface CreateFollowupDto {
@@ -178,16 +236,36 @@ export interface CreateFollowupDto {
 }
 
 /**
- * 🔴 파괴적 재생성 차단 코드 (2026-08-09). **문구가 아니라 코드로 분기한다** —
- * 문구로 분기하면 카피를 다듬는 순간 조용히 깨진다.
+ * 차단 사유 코드 — **문구가 아니라 코드로 분기한다** (문구로 분기하면 카피를 다듬는
+ * 순간 조용히 깨진다). 백엔드 `interview-prep-ai.service.ts` `GenerateBlockCode` 와 1:1.
+ *
+ * 🔴 `REGENERATE_REQUIRED` 는 **사라졌다** (질문 은행 D1b, 2026-08-11). 그 코드는
+ * "생성이 기존 질문·답변을 전부 지운다" 는 전제 위의 가드였는데, 생성이 additive 로
+ * 바뀌어 **지울 것 자체가 없어졌다.** 가드를 지운 게 아니라 위험을 지운 것이다.
  */
-export type GenerateBlockCode = 'REGENERATE_REQUIRED'
+export type GenerateBlockCode = 'NEED_COVERLETTER'
 
 export interface GenerateSessionResult {
   status: 'ok' | 'blocked'
+  /**
+   * 차단 사유 문구. **서버가 준다** — 프론트가 고정 문구로 덮으면 진짜 이유
+   * (자소서 없음·쿼터·동의·장애)가 사라져 사용자가 막다른 길에 갇힌다.
+   */
   reason?: string
-  /** `blocked` 일 때만. 없으면 쿼터·동의 등 기존 차단 */
+  /**
+   * `blocked` 일 때만, 그것도 **일부 차단만** 갖는다. 없으면 쿼터·동의·생성 중복 등
+   * "코드 없는 차단" 이라 `reason` 을 그대로 보여주는 게 유일한 처리다.
+   *
+   * 🔴 **`reason` 문자열의 접두어로 오지 않는다.** `NEED_COVERLETTER:` 접두어는
+   * 서버가 **audit 로그**(`preBlockedReason`)에만 쓰는 형식이고, 클라이언트 응답은
+   * 이 `code` 필드로 온다 (백엔드 실측 2026-08-11).
+   */
   code?: GenerateBlockCode
+  /**
+   * `status: 'ok'` 인데 **요청보다 적게 만든** 경우의 안내 문구 (AI 질문 캡 등).
+   * 🔴 문구는 서버가 준다 — 캡 숫자가 바뀌면 프론트도 같이 고쳐야 하는 구조를 만들지 않는다.
+   */
+  notice?: string
   meta?: {
     callLogId: string
     coverlettersUsed: number
@@ -196,8 +274,41 @@ export interface GenerateSessionResult {
     estimatedInputTokens: number
     mainCount: number
     followupCount: number
+    /** 사용자가 요청한 개수 (미지정이면 기본 20) */
+    requestedCount: number
+    /** 캡을 반영해 실제로 모델에 요청한 개수 */
+    effectiveCount: number
+    /** 생성 전 기준, 이 세션에 더 만들 수 있는 AI 질문 수 */
+    aiCapRemaining: number
   }
 }
+
+/**
+ * ↻ 낱개 교체 결과 — 교체된 질문 1개를 그대로 돌려준다.
+ *
+ * 🔴 **`GENERATION_IN_PROGRESS` 는 여기 없다.** 그건 200 blocked 가 아니라 **409 예외**로
+ * 온다 (`{ code, message }` 본문). `generateSession` 의 "이미 만들고 있어요" 가 200 blocked
+ * 인 것과 **다르다** — 두 경로를 같은 모양으로 다루면 409 를 놓친다.
+ */
+export interface RegenerateQuestionResult {
+  status: 'ok' | 'blocked'
+  reason?: string
+  code?: GenerateBlockCode
+  question?: InterviewPrepQuestion
+  meta?: {
+    callLogId: string
+  }
+}
+
+/** ↻ 가 세션 생성과 겹쳤을 때 서버가 409 본문에 담는 코드 */
+export const GENERATION_IN_PROGRESS_CODE = 'GENERATION_IN_PROGRESS'
+
+/** 한 세션의 AI 질문 상한 — 백엔드 `MAX_AI_QUESTIONS_PER_SESSION` 과 같은 값이어야 한다 */
+export const MAX_AI_QUESTIONS_PER_SESSION = 60
+
+/** 한 번에 만들 수 있는 AI 질문 수 — 백엔드 `GENERATE_COUNT_MIN/MAX` 와 같은 값 */
+export const GENERATE_COUNT_MIN = 1
+export const GENERATE_COUNT_MAX = 20
 
 /** Phase 4 — coverletter/log id 배열을 title·카테고리로 expand */
 export interface SessionRefsExpanded {
@@ -218,6 +329,11 @@ export interface SessionRefsExpanded {
 export interface GenerateFollowupResult {
   status: 'ok' | 'blocked'
   reason?: string
+  /**
+   * 생성·↻ 와 **같은 코드다** (백엔드가 면접 AI 4경로에 같은 자소서 게이트를 달았다,
+   * 실측 2026-08-11). 있으면 `reason` 토스트 대신 자소서로 가는 길을 띄운다.
+   */
+  code?: GenerateBlockCode
   question?: InterviewPrepQuestion
   meta?: {
     callLogId: string
@@ -234,6 +350,11 @@ export interface GenerateFollowupResult {
 export interface GenerateAnswerResult {
   status: 'ok' | 'blocked'
   reason?: string
+  /**
+   * 자소서 게이트만 코드로 온다 — 나머지 차단(동의·코인·장애)은 `reason` 뿐이라
+   * 인라인 에러로 그대로 보여주는 게 유일한 처리다 (위 구분이 사라지지 않게).
+   */
+  code?: GenerateBlockCode
   question?: InterviewPrepQuestion
   meta?: {
     callLogId: string

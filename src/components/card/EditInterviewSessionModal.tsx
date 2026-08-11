@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { FileText, FolderOpen, Lightbulb, Target } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { FileText, FolderOpen, Lightbulb, NotebookPen, Target } from 'lucide-react'
 import { Modal } from '@/components/common/Modal'
+import { useDemoLink } from '@/hooks/useDemoLink'
+import { pickInterviewSteps } from '@/utils/stepTemplates'
 import { CompanyResearchCard } from '@/components/card/CompanyResearchCard'
 import { JobTitleField } from '@/components/common/JobTitleField'
 import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
@@ -44,7 +47,7 @@ const TYPE_OPTIONS: Array<{ value: InterviewType; label: string }> = (
 /**
  * F6 PR 2 Phase 4 — 면접 세션 참고 자료·강화 자료 사후 편집.
  *
- * **저장 후 사용자가 "다시 생성" 으로 트리 재생성** — 새 자료 기반 새 질문.
+ * **저장 후 사용자가 "✨ AI 질문 생성" 으로 새 자료 기반 질문 추가** (지우지 않고 더한다).
  * 백엔드 PATCH /interview-prep-sessions/:id 가 coverletterIds·extraLogIds 변경 처리 (아직 미지원).
  * → Phase 4 단계 5 추가 : 백엔드 UpdateSessionDto 에 coverletterIds·extraLogIds 도 받게 확장 필요.
  */
@@ -111,6 +114,26 @@ export function EditInterviewSessionModal({
     )
   }
 
+  /**
+   * 🔴 **면접 준비 노트로 돌아가는 길** (2026-08-11).
+   *
+   * 노트 → 질문 은행은 뚫었는데 반대 방향이 없으면, 세션에서 "그때 뭐라고 적었더라" 가
+   * 떠올랐을 때 카드 상세를 거쳐 스텝을 다시 찾아야 한다. 자료 창구가 여기라 여기 둔다
+   * (모바일엔 사이드바가 없어 이 모달이 자료의 유일한 창구다).
+   *
+   * 면접 스텝 판정은 `pickInterviewSteps` 단일 구현 — 'PT·토론'·'컬처핏'도 면접형이다
+   * (나란히 보기의 준비 노트 열도 같은 헬퍼를 쓴다 — 링크와 열이 어긋나면 안 된다).
+   *   1개 → 그 스텝으로 직행 / 여러 개 → 카드 상세(스텝 목록)에서 고르게 / 0개 → 링크 없음
+   */
+  const link = useDemoLink()
+  const interviewSteps = pickInterviewSteps(app?.steps)
+  const notePath =
+    interviewSteps.length === 1
+      ? `/board/${session.applicationId}/steps/${interviewSteps[0].id}`
+      : interviewSteps.length > 1
+        ? `/board/${session.applicationId}`
+        : null
+
   const clList = coverletters ?? []
   // 기본함(미분류) 맨 위 고정 — 퀵캡처 기록도 면접 소재로 첨부 가능
   const actList = [...(activities ?? [])].sort(
@@ -125,15 +148,20 @@ export function EditInterviewSessionModal({
             <Lightbulb size={14} strokeWidth={1.75} aria-hidden="true" />
             자료를 바꾸고 저장한 뒤
           </span>{' '}
-          <strong>"↻ 다시 생성"</strong> 을 누르면 새 자료 기반으로 질문이
-          재생성돼요. (기존 질문·내 메모는 사라집니다)
+          {/*
+            🔴 **"사라집니다" 를 지웠다** (질문 은행 D2b). 생성은 이제 기존 질문·답변을
+            지우지 않고 **더한다**(ADR-074 뒤집기). 없어진 위험을 계속 경고하면 사용자는
+            자료를 고치고도 생성을 못 누른다 — 답변이 날아갈까 봐.
+          */}
+          <strong>"✨ AI 질문 생성"</strong> 을 누르면 새 자료 기반 질문이
+          더해져요. (기존 질문·내 메모는 그대로 남아요)
         </p>
 
         {/*
           지원 직무 — **질문 생성의 기준**이라 여기서도 보이고 고쳐져야 한다.
           차수·종류와 달리 잠그지 않는다: 이건 세션의 정체성이 아니라 카드의 속성이고,
           잘못 적힌 걸 발견했을 때 고칠 길을 막으면 세션을 새로 파는 수밖에 없다.
-          (이미 만들어진 질문은 그대로다 — 다음 "다시 생성" 부터 반영된다)
+          (이미 만들어진 질문은 그대로다 — 다음 "✨ AI 질문 생성" 부터 반영된다)
         */}
         <section>
           <JobTitleField applicationId={session.applicationId} />
@@ -148,8 +176,14 @@ export function EditInterviewSessionModal({
               {session.interviewType
                 ? ` · ${INTERVIEW_TYPE_LABEL[session.interviewType]}`
                 : ''}{' '}
+              {/*
+                🔴 **"다시 생성 후에 바꾸세요" 를 뺐다** (질문 은행 D2b). 그 안내는 재생성이
+                질문을 **전부 지우던 시절**의 길이었다 — 0개가 되면 잠금이 풀렸으니까.
+                생성이 additive 가 된 지금 아무리 눌러도 질문 수는 늘기만 해서 잠금이
+                영원히 안 풀린다. 못 가는 길을 알려주면 사용자는 그 길에서 헤맨다.
+              */}
               기준으로 만들어졌거든요. 다른 면접은 <strong>새 세션</strong>으로
-              만들거나, <strong>"↻ 다시 생성"</strong> 후에 바꿔주세요.
+              만들어 주세요.
             </p>
           )}
 
@@ -285,6 +319,36 @@ export function EditInterviewSessionModal({
             defaultExpanded={false}
           />
         </section>
+
+        {/* 면접 준비 노트 — 자소서·활동 로그와 같은 「자료」 리듬으로 목록 위에 둔다 */}
+        {notePath && (
+          <section>
+            <Link
+              to={link(notePath)}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg w-full min-h-[44px] flex items-center gap-2.5 text-sm text-text-secondary bg-card border border-line hover:border-line-strong rounded-lg px-3.5 py-3 transition-colors"
+            >
+              <NotebookPen
+                size={15}
+                strokeWidth={1.75}
+                aria-hidden="true"
+                className="shrink-0"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-text-primary">
+                  준비 노트 보기
+                </span>
+                <span className="block text-[11px] text-text-quaternary truncate">
+                  {interviewSteps.length === 1
+                    ? interviewSteps[0].name
+                    : `면접 단계 ${interviewSteps.length}개 — 카드에서 골라요`}
+                </span>
+              </span>
+              <span className="shrink-0 text-text-quaternary" aria-hidden="true">
+                →
+              </span>
+            </Link>
+          </section>
+        )}
 
         {/* 자소서 */}
         <section>

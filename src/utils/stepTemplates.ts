@@ -70,6 +70,21 @@ export function getStepType(stepName: string): StepType {
   return 'wait'
 }
 
+/**
+ * 면접형 스텝만 고른다 — **면접 세션에서 준비 노트를 찾는 단일 구현**.
+ *
+ * 세션 자료 모달의 「준비 노트 보기」 링크(다리 b)와 나란히 보기의 준비 노트 열이 같은
+ * 판정을 써야 한다: 한쪽만 'PT·토론'·'컬처핏'을 놓치면 **같은 카드인데 링크는 있고 열은
+ * 없는** 상태가 된다. 판정 자체는 `getStepType` 단일 구현에 맡긴다.
+ *
+ * `app` 이 아직 안 온 호출부가 있어 `undefined` 를 그대로 받는다 (0개로 취급).
+ */
+export function pickInterviewSteps<T extends { name: string }>(
+  steps: T[] | undefined | null,
+): T[] {
+  return (steps ?? []).filter((s) => getStepType(s.name) === 'interview')
+}
+
 // accentBorderCls: card-solid 구분감 패턴의 좌측 스트라이프 (U29 규칙 — 의미 토큰만.
 // document=warning 은 캘린더 아젠다의 마감·전형 계열 색과 정합)
 // Icon: 기능 아이콘 = lucide (아이콘 정책 — DESIGN.md). 색은 colorCls 를 상속(currentColor).

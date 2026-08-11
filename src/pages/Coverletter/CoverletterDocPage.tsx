@@ -1,4 +1,3 @@
-import { Mic } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
@@ -19,13 +18,7 @@ import {
 import {
   useCompanyResearchCache,
 } from '@/hooks/useCoverletterDoc'
-import { Modal } from '@/components/common/Modal'
-import { NewInterviewSessionModal } from '@/components/card/NewInterviewSessionModal'
-import { useInterviewPrepSessions } from '@/hooks/useInterviewPrep'
-import {
-  INTERVIEW_TYPE_LABEL,
-  INTERVIEW_TYPE_STYLE,
-} from '@/types/interviewPrep'
+import { GoToInterviewButton } from '@/components/card/GoToInterviewButton'
 import type { UpdateCoverletterDto } from '@/types/coverletter'
 import { DesktopOnlyNotice } from '@/components/coverletter/DesktopOnlyNotice'
 
@@ -36,132 +29,6 @@ import { DesktopOnlyNotice } from '@/components/coverletter/DesktopOnlyNotice'
  * Phase C — N문항 카드 + sticky nav (다음)
  * Phase D — AI 채팅 (다음)
  */
-/**
- * 자소서 → 면접 건너가기.
- *
- * 🔴 **방향이 비대칭이다.** 면접 → 자소서는 1:1(세션은 한 회사에 속한다)이지만,
- * 자소서 → 면접은 **1:N** 이다 — 1차·2차·임원면접이 따로 있을 수 있다.
- *
- *   0개 → 만들기 모달 (버튼 문구도 **「만들기」**로 바뀐다 — 「준비하기」면 기존 게 있는 줄 안다)
- *   1개 → 바로 이동 (고를 게 없는데 물을 이유가 없다)
- *   N개 → 선택 목록 + 🔴 **「새로 만들기」** (목록만 두면 3차가 잡혔을 때 만들 길이 없다)
- */
-/**
- * 자소서 → 면접 건너가기.
- *
- * `navigateOnly` 는 **이미 있는 세션으로 이동만** 한다 (모바일). 세션 생성은 AI 질문
- * 생성으로 이어져 코인이 드는 동작이라, 자소서 화면이 보기 전용인 곳에서는 만들지 않는다.
- * 만들 세션이 하나도 없으면 아예 렌더하지 않는다 — 눌러도 갈 곳이 없는 버튼은 두지 않는다.
- */
-export function GoToInterviewButton({
-  applicationId,
-  navigateOnly = false,
-}: {
-  applicationId: string
-  navigateOnly?: boolean
-}) {
-  const navigate = useNavigate()
-  /*
-    🔴 **로딩 중을 「없음」으로 읽으면 안 된다** (2026-08-10 점검).
-    조회 전엔 `[]` 이므로 세션이 있어도 「새로 만들기」가 열리고, 거기서 만들면
-    **AI 질문 생성으로 코인이 나간다.** 라벨도 「만들기 ↔ 준비하기」로 깜빡였다.
-    실패도 마찬가지 — 모르는 상태에서 중복을 만들 바엔 버튼을 잠근다.
-  */
-  const {
-    data: sessions = [],
-    isLoading: sessLoading,
-    isError: sessError,
-  } = useInterviewPrepSessions(applicationId)
-  const sessUnknown = sessLoading || sessError
-  const [picking, setPicking] = useState(false)
-  const [creating, setCreating] = useState(false)
-
-  const go = () => {
-    if (sessUnknown) return // 몇 개인지 모르는 채로 만들지 않는다
-    if (sessions.length === 0) {
-      if (navigateOnly) return
-      return setCreating(true)
-    }
-    if (sessions.length === 1) return navigate(`/interviews/${sessions[0].id}`)
-    setPicking(true)
-  }
-
-  // 이동만 가능한데 갈 곳이 없으면 버튼 자체를 두지 않는다
-  if (navigateOnly && (sessUnknown || sessions.length === 0)) return null
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={go}
-        disabled={sessUnknown}
-        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg shrink-0 min-h-[44px] inline-flex items-center gap-1.5 text-xs font-semibold text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 disabled:opacity-50 disabled:cursor-default px-3 py-2.5 rounded-lg transition-colors"
-        title={sessError ? '면접 준비 목록을 불러오지 못했어요' : '이 자소서를 바탕으로 면접 예상 질문을 준비해요'}
-      >
-        <Mic size={14} strokeWidth={2} aria-hidden="true" className="shrink-0" />
-        {navigateOnly || sessUnknown || sessions.length > 0
-          ? '면접 준비하기'
-          : '면접 준비 만들기'}
-      </button>
-
-      {picking && (
-        <Modal open onClose={() => setPicking(false)} title="어느 면접을 준비할까요?">
-          <div className="space-y-1.5">
-            {sessions.map((sess) => (
-              <button
-                key={sess.id}
-                type="button"
-                onClick={() => navigate(`/interviews/${sess.id}`)}
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg w-full min-h-[44px] text-left border border-line bg-card hover:border-brand/40 rounded-lg px-3.5 py-3 flex items-center gap-2.5 transition-colors"
-              >
-                <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-semibold text-text-primary truncate">
-                    {sess.round}
-                  </span>
-                  {/* 질문이 아직 없으면 그것도 정보다 — 어디를 골라야 할지 판단에 쓴다 */}
-                  <span className="block text-[11px] text-text-quaternary mt-0.5">
-                    {sess.generationStatus === 'completed'
-                      ? '질문 준비됨'
-                      : '아직 질문 없음'}
-                  </span>
-                </span>
-                {sess.interviewType && (
-                  <span
-                    className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full border ${INTERVIEW_TYPE_STYLE[sess.interviewType]}`}
-                  >
-                    {INTERVIEW_TYPE_LABEL[sess.interviewType]}
-                  </span>
-                )}
-              </button>
-            ))}
-            {/* 🔴 3차가 잡히면 여기서 만든다 — 목록만 두면 새로 만들 길이 없다 */}
-            <button
-              type="button"
-              onClick={() => {
-                setPicking(false)
-                setCreating(true)
-              }}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg w-full min-h-[44px] text-xs font-medium text-text-tertiary hover:text-text-secondary border border-dashed border-line hover:border-line-strong rounded-lg py-3 transition-colors"
-            >
-              + 새 면접 준비 만들기
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {creating && (
-        <NewInterviewSessionModal
-          applicationId={applicationId}
-          onClose={() => setCreating(false)}
-          onCreated={(sessionId) => navigate(`/interviews/${sessionId}`)}
-          /* 이미 자소서 화면이다 — 닫기만 하면 그 자리다 */
-          onNeedCoverletter={() => setCreating(false)}
-        />
-      )}
-    </>
-  )
-}
-
 export function CoverletterDocPage() {
   const aiEnabled = useAiEnabled()
   const interviewAiEnabled = useInterviewAiEnabled()

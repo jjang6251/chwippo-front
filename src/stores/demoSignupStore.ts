@@ -14,6 +14,8 @@ export type DemoBlockReason =
   | 'ai_generate'
   | 'ai_coverletter'
   | 'coverletter_item'
+  /** 질문 은행 — 내가 직접 적은 질문 저장 (AI 아님) */
+  | 'custom_question'
   | 'create'
   | 'default'
 

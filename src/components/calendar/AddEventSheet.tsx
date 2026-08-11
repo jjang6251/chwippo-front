@@ -197,7 +197,7 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
             className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[92dvh] flex flex-col shadow-2xl outline-none"
           >
             <Drawer.Title className="sr-only">이 날에 추가</Drawer.Title>
-            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line shrink-0" aria-hidden="true" />
+            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line-strong shrink-0" aria-hidden="true" />
             <div className="overscroll-contain overflow-y-auto">{body}</div>
             {/* 확인 레이어는 Drawer.Content 안에 — 밖에 두면 Radix 의 body pointer-events:none 에
                 막혀 버튼이 안 눌린다. data-vaul-no-drag 로 시트 드래그 오인만 차단. */}

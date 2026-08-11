@@ -11,6 +11,7 @@ import type { Application, UpdateApplicationDto } from '@/types/application'
 import type { ChecklistItem, StepDetail, UpdateStepBody } from '@/api/stepDetail'
 import type { CalendarEvent, DailyNote } from '@/api/calendar'
 import type { ApplicationCoverletter, UpdateCoverletterDto } from '@/types/coverletter'
+import type { InterviewPrepQuestion } from '@/types/interviewPrep'
 
 interface DemoState {
   applications: Application[]
@@ -20,6 +21,15 @@ interface DemoState {
   /** applicationId → 자소서 문항 */
   coverletters: Record<string, ApplicationCoverletter[]>
   calendarEvents: CalendarEvent[]
+  /**
+   * sessionId → 면접 질문 트리. 「면접 보기」 자가평가가 여기에 남는다 (질문 은행 D3).
+   *
+   * 🔴 **캐시 패치만으로는 부족하다.** 훅이 `setQueryData` 로 방금 찍은 결과를 반영하지만,
+   * 질문 조회는 staleTime 0 이라 화면을 나갔다 오거나 탭을 다시 보면 **재조회가 덮어쓴다.**
+   * 그러면 「다시 볼 것만」으로 다시 시작했을 때 방금 찍은 게 사라져, 데모에서 이 기능이
+   * 고장난 것처럼 보인다.
+   */
+  interviewQuestions: Record<string, InterviewPrepQuestion[]>
 }
 
 const clone = <T>(v: T): T => structuredClone(v)
@@ -37,6 +47,7 @@ function init(): DemoState {
     dailyNotes: clone(S.DEMO_DAILY_NOTES),
     coverletters: clone(S.DEMO_COVERLETTERS),
     calendarEvents: clone(S.DEMO_CALENDAR_EVENTS),
+    interviewQuestions: clone(S.DEMO_INTERVIEW_QUESTIONS),
   }
 }
 
@@ -180,6 +191,30 @@ export const getCalendarEvents = (filter?: { year: number; month: number }): Cal
         ? { ...e, isStarred: getApplication(e.applicationId)?.isStarred ?? false }
         : e,
     )
+}
+
+// ── 면접 질문 (읽기 + 「면접 보기」 자가평가) ────────────────
+export const getInterviewQuestions = (sessionId: string): InterviewPrepQuestion[] =>
+  state.interviewQuestions[sessionId] ?? []
+
+/**
+ * POST /interview-prep-questions/:id/practice — 잘함/애매/다시 저장 (비 AI).
+ *
+ * 못 찾은 id 는 `null` 을 돌려준다 — 실서버의 404 자리이고, 연습 루프는 그걸 조용히
+ * 넘기도록 만들어져 있다 (던지면 데모에서만 루프가 멈춘다).
+ */
+export function recordInterviewPractice(
+  questionId: string,
+  result: InterviewPrepQuestion['lastPracticeResult'],
+): InterviewPrepQuestion | null {
+  for (const list of Object.values(state.interviewQuestions)) {
+    const q = list.find((x) => x.id === questionId)
+    if (!q) continue
+    q.lastPracticeResult = result
+    q.lastPracticedAt = now()
+    return q
+  }
+  return null
 }
 
 // ── 회사별 자소서 ────────────────────────────────────────────

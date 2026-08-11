@@ -57,6 +57,9 @@ const makeQuestion = (
     myMemo: null,
     mustPrepare: false,
     followupBasis: null,
+    source: 'ai',
+    lastPracticedAt: null,
+    lastPracticeResult: null,
     children: [],
     ...overrides,
   }) as unknown as InterviewPrepQuestion
@@ -258,6 +261,21 @@ describe('InterviewQuestionCard — 꼬리질문 안내·근거', () => {
   it('메인 질문(근거 null)에는 배지가 없다', () => {
     renderCard(makeQuestion())
     expect(screen.queryByText('질문 심화')).not.toBeInTheDocument()
+  })
+
+  /**
+   * 질문 은행 D2 — **누가 만든 질문인지**를 카드에서 알 수 있어야 한다.
+   * 「내 질문」은 AI 재생성(전량 삭제)의 대상이 아니라, 사용자가 ↻ 를 누를 때
+   * 무엇이 남는지를 판단하는 근거가 된다.
+   */
+  it('직접 추가한 질문에는 「내 질문」 배지가 붙는다', () => {
+    renderCard(makeQuestion({ source: 'user' }))
+    expect(screen.getByText('내 질문')).toBeInTheDocument()
+  })
+
+  it('AI 질문에는 「내 질문」 배지가 없다', () => {
+    renderCard(makeQuestion({ source: 'ai' }))
+    expect(screen.queryByText('내 질문')).not.toBeInTheDocument()
   })
 })
 

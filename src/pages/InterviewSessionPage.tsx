@@ -1,31 +1,43 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, FileText, Star } from 'lucide-react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ChevronLeft, FileText, Mic, Star } from 'lucide-react'
 import { CompanyResearchCard } from '@/components/card/CompanyResearchCard'
 import { JobTitleField } from '@/components/common/JobTitleField'
 import { useRequireJobTitle } from '@/hooks/useRequireJobTitle'
 import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { EditInterviewSessionModal } from '@/components/card/EditInterviewSessionModal'
+import { AddInterviewQuestionForm } from '@/components/card/AddInterviewQuestionForm'
+import { GenerateQuestionsModal } from '@/components/card/GenerateQuestionsModal'
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
+import { isNeedCoverletterBlocked } from '@/api/interviewPrep'
 import { AiQuotaChip } from '@/components/common/AiQuotaChip'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useCoverletters, useUpdateCoverletter } from '@/hooks/useApplicationCoverletters'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
+import { StepNoteEditor } from '@/components/editor/StepNoteEditor'
 import { useApplication } from '@/hooks/useApplications'
+import { useUpdateStep } from '@/hooks/useStepDetail'
+import { useDemoLink } from '@/hooks/useDemoLink'
+import { pickInterviewSteps } from '@/utils/stepTemplates'
+import { mergePinnedIntoNotes } from '@/utils/stepNotes'
 import {
   useDeleteInterviewSession,
   useGenerateInterviewSession,
-  questionsKey,
-  sessionKey,
   useInterviewPrepQuestions,
   useInterviewPrepRefs,
   useInterviewPrepSession,
   useRefetchQuestionsOnGenerationEnd,
   useUpdateInterviewPrepSession,
 } from '@/hooks/useInterviewPrep'
-import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
+import { useAiQuotaBlocked } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { useUnloadGuard } from '@/hooks/useUnloadGuard'
 import {
@@ -33,20 +45,33 @@ import {
   saveCollapseExpanded,
 } from '@/utils/collapsePref'
 import { toast } from '@/stores/toastStore'
+import { compareByInterviewFlow } from '@/utils/practiceExam'
 import {
-  CATEGORY_FLOW_FALLBACK,
-  CATEGORY_FLOW_ORDER,
   CATEGORY_LABEL,
   CATEGORY_STYLE,
   CATEGORY_STYLE_FALLBACK,
   INTERVIEW_TYPE_LABEL,
   INTERVIEW_TYPE_STYLE,
 } from '@/types/interviewPrep'
+import type { ApplicationStep } from '@/types/application'
 import type {
   ApplicationCoverletter,
   UpdateCoverletterDto,
 } from '@/types/coverletter'
-import type { InterviewPrepQuestion } from '@/types/interviewPrep'
+import type {
+  GenerateSessionDto,
+  GenerateSessionResult,
+  InterviewPrepQuestion,
+} from '@/types/interviewPrep'
+
+/** 트리 전체에서 **내가 직접 적은** 질문 수 — 꼬리 자리에 적은 것도 함께 센다 */
+function countUserQuestions(nodes: InterviewPrepQuestion[]): number {
+  return nodes.reduce(
+    (sum, n) =>
+      sum + (n.source === 'user' ? 1 : 0) + countUserQuestions(n.children),
+    0,
+  )
+}
 
 /**
  * F6 PR 2 Phase 4 — 면접 세션 풀스크린 페이지.
@@ -57,10 +82,30 @@ import type { InterviewPrepQuestion } from '@/types/interviewPrep'
 /** 두 열이 나눠 갖지 **못하는** 폭 — `gap-5` 두 곳(40) + 구분선 열(22). grid 정의와 짝이다 */
 const SPLIT_CHROME = 62
 
+/** 추가 직후 위치 안내를 기다리는 질문들 — 목록에 나타나면 소진된다 */
+type PendingAdded = { ids: string[]; multi: boolean } | null
+
+/**
+ * 토스트에 질문을 통째로 넣으면 줄이 넘친다 — 어느 질문인지 알아볼 만큼만 남긴다.
+ * `trimEnd` 는 자른 자리가 공백일 때 `기술적 …` 처럼 뜨는 걸 막는다.
+ */
+const TOAST_CLIP = 12
+const clipQuestion = (s: string) =>
+  s.length > TOAST_CLIP ? `${s.slice(0, TOAST_CLIP).trimEnd()}…` : s
+
+/**
+ * 방금 들어간 질문을 잠깐 감싸는 테두리. **2.5초면 눈이 한 번 옮겨 가기에 충분**하고,
+ * 계속 남으면 "선택됨" 같은 다른 상태로 읽힌다.
+ *
+ * 🔴 알파 틴트(`bg-brand/5`)를 두지 않는 이유 — 카드 배경이 `bg-surface-2`(불투명)라
+ * 래퍼 색은 아예 보이지 않는다. 실제로 보이는 건 링뿐이라 링만 둔다.
+ */
+const ADDED_HIGHLIGHT_MS = 2500
+const ADDED_HIGHLIGHT = 'ring-2 ring-brand/50'
+
 export function InterviewSessionPage() {
   const { sessionId = '' } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
-  const qc = useQueryClient()
   const {
     data: session,
     isLoading: sessionLoading,
@@ -77,7 +122,6 @@ export function InterviewSessionPage() {
   } = useInterviewPrepQuestions(sessionId)
   const { data: refs } = useInterviewPrepRefs(sessionId)
   const { blocked: quotaBlocked, reason: quotaReason } = useAiQuotaBlocked('interview_prep_session')
-  const quota = useMyAiQuota('interview_prep_session')
   const { mutateAsync: generateSession, isPending: pendingLocal } =
     useGenerateInterviewSession(sessionId)
   /**
@@ -112,6 +156,8 @@ export function InterviewSessionPage() {
    * 여기선 사용자가 고르는 토글이다.
    */
   const [readMode, setReadMode] = useState(false)
+  /** ✨ AI 질문 생성 모달 — 개수·유형을 고르고 시작한다 (질문 은행 D2b) */
+  const [generateOpen, setGenerateOpen] = useState(false)
   /**
    * 🔴 **면접 ↔ 자소서 나란히 보기** (2026-08-10).
    *
@@ -123,6 +169,21 @@ export function InterviewSessionPage() {
    * 좁은 화면은 나란히가 불가능해 이동 버튼으로 대신한다 (아래 `narrow`).
    */
   const [split, setSplit] = useState<'iv' | 'both' | 'cl'>('iv')
+  /**
+   * 🔴 **오른쪽 열은 자소서만이 아니다** (2026-08-11).
+   *
+   * 자소서로 나란히 보기를 만들고 나니 **같은 이유로 준비 노트도 옆에 있어야 했다** —
+   * 면접 준비 노트에는 기출·리서치·당일 메모가 있고(기본 포맷의 첫 칸이 「예상 질문 & 답변」),
+   * 답을 다듬을 때 보게 되는 자료라는 점이 자소서와 정확히 같다. 열을 하나 더 만드는 대신
+   * 오른쪽 열의 **내용을 고르게** 한다 — 3열은 열당 300px 이라 어느 것도 못 읽는다.
+   *
+   * 기본은 `coverletter` — 지금까지의 동작이 그대로 기본값이어야 한다.
+   * 저장하지 않는다: 분할 상태(`split`) 자체가 매번 「면접만」으로 시작하는데
+   * 그 안의 선택만 기억하면 기준이 둘이 된다.
+   */
+  const [rightPane, setRightPane] = useState<'coverletter' | 'note'>('coverletter')
+  /** 면접 스텝이 여럿일 때 열에서 고른 스텝 — `null` 이면 첫 번째 */
+  const [noteStepId, setNoteStepId] = useState<string | null>(null)
   /** 자소서 열의 편집 여부 — 기본은 읽기. 보러 온 거지 고치러 온 게 아니다 */
   const [clEditing, setClEditing] = useState(false)
   const [openClId, setOpenClId] = useState<string | null>(null)
@@ -168,17 +229,40 @@ export function InterviewSessionPage() {
    * (아주 오래된 브라우저)에서만 0 이 유지되고, 그때는 기존처럼 2열로 떨어진다.
    */
   const narrow = contentW > 0 && contentW < 862
-  /* 나란히 열었을 때만 가져온다 — 안 쓰는 화면에서 자소서까지 조회할 이유가 없다 */
+  /**
+   * 준비 노트를 붙일 면접 스텝 — 판정은 `pickInterviewSteps` 단일 구현 (세션 자료 모달의
+   * 「준비 노트 보기」 링크와 같은 헬퍼다. 어긋나면 링크는 있는데 열은 없는 카드가 생긴다).
+   *
+   * 🔴 **0개면 오른쪽 열의 선택지에서 아예 뺀다.** 스텝이 없으면 노트도 없어서
+   * 눌러도 빈 화면이 나온다 — 갈 곳이 없는 컨트롤은 두지 않는다는 기존 판단 그대로다.
+   */
+  const interviewSteps = pickInterviewSteps(app?.steps)
+  const noteAvailable = interviewSteps.length > 0
+  /**
+   * 실제로 그릴 오른쪽 내용. 스텝이 없으면(또는 아직 안 왔으면) 자소서로 되돌린다 —
+   * `app` 이 늦게 도착하는 동안 선택만 남아 **빈 노트 열**이 그려지는 걸 막는다.
+   */
+  const rightPaneView = noteAvailable ? rightPane : 'coverletter'
+  const activeNoteStep =
+    interviewSteps.find((s) => s.id === noteStepId) ?? interviewSteps[0] ?? null
+  /*
+    나란히 열었을 때만 가져온다 — 안 쓰는 화면에서 자소서까지 조회할 이유가 없다.
+    준비 노트를 보는 중이면 자소서 열이 없으므로 같은 이유로 조회하지 않는다
+    (노트는 `useApplication` 이 이미 들고 있는 값이라 추가 조회가 없다).
+  */
   const {
     data: coverletters = [],
     isLoading: clLoading,
     isError: clError,
-  } = useCoverletters(applicationId, !!applicationId && !narrow && split !== 'iv')
+  } = useCoverletters(
+    applicationId,
+    !!applicationId && !narrow && split !== 'iv' && rightPaneView === 'coverletter',
+  )
   const { mutate: updateCl } = useUpdateCoverletter(applicationId)
   /** 좁은 화면은 나란히가 불가능 — 상태와 무관하게 면접만 */
   const view = narrow ? 'iv' : split
   /**
-   * 전체 접기·펼치기 — **목록 전체를 다루는 동작**이라 `↻ 다시 생성` 과 같은 줄에 둔다.
+   * 전체 접기·펼치기 — **목록 전체를 다루는 동작**이라 `✨ AI 질문 생성` 과 같은 줄에 둔다.
    * 예전엔 필터 바 안에 `ml-auto` 로 있었는데, 뒤에 카테고리 칩이 더 붙어 줄바꿈되면
    * 목록 한가운데 놓였다.
    *
@@ -191,6 +275,88 @@ export function InterviewSessionPage() {
     setAllCollapsed((v) => !v)
     setCollapseSignal((n) => n + 1)
   }
+
+  /**
+   * 질문 은행 D2 — **내가 직접 적는 질문 폼**의 열림. 목록 툴바와 빈 상태 두 곳에서 연다.
+   * 폼은 열린 쪽 바로 아래에 펼쳐지지만, 목록 아래쪽에서 눌렀다면 화면 밖일 수 있어 옮겨 준다
+   * (`scrollIntoView` 는 jsdom 에 없어 옵셔널 호출).
+   */
+  /**
+   * 🔴 **준비 노트에서 건너온 본문을 받는다** (2026-08-11).
+   *
+   * 스텝 페이지의 「이 내용으로 면접 질문 만들기」가 노트를 plain text 로 실어 보낸다
+   * (`navigate(..., { state: { bridgeText } })`). 받는 쪽은 폼을 **붙여넣기로 열고
+   * 채우기만** 한다 — 쪼개기·번호 떼기·중복 제외·50개 상한은 기존 파서가 그대로 하고,
+   * 미리보기가 관문이라 확인 없이 서버로 나가지 않는다.
+   *
+   * 열림·본문을 **effect 가 아니라 초기값으로** 잡는 이유 — effect 에서 setState 하면
+   * 첫 프레임엔 폼이 닫힌 채 그려졌다가 다시 열려 깜빡인다(그리고 cascading render 다).
+   */
+  const { state: navState } = useLocation()
+  const seededText = (navState as { bridgeText?: string } | null)?.bridgeText
+  const bridgeSeed = seededText?.trim() ? seededText : null
+
+  const [addOpen, setAddOpen] = useState(bridgeSeed !== null)
+  /**
+   * 폼을 닫으면 비워서 **다시 열면 빈 폼**이게 한다 — 한 번 처리한 노트가
+   * 「＋ 질문 추가」를 누를 때마다 되살아나면 사용자가 방금 끈 줄이 다시 켜져 온다.
+   */
+  const [bridgeText, setBridgeText] = useState<string | null>(bridgeSeed)
+  /**
+   * 🔴 **state 는 한 번만 먹는다.** 지우지 않으면 새로고침에 같은 노트가 되살아난다
+   * (라우터 state 는 `history.state.usr` 에 산다). 브라우저 히스토리라는 **외부 시스템**을
+   * 갱신하는 일이라 effect 가 제자리다 — 여기서 setState 는 하지 않는다.
+   */
+  useEffect(() => {
+    if (bridgeSeed === null) return
+    /*
+      🔴 소비 여부의 근거는 **우리가 실제로 읽은 값**(`bridgeSeed`)이지 히스토리의 모양이
+      아니다. 히스토리를 다시 들여다보고 판단하면 라우터 구현(MemoryRouter 등)에 따라
+      읽은 쪽과 지우는 쪽이 엇갈려, 지운 줄 알았는데 안 지워진 채로 남는다.
+      `key`·`idx` 는 라우터 것이라 건드리지 않고 `usr.bridgeText` 만 뺀다.
+    */
+    const hist = (window.history.state ?? {}) as Record<string, unknown>
+    const usr = { ...((hist.usr as Record<string, unknown>) ?? {}) }
+    delete usr.bridgeText
+    window.history.replaceState({ ...hist, usr }, '')
+  }, [bridgeSeed])
+  const addFormRef = useRef<HTMLDivElement | null>(null)
+  const closeAddForm = () => {
+    setAddOpen(false)
+    setBridgeText(null)
+  }
+  const openAddForm = () => {
+    setAddOpen(true)
+    // 🔴 JS 스크롤은 index.css 의 reduced-motion 미디어가 못 줄인다 — 여기서 직접 존중
+    const reduceMotion = window.matchMedia?.(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    requestAnimationFrame(() =>
+      addFormRef.current?.scrollIntoView?.({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'nearest',
+      }),
+    )
+  }
+
+  /**
+   * 질문 은행 D2 — **방금 추가한 질문이 어디로 갔는지 알려준다.**
+   *
+   * 🔴 목록은 `orderIndex` 가 아니라 **면접 진행 순서**(`CATEGORY_FLOW_ORDER`)로 정렬된다.
+   * 그래서 직접 추가한 질문은 맨 끝이 아니라 **카테고리가 정한 자리**(미분류는 중간)로
+   * 들어가고, 추가 직후 화면 아래쪽엔 아무 변화가 없어 "방금 넣은 게 어디 갔지" 가 된다.
+   * 정렬을 바꾸면 리허설이 깨지므로(1번은 자기소개여야 한다) **자리를 안내한다.**
+   *
+   * 서버 응답 시점엔 아직 refetch 전이라 번호를 모른다 — 목록에 **실제로 나타난 뒤**
+   * 안내한다 (번호를 계산하는 `CategoryFilterAndList` 의 effect 가 맡는다).
+   */
+  const [pendingAdded, setPendingAdded] = useState<PendingAdded>(null)
+  const handleAdded = (created: InterviewPrepQuestion[]) => {
+    if (created.length === 0) return
+    setPendingAdded({ ids: created.map((q) => q.id), multi: created.length > 1 })
+  }
+  /** effect deps 에 들어가므로 렌더마다 새로 만들지 않는다 */
+  const clearPendingAdded = useCallback(() => setPendingAdded(null), [])
   // 공고 요건 접힘 — 정리 안 했으면 펼쳐서 CTA 가 바로 보이게
   const [jpExpanded, setJpExpanded] = useState(true)
 
@@ -331,7 +497,12 @@ export function InterviewSessionPage() {
   /** 손잡이를 누르면 갈 곳 */
   const nextSplit: 'iv' | 'both' | 'cl' =
     view === 'both' ? (lastSingle === 'iv' ? 'cl' : 'iv') : 'both'
-  const SPLIT_LABEL = { iv: '면접만', both: '반반', cl: '자소서만' } as const
+  /**
+   * 🔴 오른쪽이 무엇인지에 따라 이름이 바뀐다 — 준비 노트를 보는 중에 손잡이가
+   * 「자소서만」이라고 말하면 누르기 전과 후가 어긋난다 (화면 낭독기엔 이 이름이 전부다).
+   */
+  const rightLabel = rightPaneView === 'note' ? '준비 노트' : '자소서'
+  const SPLIT_LABEL = { iv: '면접만', both: '반반', cl: `${rightLabel}만` } as const
 
   const ivColRef = useRef<HTMLDivElement | null>(null)
   /**
@@ -508,9 +679,26 @@ export function InterviewSessionPage() {
       return next
     })
 
+  /**
+   * 🔴 **직접 적은 질문은 따로 센다** (질문 은행 D2b). AI 질문은 다시 만들면 되지만
+   * 내가 모은 기출은 **어디에도 없다** — 면접 다녀와서 복기한 것, 카톡에서 긁어온 것이다.
+   * "생성된 질문과 메모" 라는 한 줄에 뭉뚱그리면 그게 함께 사라지는 줄 모르고 지운다.
+   *
+   * 트리 **전체**를 세는 이유 — 꼬리 자리에 직접 적은 질문도 같이 사라진다
+   * (`bulkCreateQuestions` 가 `parentQuestionId` 를 받는다).
+   */
+  const userQuestionCount = useMemo(
+    () => countUserQuestions(questions),
+    [questions],
+  )
+
   const handleDelete = () => {
+    const userLine =
+      userQuestionCount > 0
+        ? `\n직접 추가한 질문 ${userQuestionCount}개도 함께 삭제돼요.`
+        : ''
     const ok = window.confirm(
-      `🗑️ 면접 세션 "${session?.round ?? ''}" 을 정말 삭제하시겠어요?\n\n생성된 질문과 메모가 모두 삭제됩니다 (회사 조사 캐시는 보존).\n복구할 수 없습니다.`,
+      `🗑️ 면접 세션 "${session?.round ?? ''}" 을 정말 삭제하시겠어요?\n\n생성된 질문과 메모가 모두 삭제됩니다 (회사 조사 캐시는 보존).${userLine}\n복구할 수 없습니다.`,
     )
     if (!ok) return
     deleteSession(sessionId, {
@@ -528,55 +716,54 @@ export function InterviewSessionPage() {
     })
   }
 
-  const handleGenerate = async (isRegenerate = false) => {
-    if (isRegenerate) {
-      const remaining = quota
-        ? `오늘 ${quota.dayLimit - quota.dayUsed}/${quota.dayLimit}회 · 이번 달 ${quota.monthLimit - quota.monthUsed}/${quota.monthLimit}회`
-        : ''
-      const ok = window.confirm(
-        `기존 질문과 메모가 모두 삭제되고 새로 생성됩니다.\nAI 호출 1회가 차감됩니다.${remaining ? `\n잔여: ${remaining}` : ''}\n\n진행하시겠어요?`,
-      )
-      if (!ok) return
-    }
-    if (!(await ensureAiConsent())) return
-    if (!(await ensureJobTitle())) return
+  /**
+   * AI 질문 생성 — **모달이 고른 개수·유형으로 더한다** (질문 은행 D2b).
+   *
+   * 🔴 `window.confirm` 이 사라진 건 카피를 다듬어서가 아니라 **위험이 사라져서다.**
+   * 예전 생성은 기존 질문과 사용자가 쓴 답변을 **전부 지우고** 새로 만들었고, 확인창은
+   * 그걸 막는 마지막 문이었다. 지금 생성은 아무것도 지우지 않는다 (ADR-074 뒤집기) —
+   * 지울 게 없는 동작에 확인창을 남기면 사용자는 확인창을 안 읽는 습관만 배운다.
+   * 데이터가 사라지는 자리는 이제 ↻ 낱개 교체 하나뿐이고, 확인은 **거기**에 있다.
+   *
+   * 결과를 그대로 돌려준다 — 모달이 `NEED_COVERLETTER` 를 안내 화면으로 바꿔야 해서다.
+   */
+  const handleGenerate = async (
+    dto: GenerateSessionDto,
+  ): Promise<GenerateSessionResult | undefined> => {
+    // 사전 게이트 — 취소하면 호출하지 않는다 (코인·쿼터 소모 방지)
+    if (!(await ensureAiConsent())) return undefined
+    if (!(await ensureJobTitle())) return undefined
     try {
-      // 🔴 파괴적 의사표시를 서버에 그대로 넘긴다 — 확인창을 통과한 경로만 true
-      const result = await generateSession(isRegenerate)
+      const result = await generateSession(dto)
       if (result.status === 'ok') {
-        // v2 — 세션 생성은 **질문만** 만든다. 꼬리질문 개수는 항상 0 이라 안 쓴다
+        /*
+          🔴 캡 때문에 덜 만들었으면 **서버 문구가 이긴다** (`notice`). 캡 숫자가 바뀔 때
+          프론트도 같이 고쳐야 하는 구조를 만들지 않는다.
+        */
         toast.show(
-          `질문 ${result.meta?.mainCount ?? 0}개 생성 — 답변은 각 질문에서 만들 수 있어요`,
+          result.notice ??
+            `질문 ${result.meta?.mainCount ?? 0}개를 추가했어요 — 답변은 각 질문에서 만들 수 있어요`,
         )
-      } else if (result.code === 'REGENERATE_REQUIRED') {
-        /*
-          🔴 **서버가 화면을 정정한 상황이다.** 화면은 "질문이 없다" 고 믿고 최초 생성을
-          보냈는데, 서버가 세어 보니 있었다 — 조회가 실패했다는 뜻이다. 이때 필요한 건
-          "실패했어요" 가 아니라 **답변이 무사하다는 사실**과 새로고침이다.
-          여기서 재생성을 권하면 이 가드를 만든 이유가 없어진다.
-        */
-        /*
-          🔴 사용자에게 새로고침을 시킬 이유가 없다 — **서버가 방금 「있다」고 알려줬으니**
-          그대로 다시 가져오면 화면이 스스로 회복한다. 저위험 동작은 확인 없이 실행한다는
-          AI UX 원칙과도 같은 결이다.
-        */
-        qc.invalidateQueries({ queryKey: questionsKey(sessionId) })
-        qc.invalidateQueries({ queryKey: sessionKey(sessionId) })
-        toast.error(
-          '이미 만들어 둔 질문이 있어요 — 작성한 답변은 그대로 있어요. 다시 불러올게요.',
-        )
-      } else {
-        toast.error(result.reason ?? '생성에 실패했어요.')
+        return result
       }
+      /*
+        자소서 게이트는 **토스트로 흘리지 않는다.** 여기서 필요한 건 "실패했어요" 가 아니라
+        자소서를 쓰러 가는 길이고, 토스트는 몇 초 뒤 그 길까지 데려간다. 모달이 받는다.
+      */
+      if (isNeedCoverletterBlocked(result)) return result
+      // 그 외 차단(쿼터·동의·생성 중복·장애)은 **서버 reason 그대로** — 진짜 이유를 덮지 않는다
+      toast.error(result.reason ?? '생성에 실패했어요.')
+      return result
     } catch (err) {
       // 인터셉터가 이미 토스트를 띄웠거나(400 서버 메시지) 직무 모달을 열었으면
       // 여기서 또 띄우지 않는다 — 고정 문구가 진짜 이유를 덮는다
       const shown = (err as { config?: { _toastShown?: boolean } })?.config
         ?._toastShown
-      if (shown) return
+      if (shown) return undefined
       const message =
         err instanceof Error ? err.message : 'AI 호출 중 오류가 발생했어요.'
       toast.error(message)
+      return undefined
     }
   }
 
@@ -632,6 +819,16 @@ export function InterviewSessionPage() {
   }
 
   const totalMain = questions.length
+  /**
+   * 생성 모달의 상한(60) 계산 근거.
+   *
+   * 🔴 **depth 0 만 센다 — 서버와 같은 기준이다.** 백엔드 `generateSession` 은
+   * `loadDepth0Questions` 로 세어 `aiCapRemaining` 을 낸다. 꼬리질문까지 더해 세면
+   * 화면이 서버보다 **먼저** 한도를 말한다 — 실제로는 40개를 더 만들 수 있는데
+   * 슬라이더가 25에서 멈추고 "25개 남았어요" 라고 거짓말을 한다.
+   * `questions` 는 트리의 뿌리 배열이라 그 자체가 depth 0 이다.
+   */
+  const aiQuestionCount = questions.filter((q) => q.source === 'ai').length
   const totalFollowup = questions.reduce(
     (n, q) => n + q.children.length + q.children.reduce((m, c) => m + c.children.length, 0),
     0,
@@ -670,9 +867,24 @@ export function InterviewSessionPage() {
                 {INTERVIEW_TYPE_LABEL[session.interviewType]}
               </span>
             )}
+            {/*
+              🔴 **읽기 모드에서도 남는다.** 코인을 쓰지 않고, 면접 직전에 꺼내는 화면이
+              바로 이 버튼이 가는 곳이다 (읽기 모드가 감추는 건 코인 쓰는 버튼뿐).
+              질문이 하나도 없으면 볼 게 없으므로 숨긴다 — 빈 시험은 막다른 길이다.
+            */}
+            {questions.length > 0 && (
+              <button
+                onClick={() => navigate('practice')}
+                className="ml-auto inline-flex items-center gap-1.5 text-xs text-text-tertiary hover:text-brand border border-line hover:border-brand/40 bg-surface-2 px-3 py-1.5 rounded-md transition-colors"
+                title="질문을 골라 실전처럼 한 문항씩 보기"
+              >
+                <Mic size={13} strokeWidth={2} aria-hidden="true" />
+                면접 보기
+              </button>
+            )}
             <button
               onClick={() => setEditing(true)}
-              className="ml-auto text-xs text-text-tertiary hover:text-brand border border-line hover:border-brand/40 bg-surface-2 px-3 py-1.5 rounded-md transition-colors"
+              className={`${questions.length > 0 ? '' : 'ml-auto '}text-xs text-text-tertiary hover:text-brand border border-line hover:border-brand/40 bg-surface-2 px-3 py-1.5 rounded-md transition-colors`}
             >
               ✎ 세션 자료
             </button>
@@ -760,7 +972,9 @@ export function InterviewSessionPage() {
         >
         {/* 🔴 좁은 화면엔 2열 자체가 없다 — 세로 탭도 렌더하지 않는다 */}
         {!narrow && view === 'cl' ? (
-          <SplitTab side="iv" onClick={() => goSplit('iv')} />
+          <div className="min-w-0 self-start sticky top-[88px]">
+            <SplitTab side="iv" onClick={() => goSplit('iv')} />
+          </div>
         ) : (
         /*
           🔴 **반반일 땐 열이 각자 스크롤한다** (2026-08-10).
@@ -1051,8 +1265,13 @@ export function InterviewSessionPage() {
                 <p className="text-text-quaternary text-xs leading-relaxed mb-4">
                   코인은 차감되지 않았어요. 다시 시도해 주세요.
                 </p>
+                {/*
+                  🔴 여기서도 **모달을 거친다.** 예전엔 곧바로 재호출했지만, 생성이
+                  개수·유형을 고르는 동작이 된 지금 이 버튼만 기본값(20개)으로 몰래
+                  쏘면 캡 안내도 코인 문구도 건너뛴다 — 실패 직후가 가장 그게 필요한 순간이다.
+                */}
                 <button
-                  onClick={() => void handleGenerate()}
+                  onClick={() => setGenerateOpen(true)}
                   disabled={generating || quotaBlocked}
                   className="min-h-8 text-xs font-medium text-text-primary bg-brand hover:bg-brand-hover px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                 >
@@ -1092,34 +1311,62 @@ export function InterviewSessionPage() {
                 ))}
               </div>
             ) : questions.length === 0 ? (
-              <div className="border border-dashed border-line bg-surface-2/30 rounded-xl px-6 py-12 text-center">
-                <div className="text-2xl mb-2">✨</div>
-                <p className="text-text-secondary text-sm mb-2">
-                  아직 질문이 없어요
-                </p>
-                <p className="text-text-quaternary text-xs leading-relaxed mb-5">
-                  선택한 자소서·모집 요강·강조 포인트·로그를 바탕으로
-                  <br />
-                  AI 가 예상 질문 + 모범 답안을 만들어줘요.
-                </p>
-                <button
-                  onClick={() => handleGenerate(false)}
-                  disabled={generating || quotaBlocked}
-                  className="bg-brand hover:bg-brand-hover text-text-primary text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50"
-                  title={quotaReason ?? undefined}
-                >
-                  ✨ AI 질문 생성 (메인 20개)
-                </button>
-                <div className="mt-3 flex justify-center">
-                  <AiQuotaChip feature="interview_prep_session" />
+              /*
+                🔴 **기본 동선이 뒤집혔다** (질문 은행 D2). 예전엔 여기 버튼이 AI 생성
+                하나뿐이라, 세션을 만든 사람에게 남은 선택지가 「코인을 쓰거나 나가거나」
+                였다. 실사용자 피드백은 **자기가 받은 기출을 모으고 싶다**는 것이었고,
+                그건 코인도 자소서도 없이 지금 당장 할 수 있는 일이다.
+                그래서 직접 추가가 주(主) 버튼이고 AI 생성은 옆에 선다.
+              */
+              <>
+                <div className="border border-dashed border-line bg-surface-2/30 rounded-xl px-6 py-12 text-center">
+                  <div className="text-2xl mb-2">✨</div>
+                  <p className="text-text-secondary text-sm mb-2">
+                    아직 질문이 없어요
+                  </p>
+                  <p className="text-text-quaternary text-xs leading-relaxed mb-5">
+                    기출·예상 질문을 직접 모으고,
+                    <br />
+                    자소서 기반 AI 질문으로 채워보세요.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      onClick={openAddForm}
+                      aria-expanded={addOpen}
+                      className="bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors"
+                    >
+                      ＋ 질문 추가
+                    </button>
+                    <button
+                      onClick={() => setGenerateOpen(true)}
+                      disabled={generating || quotaBlocked}
+                      className="text-text-secondary hover:text-text-primary bg-card border border-line hover:border-line-strong text-sm font-medium px-5 py-2.5 rounded-md transition-colors disabled:opacity-50"
+                      title={quotaReason ?? undefined}
+                    >
+                      ✨ AI 질문 생성
+                    </button>
+                  </div>
+                  <div className="mt-3 flex justify-center">
+                    <AiQuotaChip feature="interview_prep_session" />
+                  </div>
                 </div>
-              </div>
+                {addOpen && (
+                  <div ref={addFormRef} className="mt-3">
+                    <AddInterviewQuestionForm
+                      sessionId={sessionId}
+                      onClose={closeAddForm}
+                      onAdded={handleAdded}
+                      initialPasteText={bridgeText ?? undefined}
+                    />
+                  </div>
+                )}
+              </>
             ) : (
               <>
                 {/*
                   🔴 **좁은 화면 전용 — 나란히가 안 되니 건너간다** (2026-08-10).
                   1024px 미만에서는 2열이 열당 250px 도 안 나온다. 대신 자소서로 가는 길을
-                  **「↻ 다시 생성」 바로 위**에 둔다 — 답을 쓰다 "내가 뭐라고 썼더라" 가
+                  **「✨ AI 질문 생성」 바로 위**에 둔다 — 답을 쓰다 "내가 뭐라고 썼더라" 가
                   떠오르는 자리가 여기다.
 
                   문구가 「자소서 보기」가 아니라 **「이 면접의 바탕이 된」** 인 이유 —
@@ -1147,6 +1394,20 @@ export function InterviewSessionPage() {
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     {/*
+                      질문 은행 D2 — 직접 적은 질문을 **목록 옆에서** 바로 더한다.
+                      읽기 모드는 훑어보기 전용이라 편집 표면을 두지 않는다 (↻ 와 같은 조건).
+                    */}
+                    {!readMode && (
+                      <button
+                        type="button"
+                        onClick={() => (addOpen ? closeAddForm() : openAddForm())}
+                        aria-expanded={addOpen}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-brand bg-brand/10 border border-brand/25 hover:bg-brand/15 px-2.5 py-1 rounded-md transition-colors"
+                      >
+                        ＋ 질문 추가
+                      </button>
+                    )}
+                    {/*
                       🔴 **좁은 화면에선 감춘다** (2026-08-09). 모바일 목록은 이제 한 줄
                       요약이라 접을 게 없다 — 눌러도 아무 일이 안 일어나는 **거짓 어포던스**가
                       된다. 카드가 실제로 펼쳐지는 건 넓은 화면뿐이다.
@@ -1162,19 +1423,35 @@ export function InterviewSessionPage() {
                     {/* 읽기 모드엔 코인 쓰는 버튼을 두지 않는다 */}
                     {!readMode && (
                       <button
-                        onClick={() => handleGenerate(true)}
+                        onClick={() => setGenerateOpen(true)}
                         disabled={generating || quotaBlocked}
                         className="inline-flex items-center gap-1.5 text-text-tertiary hover:text-text-primary text-xs disabled:opacity-50"
-                        title={quotaReason ?? '기존 질문 모두 삭제 + AI 1회 차감'}
+                        /*
+                          🔴 문구가 `↻ 다시 생성` → `✨ AI 질문 생성` 으로 바뀐 건 카피
+                          다듬기가 아니라 **동작이 달라져서다.** 이 버튼은 더 이상 기존
+                          질문을 지우지 않는다 — 고른 개수만큼 **더한다.** `다시` 를 남겨
+                          두면 사용자는 여전히 답변이 날아갈까 봐 누르지 못한다.
+                        */
+                        title={quotaReason ?? '고른 개수만큼 AI 질문을 더 만들어요'}
                       >
                         {/* 버튼 로딩은 하우스 패턴대로 **텍스트 변경**만 (스피너 없음) */}
                         <span>
-                          {generating ? '다시 만들고 있어요…' : '↻ 다시 생성'}
+                          {generating ? '만들고 있어요…' : '✨ AI 질문 생성'}
                         </span>
                       </button>
                     )}
                   </div>
                 </div>
+                {addOpen && !readMode && (
+                  <div ref={addFormRef}>
+                    <AddInterviewQuestionForm
+                      sessionId={sessionId}
+                      onClose={closeAddForm}
+                      onAdded={handleAdded}
+                      initialPasteText={bridgeText ?? undefined}
+                    />
+                  </div>
+                )}
                 <CategoryFilterAndList
                   questions={questions}
                   sessionId={sessionId}
@@ -1182,6 +1459,8 @@ export function InterviewSessionPage() {
                   readOnly={readMode}
                   allCollapsed={allCollapsed}
                   collapseSignal={collapseSignal}
+                  pendingAdded={pendingAdded}
+                  onAddedShown={clearPendingAdded}
                 />
               </>
             )}
@@ -1281,9 +1560,43 @@ export function InterviewSessionPage() {
           </div>
         )}
 
-        {/* ── 자소서 열 ── */}
+        {/* ── 오른쪽 열 — 자소서 또는 준비 노트 ── */}
         {narrow ? null : view === 'iv' ? (
-          <SplitTab side="cl" onClick={() => goSplit('cl')} />
+          /*
+            🔴 **접힌 채로도 무엇이 있는지 보인다** (2026-08-11). 탭을 하나만 두고 안에서
+            고르게 하면, 준비 노트가 여기 있다는 걸 **한 번 열어 본 사람만** 알게 된다.
+            누른 쪽이 곧 오른쪽 열의 내용이 되고, 여는 방식(그쪽만 전체 펼침)은 기존 그대로다 —
+            버튼에 「펼치기」라고 쓰여 있으면 그 말대로 펼친다(반반은 손잡이가 맡는다).
+          */
+          <div className="min-w-0 self-start sticky top-[88px] flex flex-col items-center gap-2">
+            <SplitTab
+              side="cl"
+              onClick={() => {
+                setRightPane('coverletter')
+                goSplit('cl')
+              }}
+            />
+            {noteAvailable && (
+              <SplitTab
+                side="note"
+                onClick={() => {
+                  setRightPane('note')
+                  goSplit('cl')
+                }}
+              />
+            )}
+          </div>
+        ) : rightPaneView === 'note' && activeNoteStep ? (
+          <StepNotePane
+            scrollable={view === 'both'}
+            applicationId={applicationId}
+            steps={interviewSteps}
+            step={activeNoteStep}
+            onSelectStep={setNoteStepId}
+            switcher={
+              <RightPaneSwitch value={rightPaneView} onChange={setRightPane} />
+            }
+          />
         ) : (
           <CoverletterPane
             loading={clLoading}
@@ -1296,6 +1609,11 @@ export function InterviewSessionPage() {
             openId={openClId}
             onOpen={setOpenClId}
             onUpdate={(clId, dto) => updateCl({ clId, dto })}
+            switcher={
+              noteAvailable ? (
+                <RightPaneSwitch value={rightPaneView} onChange={setRightPane} />
+              ) : null
+            }
           />
         )}
         </div>
@@ -1314,13 +1632,26 @@ export function InterviewSessionPage() {
                 onSuccess: () => {
                   setEditing(false)
                   toast.show(
-                    '저장됐어요. "↻ 다시 생성" 을 누르면 새 자료 기반 질문이 만들어져요.',
+                    '저장됐어요. "✨ AI 질문 생성" 을 누르면 새 자료 기반 질문이 만들어져요.',
                   )
                 },
                 onError: () => toast.error('저장에 실패했습니다.'),
               },
             )
           }}
+        />
+      )}
+
+      {generateOpen && (
+        <GenerateQuestionsModal
+          onClose={() => setGenerateOpen(false)}
+          applicationId={applicationId}
+          aiQuestionCount={aiQuestionCount}
+          hasQuestions={totalMain > 0}
+          onGenerate={handleGenerate}
+          generating={generating}
+          quotaBlocked={quotaBlocked}
+          quotaReason={quotaReason}
         />
       )}
     </div>
@@ -1333,8 +1664,14 @@ export function InterviewSessionPage() {
  * 🔴 **완전히 없애지 않는다.** 사라지면 되돌리는 법을 기억에 맡기게 되고, 한 번 접은
  * 사용자는 다시 안 켠다. 같은 판단을 면접 카드의 AI 답변 접기에서도 했다.
  */
-function SplitTab({ side, onClick }: { side: 'iv' | 'cl'; onClick: () => void }) {
-  const label = side === 'iv' ? '면접' : '자소서'
+function SplitTab({
+  side,
+  onClick,
+}: {
+  side: 'iv' | 'cl' | 'note'
+  onClick: () => void
+}) {
+  const label = side === 'iv' ? '면접' : side === 'cl' ? '자소서' : '준비 노트'
   return (
     <button
       type="button"
@@ -1342,7 +1679,7 @@ function SplitTab({ side, onClick }: { side: 'iv' | 'cl'; onClick: () => void })
       aria-expanded={false}
       aria-label={`${label} 펼치기`}
       title={`${label} 펼치기`}
-      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg min-w-0 w-11 rounded-xl border border-line bg-card hover:bg-surface-3 transition-colors flex flex-col items-center gap-2 py-4 self-start sticky top-[88px]"
+      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg shrink-0 min-w-0 w-11 rounded-xl border border-line bg-card hover:bg-surface-3 transition-colors flex flex-col items-center gap-2 py-4"
     >
       {/*
         🔴 **텍스트 문자 chevron 금지** (memory `feedback_collapsible_chevron`).
@@ -1362,6 +1699,189 @@ function SplitTab({ side, onClick }: { side: 'iv' | 'cl'; onClick: () => void })
         {label}
       </span>
     </button>
+  )
+}
+
+/**
+ * 오른쪽 열 전환 — **자소서 ↔ 준비 노트** (2026-08-11).
+ *
+ * 🔴 **열려 있는 동안에도 바꿀 수 있어야 한다.** 세로 탭만 두면 바꾸려고 열을 한 번 접었다
+ * 다시 펴야 하고, 그 사이 비율이 리셋된다(`goSplit('both')` 가 0.5 로 되돌린다).
+ * 여기서 바꾸면 `split`·`ratio` 를 건드리지 않으므로 **보던 비율 그대로** 내용만 갈린다.
+ *
+ * 문법은 같은 헤더의 「읽기 / 편집」 토글 그대로다 — 한 줄에 세그먼트가 둘인데 생김새가
+ * 다르면 둘 중 하나는 다른 것처럼 읽힌다.
+ */
+function RightPaneSwitch({
+  value,
+  onChange,
+}: {
+  value: 'coverletter' | 'note'
+  onChange: (v: 'coverletter' | 'note') => void
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="오른쪽 열 내용"
+      className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-surface-2 border border-line"
+    >
+      {(
+        [
+          ['coverletter', '자소서'],
+          ['note', '준비 노트'],
+        ] as const
+      ).map(([v, label]) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          aria-pressed={value === v}
+          className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg text-[11px] font-medium px-2.5 py-1.5 rounded-md transition-colors ${
+            value === v
+              ? 'bg-card-solid text-text-primary shadow-sm'
+              : 'text-text-tertiary hover:text-text-secondary'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * 준비 노트 열 — **스텝 페이지의 노트 그대로** (체크리스트·일정·완료 버튼은 제외).
+ *
+ * 🔴 **왜 여기 있나** — 면접 준비 노트의 기본 포맷 첫 칸이 「예상 질문 & 답변」이다. 즉
+ * 여기 적힌 게 곧 이 세션에서 다듬는 것이고, 그런데도 답을 쓰는 화면에서는 볼 수가 없어
+ * 카드 상세 → 스텝으로 나갔다 돌아와야 했다 (자소서와 정확히 같은 이유다).
+ *
+ * 🔴 **읽기 전용이 아니라 편집 가능**이다. 자소서 열과 다른 점인데, 자소서는 「면접 참고용
+ * 재료」라 손대는 게 예외지만 노트는 **면접 준비 그 자체**다 — 질문을 보다 떠오른 걸
+ * 적는 게 이 열의 용도이므로 막으면 다시 나갔다 와야 한다.
+ * 자동 저장(1.5s)·저장 상태 표시는 `StepNoteEditor`(→ `RichTextEditor`) 소관이다.
+ */
+function StepNotePane({
+  scrollable,
+  applicationId,
+  steps,
+  step,
+  onSelectStep,
+  switcher,
+}: {
+  /** 반반일 때만 자기 스크롤 — 한쪽만 볼 땐 페이지 스크롤이 자연스럽다 */
+  scrollable: boolean
+  applicationId: string
+  /** 면접형 스텝 전부 — 2개 이상이면 열 안에서 고른다 */
+  steps: ApplicationStep[]
+  step: ApplicationStep
+  onSelectStep: (stepId: string) => void
+  switcher: React.ReactNode
+}) {
+  const link = useDemoLink()
+  const { mutate: updateStep } = useUpdateStep(applicationId)
+
+  /*
+    🔴 **`StepPage.handleSaveNotes` 와 같은 규칙이어야 한다.** 죽은 `pinnedContent` 는
+    화면에 보일 때 `mergePinnedIntoNotes` 로 앞에 붙는데, 저장하면서 그걸 안 지우면
+    **본문에 들어간 📌 문단 위에 또 붙는다** — 스텝 페이지에 가서야 중복이 드러난다.
+  */
+  const initialNotes = mergePinnedIntoNotes(step.notes, step.pinnedContent)
+  const clearPinned = !!step.pinnedContent
+  const handleSave = (json: string) =>
+    new Promise<void>((resolve, reject) =>
+      updateStep(
+        {
+          stepId: step.id,
+          notes: json,
+          ...(clearPinned ? { pinnedContent: null } : {}),
+        },
+        { onSuccess: () => resolve(), onError: () => reject() },
+      ),
+    )
+
+  return (
+    <section
+      className={`min-w-0 ${
+        scrollable ? 'h-full overflow-y-auto overscroll-contain pr-1' : ''
+      }`}
+      aria-label="면접 준비 노트"
+    >
+      <div className="shrink-0 mb-4 space-y-3">
+        {switcher}
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-text-primary text-lg font-bold truncate">
+              {step.name}
+            </h2>
+            <p className="text-[11px] text-text-tertiary mt-0.5">
+              면접 준비 노트 · 적는 대로 저장돼요
+            </p>
+          </div>
+          {/*
+            조용한 출구 — 체크리스트·일정처럼 여기 없는 것들이 어디 있는지 알려 준다.
+            자소서 열의 「자소서 화면에서 열기 ↗」와 같은 자리·같은 문법이다.
+          */}
+          <Link
+            to={link(`/board/${applicationId}/steps/${step.id}`)}
+            title="체크리스트·일정·장소는 스텝 화면에서"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg shrink-0 text-[11px] text-text-tertiary hover:text-text-secondary underline underline-offset-2 decoration-text-quaternary/50 whitespace-nowrap"
+          >
+            전체 화면으로 →
+          </Link>
+        </div>
+
+        {/*
+          🔴 면접 스텝이 여럿인 카드가 흔하다 (1차 실무 · 2차 임원 · 컬처핏). 어느 노트인지
+          **세션이 정해 줄 수 없어서**(세션은 스텝에 묶여 있지 않다) 여기서 고르게 한다.
+          하나뿐이면 고를 게 없으므로 렌더하지 않는다 — 선택지 1개짜리 select 는 잡음이다.
+        */}
+        {steps.length > 1 && (
+          <span className="relative block">
+            <select
+              value={step.id}
+              onChange={(e) => onSelectStep(e.target.value)}
+              aria-label="준비 노트를 볼 면접 단계"
+              className="w-full appearance-none bg-surface-2 border border-line rounded-md pl-2.5 pr-9 py-1.5 text-[11px] text-text-secondary focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors cursor-pointer"
+            >
+              {steps.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden="true"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none"
+            >
+              <path
+                d="M2 4l4 4 4-4"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        )}
+      </div>
+
+      {/*
+        🔴 **`key` 가 없으면 스텝을 바꿔도 글이 안 바뀐다.** tiptap 은 `content` 를 초기화
+        시점에만 읽으므로, 같은 자리에서 prop 만 갈아끼우면 **직전 스텝의 노트를 그대로
+        보여주면서 새 스텝에 저장한다** — 조용히 남의 노트를 덮어쓰는 경로다.
+      */}
+      <StepNoteEditor
+        key={step.id}
+        stepName={step.name}
+        initialContent={initialNotes}
+        onSave={handleSave}
+      />
+    </section>
   )
 }
 
@@ -1387,6 +1907,7 @@ function CoverletterPane({
   openId,
   onOpen,
   onUpdate,
+  switcher,
 }: {
   /** 반반일 때만 자기 스크롤 — 한쪽만 볼 땐 페이지 스크롤이 자연스럽다 */
   loading: boolean
@@ -1399,6 +1920,8 @@ function CoverletterPane({
   openId: string | null
   onOpen: (id: string | null) => void
   onUpdate: (clId: string, dto: UpdateCoverletterDto) => void
+  /** 자소서 ↔ 준비 노트 전환 — 면접 스텝이 없으면 `null` (고를 게 없다) */
+  switcher: React.ReactNode
 }) {
   // 아무것도 안 열려 있으면 첫 문항 — 빈 열을 보여줄 이유가 없다
   const activeId = openId ?? coverletters[0]?.id ?? null
@@ -1412,6 +1935,8 @@ function CoverletterPane({
       }`}
       aria-label="자기소개서"
     >
+      {/* 전환 세그먼트는 제목 위 — 제목·링크 줄에 끼우면 460px 열에서 셋이 서로를 밀어낸다 */}
+      {switcher && <div className="shrink-0 mb-3">{switcher}</div>}
       <div className="shrink-0 flex items-start gap-2 mb-4">
         <div className="flex-1 min-w-0">
           <h2 className="text-text-primary text-lg font-bold">자기소개서</h2>
@@ -1607,15 +2132,20 @@ function CategoryFilterAndList({
   readOnly = false,
   allCollapsed,
   collapseSignal,
+  pendingAdded = null,
+  onAddedShown,
 }: {
   questions: InterviewPrepQuestion[]
   sessionId: string
   applicationId: string
   /** 읽기 모드 — 카드까지 그대로 내려간다 (꼬리질문 포함) */
   readOnly?: boolean
-  /** 전체 접기·펼치기 — 버튼은 부모(다시 생성 옆)에 있고 상태만 내려온다 */
+  /** 전체 접기·펼치기 — 버튼은 부모(AI 질문 생성 옆)에 있고 상태만 내려온다 */
   allCollapsed: boolean
   collapseSignal: number
+  /** 방금 추가돼 위치 안내를 기다리는 질문들 — 번호를 여기서 매기므로 안내도 여기서 한다 */
+  pendingAdded?: PendingAdded
+  onAddedShown?: () => void
 }) {
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
   /**
@@ -1625,6 +2155,17 @@ function CategoryFilterAndList({
   const [onlyMust, setOnlyMust] = useState(false)
   const mustCount = useMemo(
     () => questions.filter((q) => q.mustPrepare).length,
+    [questions],
+  )
+  /**
+   * 🔁 지난 「면접 보기」에서 「다시」로 찍은 것만 — **연습의 결과가 준비로 이어지는 길**이다.
+   * 연습 화면은 답을 고쳐 쓸 수 없으니, 찍고 나서 할 일은 결국 여기로 돌아오는 것이다.
+   *
+   * 연습 전 세션은 전부 `null` 이라 0개다 — 그땐 칩 자체를 안 띄운다 (⭐ 와 같은 규칙).
+   */
+  const [onlyAgain, setOnlyAgain] = useState(false)
+  const againCount = useMemo(
+    () => questions.filter((q) => q.lastPracticeResult === 'again').length,
     [questions],
   )
   /**
@@ -1657,23 +2198,20 @@ function CategoryFilterAndList({
    */
   const numbered = useMemo(() => {
     return [...questions]
-      .sort(
-        (a, b) =>
-          (CATEGORY_FLOW_ORDER[a.category ?? ''] ?? CATEGORY_FLOW_FALLBACK) -
-            (CATEGORY_FLOW_ORDER[b.category ?? ''] ?? CATEGORY_FLOW_FALLBACK) ||
-          a.orderIndex - b.orderIndex,
-      )
+      /* 「면접 보기」의 `차례` 와 **같은 함수** — 목록 번호와 시험 순서가 갈라지지 않게 */
+      .sort(compareByInterviewFlow)
       .map((q, i) => ({ q, no: i + 1 }))
   }, [questions])
 
   const filtered = useMemo(() => {
     let list = numbered
     if (onlyMust) list = list.filter(({ q }) => q.mustPrepare)
+    if (onlyAgain) list = list.filter(({ q }) => q.lastPracticeResult === 'again')
     if (selectedCat === '(미분류)') list = list.filter(({ q }) => !q.category)
     else if (selectedCat)
       list = list.filter(({ q }) => q.category === selectedCat)
     return list
-  }, [numbered, selectedCat, onlyMust])
+  }, [numbered, selectedCat, onlyMust, onlyAgain])
 
   const totalCats = catCounts.size
 
@@ -1710,6 +2248,75 @@ function CategoryFilterAndList({
     if (focusIdx === null) return
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [focusIdx])
+
+  /**
+   * 방금 들어간 질문에 두르는 강조.
+   *
+   * 🔴 **별도 state 로 복제하지 않는다.** `pendingAdded` 가 살아 있는 동안이 곧 강조
+   * 구간이고, 2.5초 뒤 부모가 비우면 저절로 걷힌다. 복제하면 effect 안에서 setState 를
+   * 하게 되고(cascading render), 무엇보다 **두 값이 어긋날 자리**가 생긴다.
+   * 목록에 나타나기 전에도 세팅돼 있지만 그때는 그릴 요소 자체가 없다.
+   */
+  const highlighted = useMemo(
+    () => new Set(pendingAdded?.ids ?? []),
+    [pendingAdded],
+  )
+  /** 같은 추가를 두 번 알리지 않는다 — `numbered` 가 바뀔 때마다 아래 effect 가 다시 돈다 */
+  const announcedRef = useRef<string | null>(null)
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current)
+    },
+    [],
+  )
+  /**
+   * 🔴 **추가 직후 "어디로 갔는지" 를 말해 준다** (2026-08-11).
+   *
+   * 목록이 면접 진행 순서라 새 질문은 맨 끝이 아니라 카테고리의 자리로 들어간다.
+   * 단건은 **번호만 알려주고 스크롤하지 않는다** — 연달아 적는 흐름이라 화면이 움직이면
+   * 입력칸을 뺏긴다. 붙여넣기는 폼이 닫히고 흐름이 끝나므로 그때만 데려간다.
+   *
+   * 번호는 `numbered` 에 실제로 나타난 뒤에야 확정된다 — 서버 응답 시점엔 아직 refetch
+   * 전이라 못 찾는다. 못 찾으면 그냥 두고 **다음 렌더에 다시 본다.**
+   */
+  useEffect(() => {
+    if (!pendingAdded) return
+    const [firstId] = pendingAdded.ids
+    if (announcedRef.current === firstId) return
+    const hit = numbered.find(({ q }) => q.id === firstId)
+    if (!hit) return
+    announcedRef.current = firstId
+
+    if (pendingAdded.multi) {
+      // 🔴 JS 스크롤은 index.css 의 reduced-motion 미디어가 못 줄인다 — 여기서 직접 존중
+      const reduceMotion = window.matchMedia?.(
+        '(prefers-reduced-motion: reduce)',
+      ).matches
+      document
+        .querySelector(`[data-question-id="${firstId}"]`)
+        ?.scrollIntoView?.({
+          block: 'center',
+          behavior: reduceMotion ? 'auto' : 'smooth',
+        })
+      toast.show(
+        `질문 ${pendingAdded.ids.length}개를 추가했어요 (면접 흐름 순서로 배치돼요)`,
+      )
+    } else {
+      toast.show(`「${clipQuestion(hit.q.questionText)}」 ${hit.no}번으로 들어갔어요`)
+    }
+
+    /*
+      deps 가 바뀔 때 정리하지 않는다 — `numbered` 는 자동저장·refetch 로 자주 바뀌는데,
+      cleanup 으로 타이머를 끊으면 위 `announcedRef` 가드에 걸려 다시 걸지 못하고
+      강조가 영원히 남는다. 언마운트 정리는 위 effect 가 맡는다.
+    */
+    if (highlightTimer.current) clearTimeout(highlightTimer.current)
+    highlightTimer.current = setTimeout(
+      () => onAddedShown?.(),
+      ADDED_HIGHLIGHT_MS,
+    )
+  }, [pendingAdded, numbered, onAddedShown])
 
   if (narrow && focused) {
     const answered = filtered.filter(({ q }) => (q.myMemo ?? '').trim()).length
@@ -1827,9 +2434,29 @@ function CategoryFilterAndList({
             </button>
           )}
           {/*
+            🔁 다시 볼 것 — ⭐ 와 **같은 토글 문법**이되 색은 danger 다 (축이 다르다).
+            연습 전 세션은 0개라 아예 안 띄운다: 쓸 수 없는 칩이 필터 줄 맨 앞을 차지하면
+            정작 쓰는 카테고리 칩이 스크롤 밖으로 밀린다.
+          */}
+          {againCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setOnlyAgain((v) => !v)}
+              aria-pressed={onlyAgain}
+              title="지난 「면접 보기」에서 「다시」로 표시한 질문만 봅니다"
+              className={`shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border transition-colors inline-flex items-center gap-1 ${
+                onlyAgain
+                  ? 'bg-danger text-white border-danger'
+                  : 'bg-danger/10 text-danger border-danger/25 hover:bg-danger/15'
+              }`}
+            >
+              🔁 다시 볼 것 ({againCount})
+            </button>
+          )}
+          {/*
             🔴 **전체 접기·펼치기는 여기 없다** (2026-08-07). `ml-auto` 로 우측에 밀었는데
             **뒤에 카테고리 칩이 더 붙어서**, 줄바꿈되면 목록 한가운데 놓였다.
-            필터 바는 필터만 두고, 목록 전체를 다루는 동작은 `↻ 다시 생성` 옆으로 올렸다.
+            필터 바는 필터만 두고, 목록 전체를 다루는 동작은 `✨ AI 질문 생성` 옆으로 올렸다.
           */}
           {Array.from(catCounts.entries()).map(([cat, count]) => {
             const isActive = selectedCat === cat
@@ -1890,7 +2517,13 @@ function CategoryFilterAndList({
                 0,
               )
             return (
-              <li key={q.id}>
+              <li
+                key={q.id}
+                data-question-id={q.id}
+                className={`rounded-lg transition-shadow ${
+                  highlighted.has(q.id) ? ADDED_HIGHLIGHT : ''
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => setFocusIdx(i)}
@@ -1950,17 +2583,28 @@ function CategoryFilterAndList({
         </ul>
       ) : (
         <div className="space-y-3">
+          {/*
+            래퍼 div 는 **하이라이트와 스크롤 표적** 전용이다 — 카드 컴포넌트는 그대로 둔다.
+            radius 는 카드(`rounded-xl`)와 맞춘다. 안 맞추면 모서리에서 링이 튄다.
+          */}
           {filtered.map(({ q, no }) => (
-            <InterviewQuestionCard
+            <div
               key={q.id}
-              question={q}
-              questionNo={no}
-              sessionId={sessionId}
-              applicationId={applicationId}
-              collapseSignal={collapseSignal}
-              collapseAll={allCollapsed}
-              readOnly={readOnly}
-            />
+              data-question-id={q.id}
+              className={`rounded-xl transition-shadow ${
+                highlighted.has(q.id) ? ADDED_HIGHLIGHT : ''
+              }`}
+            >
+              <InterviewQuestionCard
+                question={q}
+                questionNo={no}
+                sessionId={sessionId}
+                applicationId={applicationId}
+                collapseSignal={collapseSignal}
+                collapseAll={allCollapsed}
+                readOnly={readOnly}
+              />
+            </div>
           ))}
         </div>
       )}

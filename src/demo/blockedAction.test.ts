@@ -73,6 +73,18 @@ describe('데모 — AI 동작 차단', () => {
     await call(m, url, { myMemo: '메모' })
     expect(useDemoSignupStore.getState().open).toBe(false)
   })
+
+  /**
+   * 🔴 **「면접 보기」 자가평가도 AI 가 아니다** (질문 은행 D3). 막으면 연습 도중 문항마다
+   * 가입 모달이 떠서 **루프가 끝까지 도는 걸 볼 수 없다** — 데모에서 보여줄 게 그건데도.
+   * 코인도 안 쓰고 서버 판단도 없는, 내가 나를 채점한 한 칸이다.
+   */
+  it('🔴 post /interview-prep-questions/:id/practice → 차단되지 않는다', async () => {
+    await call('post', '/interview-prep-questions/demo-is1-q7/practice', {
+      result: 'good',
+    })
+    expect(useDemoSignupStore.getState().open).toBe(false)
+  })
 })
 
 /**
@@ -86,6 +98,9 @@ describe('데모 — 모달이 맥락을 받는다', () => {
     ['/interview-prep-questions/q1/answer', 'ai_answer'],
     ['/interview-prep-questions/q1/followups', 'ai_followup'],
     ['/interview-prep-sessions/s1/generate', 'ai_generate'],
+    // 🔴 직접 적은 질문은 AI 가 아니다 — "예상 질문을 뽑아드릴게요" 가 뜨면 방금 한
+    //    행동과 어긋난다. `/generate` 와 접두사가 같아 순서가 뒤집히면 조용히 섞인다
+    ['/interview-prep-sessions/s1/questions/bulk', 'custom_question'],
     // 🔴 세션 생성 = 질문 생성이다. 예전엔 'create'(지원 카드 추가) 로 떨어져
     //    "지원한 회사를 추가하면 마감 D-day 를…" 이 떴다 (2026-08-08 QA)
     ['/interview-prep-sessions', 'ai_generate'],
