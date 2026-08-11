@@ -2,7 +2,7 @@ import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { toast } from '@/stores/toastStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useJobTitleGateStore } from '@/stores/jobTitleGateStore'
-import { postToNative } from '@/utils/nativeBridge'
+import { isInNativeApp, postToNative } from '@/utils/nativeBridge'
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -165,7 +165,12 @@ export function handleAuthFailure(err: unknown): void {
   } else {
     toast.error('로그인이 만료되었습니다.')
   }
-  window.location.href = '/'
+  /*
+    🔴 앱에선 화면 전환이 네이티브 소유다 — 위 logout 브리지를 받은 네이티브가 푸시 기기
+    해제 후 로그인 화면으로 바꾼다. 여기서 랜딩으로 밀면 그 대기 시간 동안 랜딩이 보인다
+    (세션 만료 로그아웃도 사용자 로그아웃과 같은 깜빡임을 겪고 있었다).
+  */
+  if (!isInNativeApp()) window.location.href = '/'
 }
 
 /** Test-only: refreshPromise singleton을 reset (vitest 사이 isolation) */

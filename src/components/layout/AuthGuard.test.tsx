@@ -23,6 +23,11 @@
  * 15. 401 은 재시도 대상 아님 — 즉시 랜딩 (재호출 없음)
  * 16. 429 도 재시도 대상 아님 — 즉시 rate limit 카드
  * 17. 언마운트되면 예약된 재시도 타이머는 발사되지 않는다
+ *
+ * 앱 웹뷰 로그아웃 깜빡임 (2026-08-12) — 케이스 먼저:
+ * 18. 앱 + 401 확정(재시도 대상 아님) → 랜딩이 아니라 **빈 화면** (네이티브 전환 대기)
+ * 19. 앱 + 로그인 중 clearAuth (사용자 로그아웃) → 랜딩 안 그림
+ * 20. 브라우저 + 401 → 기존대로 랜딩 (앱 분기가 웹을 망가뜨리지 않는다)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
@@ -314,5 +319,75 @@ describe('AuthGuard — 네트워크·5xx 자동 재시도', () => {
     unmount()
     await advance(30_000)
     expect(mockedPerformRefresh).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
+ * 🔴 앱 웹뷰 로그아웃 랜딩 깜빡임 (2026-08-12).
+ *
+ * 로그아웃 핸들러에서 `navigate('/')` 를 지우는 것만으로는 **안 막힌다.**
+ * `clearAuth()` 가 store 구독 재렌더를 일으키고, 그 재렌더가 `if (!accessToken)` 를
+ * 통과해 `<Navigate to="/" />` 로 랜딩을 그린다. 앱 안에서 화면 전환은 네이티브 소유이므로
+ * 웹뷰는 빈 화면으로 버틴다.
+ */
+describe('AuthGuard — 앱 웹뷰에서는 랜딩을 그리지 않는다', () => {
+  interface RNWindowMock {
+    ReactNativeWebView?: { postMessage: (data: string) => void }
+  }
+  const enterApp = () => {
+    ;(window as unknown as RNWindowMock).ReactNativeWebView = {
+      postMessage: vi.fn(),
+    }
+  }
+
+  afterEach(() => {
+    // 모드 누수 금지 — 앱 판정이 남으면 다른 케이스가 엉뚱한 이유로 통과한다
+    delete (window as unknown as RNWindowMock).ReactNativeWebView
+  })
+
+  it('18. 앱 + 401 확정 → 랜딩 아님 · 빈 화면 (네이티브 전환 대기)', async () => {
+    enterApp()
+    mockedPerformRefresh.mockRejectedValue({ response: { status: 401 } })
+
+    const { container } = renderApp('/dashboard')
+
+    await waitFor(() => expect(mockedPerformRefresh).toHaveBeenCalledTimes(1))
+    // reject → setChecking(false) 까지 흘려보낸 뒤에 본다 (검사가 이르면 빈 화면은 공짜다)
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    expect(container.textContent).toBe('')
+    expect(screen.queryByText('LANDING_PAGE')).toBeNull()
+    expect(screen.queryByText('DASHBOARD_PAGE')).toBeNull()
+  })
+
+  it('19. 앱 + 로그인 중 clearAuth (사용자 로그아웃) → 랜딩 안 그림', async () => {
+    enterApp()
+    useAuthStore.setState({ accessToken: 'existing', user: sampleUser })
+    const { container } = renderApp('/dashboard')
+    expect(screen.getByText('DASHBOARD_PAGE')).toBeTruthy()
+
+    // 로그아웃 핸들러가 하는 일 = 이것. navigate 없이도 재렌더가 랜딩을 그리는지 본다
+    await act(async () => {
+      useAuthStore.getState().clearAuth()
+    })
+
+    expect(screen.queryByText('LANDING_PAGE')).toBeNull()
+    expect(container.textContent).toBe('')
+  })
+
+  it('20. 브라우저 + 401 → 기존대로 랜딩 (웹 경로 무손상)', async () => {
+    mockedPerformRefresh.mockRejectedValue({ response: { status: 401 } })
+    renderApp('/dashboard')
+    await waitFor(() => expect(screen.getByText('LANDING_PAGE')).toBeTruthy())
+  })
+
+  it('20-1. 브라우저 + 로그인 중 clearAuth → 기존대로 랜딩', async () => {
+    useAuthStore.setState({ accessToken: 'existing', user: sampleUser })
+    renderApp('/dashboard')
+    await act(async () => {
+      useAuthStore.getState().clearAuth()
+    })
+    expect(screen.getByText('LANDING_PAGE')).toBeTruthy()
   })
 })

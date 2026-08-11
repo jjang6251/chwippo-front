@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { agreeTerms as agreeTermsApi } from '@/api/users'
 import { apiClient } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
-import { postToNative } from '@/utils/nativeBridge'
+import { isInNativeApp, postToNative } from '@/utils/nativeBridge'
 
 export function TermsAgreement() {
   const navigate = useNavigate()
@@ -22,7 +22,8 @@ export function TermsAgreement() {
       try { await apiClient.post('/auth/logout') } catch { /* 무시 */ }
       clearAuth()
       postToNative({ type: 'logout' })
-      navigate('/', { replace: true })
+      // 앱에선 화면 전환이 네이티브 소유 — 랜딩을 그리면 네이티브 전환 대기 동안 그대로 보인다
+      if (!isInNativeApp()) navigate('/', { replace: true })
     }
     window.addEventListener('popstate', handler)
     return () => window.removeEventListener('popstate', handler)
@@ -204,7 +205,8 @@ export function TermsAgreement() {
               try { await apiClient.post('/auth/logout') } catch { /* 무시 */ }
               clearAuth()
               postToNative({ type: 'logout' })
-              navigate('/', { replace: true })
+              // 앱에선 화면 전환이 네이티브 소유 — 랜딩을 그리면 네이티브 전환 대기 동안 그대로 보인다
+              if (!isInNativeApp()) navigate('/', { replace: true })
             }}
             className="text-text-tertiary text-xs px-3 py-1.5 rounded-lg border border-line hover:bg-card active:bg-card-strong hover:text-text-secondary hover:border-line-strong transition-colors shrink-0"
           >

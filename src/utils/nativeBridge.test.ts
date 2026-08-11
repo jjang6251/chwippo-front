@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { postToNative } from './nativeBridge'
+import { isInNativeApp, postToNative } from './nativeBridge'
 
 /**
  * nativeBridge spec.
@@ -72,5 +72,43 @@ describe('postToNative', () => {
     }
 
     expect(() => postToNative({ type: 'logout' })).not.toThrow()
+  })
+})
+
+/**
+ * isInNativeApp — 앱 웹뷰 판정 (로그아웃 랜딩 깜빡임 수리, 2026-08-12).
+ *
+ * 시나리오:
+ *   1) 일반 브라우저 (ReactNativeWebView 없음) → false
+ *   2) 앱 웹뷰 (ReactNativeWebView 있음) → true
+ *   3) postToNative 와 **같은 기준**이어야 한다 — 판정이 갈리면 "브리지는 보냈는데
+ *      랜딩도 그린다" 같은 반쪽 상태가 난다
+ */
+describe('isInNativeApp', () => {
+  afterEach(() => {
+    delete (window as unknown as RNWindowMock).ReactNativeWebView
+  })
+
+  it('ReactNativeWebView 없으면 false (일반 브라우저)', () => {
+    expect(isInNativeApp()).toBe(false)
+  })
+
+  it('ReactNativeWebView 있으면 true (앱 웹뷰)', () => {
+    ;(window as unknown as RNWindowMock).ReactNativeWebView = {
+      postMessage: vi.fn(),
+    }
+    expect(isInNativeApp()).toBe(true)
+  })
+
+  it('🔴 postToNative 와 판정 기준이 같다 (true 면 발신 · false 면 no-op)', () => {
+    const postMessage = vi.fn()
+    expect(isInNativeApp()).toBe(false)
+    postToNative({ type: 'logout' })
+    expect(postMessage).not.toHaveBeenCalled()
+
+    ;(window as unknown as RNWindowMock).ReactNativeWebView = { postMessage }
+    expect(isInNativeApp()).toBe(true)
+    postToNative({ type: 'logout' })
+    expect(postMessage).toHaveBeenCalledWith('{"type":"logout"}')
   })
 })
