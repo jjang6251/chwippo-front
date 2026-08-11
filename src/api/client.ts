@@ -95,6 +95,13 @@ async function doRefresh(): Promise<RefreshResult> {
       }
       useAuthStore.getState().setAccessToken(accessToken)
       if (user) useAuthStore.getState().setUser(user)
+      /*
+        🔴 회전 성공을 네이티브에 알린다 (refresh 단일 주체화 — plan refresh-single-writer).
+        앱에선 웹뷰가 유일한 회전자이고, 네이티브(푸시 등록·배지 폴링)는 여기서 받은
+        access 를 SecureStore 에 보관해 쓴다. 웹뷰 밖에선 postToNative 가 no-op 이라
+        분기 불필요, 구앱은 모르는 메시지를 무시하므로 무해 (핸드셰이크 불요).
+      */
+      postToNative({ type: 'token', accessToken })
       return { accessToken, user }
     } catch (err) {
       lastErr = err

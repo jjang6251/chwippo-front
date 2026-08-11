@@ -77,6 +77,31 @@ describe('performRefresh', () => {
     expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
   })
 
+  /**
+   * 🔴 refresh 단일 주체화 (plan refresh-single-writer, 2026-08-13).
+   * 앱에선 웹뷰가 유일 회전자 — 회전 성공마다 네이티브에 새 access 를 밀어줘야
+   * 네이티브(푸시 등록·배지 폴링)가 만료 토큰으로 401 을 맞지 않는다.
+   * 실패 시엔 보내지 않는다 — 죽은 토큰을 SecureStore 에 밀어넣으면 안 된다.
+   */
+  it('🔴 회전 성공 → 네이티브에 token 브리지 발신', async () => {
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'new-token' }, message: 'ok' },
+    })
+    await performRefresh()
+    expect(mockedPostToNative).toHaveBeenCalledWith({
+      type: 'token',
+      accessToken: 'new-token',
+    })
+  })
+
+  it('🔴 회전 실패(401) → token 브리지 미발신', async () => {
+    mockedAxiosPost.mockRejectedValueOnce({ response: { status: 401 } })
+    await expect(performRefresh()).rejects.toBeTruthy()
+    expect(mockedPostToNative).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'token' }),
+    )
+  })
+
   it('user 포함 응답 → setUser도 호출 + 반환값에 user 포함', async () => {
     const user = {
       id: 'u1',

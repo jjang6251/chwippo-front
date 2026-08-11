@@ -29,6 +29,12 @@ export type NativeMessage =
   | { type: 'deadline-saved' }
   | { type: 'get-app-lock' }
   | { type: 'set-app-lock'; enabled: boolean }
+  /**
+   * refresh 회전 성공 시 새 access token 전달 (refresh 단일 주체화 — 웹뷰가 유일 회전자).
+   * 네이티브는 SecureStore 'jwt' 갱신에만 사용. ⚠️ RT 가 아니라 단명 access 이고,
+   * 채널이 웹뷰→앱 내부 postMessage 라 과거 제거된 sessionStorage 평문 표면과 다르다.
+   */
+  | { type: 'token'; accessToken: string }
 
 interface RNWindow {
   ReactNativeWebView?: {
