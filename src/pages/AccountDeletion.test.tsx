@@ -82,5 +82,20 @@ describe('계정 삭제 안내', () => {
         '/privacy',
       )
     })
+
+    /**
+     * Play 데이터 보안 요건 ③ — 보관 데이터 유형·기간을 이 페이지 자체에 명시.
+     * 문구는 방침 §3·§6 미러링 — 방침이 바뀌면 이 spec 이 드리프트를 잡는다.
+     */
+    it('보관되는 데이터 및 기간 섹션을 명시한다 (방침 §3·§6 미러)', () => {
+      renderPage()
+      expect(screen.getByText('보관되는 데이터 및 기간')).toBeInTheDocument()
+      expect(
+        screen.getByText(/추가로 보관하는 개인정보는 없습니다/),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/법령에 의해 보존 의무가 있는 정보는 해당 법정 기간/),
+      ).toBeInTheDocument()
+    })
   })
 })
