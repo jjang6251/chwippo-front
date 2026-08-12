@@ -89,14 +89,19 @@ export const ROUTE_META: Record<string, RouteMeta> = {
 }
 
 /**
- * 🔴 `Object.hasOwn` 으로 조회한다 — 그냥 `ROUTE_META[key]` 를 쓰면 `'constructor'`·`'__proto__'`
+ * 🔴 own-property 확인 후 조회한다 — 그냥 `ROUTE_META[key]` 를 쓰면 `'constructor'`·`'__proto__'`
  * 같은 키에서 **`Object.prototype` 값이 새어 나온다** (실검 확인, CWE-1321).
  * 라우터의 `pathname` 은 언제나 `/` 로 시작해 지금은 도달 불가하지만, 이 함수들은 export 라
  * 다른 호출부가 생기면 뚫린다. 값 하나로 막을 수 있는 것을 조건에 의존하지 않는다.
+ *
+ * 🔴 `Object.hasOwn` 금지 — ES2022 라 iOS/Safari 15.4 미만 WebKit 에 없고, 이 함수는
+ * 전 페이지 렌더 경로라 해당 기기에서 **앱·웹 전 화면이 죽는다** (2026-08-12 실사고
+ * CHWIPPO-FRONT-3, 앱 WebView 16회 크래시). `hasOwnProperty.call` 은 의미가 같고 전 브라우저 지원.
  */
 function lookup(pathname: string): { key: string; meta: RouteMeta | null } {
   const key = pathname !== '/' ? pathname.replace(/\/+$/, '') : '/'
-  return { key, meta: Object.hasOwn(ROUTE_META, key) ? ROUTE_META[key] : null }
+  const has = Object.prototype.hasOwnProperty.call(ROUTE_META, key)
+  return { key, meta: has ? ROUTE_META[key] : null }
 }
 
 /** 경로 → 메타. 끝의 `/` 는 무시하고 찾는다(`/privacy/` 도 같은 페이지다) */
