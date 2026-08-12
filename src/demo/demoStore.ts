@@ -46,7 +46,9 @@ interface DemoState {
   interviewQuestions: Record<string, InterviewPrepQuestion[]>
 }
 
-const clone = <T>(v: T): T => structuredClone(v)
+// structuredClone 금지 — ES2022 급 API 라 iOS 15.4 미만 WebKit 에 없어 데모 전체가 죽는다
+// (CHWIPPO-FRONT-3 과 같은 기기 대역). 픽스처는 빌더가 전부 문자열·숫자로 만들어 JSON-safe.
+const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 
 // 신규 항목 id 생성기 — reset 마다 0 부터 (테스트 결정성)
 let seq = 0

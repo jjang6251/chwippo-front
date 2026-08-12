@@ -161,3 +161,32 @@ describe('demoStore — 자소서·캘린더 이벤트', () => {
     expect(ev?.isStarred).toBe(true)
   })
 })
+
+/**
+ * 🔴 구형 WebKit 시뮬레이션 (2026-08-12 실사고 CHWIPPO-FRONT-3 과 같은 기기 대역).
+ * `structuredClone` 도 ES2022 급 — iOS/Safari 15.4 미만 엔진에는 없다. 데모 진입 시
+ * clone 이 첫 호출이라 그 기기에선 둘러보기 전체가 죽는다. jsdom 은 이 API 를 가지므로
+ * "지워진 환경"을 흉내내야만 회귀가 잡힌다 (/qa 16축: 실행 환경 호환).
+ * 구현이 structuredClone 으로 되돌아가면 이 블록이 실패한다.
+ *
+ * ⚠️ stub 은 호출 구간에만 — jsdom·vitest 내부도 ES2022 API 를 쓴다 (routeMeta.test 참조).
+ */
+describe('demoStore — structuredClone 이 없는 구형 엔진에서도 동작', () => {
+  it('reset·조회·deep copy 가 전부 동작한다', () => {
+    const original = globalThis.structuredClone
+    let count: number
+    let origStatus: string | undefined
+    try {
+      ;(globalThis as { structuredClone?: unknown }).structuredClone = undefined
+      store.resetDemoStore()
+      count = store.getApplications().length
+      // deep copy 유지 — store mutation 이 sampleData 상수를 오염시키지 않는다
+      store.updateApplication('demo-a1', { status: 'PASSED' })
+      origStatus = S.DEMO_APPLICATIONS.find((a) => a.id === 'demo-a1')?.status
+    } finally {
+      ;(globalThis as { structuredClone?: unknown }).structuredClone = original
+    }
+    expect(count).toBe(S.DEMO_APPLICATIONS.length)
+    expect(origStatus).toBe('IN_PROGRESS')
+  })
+})
