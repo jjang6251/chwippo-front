@@ -1,3 +1,7 @@
+// ⚠️ 반드시 **첫 줄** — ES module import 는 선언 순서대로 평가되므로, 구형 WebKit 에 없는
+// 내장 API 는 Sentry 초기화·의존성(tiptap 등) 로드보다 먼저 전역에 채워져 있어야 한다.
+// 아래로 내리면 그 사이 코드가 먼저 실행돼 폴리필 전에 터진다.
+import './polyfills'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

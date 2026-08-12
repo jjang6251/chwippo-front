@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from '@/stores/toastStore'
 
 interface CopyButtonProps {
   value?: string
@@ -10,9 +11,15 @@ export function CopyButton({ value }: CopyButtonProps) {
 
   const handleCopy = async () => {
     if (isEmpty || copied) return
-    await navigator.clipboard.writeText(value!)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 800)
+    try {
+      await navigator.clipboard.writeText(value!)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 800)
+    } catch {
+      // clipboard 권한 거부·비보안 컨텍스트 — 값은 화면에 이미 보이므로 치명적이지 않다.
+      // 방어가 없으면 rejection 이 unhandled 로 새어 Sentry 에 크래시로 잡힌다 (CHWIPPO-FRONT-6).
+      toast.error('복사에 실패했어요. 직접 선택해 복사해 주세요.')
+    }
   }
 
   return (
