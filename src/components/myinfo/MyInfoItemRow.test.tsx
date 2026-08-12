@@ -1,6 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MyInfoItemRow } from './MyInfoItemRow'
+
+const toastError = vi.fn()
+vi.mock('@/stores/toastStore', () => ({
+  toast: { error: (...a: unknown[]) => toastError(...a) },
+}))
+
+function setClipboard(impl: () => Promise<void>) {
+  Object.assign(navigator, { clipboard: { writeText: impl } })
+}
 
 describe('MyInfoItemRow', () => {
   it('emoji·title·meta 표시', () => {
@@ -50,5 +59,63 @@ describe('MyInfoItemRow', () => {
 
     rerender(<MyInfoItemRow emoji="🎓" title="학교" accent="warning" onClick={vi.fn()} />)
     expect(container.querySelector('.bg-warning\\/15')).toBeInTheDocument()
+  })
+})
+
+/**
+ * 펼친 상세 필드의 [📋] 복사 — 클립보드가 **거부될 수 있다**.
+ * 권한 거부·비보안 컨텍스트(NotAllowedError)에서 `writeText` 는 reject 한다.
+ *
+ * 케이스:
+ *  1. 복사 성공 → 성공 표시(체크·text-success)
+ *  2. 복사 실패 → 안내 토스트 + 성공 표시 안 뜸 (거짓 성공 금지)
+ *     ※ rejection 이 새면 vitest 가 unhandled 로 런 자체를 실패시킨다 — 그게 크래시 회귀 방어다
+ */
+describe('MyInfoItemRow — 클립보드 복사', () => {
+  const detailFields = [{ label: '이메일', value: 'a@b.com' }]
+
+  function renderExpanded() {
+    render(
+      <MyInfoItemRow
+        emoji="🎓"
+        title="학교"
+        onClick={vi.fn()}
+        detailFields={detailFields}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /학교/ }))
+  }
+
+  const copyButton = () => screen.getByRole('button', { name: '이메일 복사' })
+
+  beforeEach(() => {
+    toastError.mockReset()
+    setClipboard(() => Promise.resolve())
+  })
+
+  it('1. 복사 성공 → 성공 표시', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    setClipboard(writeText)
+
+    renderExpanded()
+    fireEvent.click(copyButton())
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('a@b.com'))
+    await waitFor(() => expect(copyButton().className).toContain('text-success'))
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  it('2. 복사 실패 → 안내 토스트 + 성공 표시 안 뜸', async () => {
+    setClipboard(() => Promise.reject(new Error('NotAllowedError')))
+
+    renderExpanded()
+    fireEvent.click(copyButton())
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        expect.stringContaining('복사에 실패했어요'),
+      ),
+    )
+    expect(copyButton().className).not.toContain('text-success')
   })
 })
