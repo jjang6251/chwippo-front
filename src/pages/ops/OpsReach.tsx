@@ -54,7 +54,9 @@ const STAGE_STYLE: Record<ReachStage, { badge: string; bar: string }> = {
  * 서버가 주는 값이라 지금은 도달 불가지만, 값 하나로 막을 수 있는 것을 신뢰에 맡기지 않는다.
  */
 function stageStyle(stage: ReachStage) {
-  return Object.hasOwn(STAGE_STYLE, stage) ? STAGE_STYLE[stage] : STAGE_STYLE.signup
+  // Object.hasOwn 금지 — ES2022, iOS 15.4 미만 WebKit 크래시 (routeMeta.ts 참조)
+  const has = Object.prototype.hasOwnProperty.call(STAGE_STYLE, stage)
+  return has ? STAGE_STYLE[stage] : STAGE_STYLE.signup
 }
 
 function StageBadge({ stage }: { stage: ReachStage }) {
