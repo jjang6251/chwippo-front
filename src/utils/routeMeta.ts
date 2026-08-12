@@ -81,6 +81,11 @@ export const ROUTE_META: Record<string, RouteMeta> = {
     description:
       '치뽀 서비스 이용 조건, 회원 가입·금지 행위, 콘텐츠 소유권, AI 기능 이용 안내를 담은 약관입니다.',
   },
+  '/account-deletion': {
+    title: '계정 삭제 안내 | 치뽀',
+    description:
+      '치뽀 계정과 데이터를 삭제하는 방법을 안내합니다. 앱·웹에서 직접 탈퇴하거나 이메일로 요청할 수 있습니다.',
+  },
 }
 
 /**

@@ -32,6 +32,7 @@ import { InquiryNew } from '@/pages/inquiry/InquiryNew'
 import { InquiryDetail } from '@/pages/inquiry/InquiryDetail'
 import { Privacy } from '@/pages/Privacy'
 import { Terms } from '@/pages/Terms'
+import { AccountDeletion } from '@/pages/AccountDeletion'
 import { NotFound } from '@/pages/NotFound'
 import { Settings } from '@/pages/settings/Settings'
 import { AlarmSettings } from '@/pages/settings/AlarmSettings'
@@ -149,6 +150,8 @@ export default function App() {
         <Route path="/login/callback" element={<LoginCallback />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        {/* Google Play 데이터 보안 요건 — 로그인 없이 열려야 한다 (Play Console 등록 URL) */}
+        <Route path="/account-deletion" element={<AccountDeletion />} />
         {/* 데모 모드 — 로그인 불필요, 샘플 데이터(읽기 전용). DemoShell 은 lazy →
             상위 레이아웃이 없어 여기서 Suspense 로 감싼다. */}
         <Route
