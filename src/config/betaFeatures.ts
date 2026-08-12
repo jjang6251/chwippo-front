@@ -17,9 +17,10 @@ export const BETA_FEATURES = {
   icalExport: false,
   /**
    * 네이티브 푸시 준비 완료 여부.
-   * false = 앱(native)의 soft-ask 모달·권한 버튼 숨김 (native 핸들러 미구현이라 눌러도 무동작).
+   * false = 앱(native)의 권한 버튼 숨김 (native 핸들러 미구현이라 눌러도 무동작).
    * 2026-07-11 true flip (plan Step 6) — mobile Step 1~4 + EAS 빌드 + TestFlight 배포 완료.
-   * true 로 바꾸면: PermissionPromptModal 트리거 + AlarmSettings 권한 CTA 노출.
+   * true 로 바꾸면: AlarmSettings 권한 CTA 노출.
+   * 로그인 시점 soft-ask 모달은 2026-08-13 네이티브(앱 시작 시 OS 권한 상태 기준)로 이관 — 웹은 더 이상 띄우지 않는다.
    */
   nativePushReady: true,
 } as const

@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react'
+import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import { RouteFallback } from '@/components/common/RouteFallback'
 import { Sidebar } from './Sidebar'
@@ -12,13 +12,10 @@ import { CoinChip } from '@/components/common/CoinChip'
 import { CoinOnboardingModal } from '@/components/common/CoinOnboardingModal'
 import { SuspendedModal } from '@/components/auth/SuspendedModal'
 import { UserNotificationModal } from '@/components/notification/UserNotificationModal'
-import { PermissionPromptModal } from '@/components/notification/PermissionPromptModal'
 import { useMyCoinBalance } from '@/hooks/useMyCoin'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useNativeMode } from '@/hooks/useNativeMode'
 import { useDesktopSeenBeacon } from '@/hooks/useDesktopSeenBeacon'
-import { useAuthStore } from '@/stores/authStore'
-import { BETA_FEATURES } from '@/config/betaFeatures'
 
 export function AppShell() {
   const isDemo = useDemoMode()
@@ -27,21 +24,9 @@ export function AppShell() {
   const isNative = useNativeMode()
   // PR_B2 Phase 1 — me 응답에서 suspendedAt + pending_notification 감지
   const { data: coinBalance } = useMyCoinBalance()
-  // 알림 soft-ask — native + 최초 로그인(alarm_prompted_at NULL) 1회.
-  // BETA_FEATURES.nativePushReady false 동안은 숨김 (native 권한 핸들러 미구현 → 눌러도 무동작).
-  // Apple Developer + mobile 완료 후 flag flip (plan Step 6).
-  const user = useAuthStore((s) => s.user)
   // 데스크탑 웹 사용 스탬프 (관측 전용) — 자소서 게이트가 열린 환경일 때만 1회.
   // 데모는 제외한다 (DemoShell 도 AppShell 을 쓴다 — 비로그인 방문자가 쏘면 안 된다)
   useDesktopSeenBeacon(!isDemo)
-  const [permDismissed, setPermDismissed] = useState(false)
-  const showPermPrompt =
-    BETA_FEATURES.nativePushReady &&
-    !isDemo &&
-    isNative &&
-    !coinBalance?.suspendedAt &&
-    user?.alarmPromptedAt == null &&
-    !permDismissed
   return (
     <div className="min-h-screen bg-bg text-text-primary flex flex-col">
       {isDemo && <DemoBanner />}
@@ -80,11 +65,7 @@ export function AppShell() {
       {!isDemo && !coinBalance?.suspendedAt && coinBalance?.pendingNotification && (
         <UserNotificationModal notification={coinBalance.pendingNotification} />
       )}
-      {/* 알림 soft-ask (native 최초 1회) */}
-      <PermissionPromptModal
-        open={showPermPrompt}
-        onClose={() => setPermDismissed(true)}
-      />
+      {/* 로그인 시점 알림 모달은 네이티브 soft-ask 로 이관 (2026-08-13 — 사용자별 플래그가 기기 변경을 못 덮는 결함) */}
     </div>
   )
 }
