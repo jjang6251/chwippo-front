@@ -23,7 +23,7 @@ import {
 } from './client'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
-import { postToNative } from '@/utils/nativeBridge'
+import { postToNative, type NativeMessage } from '@/utils/nativeBridge'
 
 vi.mock('axios', async () => {
   const actual = await vi.importActual<typeof import('axios')>('axios')
@@ -519,7 +519,24 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
       new CustomEvent('chwippo:token-broadcast', { detail: { accessToken } }),
     )
 
-  const sentTypes = () => mockedPostToNative.mock.calls.map(([m]) => m.type)
+  /*
+    🔬 진단 계측(refresh-trace)은 **관측 전용**이라 락 계약 단언에서 걸러낸다. breadcrumb 이
+    늘거나 줄어도 아래 "무엇을 보냈는가" 단언은 그대로 서 있어야 한다 — 계측 때문에
+    toEqual 을 toContain 으로 약화시키면 계약 자체가 헐거워진다.
+  */
+  const sentTypes = () =>
+    mockedPostToNative.mock.calls
+      .map(([m]) => m.type)
+      .filter((t) => t !== 'refresh-trace')
+
+  const traceEvents = () =>
+    mockedPostToNative.mock.calls
+      .map(([m]) => m)
+      .filter(
+        (m): m is Extract<NativeMessage, { type: 'refresh-trace' }> =>
+          m.type === 'refresh-trace',
+      )
+      .map((m) => m.event)
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -806,6 +823,43 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
     expect(useAuthStore.getState().accessToken).toBe('keep-me')
     expect(toast.error).not.toHaveBeenCalled()
     expect(sentTypes()).not.toContain('logout')
+  })
+
+  /*
+    🔬 13·14 = 진단 계측 (R2 원인 규명 · 2026-08-14). 승자가 grant 를 받고도 token 도
+    release 도 30s 동안 안 보낸 실기를 웹 안에서 볼 수단이 없어 뚫은 관측 채널이라,
+    여기서 잠그는 건 "순서대로 나오는가" 와 "브라우저는 여전히 무접촉인가" 둘뿐이다.
+  */
+  it('13. 🔬 회전 성공 시 breadcrumb 이 구간 순서대로 발신된다', async () => {
+    enterApp()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'traced-token' } },
+    })
+
+    const p = performRefresh()
+    grant(lockReqId())
+    await p
+
+    expect(traceEvents()).toEqual([
+      'enter',
+      'gate:granted',
+      'http:start',
+      'http:ok',
+      'done:ok',
+    ])
+  })
+
+  it('14. 🔬 브라우저에서는 breadcrumb 0건 (락 경로 미진입 계약이 계측으로도 안 깨진다)', async () => {
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'web-token' } },
+    })
+
+    await performRefresh()
+
+    expect(traceEvents()).toEqual([])
+    expect(mockedPostToNative).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'refresh-trace' }),
+    )
   })
 })
 
