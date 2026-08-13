@@ -9,6 +9,7 @@
  *   - Row 클릭 = onClick (기존 modal 진입 하위 호환)
  */
 import { useState } from 'react'
+import { toast } from '@/stores/toastStore'
 
 export interface DetailField {
   label: string
@@ -89,7 +90,11 @@ export function MyInfoItemRow({
       await navigator.clipboard.writeText(text)
       setCopiedField(key)
       setTimeout(() => setCopiedField(null), 900)
-    } catch { /* ignore */ }
+    } catch {
+      // clipboard 권한 거부·비보안 컨텍스트 — 값은 펼친 화면에 이미 보이므로 치명적이지 않다.
+      // 조용히 삼키면 눌러도 아무 일 없는 것처럼 보여 실패를 알려준다.
+      toast.error('복사에 실패했어요. 직접 선택해 복사해 주세요.')
+    }
   }
 
   return (

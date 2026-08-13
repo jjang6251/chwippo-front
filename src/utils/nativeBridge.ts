@@ -13,10 +13,19 @@
  *   - deadline-saved: 마감일 저장 성공 (가치 순간) → native soft-ask 트리거 후보
  *   - get-app-lock: 설정 "앱 잠금" 섹션 진입 → native 가 지원 여부·현재 on/off 회신
  *   - set-app-lock: 설정 토글 → native 앱 잠금 on/off 저장
+ *   - refresh-lock-request: refresh 회전 직전 락 요청 → native 가 grant 회신 (선착순 1명)
+ *   - refresh-lock-release: 회전 **실패** 시 명시 해제 (성공은 아래 token 이 겸용)
  *
  * ## native → web 회신 (get/set-app-lock 응답)
  *   - native 가 `window.dispatchEvent(new CustomEvent('chwippo:app-lock-state',
  *     { detail: { supported, enabled } }))` 주입 → 웹이 event 로 수신 (AppLockSection).
+ *
+ * ## native → web 회신 (refresh 락)
+ *   - `chwippo:refresh-lock-grant` { reqId } — 요청한 웹뷰에만 (회전 진행 허가)
+ *   - `chwippo:refresh-lock-queued` { reqId } — 요청한 웹뷰에만 (남이 락 보유 · 대기 지시).
+ *     락 관리자가 살아 있다는 증거라, 웹은 이걸 받으면 700ms 무응답 폴백을 걷는다.
+ *   - `chwippo:token-broadcast` { accessToken } — **전 웹뷰**에 (남이 회전 성공 → 대기자 해소)
+ *   수신부는 api/client.ts `acquireNativeRefreshLock`.
  */
 
 export type NativeMessage =
@@ -35,6 +44,14 @@ export type NativeMessage =
    * 채널이 웹뷰→앱 내부 postMessage 라 과거 제거된 sessionStorage 평문 표면과 다르다.
    */
   | { type: 'token'; accessToken: string }
+  /**
+   * 회전 직전 락 요청 / 회전 실패 시 명시 해제 (plan refresh-rotation-lock).
+   * 탭마다 웹뷰가 1개라 각자 회전을 시도해 같은 RT 를 동시에 소비했다 — 순서만
+   * 네이티브가 중재한다. 구앱은 모르는 메시지를 무시하고, 웹은 700ms 뒤 단독 회전으로
+   * 폴백하므로 핸드셰이크 불요.
+   */
+  | { type: 'refresh-lock-request'; reqId: string }
+  | { type: 'refresh-lock-release'; reqId: string }
 
 interface RNWindow {
   ReactNativeWebView?: {

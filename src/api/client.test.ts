@@ -474,6 +474,279 @@ describe('handleAuthFailure — 앱 웹뷰에서는 랜딩으로 밀지 않는�
 
 
 /**
+ * 🔴 앱 웹뷰 다중 회전 경합 락 (plan refresh-rotation-lock, 2026-08-13).
+ *
+ * 탭마다 웹뷰가 1개(최대 5)라 single-flight 큐가 웹뷰마다 따로 있다 — access 만료 후
+ * 복귀하면 N개가 같은 RT 쿠키로 동시에 회전해 429·재사용 감지 로그아웃이 났다.
+ * 순서만 네이티브가 중재한다: 락 요청 → grant 받은 1명만 HTTP, 나머지는 방송된 토큰으로 해소.
+ *
+ * 여기서 못박는 계약 (plan §4 케이스 1~8):
+ * - 모든 실패 모드가 "현행 이하로 안 나빠짐" — 무응답이면 단독 회전 = 수리 전 동작
+ * - 브라우저에선 이 경로 자체가 없다 (리스너 등록조차 안 함)
+ */
+describe('performRefresh — 앱 웹뷰 회전 락', () => {
+  const enterApp = () => {
+    ;(window as unknown as RNWindowMock).ReactNativeWebView = {
+      postMessage: vi.fn(),
+    }
+  }
+
+  /** 방금 발신된 락 요청의 reqId — 네이티브가 회신에 그대로 실어 보내는 값 */
+  const lockReqId = (): string => {
+    const call = mockedPostToNative.mock.calls.find(
+      ([m]) => m.type === 'refresh-lock-request',
+    )
+    if (!call) throw new Error('refresh-lock-request 미발신')
+    const msg = call[0]
+    if (msg.type !== 'refresh-lock-request') throw new Error('메시지 타입 불일치')
+    return msg.reqId
+  }
+
+  const grant = (reqId: string) =>
+    window.dispatchEvent(
+      new CustomEvent('chwippo:refresh-lock-grant', { detail: { reqId } }),
+    )
+
+  const queued = (reqId: string) =>
+    window.dispatchEvent(
+      new CustomEvent('chwippo:refresh-lock-queued', { detail: { reqId } }),
+    )
+
+  const broadcast = (accessToken: string) =>
+    window.dispatchEvent(
+      new CustomEvent('chwippo:token-broadcast', { detail: { accessToken } }),
+    )
+
+  const sentTypes = () => mockedPostToNative.mock.calls.map(([m]) => m.type)
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('1. grant 수신 → HTTP 회전 1회 + 기존 token 브리지 발신 (락 해제 겸용)', async () => {
+    enterApp()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'granted-token' } },
+    })
+
+    const p = performRefresh()
+    expect(sentTypes()).toContain('refresh-lock-request')
+    expect(mockedAxiosPost).not.toHaveBeenCalled() // grant 전엔 HTTP 금지
+    grant(lockReqId())
+
+    const result = await p
+    expect(result.accessToken).toBe('granted-token')
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+    expect(mockedPostToNative).toHaveBeenCalledWith({
+      type: 'token',
+      accessToken: 'granted-token',
+    })
+    // 성공은 token 이 해제를 겸한다 — 별도 release 를 보내면 락이 두 번 풀린다
+    expect(sentTypes()).not.toContain('refresh-lock-release')
+  })
+
+  it('2. 대기 중 token-broadcast 수신 → HTTP 0회 + 토큰 반영 후 resolve', async () => {
+    enterApp()
+
+    const p = performRefresh()
+    broadcast('broadcast-token')
+
+    const result = await p
+    expect(result.accessToken).toBe('broadcast-token')
+    expect(useAuthStore.getState().accessToken).toBe('broadcast-token')
+    expect(mockedAxiosPost).not.toHaveBeenCalled() // 남이 이미 회전했다
+    // 남의 회전 결과를 내가 다시 네이티브에 되쏘지 않는다 (방송 루프 방지)
+    expect(sentTypes()).toEqual(['refresh-lock-request'])
+  })
+
+  // ⚠️ 아래 3·3b 는 **queued 회신조차 없는** 전제다 — 락 관리자가 없는 구앱(웹 번들이
+  // 네이티브 빌드보다 먼저 나가는 창)·브리지 사망. queued 를 받은 정상 대기는 9·10 참조.
+  it('3. 어떤 회신도 없음 700ms → 단독 회전 (구앱·브리지 실패 폴백)', async () => {
+    enterApp()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'solo-token' } },
+    })
+
+    const p = performRefresh()
+    expect(mockedAxiosPost).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(699)
+    expect(mockedAxiosPost).not.toHaveBeenCalled() // 아직 대기 (조기 폴백 금지)
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(await p).toEqual({ accessToken: 'solo-token', user: null })
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+  })
+
+  it('3b. 다른 웹뷰 몫 grant(reqId 불일치)는 무시 → 폴백까지 대기', async () => {
+    enterApp()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'solo-token' } },
+    })
+
+    const p = performRefresh()
+    grant('someone-else')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mockedAxiosPost).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(700)
+    await p
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+  })
+
+  it('4. 회전 실패(401) → release 발신 + 기존 handleAuthFailure 경로 무변경', async () => {
+    enterApp()
+    useAuthStore.setState({ accessToken: 'dying', user: null })
+    mockedAxiosPost.mockRejectedValueOnce({ response: { status: 401 } })
+
+    const p = performRefresh()
+    grant(lockReqId())
+    await expect(p).rejects.toBeDefined()
+
+    expect(sentTypes()).toContain('refresh-lock-release')
+    expect(mockedPostToNative).toHaveBeenCalledWith({
+      type: 'refresh-lock-release',
+      reqId: lockReqId(),
+    })
+    // 기존 401 계약 그대로 — clearAuth + logout 브리지 + 만료 토스트, 앱이라 href 는 미변경
+    expect(useAuthStore.getState().accessToken).toBeNull()
+    expect(mockedPostToNative).toHaveBeenCalledWith({ type: 'logout' })
+    expect(toast.error).toHaveBeenCalledWith('로그인이 만료되었습니다.')
+    expect(window.location.href).toBe('')
+  })
+
+  it('5. 회전 실패(네트워크) → release 발신 + 비파괴 계약 유지', async () => {
+    enterApp()
+    useAuthStore.setState({ accessToken: 'keep-me', user: null })
+    mockedAxiosPost.mockRejectedValueOnce(new Error('Network Error'))
+
+    const p = performRefresh()
+    grant(lockReqId())
+    await expect(p).rejects.toBeDefined()
+
+    expect(sentTypes()).toContain('refresh-lock-release')
+    // 세션 판정 불가 → clearAuth·토스트·logout 전파 전부 금지 (락이 이 계약을 흔들지 않는다)
+    expect(useAuthStore.getState().accessToken).toBe('keep-me')
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(sentTypes()).not.toContain('logout')
+  })
+
+  it('6. 브라우저(브리지 부재) → 락 경로 0 호출 · 리스너 등록조차 안 함', async () => {
+    const addSpy = vi.spyOn(window, 'addEventListener')
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'web-token' } },
+    })
+
+    const result = await performRefresh()
+
+    expect(result.accessToken).toBe('web-token')
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1) // 대기 없이 즉시 회전
+    expect(sentTypes()).not.toContain('refresh-lock-request')
+    expect(addSpy).not.toHaveBeenCalledWith(
+      'chwippo:refresh-lock-grant',
+      expect.anything(),
+    )
+    expect(addSpy).not.toHaveBeenCalledWith(
+      'chwippo:token-broadcast',
+      expect.anything(),
+    )
+    addSpy.mockRestore()
+  })
+
+  // 상한(8s) 자체를 잠그는 건 10번 — 여기선 "해소 후 리스너가 확실히 걷혔는지"만 본다.
+  it('7. 폴백으로 해소된 뒤 지각 grant/broadcast 는 추가 회전·store 오염을 안 만든다', async () => {
+    enterApp()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'solo-token' } },
+    })
+
+    const p = performRefresh()
+    await vi.advanceTimersByTimeAsync(700)
+    expect(await p).toEqual({ accessToken: 'solo-token', user: null })
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+
+    // 리스너가 남아 있으면 지각 신호가 store 를 덮어쓰거나 회전을 또 태운다
+    grant(lockReqId())
+    queued(lockReqId())
+    broadcast('late-token')
+    await vi.advanceTimersByTimeAsync(8000)
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+    expect(useAuthStore.getState().accessToken).toBe('solo-token')
+  })
+
+  it('8. 동시 caller 5개 → 락 요청도 HTTP 도 1회 (웹뷰 내 single-flight 유지)', async () => {
+    enterApp()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'shared-token' } },
+    })
+
+    const all = Promise.all([
+      performRefresh(),
+      performRefresh(),
+      performRefresh(),
+      performRefresh(),
+      performRefresh(),
+    ])
+    grant(lockReqId())
+
+    const results = await all
+    expect(results.every((r) => r.accessToken === 'shared-token')).toBe(true)
+    expect(
+      sentTypes().filter((t) => t === 'refresh-lock-request'),
+    ).toHaveLength(1)
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+  })
+
+  /*
+    🔴 queued ack (CEO 승인 2026-08-13) — 수리의 핵심 조건.
+
+    이 회신이 없으면 웹은 '남이 락을 쥐고 있어 대기 중'과 '락 관리자가 없는 구앱'을
+    구분할 수 없어 둘 다 700ms 폴백을 태운다. 그러면 승자의 회전이 700ms 만 넘겨도
+    (409 backoff·느린 네트워크) 대기자 전원이 단독 회전으로 흩어져 R2 가 재발한다.
+  */
+  it('9. queued 수신 → 700ms 폴백 해제 · 승자의 broadcast 로 HTTP 0회 해소', async () => {
+    enterApp()
+
+    const p = performRefresh()
+    queued(lockReqId())
+
+    // 700ms 를 한참 넘겨도 단독 회전 금지 — 승자를 기다리는 게 이 회신의 존재 이유
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(mockedAxiosPost).not.toHaveBeenCalled()
+
+    broadcast('winner-token')
+    const result = await p
+
+    expect(result.accessToken).toBe('winner-token')
+    expect(useAuthStore.getState().accessToken).toBe('winner-token')
+    expect(mockedAxiosPost).not.toHaveBeenCalled()
+    expect(sentTypes()).toEqual(['refresh-lock-request'])
+  })
+
+  it('10. queued 후 8s 까지 무신호 → 절대 상한에서 단독 회전 폴백', async () => {
+    enterApp()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'capped-token' } },
+    })
+
+    const p = performRefresh()
+    queued(lockReqId())
+
+    await vi.advanceTimersByTimeAsync(7999)
+    expect(mockedAxiosPost).not.toHaveBeenCalled() // 상한 전 조기 폴백 금지
+    await vi.advanceTimersByTimeAsync(1)
+
+    // 승자·중재자가 통째로 죽어도 무기한 매달리지 않는다 (현행 폴백으로 복귀)
+    expect(await p).toEqual({ accessToken: 'capped-token', user: null })
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
  * 직무 미입력 400 → **토스트 대신 입력 모달**.
  *
  * 🔴 백엔드 `assertJobTextPresent` 가 던지는 payload 모양에 의존한다

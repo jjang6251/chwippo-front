@@ -65,7 +65,7 @@ let refreshPromise: Promise<RefreshResult> | null = null
 
 export async function performRefresh(): Promise<RefreshResult> {
   if (refreshPromise) return refreshPromise
-  refreshPromise = doRefresh()
+  refreshPromise = refreshWithNativeLock()
     .catch((err: unknown) => {
       handleAuthFailure(err)
       throw err
@@ -74,6 +74,126 @@ export async function performRefresh(): Promise<RefreshResult> {
       refreshPromise = null
     })
   return refreshPromise
+}
+
+/**
+ * 🔴 앱 웹뷰 다중 회전 경합 락 (plan refresh-rotation-lock, 2026-08-13).
+ *
+ * 하단 탭마다 웹뷰가 1개(최대 5)라 위 single-flight 큐도 웹뷰마다 따로 있다. access 만료
+ * 후 잠금·백그라운드에서 복귀하면 N개가 **같은 RT 쿠키로 동시에 회전**해 429(요청 폭주)나
+ * 재사용 감지 → 체인 revoke → 강제 로그아웃이 났다 (ADR-080 "회전 주체 1개"가 탭 구조
+ * 안에서 다시 깨진 것). 회전 실행은 그대로 웹뷰가 하고 **순서만 네이티브가 중재**한다.
+ *
+ * 계약 — 모든 실패 모드가 "현행 이하로 안 나빠짐":
+ *   - 브라우저(브리지 부재): 이 경로 자체를 안 탄다 → 기존 동작 완전 동일
+ *   - grant 수신: HTTP 회전 진행. 성공은 doRefresh 안의 token 브리지가 락 해제를 겸하고,
+ *     실패일 때만 refresh-lock-release 를 명시 발신
+ *   - token-broadcast 수신: 남이 이미 회전에 성공했다 → **HTTP 없이** 그 토큰으로 resolve
+ *   - queued 수신: 남이 락을 쥐고 있다 → 무응답 폴백을 걷고 상한까지 승자를 기다린다
+ *   - 무응답: 단독 회전 (= 수리 전 동작). 구앱·브리지 실패에도 새 오류가 생기지 않는다
+ */
+/**
+ * 무응답 폴백 — 네이티브가 **아무 회신도 안 할 때**만 발동한다. 락 관리자가 없는 구앱
+ * (웹 번들이 네이티브 빌드보다 먼저 나가는 창)·브리지 사망이 여기 걸리고, 동작은 수리 전과 같다.
+ * 정상 앱에선 grant·queued 중 하나가 즉시 오므로 이 타이머는 걷힌다.
+ */
+const LOCK_GRANT_TIMEOUT_MS = 700
+/**
+ * 락 대기 절대 상한 — queued 를 받아 대기 중이어도 여기선 반드시 단독 회전으로 풀린다.
+ * 네이티브 holder 타임아웃(5s)보다 길게 잡아, 승자가 죽어도 승계 grant 가 먼저 오게 한다.
+ */
+const LOCK_WAIT_MAX_MS = 8000
+
+type LockGate =
+  | { kind: 'granted' }
+  | { kind: 'broadcast'; accessToken: string }
+  | { kind: 'timeout' }
+
+function acquireNativeRefreshLock(reqId: string): Promise<LockGate> {
+  return new Promise<LockGate>((resolve) => {
+    let settled = false
+    // 무응답 폴백(queued 회신이 오면 걷힌다) + 어떤 경우에도 걷지 않는 절대 상한
+    let graceTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(
+      () => finish({ kind: 'timeout' }),
+      LOCK_GRANT_TIMEOUT_MS,
+    )
+    const capTimer = setTimeout(
+      () => finish({ kind: 'timeout' }),
+      LOCK_WAIT_MAX_MS,
+    )
+
+    function finish(gate: LockGate) {
+      if (settled) return
+      settled = true
+      window.removeEventListener('chwippo:refresh-lock-grant', onGrant)
+      window.removeEventListener('chwippo:refresh-lock-queued', onQueued)
+      window.removeEventListener('chwippo:token-broadcast', onBroadcast)
+      clearTimeout(graceTimer)
+      clearTimeout(capTimer)
+      resolve(gate)
+    }
+
+    // reqId 대조 — 이 웹뷰의 이전 요청에 대한 지각 회신을 현재 요청으로 오인하지 않는다
+    function onGrant(e: Event) {
+      const detail = (e as CustomEvent).detail as { reqId?: unknown } | undefined
+      if (detail?.reqId === reqId) finish({ kind: 'granted' })
+    }
+
+    /*
+      "큐에 넣었다" 회신 — 락 관리자가 **살아 있다는 증거**다. 무응답 폴백(700ms)만 걷고
+      상한(8s)까지 승자의 broadcast·승계 grant 를 기다린다. 이 회신이 없으면 대기자와
+      구앱을 구분할 수 없어 승자의 회전이 700ms 만 넘겨도 다 같이 단독 회전해 버렸다.
+    */
+    function onQueued(e: Event) {
+      const detail = (e as CustomEvent).detail as { reqId?: unknown } | undefined
+      if (settled || detail?.reqId !== reqId) return
+      clearTimeout(graceTimer)
+      graceTimer = undefined
+    }
+
+    function onBroadcast(e: Event) {
+      const detail = (e as CustomEvent).detail as
+        | { accessToken?: unknown }
+        | undefined
+      const accessToken = detail?.accessToken
+      if (typeof accessToken === 'string' && accessToken) {
+        finish({ kind: 'broadcast', accessToken })
+      }
+    }
+
+    window.addEventListener('chwippo:refresh-lock-grant', onGrant)
+    window.addEventListener('chwippo:refresh-lock-queued', onQueued)
+    window.addEventListener('chwippo:token-broadcast', onBroadcast)
+    postToNative({ type: 'refresh-lock-request', reqId })
+  })
+}
+
+/**
+ * 회전 앞단 — 앱 웹뷰에서만 락을 거친다. 브라우저는 doRefresh 직행 (기존 경로 무접촉).
+ */
+async function refreshWithNativeLock(): Promise<RefreshResult> {
+  if (!isInNativeApp()) return doRefresh()
+
+  const reqId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  const gate = await acquireNativeRefreshLock(reqId)
+
+  if (gate.kind === 'broadcast') {
+    useAuthStore.getState().setAccessToken(gate.accessToken)
+    // 회전 응답이 없으니 user 는 store 현재값 그대로 — broadcast 는 토큰만 나른다.
+    return { accessToken: gate.accessToken, user: useAuthStore.getState().user }
+  }
+
+  try {
+    return await doRefresh()
+  } catch (err) {
+    /*
+      타임아웃 폴백으로 단독 회전한 경우에도 보낸다 — 네이티브가 뒤늦게(승계·5s 타임아웃)
+      이 reqId 에 grant 를 찍어 두었을 수 있어, 해제를 생략하면 락이 5s 동안 묶인다.
+      모르는 reqId 는 네이티브가 무시하므로 과잉 발신은 무해.
+    */
+    postToNative({ type: 'refresh-lock-release', reqId })
+    throw err
+  }
 }
 
 async function doRefresh(): Promise<RefreshResult> {

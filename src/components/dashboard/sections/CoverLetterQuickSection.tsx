@@ -24,9 +24,15 @@ export function CoverLetterQuickSection() {
     ? FIELDS.filter((f) => (coverletter[f.key] ?? '').trim().length > 0).length
     : 0
 
-  function handleCopy(content: string) {
-    navigator.clipboard.writeText(content)
-    toast.show('복사됐어요')
+  async function handleCopy(content: string) {
+    try {
+      await navigator.clipboard.writeText(content)
+      toast.show('복사됐어요')
+    } catch {
+      // clipboard 권한 거부·비보안 컨텍스트 — await 없이 두면 rejection 이 unhandled 로 샜고,
+      // 성공 토스트가 실패해도 먼저 떠서 복사된 줄 알고 넘어갔다.
+      toast.error('복사에 실패했어요. 직접 선택해 복사해 주세요.')
+    }
   }
 
   return (
