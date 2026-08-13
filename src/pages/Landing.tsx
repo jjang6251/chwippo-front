@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Apple } from 'lucide-react'
 import axios from 'axios'
+import { REFRESH_HTTP_TIMEOUT_MS } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
 import { resolvePostLoginDestination } from '@/utils/authRouting'
 import { CompanyCard } from '@/components/card/CompanyCard'
@@ -79,8 +80,20 @@ export function Landing() {
     // 캘린더 UX 재구성 — 홈 = /calendar (대시보드는 "회고" 페이지로 강등)
     if (accessToken) { navigate('/calendar', { replace: true }); return }
 
+    /*
+      🔴 performRefresh(공용 통로)를 쓰지 않는다 — 그 경로는 실패 시 반드시
+      handleAuthFailure(토스트 + clearAuth + '/' 이동)를 타는데, **랜딩에서 401 은
+      비정상이 아니라 비로그인 방문자의 정상 상태**다. 갈아끼우면 첫 방문자가
+      "로그인이 만료되었습니다" 토스트와 '/' 재이동(무한 새로고침)을 겪는다.
+      회전 락 대상도 아니다 (앱의 로그인 화면은 네이티브라 이 코드가 렌더되지 않고,
+      브라우저엔 중재할 네이티브가 없다). 시간 상한만 doRefresh 와 맞춘다.
+    */
     axios
-      .post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true })
+      .post(
+        `${import.meta.env.VITE_API_URL}/auth/refresh`,
+        {},
+        { withCredentials: true, timeout: REFRESH_HTTP_TIMEOUT_MS },
+      )
       .then(({ data }) => {
         const payload = data.data ?? data
         setAccessToken(payload.accessToken)

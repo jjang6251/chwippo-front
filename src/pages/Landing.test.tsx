@@ -16,9 +16,12 @@
  * 시나리오: 출시 상태 배지 · 없어진 메뉴명 · PC 전용 고지 · 데모 진입
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import axios from 'axios'
+import { toast } from '@/stores/toastStore'
+import { REFRESH_HTTP_TIMEOUT_MS } from '@/api/client'
 import { Landing } from './Landing'
 import { useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 
@@ -273,5 +276,36 @@ describe('Landing — 진입 경로', () => {
     const feedback = within(container).getByText(/의견 보내기/).closest('a')
     expect(feedback).not.toBeNull()
     expect(feedback?.getAttribute('href')).toMatch(/^mailto:/)
+  })
+})
+
+/**
+ * 🔴 랜딩의 자동 로그인은 **공용 통로(performRefresh)를 일부러 쓰지 않는다** —
+ * 그 경로는 실패 시 handleAuthFailure(토스트 + clearAuth + '/' 이동)를 타는데,
+ * 랜딩에서의 401 은 비로그인 방문자의 **정상 상태**다. 갈아끼우면 첫 방문자가
+ * "로그인이 만료되었습니다" 토스트와 '/' 재이동(무한 새로고침)을 겪는다.
+ *
+ * 대신 시간 상한만 doRefresh 와 맞춘다 — 없으면 회전이 무한정 매달린다.
+ * 이 두 계약(직접 호출 유지 · 상한 부착)이 함께 성립해야 한다.
+ */
+describe('Landing — 자동 로그인 회전 계약', () => {
+  it('refresh 요청에 시간 상한이 붙는다', async () => {
+    renderLanding()
+    await waitFor(() => expect(axios.post).toHaveBeenCalled())
+    const [, , config] = vi.mocked(axios.post).mock.calls[0] ?? []
+    expect((config as { timeout?: number } | undefined)?.timeout).toBe(
+      REFRESH_HTTP_TIMEOUT_MS,
+    )
+    expect((config as { withCredentials?: boolean } | undefined)?.withCredentials).toBe(true)
+  })
+
+  it('회전 실패(401)에도 토스트·이동 없이 랜딩을 유지한다', async () => {
+    const errorSpy = vi.spyOn(toast, 'error')
+    const href = window.location.href
+    renderLanding()
+    await waitFor(() => expect(axios.post).toHaveBeenCalled())
+    expect(errorSpy).not.toHaveBeenCalled()
+    expect(window.location.href).toBe(href)
+    errorSpy.mockRestore()
   })
 })
