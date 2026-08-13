@@ -271,24 +271,75 @@ async function refreshWithNativeLock(): Promise<RefreshResult> {
  * 네이티브 holder 타임아웃은 "최악 회전보다 길게" 잡아야 하는데 최악이 무한이면 어떤 값을
  * 골라도 아직 in-flight 인 승자의 락을 뺏게 되고, 대기자가 승계 grant 를 받아 **동시 회전**
  * 한다 — 실기에서 5s 타임아웃이 10s 짜리 회전을 끊고 벌어진 일이 정확히 이것이다.
- * 3시도 × 8s + 409 backoff(250+500) ≈ 24.75s 가 회전 전체의 최악값이 된다.
+ * 3시도 × 8s + backoff(250+500) ≈ 24.75s 가 회전 전체의 최악값이 된다.
+ *
+ * 재시도 대상에 abort(타임아웃) 를 넣어도 **이 최악값은 그대로다** — 시도 수(3)도 backoff 도
+ * 그대로고, 매달린 시도의 소요가 8s 로 잘리는 것뿐이라 상한 계산은 전과 동일하다.
+ * 즉 부등식(24.75s < holder 30s < 대기 상한 35s)이 그대로 성립해 상수 변경이 필요 없다.
  */
 export const REFRESH_HTTP_TIMEOUT_MS = 8000
 
+/**
+ * abort 판정 — axios 는 signal.abort() 로 끊긴 요청을 CanceledError(code `ERR_CANCELED`)
+ * 로 reject 한다 (xhr 어댑터가 abort 리스너 안에서 곧바로 reject 하므로 네트워크 계층이
+ * 죽어 있어도 확실히 나온다). errInfo breadcrumb 도 같은 code 를 찍는다.
+ */
+function isAbortError(err: unknown): boolean {
+  const e = err as { code?: unknown; name?: unknown } | undefined
+  return (
+    e?.code === 'ERR_CANCELED' ||
+    e?.name === 'CanceledError' ||
+    e?.name === 'AbortError'
+  )
+}
+
+/**
+ * 재시도 대상 판정.
+ * - 409 = 동시 refresh 경합 (세션 지속성 토큰 패밀리) — 승자가 방금 쿠키를 갱신했으나
+ *   이 요청이 옛 토큰으로 도착한 순간. 세션은 유효하므로 갱신된 쿠키로 다시 던지면 된다.
+ * - abort = 아래 JS 타이머가 끊은 무응답 시도. 매달린 요청도 **서버엔 도달해 회전이 처리된**
+ *   경우가 있어(실기: 응답만 못 돌아옴) 기기엔 낡은 RT 만 남는다. 서버 재사용 유예(30s)
+ *   안에 다시 던져야 재사용 감지 → 체인 폐기 → 강제 로그아웃을 피한다. 실기에서도 409 를
+ *   받은 웹뷰가 250ms 뒤 재시도로 정상 복구했다.
+ */
+function shouldRetryRefresh(err: unknown): boolean {
+  const status = (err as { response?: { status?: number } })?.response?.status
+  return status === 409 || isAbortError(err)
+}
+
 async function doRefresh(): Promise<RefreshResult> {
-  // 409 = 동시 refresh 경합 (세션 지속성 토큰 패밀리) — 새로고침 연타·멀티탭에서
-  // 승자가 방금 쿠키를 갱신했으나 이 요청이 옛 토큰으로 도착한 순간. 세션은 유효하므로
-  // 짧은 backoff 후 갱신된 쿠키로 재시도하면 성공한다 (로그아웃 아님).
   let lastErr: unknown
   for (let attempt = 0; attempt < 3; attempt++) {
     // 🔬 진단 전용 — 가설 ②(8s 상한을 무시한 채 매달림)는 여기서 http:ok/err 이 안 나오는 걸로 드러난다
     const attemptAt = Date.now()
     trace('http:start', undefined, `attempt=${attempt + 1}`)
+    /*
+      🔴 시도 1건의 상한을 **우리 JS 타이머로 직접 끊는다** (2026-08-14 실기 수리).
+
+      계측(vc15 · 06:55)에서 긴 백그라운드 복귀 후 첫 회전이 응답도 실패도 없이 30s 를
+      통째로 매달렸고 axios 의 `timeout`(= XHR.timeout)은 끝내 발동하지 않았다 — 죽은 소켓을
+      잡은 채 네트워크 계층에서 멎는 증상이다. 같은 로그에서 **JS setTimeout 은 2ms 오차로
+      정확히 작동**했으므로(대기 상한 35s 발동), 상한 보장은 타이머 + AbortController 몫이다.
+      abort 는 xhr 어댑터의 리스너에서 곧바로 reject 되므로 소켓 상태와 무관하게 풀린다.
+    */
+    const controller = new AbortController()
+    const abortTimer = setTimeout(
+      () => controller.abort(),
+      REFRESH_HTTP_TIMEOUT_MS,
+    )
     try {
       const { data } = await axios.post<RefreshResponse>(
         `${import.meta.env.VITE_API_URL}/auth/refresh`,
         {},
-        { withCredentials: true, timeout: REFRESH_HTTP_TIMEOUT_MS },
+        {
+          withCredentials: true,
+          /*
+            XHR 타임아웃은 긴 백그라운드 후 발동하지 않는 것이 실측됐다. 이 옵션은 정상
+            상황용 보조(먹을 때는 먹는다)이고, 실제 상한은 위 JS 타이머가 보장한다.
+          */
+          timeout: REFRESH_HTTP_TIMEOUT_MS,
+          signal: controller.signal,
+        },
       )
       const accessToken = data.data?.accessToken ?? data.accessToken
       const user = data.data?.user ?? data.user ?? null
@@ -309,13 +360,14 @@ async function doRefresh(): Promise<RefreshResult> {
     } catch (err) {
       lastErr = err
       trace('http:err', Date.now() - attemptAt, errInfo(err))
-      const status = (err as { response?: { status?: number } })?.response
-        ?.status
-      if (status === 409 && attempt < 2) {
+      if (shouldRetryRefresh(err) && attempt < 2) {
         await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
         continue // 갱신된 쿠키로 재시도
       }
-      throw err // 401 등 인증 실패, 또는 409 재시도 소진 → caller 처리
+      throw err // 401 등 인증 실패, 또는 재시도 소진 → caller 처리
+    } finally {
+      // 성공·실패 어느 경로로 끝나도 걷는다 — 남으면 다음 시도·다음 회전을 뒤늦게 끊는다
+      clearTimeout(abortTimer)
     }
   }
   throw lastErr
