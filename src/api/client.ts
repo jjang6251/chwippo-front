@@ -100,9 +100,18 @@ export async function performRefresh(): Promise<RefreshResult> {
 const LOCK_GRANT_TIMEOUT_MS = 700
 /**
  * 락 대기 절대 상한 — queued 를 받아 대기 중이어도 여기선 반드시 단독 회전으로 풀린다.
- * 네이티브 holder 타임아웃(5s)보다 길게 잡아, 승자가 죽어도 승계 grant 가 먼저 오게 한다.
+ *
+ * 🔴 부등식 (2026-08-13 실기 수리): **최악 회전 < 네이티브 holder 타임아웃 < 이 상한**
+ *   최악 회전 ≈ 24.75s (3시도 × REFRESH_HTTP_TIMEOUT_MS 8s + 409 backoff 250+500)
+ *   < holder 타임아웃 30s (refreshLockManager.HOLDER_TIMEOUT_MS)
+ *   < 대기 상한 35s (여기)
+ * 승자가 죽어야 비로소 승계 grant 가 오고, 그 뒤에 이 상한이 열리는 순서가 지켜진다.
+ *
+ * 옛 값 8s 는 "정상 회전 150~400ms" 만 보고 잡은 값이었다. 실기(22:16, 잠금 71분 후 재개)
+ * 에서 Wi-Fi 재결합·DNS·TLS 콜드 스타트로 회전 1건이 **10s** 걸리자, 대기자 3개가 승자의
+ * 방송(10s)보다 먼저 8s 상한에 걸려 단독 회전으로 흩어졌다 — 가장 필요한 순간에 락이 풀렸다.
  */
-const LOCK_WAIT_MAX_MS = 8000
+export const LOCK_WAIT_MAX_MS = 35000
 
 type LockGate =
   | { kind: 'granted' }
@@ -141,7 +150,7 @@ function acquireNativeRefreshLock(reqId: string): Promise<LockGate> {
 
     /*
       "큐에 넣었다" 회신 — 락 관리자가 **살아 있다는 증거**다. 무응답 폴백(700ms)만 걷고
-      상한(8s)까지 승자의 broadcast·승계 grant 를 기다린다. 이 회신이 없으면 대기자와
+      상한(35s)까지 승자의 broadcast·승계 grant 를 기다린다. 이 회신이 없으면 대기자와
       구앱을 구분할 수 없어 승자의 회전이 700ms 만 넘겨도 다 같이 단독 회전해 버렸다.
     */
     function onQueued(e: Event) {
@@ -187,14 +196,25 @@ async function refreshWithNativeLock(): Promise<RefreshResult> {
     return await doRefresh()
   } catch (err) {
     /*
-      타임아웃 폴백으로 단독 회전한 경우에도 보낸다 — 네이티브가 뒤늦게(승계·5s 타임아웃)
-      이 reqId 에 grant 를 찍어 두었을 수 있어, 해제를 생략하면 락이 5s 동안 묶인다.
+      타임아웃 폴백으로 단독 회전한 경우에도 보낸다 — 네이티브가 뒤늦게(승계·holder 타임아웃)
+      이 reqId 에 grant 를 찍어 두었을 수 있어, 해제를 생략하면 락이 30s 동안 묶인다.
       모르는 reqId 는 네이티브가 무시하므로 과잉 발신은 무해.
     */
     postToNative({ type: 'refresh-lock-release', reqId })
     throw err
   }
 }
+
+/**
+ * 회전 1시도의 HTTP 상한 (2026-08-13 실기 수리).
+ *
+ * 🔴 이 값이 없으면 **회전 소요의 상한 자체가 정의되지 않아** 위 부등식이 성립하지 않는다.
+ * 네이티브 holder 타임아웃은 "최악 회전보다 길게" 잡아야 하는데 최악이 무한이면 어떤 값을
+ * 골라도 아직 in-flight 인 승자의 락을 뺏게 되고, 대기자가 승계 grant 를 받아 **동시 회전**
+ * 한다 — 실기에서 5s 타임아웃이 10s 짜리 회전을 끊고 벌어진 일이 정확히 이것이다.
+ * 3시도 × 8s + 409 backoff(250+500) ≈ 24.75s 가 회전 전체의 최악값이 된다.
+ */
+export const REFRESH_HTTP_TIMEOUT_MS = 8000
 
 async function doRefresh(): Promise<RefreshResult> {
   // 409 = 동시 refresh 경합 (세션 지속성 토큰 패밀리) — 새로고침 연타·멀티탭에서
@@ -206,7 +226,7 @@ async function doRefresh(): Promise<RefreshResult> {
       const { data } = await axios.post<RefreshResponse>(
         `${import.meta.env.VITE_API_URL}/auth/refresh`,
         {},
-        { withCredentials: true },
+        { withCredentials: true, timeout: REFRESH_HTTP_TIMEOUT_MS },
       )
       const accessToken = data.data?.accessToken ?? data.accessToken
       const user = data.data?.user ?? data.user ?? null

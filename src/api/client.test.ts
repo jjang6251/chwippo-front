@@ -18,6 +18,8 @@ import {
   handleAuthFailure,
   jobTitleRequiredApplicationId,
   __resetRefreshPromiseForTest,
+  LOCK_WAIT_MAX_MS,
+  REFRESH_HTTP_TIMEOUT_MS,
 } from './client'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
@@ -657,7 +659,7 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
     addSpy.mockRestore()
   })
 
-  // 상한(8s) 자체를 잠그는 건 10번 — 여기선 "해소 후 리스너가 확실히 걷혔는지"만 본다.
+  // 상한 자체를 잠그는 건 10번 — 여기선 "해소 후 리스너가 확실히 걷혔는지"만 본다.
   it('7. 폴백으로 해소된 뒤 지각 grant/broadcast 는 추가 회전·store 오염을 안 만든다', async () => {
     enterApp()
     mockedAxiosPost.mockResolvedValueOnce({
@@ -673,7 +675,7 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
     grant(lockReqId())
     queued(lockReqId())
     broadcast('late-token')
-    await vi.advanceTimersByTimeAsync(8000)
+    await vi.advanceTimersByTimeAsync(LOCK_WAIT_MAX_MS)
     expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
     expect(useAuthStore.getState().accessToken).toBe('solo-token')
   })
@@ -727,7 +729,8 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
     expect(sentTypes()).toEqual(['refresh-lock-request'])
   })
 
-  it('10. queued 후 8s 까지 무신호 → 절대 상한에서 단독 회전 폴백', async () => {
+  // 상한 값은 LOCK_WAIT_MAX_MS 를 직접 참조한다 — 상수가 바뀌면 이 케이스도 같이 움직인다.
+  it('10. queued 후 LOCK_WAIT_MAX_MS 까지 무신호 → 절대 상한에서 단독 회전 폴백', async () => {
     enterApp()
     mockedAxiosPost.mockResolvedValueOnce({
       data: { data: { accessToken: 'capped-token' } },
@@ -736,13 +739,73 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
     const p = performRefresh()
     queued(lockReqId())
 
-    await vi.advanceTimersByTimeAsync(7999)
+    await vi.advanceTimersByTimeAsync(LOCK_WAIT_MAX_MS - 1)
     expect(mockedAxiosPost).not.toHaveBeenCalled() // 상한 전 조기 폴백 금지
     await vi.advanceTimersByTimeAsync(1)
 
     // 승자·중재자가 통째로 죽어도 무기한 매달리지 않는다 (현행 폴백으로 복귀)
     expect(await p).toEqual({ accessToken: 'capped-token', user: null })
     expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+  })
+
+  /*
+    🔴 11·12 = 2026-08-13 실기 결함(vc13 · 잠금 71분 후 재개 · 웹뷰 5개)의 회귀 방어.
+
+    상수를 "정상 회전 150~400ms" 기준으로 잡은 게 화근이었다. 재개 직후엔 Wi-Fi 재결합·
+    DNS·TLS 콜드 스타트로 회전 1건이 **10s** 걸렸고, 그 결과 ① 네이티브가 아직 in-flight
+    인 승자의 락을 5s 에 뺏어 대기자와 동시 회전시키고 ② 대기자들은 8s 웹 상한이 승자의
+    방송(10s)보다 먼저 끝나 단독 회전으로 흩어졌다. 가장 필요한 순간에 락이 풀린 것이다.
+
+    부등식: 최악 회전(≈24.75s) < 네이티브 holder 타임아웃(30s) < 웹 대기 상한(35s).
+  */
+  it('11. 승자의 회전이 10s 걸려도 대기자는 폴백하지 않고 broadcast 로 해소 (실기 재현)', async () => {
+    enterApp()
+
+    const p = performRefresh()
+    queued(lockReqId())
+
+    // 실측 10s — 옛 상한 8s 였다면 여기서 capTimer 가 터져 단독 회전으로 흩어졌다
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(mockedAxiosPost).not.toHaveBeenCalled()
+
+    broadcast('slow-winner-token')
+    const result = await p
+
+    expect(result.accessToken).toBe('slow-winner-token')
+    expect(useAuthStore.getState().accessToken).toBe('slow-winner-token')
+    expect(mockedAxiosPost).not.toHaveBeenCalled() // 회전은 끝까지 승자 1명뿐
+    expect(sentTypes()).toEqual(['refresh-lock-request'])
+  })
+
+  it('12. refresh HTTP 에 timeout 상한이 걸려 있고, 초과 실패는 기존 실패 경로 그대로', async () => {
+    enterApp()
+    useAuthStore.setState({ accessToken: 'keep-me', user: null })
+    // axios 가 timeout 초과 시 실제로 만드는 모양 — response 없음 = 세션 판정 불가
+    mockedAxiosPost.mockRejectedValueOnce(
+      Object.assign(
+        new Error(`timeout of ${REFRESH_HTTP_TIMEOUT_MS}ms exceeded`),
+        { code: 'ECONNABORTED' },
+      ),
+    )
+
+    const p = performRefresh()
+    grant(lockReqId())
+    await expect(p).rejects.toBeDefined()
+
+    /*
+      상한이 실제로 요청에 실려야 회전 소요에 최대값이 생기고, 그래야 네이티브 holder
+      타임아웃을 "최악 회전보다 길게" 잡을 수 있다. 이 옵션이 빠지면 부등식이 무너진다.
+    */
+    expect(mockedAxiosPost).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/refresh'),
+      {},
+      { withCredentials: true, timeout: REFRESH_HTTP_TIMEOUT_MS },
+    )
+    // 실패 계약 무변경 — 락 해제는 보내되 세션은 건드리지 않는다 (5번과 같은 비파괴 경로)
+    expect(sentTypes()).toContain('refresh-lock-release')
+    expect(useAuthStore.getState().accessToken).toBe('keep-me')
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(sentTypes()).not.toContain('logout')
   })
 })
 
