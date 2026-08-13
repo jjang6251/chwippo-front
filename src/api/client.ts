@@ -63,8 +63,58 @@ export interface RefreshResult {
  */
 let refreshPromise: Promise<RefreshResult> | null = null
 
+/*
+  🔬 진단 계측 (R2 원인 규명 · 2026-08-14) — **관측 전용, 락 동작 무관섭**. 원인 확정 후 제거 가능.
+
+  실기(01:31)에서 grant 를 받은 승자가 token 도 release 도 30s 동안 안 보냈다. HTTP 에
+  8s 상한이 있으니 늦어도 8s 뒤엔 둘 중 하나가 나와야 하는데 아무것도 안 나왔다 —
+  프로덕션 웹의 console 은 logcat 에 안 나와서 웹 안을 볼 수단이 없었다. 아래 breadcrumb 이
+  ① grant inject 미도달 ② HTTP 무한 대기 ③ 회전 중 페이지 소멸 을 갈라 준다.
+*/
+
+/** 앱 웹뷰에서만 발신. 계측 실패가 회전을 깨면 안 되므로 예외를 밖으로 던지지 않는다. */
+function trace(event: string, ms?: number, info?: string): void {
+  try {
+    if (!isInNativeApp()) return
+    postToNative({ type: 'refresh-trace', event, ms, info })
+  } catch {
+    // 진단이 본 기능을 죽이는 일은 없어야 한다
+  }
+}
+
+/** 진단 info 용 짧은 식별자 — 응답 본문·URL·토큰은 절대 싣지 않는다 */
+function errInfo(err: unknown): string {
+  const status = (err as { response?: { status?: number } })?.response?.status
+  if (typeof status === 'number') return `status=${status}`
+  const code = (err as { code?: unknown })?.code
+  return typeof code === 'string' && code ? `code=${code}` : 'code=none'
+}
+
+/**
+ * 가설 ③(회전 도중 페이지 소멸 → promise 증발) 판별용. 리로드·렌더러 교체가 회전 구간과
+ * 겹치는지 보려는 것이라 한 번만 등록한다 (가드로 중복 등록 차단).
+ *
+ * 진입점을 performRefresh 로 둔 이유: 모듈 최상단에서 부르면 import 만으로 부수효과가
+ * 생겨(브리지 mock 이 부분적인 다른 spec 들이 import 단계에서 깨졌다) 관측이 본 코드의
+ * 로딩 계약을 건드린다. 첫 회전 진입에 붙어도 대기·HTTP 구간은 전부 덮인다.
+ */
+let pageTraceBound = false
+function bindPageLifecycleTrace(): void {
+  if (pageTraceBound || typeof window === 'undefined' || !isInNativeApp()) return
+  pageTraceBound = true
+  window.addEventListener('pagehide', () => trace('page:hide'))
+  window.addEventListener('visibilitychange', () =>
+    trace(document.visibilityState === 'visible' ? 'page:show' : 'page:hide'),
+  )
+}
+
 export async function performRefresh(): Promise<RefreshResult> {
-  if (refreshPromise) return refreshPromise
+  bindPageLifecycleTrace()
+  if (refreshPromise) {
+    trace('enter-dedup')
+    return refreshPromise
+  }
+  trace('enter')
   refreshPromise = refreshWithNativeLock()
     .catch((err: unknown) => {
       handleAuthFailure(err)
@@ -120,6 +170,7 @@ type LockGate =
 
 function acquireNativeRefreshLock(reqId: string): Promise<LockGate> {
   return new Promise<LockGate>((resolve) => {
+    const requestedAt = Date.now() // 🔬 진단 전용 — 게이트 해소까지 걸린 시간
     let settled = false
     // 무응답 폴백(queued 회신이 오면 걷힌다) + 어떤 경우에도 걷지 않는 절대 상한
     let graceTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(
@@ -139,6 +190,7 @@ function acquireNativeRefreshLock(reqId: string): Promise<LockGate> {
       window.removeEventListener('chwippo:token-broadcast', onBroadcast)
       clearTimeout(graceTimer)
       clearTimeout(capTimer)
+      trace(`gate:${gate.kind}`, Date.now() - requestedAt)
       resolve(gate)
     }
 
@@ -158,6 +210,8 @@ function acquireNativeRefreshLock(reqId: string): Promise<LockGate> {
       if (settled || detail?.reqId !== reqId) return
       clearTimeout(graceTimer)
       graceTimer = undefined
+      // 🔬 가설 ①(grant inject 미도달)을 가르는 핵심 신호 — 이 웹뷰가 대기자였는지 승자였는지
+      trace('gate:queued', Date.now() - requestedAt)
     }
 
     function onBroadcast(e: Event) {
@@ -183,17 +237,21 @@ function acquireNativeRefreshLock(reqId: string): Promise<LockGate> {
 async function refreshWithNativeLock(): Promise<RefreshResult> {
   if (!isInNativeApp()) return doRefresh()
 
+  const startedAt = Date.now() // 🔬 진단 전용 — 락 요청부터 종료까지
   const reqId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
   const gate = await acquireNativeRefreshLock(reqId)
 
   if (gate.kind === 'broadcast') {
     useAuthStore.getState().setAccessToken(gate.accessToken)
+    trace('done:ok', Date.now() - startedAt, 'broadcast')
     // 회전 응답이 없으니 user 는 store 현재값 그대로 — broadcast 는 토큰만 나른다.
     return { accessToken: gate.accessToken, user: useAuthStore.getState().user }
   }
 
   try {
-    return await doRefresh()
+    const result = await doRefresh()
+    trace('done:ok', Date.now() - startedAt)
+    return result
   } catch (err) {
     /*
       타임아웃 폴백으로 단독 회전한 경우에도 보낸다 — 네이티브가 뒤늦게(승계·holder 타임아웃)
@@ -201,6 +259,7 @@ async function refreshWithNativeLock(): Promise<RefreshResult> {
       모르는 reqId 는 네이티브가 무시하므로 과잉 발신은 무해.
     */
     postToNative({ type: 'refresh-lock-release', reqId })
+    trace('done:err', Date.now() - startedAt, errInfo(err))
     throw err
   }
 }
@@ -222,6 +281,9 @@ async function doRefresh(): Promise<RefreshResult> {
   // 짧은 backoff 후 갱신된 쿠키로 재시도하면 성공한다 (로그아웃 아님).
   let lastErr: unknown
   for (let attempt = 0; attempt < 3; attempt++) {
+    // 🔬 진단 전용 — 가설 ②(8s 상한을 무시한 채 매달림)는 여기서 http:ok/err 이 안 나오는 걸로 드러난다
+    const attemptAt = Date.now()
+    trace('http:start', undefined, `attempt=${attempt + 1}`)
     try {
       const { data } = await axios.post<RefreshResponse>(
         `${import.meta.env.VITE_API_URL}/auth/refresh`,
@@ -230,6 +292,7 @@ async function doRefresh(): Promise<RefreshResult> {
       )
       const accessToken = data.data?.accessToken ?? data.accessToken
       const user = data.data?.user ?? data.user ?? null
+      trace('http:ok', Date.now() - attemptAt)
       if (!accessToken) {
         throw new Error('Refresh 응답에 accessToken이 없습니다.')
       }
@@ -245,6 +308,7 @@ async function doRefresh(): Promise<RefreshResult> {
       return { accessToken, user }
     } catch (err) {
       lastErr = err
+      trace('http:err', Date.now() - attemptAt, errInfo(err))
       const status = (err as { response?: { status?: number } })?.response
         ?.status
       if (status === 409 && attempt < 2) {

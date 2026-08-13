@@ -15,6 +15,7 @@
  *   - set-app-lock: 설정 토글 → native 앱 잠금 on/off 저장
  *   - refresh-lock-request: refresh 회전 직전 락 요청 → native 가 grant 회신 (선착순 1명)
  *   - refresh-lock-release: 회전 **실패** 시 명시 해제 (성공은 아래 token 이 겸용)
+ *   - refresh-trace: 회전 구간 진단 breadcrumb → native 가 logcat 으로 출력 (임시 계측)
  *
  * ## native → web 회신 (get/set-app-lock 응답)
  *   - native 가 `window.dispatchEvent(new CustomEvent('chwippo:app-lock-state',
@@ -52,6 +53,18 @@ export type NativeMessage =
    */
   | { type: 'refresh-lock-request'; reqId: string }
   | { type: 'refresh-lock-release'; reqId: string }
+  /**
+   * 🔬 **진단 전용** breadcrumb (R2 회전 락 원인 규명 · 2026-08-14) — 락 동작에 관여하지
+   * 않으며, **원인 확정 후 제거 가능**하다.
+   *
+   * 왜 필요한가: 프로덕션 웹의 console 은 logcat 에 안 나와서, 승자 웹뷰가 grant 를 받고도
+   * token(성공)·release(실패) 어느 쪽도 안 보낸 채 30s 침묵한 실기(01:31)를 웹 안에서
+   * 들여다볼 수단이 없었다. 이 메시지가 그 구간을 네이티브 로그로 끌어낸다.
+   *
+   * ⚠️ 토큰·PII 는 절대 싣지 않는다 — `info` 는 `status=409` · `code=ECONNABORTED` 같은
+   * 짧은 식별자만. 발신부는 api/client.ts `trace`.
+   */
+  | { type: 'refresh-trace'; event: string; ms?: number; info?: string }
 
 interface RNWindow {
   ReactNativeWebView?: {
