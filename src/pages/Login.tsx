@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
+import { REFRESH_HTTP_TIMEOUT_MS } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
 
 export function Login() {
@@ -13,8 +14,14 @@ export function Login() {
     if (accessToken) { navigate('/calendar', { replace: true }); return }
     if (isSuspended) return
     // 유효한 refresh 쿠키가 있으면 자동 리다이렉트
+    // 🔴 랜딩과 같은 이유로 performRefresh 를 쓰지 않는다 (Landing.tsx 주석 참조) —
+    // 로그인 화면에서의 401 은 비로그인 방문자의 정상 상태다. 시간 상한만 맞춘다.
     axios
-      .post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true })
+      .post(
+        `${import.meta.env.VITE_API_URL}/auth/refresh`,
+        {},
+        { withCredentials: true, timeout: REFRESH_HTTP_TIMEOUT_MS },
+      )
       .then(({ data }) => {
         const token = data.data?.accessToken ?? data.accessToken
         setAccessToken(token)
