@@ -125,6 +125,29 @@ describe('AuthGuard', () => {
     expect(screen.queryByText('DASHBOARD_PAGE')).toBeNull()
   })
 
+  /**
+   * ⑫ 🔴 **409 를 429 문구로 받고 있었다** (2026-08-15 수리).
+   *
+   * 실제 409 는 기기 안 여러 화면이 동시에 세션을 갱신하다 순서가 엇갈린 것이라 사용자
+   * 행동과 무관한데, 화면은 "많은 새로고침 요청에 잠시 제한" 이라고 말해 **자기 탓으로
+   * 오해**하게 만들었다. 게다가 "60초 뒤" 는 409 에 근거가 없다 (바로 재시도해도 된다).
+   */
+  it('4-b. 409 → 409 전용 문구 (429 문구·60초 안내와 구분)', async () => {
+    mockedPerformRefresh.mockRejectedValue({ response: { status: 409 } })
+    renderApp('/dashboard')
+    await waitFor(() =>
+      expect(screen.getByText('로그인 정보를 갱신하는 중이에요')).toBeTruthy(),
+    )
+    // 429 문구가 새어 나오면 안 된다 — 이 assert 가 이번 수리의 본체다
+    expect(
+      screen.queryByText('많은 새로고침 요청에 잠시 제한되었습니다'),
+    ).toBeNull()
+    expect(screen.queryByText(/60초 뒤에 다시 시도/)).toBeNull()
+    // 세션은 유효 — 랜딩으로 튕기지 않고 재시도 버튼을 준다
+    expect(screen.queryByText('LANDING_PAGE')).toBeNull()
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
+  })
+
   it('5. rate limit 화면 — 안내 문구와 "다시 시도" 버튼 존재', async () => {
     mockedPerformRefresh.mockRejectedValue({ response: { status: 429 } })
     renderApp('/dashboard')
