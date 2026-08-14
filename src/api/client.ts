@@ -309,6 +309,23 @@ function shouldRetryRefresh(err: unknown): boolean {
 
 async function doRefresh(): Promise<RefreshResult> {
   let lastErr: unknown
+  /*
+    🔴 회전 1건의 **접수번호** — 루프 밖에서 딱 한 번 뽑아 3시도 전부에 같은 값을 싣는다
+    (회전 멱등성, plan refresh-rotation-idempotency · 2026-08-15).
+
+    **재시도가 새 id 를 뽑으면 이 수리는 성립하지 않는다.** 서버는 회전 시 소비되는 행에 이
+    값을 적어 두고, 같은 값이 다시 오면 "새 시도" 가 아니라 **"같은 회전의 재전송"** 으로
+    알아본다 — 그때만 새 토큰을 발급한다. id 가 매번 달라지면 서버 눈에는 소비된 토큰을 든
+    남남이 셋 오는 것이라, 지금처럼 409 → 재시도 소진 → (창 밖이면) 세션 revoke 로 끝난다.
+
+    고치는 구멍: 회전이 서버엔 처리됐는데 응답(새 RT 쿠키)만 유실되면 기기엔 이미 소비된
+    낡은 RT 만 남아 **재시도가 원리적으로 성공할 수 없었다** (실측 2026-08-14 — 409×3 후
+    세션 갇힘, 창을 넘긴 건 401 강제 로그아웃).
+
+    `crypto.randomUUID` 는 Safari 15.4 미만에 없지만 `@/polyfills` 가 main.tsx 첫 import 로
+    채운다 (toastStore·BoardDetail 과 같은 전제). 서버는 UUID 형식만 받는다.
+  */
+  const rotationId = crypto.randomUUID()
   for (let attempt = 0; attempt < 3; attempt++) {
     // 🔬 진단 전용 — 가설 ②(8s 상한을 무시한 채 매달림)는 여기서 http:ok/err 이 안 나오는 걸로 드러난다
     const attemptAt = Date.now()
@@ -330,7 +347,7 @@ async function doRefresh(): Promise<RefreshResult> {
     try {
       const { data } = await axios.post<RefreshResponse>(
         `${import.meta.env.VITE_API_URL}/auth/refresh`,
-        {},
+        { rotationId },
         {
           withCredentials: true,
           /*
