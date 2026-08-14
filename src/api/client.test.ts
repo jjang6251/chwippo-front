@@ -175,6 +175,79 @@ describe('performRefresh', () => {
     expect(window.location.href).toBe('')
   })
 
+  /**
+   * ── 회전 멱등성 rotationId (plan refresh-rotation-idempotency, 2026-08-15) ──────
+   *
+   * 🔴 **이 수리의 전부가 "재시도가 같은 id 를 재사용한다" 한 줄에 달려 있다.**
+   * 서버는 회전 시 소비되는 행에 이 값을 적어 두고, 같은 값이 다시 오면 "같은 회전의
+   * 재전송" 으로 알아봐 새 토큰을 준다. 재시도가 새 id 를 뽑으면 서버 눈에는 소비된 토큰을
+   * 든 남남이 셋 오는 것이라 409 → 재시도 소진 → (창 밖이면) 세션 revoke 로 되돌아간다.
+   *
+   * 고치는 구멍(실측 2026-08-14): 회전이 서버엔 처리됐는데 응답만 유실되면 기기엔 소비된
+   * 낡은 RT 만 남아 재시도가 원리적으로 성공할 수 없었다 (409×3 후 세션 갇힘 · 401 로그아웃).
+   */
+  describe('rotationId — 회전 접수번호', () => {
+    const bodyOf = (i: number) =>
+      mockedAxiosPost.mock.calls[i][1] as { rotationId?: string }
+
+    it('⑨ 3시도 전부 같은 rotationId 를 싣는다 (재사용이 멱등의 전제)', async () => {
+      mockedAxiosPost.mockRejectedValue({ response: { status: 409 } })
+
+      await expect(performRefresh()).rejects.toBeDefined()
+
+      expect(mockedAxiosPost).toHaveBeenCalledTimes(3)
+      const ids = [0, 1, 2].map((i) => bodyOf(i).rotationId)
+      expect(ids[0]).toBeTruthy()
+      expect(new Set(ids).size).toBe(1) // 셋이 한 값 — 여기가 깨지면 수리가 무효다
+      // 서버는 UUID 형식만 받는다 (형식 위반은 400)
+      expect(ids[0]).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      )
+    })
+
+    it('⑩ 회전마다 새 id — 서로 다른 회전이 같은 접수번호를 쓰지 않는다', async () => {
+      mockedAxiosPost.mockResolvedValue({
+        data: { data: { accessToken: 'tok' } },
+      })
+
+      await performRefresh()
+      __resetRefreshPromiseForTest()
+      await performRefresh()
+
+      expect(mockedAxiosPost).toHaveBeenCalledTimes(2)
+      expect(bodyOf(0).rotationId).not.toBe(bodyOf(1).rotationId)
+    })
+
+    /**
+     * ⑪ 앱 웹뷰는 락 게이트를 한 번 더 거치지만 회전 실행은 같은 `doRefresh` 다.
+     * 정작 이 수리가 가장 필요한 쪽이 앱(응답 유실·백그라운드 복귀)이므로 못박는다.
+     */
+    it('⑪ 앱 웹뷰(락 grant 경로)에서도 rotationId 가 실린다', async () => {
+      ;(window as unknown as RNWindowMock).ReactNativeWebView = {
+        postMessage: vi.fn(),
+      }
+      mockedAxiosPost.mockResolvedValueOnce({
+        data: { data: { accessToken: 'granted-token' } },
+      })
+
+      const p = performRefresh()
+      const call = mockedPostToNative.mock.calls.find(
+        ([m]) => m.type === 'refresh-lock-request',
+      )
+      if (!call || call[0].type !== 'refresh-lock-request') {
+        throw new Error('refresh-lock-request 미발신')
+      }
+      window.dispatchEvent(
+        new CustomEvent('chwippo:refresh-lock-grant', {
+          detail: { reqId: call[0].reqId },
+        }),
+      )
+      await p
+
+      expect(bodyOf(0).rotationId).toBeTruthy()
+    })
+  })
+
   it('동시 5개 호출 → axios.post 1번만 (queue 동작) + 모두 같은 결과', async () => {
     mockedAxiosPost.mockResolvedValueOnce({
       data: { data: { accessToken: 'shared-token' } },
@@ -815,7 +888,8 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
     */
     expect(mockedAxiosPost).toHaveBeenCalledWith(
       expect.stringContaining('/auth/refresh'),
-      {},
+      // 회전 접수번호 (멱등성) — 값 자체의 계약은 아래 rotationId describe 가 본다
+      { rotationId: expect.any(String) },
       {
         withCredentials: true,
         timeout: REFRESH_HTTP_TIMEOUT_MS,

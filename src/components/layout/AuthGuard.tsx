@@ -6,7 +6,7 @@ import { resolvePostLoginDestination } from '@/utils/authRouting'
 import { isInNativeApp } from '@/utils/nativeBridge'
 
 /** 부팅 refresh 가 막힌 사유 — 랜딩으로 튕기는 대신 안내 카드로 받는다 */
-type BlockedReason = 'rate-limit' | 'network'
+type BlockedReason = 'rate-limit' | 'conflict' | 'network'
 
 /**
  * 🔴 네트워크 실패 자동 재시도 백오프 (ms). 배열 길이 = 재시도 횟수.
@@ -20,6 +20,15 @@ const BLOCKED_COPY: Record<BlockedReason, { title: string; body: string }> = {
   'rate-limit': {
     title: '많은 새로고침 요청에 잠시 제한되었습니다',
     body: '60초 뒤에 다시 시도해 주세요. 세션은 그대로 유지됩니다.',
+  },
+  /*
+    🔴 409 를 429 문구로 받고 있었다 — 사용자가 **자기가 너무 많이 눌러서** 막힌 걸로
+    오해한다. 실제 409 는 기기 안 여러 화면이 동시에 세션을 갱신하다 순서가 엇갈린 것으로,
+    사용자 행동과 무관하고 60초를 기다릴 이유도 없다 (바로 다시 시도하면 된다).
+  */
+  conflict: {
+    title: '로그인 정보를 갱신하는 중이에요',
+    body: '잠시 후 다시 시도해 주세요. 로그인 상태는 그대로 유지됩니다.',
   },
   network: {
     title: '연결이 불안정해요',
@@ -62,9 +71,10 @@ export function AuthGuard() {
           if (cancelled) return
           const status = statusOf(err)
           // 429(rate limit)·409(refresh 경합 재시도 소진) 둘 다 세션 유효 —
-          // 랜딩 redirect 대신 현재 URL 유지하며 재시도 안내
+          // 랜딩 redirect 대신 현재 URL 유지하며 재시도 안내.
+          // 원인이 다르므로 문구도 나눈다 (409 를 429 문구로 받으면 사용자가 자기 탓으로 오해).
           if (status === 429 || status === 409) {
-            setBlocked('rate-limit')
+            setBlocked(status === 409 ? 'conflict' : 'rate-limit')
             setChecking(false)
             return
           }
