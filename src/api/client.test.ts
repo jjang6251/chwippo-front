@@ -12,7 +12,7 @@
  * - handleAuthFailure: 네트워크(응답 없음)·5xx → 비파괴 (콜드스타트 랜딩 flash 수리)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import axios from 'axios'
+import axios, { type GenericAbortSignal } from 'axios'
 import {
   performRefresh,
   handleAuthFailure,
@@ -816,7 +816,13 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
     expect(mockedAxiosPost).toHaveBeenCalledWith(
       expect.stringContaining('/auth/refresh'),
       {},
-      { withCredentials: true, timeout: REFRESH_HTTP_TIMEOUT_MS },
+      {
+        withCredentials: true,
+        timeout: REFRESH_HTTP_TIMEOUT_MS,
+        // XHR 타임아웃이 안 먹는 실기가 확인돼(15~20) 상한 보장은 signal 몫이 됐다.
+        // timeout 은 정상 상황용 보조로 남는다 — 둘 다 실려야 이중 안전망이 성립한다.
+        signal: expect.any(AbortSignal),
+      },
     )
     // 실패 계약 무변경 — 락 해제는 보내되 세션은 건드리지 않는다 (5번과 같은 비파괴 경로)
     expect(sentTypes()).toContain('refresh-lock-release')
@@ -860,6 +866,178 @@ describe('performRefresh — 앱 웹뷰 회전 락', () => {
     expect(mockedPostToNative).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: 'refresh-trace' }),
     )
+  })
+
+  /*
+    🔴 15~20 = 2026-08-14 실기 결함(vc15 + v1.13.7 계측, 06:55)의 회귀 방어.
+
+    grant 를 18ms 에 받은 승자가 `http:start` 이후 **아무것도 안 찍고** 30s holder
+    타임아웃까지 매달렸다. axios 의 `timeout: 8000`(= XHR.timeout)이 끝내 발동하지 않은
+    것이다 — 긴 백그라운드 뒤 죽은 소켓을 잡고 네트워크 계층에서 멎는 증상. 같은 로그에서
+    JS setTimeout 은 2ms 오차로 정확히 작동했다(대기 상한 35s). 그래서 상한 보장을
+    타이머 + AbortController 로 옮겼다.
+
+    연쇄 피해도 같은 로그에 있다: 매달린 요청이 **서버엔 도달해 회전이 처리**돼(뒤늦게 회전한
+    웹뷰가 409 "이미 소비된 토큰"을 받았다) 기기엔 낡은 RT 만 남았고, 서버 유예(30s)를
+    넘겨 제출하자 재사용 감지 → 체인 폐기 → 강제 로그아웃. 그래서 abort 도 재시도 대상이다
+    (실기에서도 409 를 받은 웹뷰가 250ms 뒤 재시도로 정상 복구했다).
+  */
+
+  /**
+   * 응답도 실패도 오지 않는 시도 — 실기의 매달린 요청 재현.
+   * abort 시의 reject 모양은 **실제 axios 의 CanceledError** 를 쓴다. 직접 지어낸 에러로
+   * 픽스처를 짜면 "우리 코드가 라이브러리의 실제 신호를 읽는가" 를 검증할 수 없다
+   * (xhr 어댑터도 signal 의 abort 리스너 안에서 곧바로 이 에러로 reject 한다).
+   */
+  const hangUntilAbort = () =>
+    mockedAxiosPost.mockImplementationOnce(
+      (_url, _body, config) =>
+        new Promise<never>((_resolve, reject) => {
+          config?.signal?.addEventListener?.('abort', () =>
+            reject(new axios.CanceledError()),
+          )
+        }),
+    )
+
+  const traceInfos = (event: string) =>
+    mockedPostToNative.mock.calls
+      .map(([m]) => m)
+      .filter(
+        (m): m is Extract<NativeMessage, { type: 'refresh-trace' }> =>
+          m.type === 'refresh-trace' && m.event === event,
+      )
+      .map((m) => m.info)
+
+  it('15. 첫 시도가 영영 무응답 → 8s 에 abort → 재시도로 회복 (실기 결함 재현·수리)', async () => {
+    enterApp()
+    hangUntilAbort()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'recovered-token' } },
+    })
+
+    const p = performRefresh()
+    grant(lockReqId())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+
+    // 상한 전 조기 abort 금지 — 느린 회전(실측 10s 사례)을 우리가 먼저 끊으면 안 된다
+    await vi.advanceTimersByTimeAsync(REFRESH_HTTP_TIMEOUT_MS - 1)
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+
+    // 여기서 JS 타이머가 끊는다. 수리 전이라면 이 시도는 30s 를 통째로 매달렸다
+    await vi.advanceTimersByTimeAsync(1)
+    await vi.advanceTimersByTimeAsync(250) // 재시도 backoff
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(2)
+
+    expect(await p).toEqual({ accessToken: 'recovered-token', user: null })
+    expect(useAuthStore.getState().accessToken).toBe('recovered-token')
+    expect(mockedPostToNative).toHaveBeenCalledWith({
+      type: 'token',
+      accessToken: 'recovered-token',
+    })
+    // 🔬 끊긴 시도가 계측에 남아야 다음 실기에서 "매달림"과 "그냥 느림"을 가른다
+    expect(traceInfos('http:err')).toEqual(['code=ERR_CANCELED'])
+  })
+
+  it('16. 3시도 전부 무응답 → 24.75s 에 최종 실패 · release 발신 + 세션 비파괴', async () => {
+    enterApp()
+    useAuthStore.setState({ accessToken: 'keep-me', user: null })
+    hangUntilAbort()
+    hangUntilAbort()
+    hangUntilAbort()
+
+    const p = performRefresh()
+    let settled = false
+    const outcome = p.catch((err: unknown) => {
+      settled = true
+      return err
+    })
+    grant(lockReqId())
+    await vi.advanceTimersByTimeAsync(0)
+
+    // 최악 회전 = 3시도 × 8s + backoff(250+500) = 24.75s.
+    // 이 상한이 지켜져야 부등식(24.75s < holder 30s < 대기 상한 35s)이 성립한다.
+    await vi.advanceTimersByTimeAsync(24_749)
+    expect(settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(settled).toBe(true)
+
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(3)
+    const finalErr = (await outcome) as { code?: string }
+    expect(finalErr.code).toBe('ERR_CANCELED')
+
+    // 락은 풀어 주되, 서버가 "세션 죽었다"고 말한 적 없으므로 세션은 그대로 (5·12번과 동일)
+    expect(sentTypes()).toContain('refresh-lock-release')
+    expect(useAuthStore.getState().accessToken).toBe('keep-me')
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(sentTypes()).not.toContain('logout')
+  })
+
+  it('17. abort 타이머 누수 없음 — 성공으로 끝난 시도를 뒤늦게 끊지 않는다', async () => {
+    enterApp()
+    const signals: (GenericAbortSignal | undefined)[] = []
+    mockedAxiosPost.mockImplementationOnce((_url, _body, config) => {
+      signals.push(config?.signal)
+      return Promise.resolve({ data: { data: { accessToken: 'quick-token' } } })
+    })
+
+    const p = performRefresh()
+    grant(lockReqId())
+    expect(await p).toEqual({ accessToken: 'quick-token', user: null })
+
+    // 타이머가 남아 있으면 여기서 abort 가 뒤늦게 터진다 — 다음 회전까지 오염시킨다
+    await vi.advanceTimersByTimeAsync(REFRESH_HTTP_TIMEOUT_MS * 3)
+    expect(signals[0]?.aborted).toBe(false)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('18. 혼합 재시도 — 409 → abort → 성공', async () => {
+    enterApp()
+    mockedAxiosPost.mockRejectedValueOnce({ response: { status: 409 } })
+    hangUntilAbort()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'mixed-token' } },
+    })
+
+    const p = performRefresh()
+    grant(lockReqId())
+    await vi.advanceTimersByTimeAsync(250) // 409 backoff
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(REFRESH_HTTP_TIMEOUT_MS) // 2시도 abort
+    await vi.advanceTimersByTimeAsync(500) // 두 번째 backoff
+    expect(await p).toEqual({ accessToken: 'mixed-token', user: null })
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(3)
+    expect(traceInfos('http:err')).toEqual(['status=409', 'code=ERR_CANCELED'])
+  })
+
+  it('19. 401 은 재시도 대상이 아니다 — 즉시 1회 실패 (인증 실패 계약 무손상)', async () => {
+    enterApp()
+    mockedAxiosPost.mockRejectedValue({ response: { status: 401 } })
+
+    const p = performRefresh()
+    grant(lockReqId())
+    await expect(p).rejects.toBeDefined()
+
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1)
+    expect(useAuthStore.getState().accessToken).toBeNull()
+    expect(mockedPostToNative).toHaveBeenCalledWith({ type: 'logout' })
+  })
+
+  it('20. 브라우저도 같은 상한으로 회복 (락 경로는 여전히 미진입)', async () => {
+    hangUntilAbort()
+    mockedAxiosPost.mockResolvedValueOnce({
+      data: { data: { accessToken: 'web-recovered' } },
+    })
+
+    const p = performRefresh()
+    await vi.advanceTimersByTimeAsync(REFRESH_HTTP_TIMEOUT_MS)
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(await p).toEqual({ accessToken: 'web-recovered', user: null })
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(2)
+    expect(sentTypes()).not.toContain('refresh-lock-request')
+    expect(traceEvents()).toEqual([]) // 브라우저 무접촉 계약 유지
   })
 })
 
