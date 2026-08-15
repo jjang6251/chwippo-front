@@ -21,15 +21,28 @@
  *
  * Clarity 기본값도 입력창·숫자·이메일은 마스킹하지만(마스킹된 콘텐츠는 업로드되지 않음),
  * 그것만으로는 부족하다 — 자소서 본문은 `<div>` 로도 렌더된다. 그래서
- * **민감 화면 컨테이너에 `data-clarity-mask="true"`** 를 직접 붙인다 (`useClarityMask`).
+ * **민감 화면 컨테이너에 `data-clarity-mask="true"`** 를 직접 붙인다 (`CLARITY_MASK` 상수 ·
+ * 라우트 단위는 `components/common/ClarityMask` 가 감싼다).
  *
  * ⚠️ **"특정 화면에서 수집 중단" 은 불가능하다.** Clarity 클라이언트 API 는
  * `consent`·`identify`·`set`·`event`·`upgrade` 뿐이고 **stop/pause 가 없다.** SPA 라 스크립트가
  * 한 번 로드되면 이후 라우팅까지 기록된다. 그래서 방침 문구도 "수집하지 않습니다" 가 아니라
  * **"마스킹되어 전송되지 않습니다"** 로 적었다 — 지킬 수 있는 말만 쓴다.
  *
- * ⚠️ 앱(WebView)에서는 붙이지 않는다. 네이티브 화면 흐름과 섞이면 해석이 어긋나고,
- * 앱 사용자는 별도 분석 경로가 필요하다.
+ * ## 앱(WebView)에서도 켠다 (2026-08-15 변경)
+ *
+ * 처음에는 "네이티브 화면 흐름과 섞이면 해석이 어긋난다" 는 이유로 앱을 제외했었다. 그런데
+ * **Play 비공개 테스트(테스터 12명 × 14일)** 는 구글 프로덕션 심사가 "테스터가 어떤 기능을
+ * 썼는지" 를 서술로 요구하는데, **앱 사용의 관측 수단이 0** 이라 테스터 진술에만 의존하게 된다.
+ *
+ * 그래서 켜되, 원래 걱정("섞임")은 제외가 아니라 **`platform` 커스텀 태그(`app`/`web`)** 로 푼다 —
+ * 대시보드에서 필터로 갈라 보면 두 흐름이 섞이지 않는다. 어휘는 Sentry 태그(`src/lib/sentry.ts`)와
+ * 일부러 같게 맞췄다 — 두 도구를 **같은 단어로** 필터할 수 있어야 한다.
+ *
+ * ✅ **개인정보처리방침 개정은 불필요하다.** `src/pages/Privacy.tsx` §5-2 의 Clarity 조항에
+ * 웹 한정 표현이 없고 수탁업체(Microsoft)도 이미 등재돼 있다. 위 마스킹 약속도 앱·웹 공통으로
+ * 지켜진다 — **같은 React 앱**이라 `CLARITY_MASK` 와 `ClarityMask` 라우트가 WebView 안에서도
+ * 그대로 작동하기 때문이다.
  */
 
 const SCRIPT_ID = 'clarity-script'
@@ -40,14 +53,13 @@ function isNative(): boolean {
 }
 
 /**
- * Clarity 초기화. 미설정·앱·중복 호출 시 아무것도 하지 않는다.
+ * Clarity 초기화. 미설정·중복 호출 시 아무것도 하지 않는다.
  *
  * 스크립트는 Microsoft 가 안내하는 형태 그대로 주입한다.
  */
 export function initClarity(): void {
   const projectId = import.meta.env.VITE_CLARITY_PROJECT_ID
   if (!projectId) return // 미설정 = 비활성 (시행일 전·로컬·CI)
-  if (isNative()) return
   if (document.getElementById(SCRIPT_ID)) return // 중복 주입 방지
 
   const w = window as unknown as {
@@ -64,11 +76,15 @@ export function initClarity(): void {
   s.async = true
   s.src = `https://www.clarity.ms/tag/${projectId}`
   document.head.appendChild(s)
+
+  // 앱/웹 구분 태그. 스크립트가 아직 로드 전이어도 위 큐 shim(`w.clarity.q`)에 쌓였다가
+  // 로드 후 재생되므로 여기서 바로 불러도 유실되지 않는다. 값은 Sentry `platform` 태그와 같은 어휘.
+  w.clarity('set', 'platform', isNative() ? 'app' : 'web')
 }
 
 /** Clarity 가 실제로 켜져 있는가 (admin 상태 표시용) */
 export function isClarityActive(): boolean {
-  return Boolean(import.meta.env.VITE_CLARITY_PROJECT_ID) && !isNative()
+  return Boolean(import.meta.env.VITE_CLARITY_PROJECT_ID)
 }
 
 /**
