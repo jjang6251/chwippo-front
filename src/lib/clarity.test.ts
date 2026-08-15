@@ -6,9 +6,10 @@
  * 1. **시행일 전 비활성 보장** — 개인정보처리방침 개정은 2026-08-04 공고 / **08-11 시행**이다.
  *    시행 전에 수집이 시작되면 **고지 없는 수집**이 된다. `VITE_CLARITY_PROJECT_ID` 미설정이면
  *    아무것도 하지 않아야 한다 (Sentry DSN 과 같은 절차).
- * 2. **앱(WebView) 제외** — 네이티브 화면 흐름과 섞이면 해석이 어긋난다.
+ * 2. **앱/웹 구분 태그** — 앱(WebView)도 수집하되(비공개 테스트 관측), `platform` 태그로
+ *    갈라 보지 못하면 두 흐름이 섞여 해석이 어긋난다. 태그가 빠지면 켠 의미가 없다.
  *
- * 시나리오: 미설정 · 설정됨 · 앱 · 중복 호출 · 마스킹 상수
+ * 시나리오: 미설정 · 설정됨 · 앱 · 플랫폼 태그(app/web) · 중복 호출 · 마스킹 상수
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CLARITY_MASK, initClarity, isClarityActive } from './clarity'
@@ -17,6 +18,14 @@ function cleanup() {
   document.getElementById('clarity-script')?.remove()
   document.documentElement.removeAttribute('data-native')
   delete (window as unknown as { clarity?: unknown }).clarity
+}
+
+/** 큐 shim 에 쌓인 호출 인자 목록 (스크립트 로드 전이므로 실호출은 전부 여기 남는다) */
+function clarityQueue(): unknown[] {
+  const w = window as unknown as {
+    clarity?: ((...a: unknown[]) => void) & { q?: unknown[] }
+  }
+  return w.clarity?.q ?? []
 }
 
 describe('initClarity', () => {
@@ -34,6 +43,17 @@ describe('initClarity', () => {
     expect(isClarityActive()).toBe(false)
   })
 
+  /** 앱도 예외가 아니다 — 미설정이면 shim 도 태그도 없어야 완전 no-op 이다 */
+  it('앱(WebView)도 프로젝트 ID 미설정이면 완전 no-op 이다', () => {
+    vi.stubEnv('VITE_CLARITY_PROJECT_ID', '')
+    document.documentElement.dataset.native = '1'
+    initClarity()
+    expect(document.getElementById('clarity-script')).toBeNull()
+    expect(isClarityActive()).toBe(false)
+    expect((window as unknown as { clarity?: unknown }).clarity).toBeUndefined()
+    expect(clarityQueue()).toHaveLength(0)
+  })
+
   it('프로젝트 ID 가 있으면 스크립트를 주입한다', () => {
     vi.stubEnv('VITE_CLARITY_PROJECT_ID', 'abc123')
     initClarity()
@@ -43,13 +63,16 @@ describe('initClarity', () => {
     expect(s.async).toBe(true)
   })
 
-  /** 앱은 네이티브 화면 흐름과 섞여 해석이 어긋난다 — 별도 경로가 필요하다 */
-  it('앱(WebView)에서는 주입하지 않는다', () => {
+  /**
+   * 2026-08-15 계약 반전 — 앱(WebView)도 수집한다. Play 비공개 테스트에서 앱 사용을
+   * 관측할 수단이 이것뿐이다. 섞임은 아래 `platform` 태그로 푼다.
+   */
+  it('앱(WebView)에서도 주입한다', () => {
     vi.stubEnv('VITE_CLARITY_PROJECT_ID', 'abc123')
     document.documentElement.dataset.native = '1'
     initClarity()
-    expect(document.getElementById('clarity-script')).toBeNull()
-    expect(isClarityActive()).toBe(false)
+    expect(document.getElementById('clarity-script')).not.toBeNull()
+    expect(isClarityActive()).toBe(true)
   })
 
   /** StrictMode·리마운트로 두 번 불려도 스크립트가 둘이 되면 안 된다 */
@@ -58,6 +81,39 @@ describe('initClarity', () => {
     initClarity()
     initClarity()
     expect(document.querySelectorAll('#clarity-script')).toHaveLength(1)
+  })
+})
+
+/**
+ * 앱·웹 세션이 한 프로젝트에 섞여도 필터로 갈라 볼 수 있어야 한다.
+ * 어휘는 Sentry `platform` 태그와 동일 — 두 도구를 같은 단어로 필터하기 위함이다.
+ */
+describe('platform 태그', () => {
+  beforeEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllEnvs()
+  })
+
+  it('앱(WebView)이면 app 으로 태그한다', () => {
+    vi.stubEnv('VITE_CLARITY_PROJECT_ID', 'abc123')
+    document.documentElement.dataset.native = '1'
+    initClarity()
+    expect(clarityQueue()).toEqual([['set', 'platform', 'app']])
+  })
+
+  it('웹이면 web 으로 태그한다', () => {
+    vi.stubEnv('VITE_CLARITY_PROJECT_ID', 'abc123')
+    initClarity()
+    expect(clarityQueue()).toEqual([['set', 'platform', 'web']])
+  })
+
+  /** 중복 주입 방지 가드보다 태그가 앞서면 리마운트마다 같은 태그가 쌓인다 */
+  it('중복 호출해도 태그는 한 번만 쌓인다', () => {
+    vi.stubEnv('VITE_CLARITY_PROJECT_ID', 'abc123')
+    initClarity()
+    initClarity()
+    expect(clarityQueue()).toEqual([['set', 'platform', 'web']])
   })
 })
 
@@ -81,7 +137,11 @@ describe('큐 shim', () => {
     }
     w.clarity('event', 'testEvent')
 
-    expect(w.clarity.q).toEqual([['event', 'testEvent']])
+    // initClarity 가 넣은 platform 태그 뒤에 순서대로 쌓인다
+    expect(w.clarity.q).toEqual([
+      ['set', 'platform', 'web'],
+      ['event', 'testEvent'],
+    ])
   })
 
   /** 이미 있는 clarity 를 덮으면 그때까지 쌓인 큐가 통째로 사라진다 */
