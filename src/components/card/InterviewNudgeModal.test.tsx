@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { InterviewNudgeModal } from './InterviewNudgeModal'
+import { todayLocal } from '@/utils/datetime'
 
 /**
  * 면접 유도 모달 — **체크박스가 「닫기의 종류」를 정한다.**
@@ -214,11 +215,19 @@ describe('InterviewNudgeModal', () => {
       expect(screen.getByText(/^D-\d/).className).toContain('text-brand')
     })
 
+    /**
+     * 🔴 **픽스처와 코드가 같은 시계를 봐야 한다** (ADR-066 재발 — 2026-08-17 CI 실패).
+     *
+     * 처음엔 `new Date()` + `setHours(12)` 로 만들었다. 로컬(KST)에선 통과하는데
+     * **CI(UTC)에서 죽는다** — CI 가 22:10 UTC 에 돌면 KST 로는 이미 다음 날이라,
+     * UTC 기준 「오늘 정오」가 KST 로는 **어제**가 되어 D-day 가 아니라 「지남」이 된다.
+     * KST/UTC 날짜가 갈리는 구간이 **하루 9시간**뿐이라 로컬에선 좀처럼 안 걸린다.
+     *
+     * `calcDday` 는 KST 로 판정하므로 픽스처도 KST 날짜에서 만든다.
+     * `T03:00:00Z` = 그날 **정오 KST** — 어느 TZ 에서 돌려도 같은 KST 날짜를 가리킨다.
+     */
     it('🔴 당일 표기는 앱 전역과 같은 `D-day` — `D-DAY` 가 아니다', () => {
-      // 오늘 정오(KST) — calcDday 가 0 을 주는 값
-      const noonKst = new Date()
-      noonKst.setHours(12, 0, 0, 0)
-      draw('first', noonKst.toISOString())
+      draw('first', `${todayLocal()}T03:00:00Z`)
       expect(screen.getByText('D-day')).toBeInTheDocument()
       expect(screen.queryByText('D-DAY')).not.toBeInTheDocument()
     })
