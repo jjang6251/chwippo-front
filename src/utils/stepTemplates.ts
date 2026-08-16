@@ -79,6 +79,38 @@ export function getStepType(stepName: string): StepType {
  *
  * `app` 이 아직 안 온 호출부가 있어 `undefined` 를 그대로 받는다 (0개로 취급).
  */
+/**
+ * 면접 유도 모달 **전용** 판정 — `getStepType` 보다 좁다.
+ *
+ * 🔴 **왜 따로 두나** — 판정 순서가 `interview`(1순위) → … → `result`(4순위)라
+ * **「면접 결과 발표」·「1차 면접 결과」·「면접 후기 작성」이 전부 `interview` 로 잡힌다.**
+ * 아이콘·색을 고르는 용도로는 그게 맞다(면접 결과니 면접 아이콘). 하지만 넛지 기준으로는
+ * **결과를 기다리는 사람에게 「면접이 잡혔네요」가 뜨는 것**이라 부적합하다.
+ *
+ * 🔴 **`getStepType` 을 고치지 않는다** — 소비처가 4곳이고 아이콘·필터·그룹핑이 걸려 있다.
+ * 넛지 한 기능 때문에 전역 분류를 바꾸면 그쪽이 조용히 어긋난다.
+ *
+ * 🔴 **이 판정은 프론트에만 있다.** 서버는 「이 스텝이 면접인가」를 모른다 —
+ * 정규식을 백엔드에 복제하면 여기에 `온사이트` 를 추가하고 저기를 잊는 순간 드리프트가 된다.
+ * 서버는 「띄워도 되는 상태인가」(노출 이력·영구차단·세션)만 답한다.
+ */
+export function isInterviewLikeForNudge(stepName: string): boolean {
+  return getStepType(stepName) === 'interview' && !NUDGE_EXCLUDE_RE.test(stepName)
+}
+
+/**
+ * 넛지 전용 제외어 — 🔴 **`RESULT_RE` 를 그대로 못 쓴다.**
+ *
+ * `RESULT_RE`(`합격|최종|발표`)는 **「결과」 단독을 일부러 뺐다** — `결과 대기` 가 `wait` 로
+ * 가야 하기 때문이다(위 판정 순서 주석 참조). 그래서 그걸 재사용하면
+ * **「1차 면접 결과」가 안 걸린다.**
+ *
+ * 넛지는 `getStepType === 'interview'` 를 이미 통과한 이름만 보므로 `결과` 를 넣어도
+ * `결과 대기` 에 영향이 없다 — 그건 애초에 `wait` 라 여기 오지 않는다.
+ * `후기` 는 면접이 끝난 뒤라 준비를 권할 자리가 아니다.
+ */
+const NUDGE_EXCLUDE_RE = /합격|최종|발표|결과|후기/
+
 export function pickInterviewSteps<T extends { name: string }>(
   steps: T[] | undefined | null,
 ): T[] {

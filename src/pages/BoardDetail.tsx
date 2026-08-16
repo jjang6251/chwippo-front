@@ -15,6 +15,9 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep, useUpdateSteps } from '@/hooks/useApplications'
+import { useInterviewNudgeFlow } from '@/hooks/useInterviewNudgeFlow'
+import { InterviewNudgeModal } from '@/components/card/InterviewNudgeModal'
+import { NewInterviewSessionModal } from '@/components/card/NewInterviewSessionModal'
 import type { UpdateApplicationDto, ApplicationStep } from '@/types/application'
 import { useChecklist } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
@@ -149,14 +152,14 @@ function CurrentStepCard({
         {needsResult ? (
           <button
             onClick={onSetResult}
-            className="flex-none text-xs font-medium px-3.5 py-2 rounded-lg text-text-primary bg-brand hover:bg-accent active:bg-accent-hover transition-colors"
+            className="flex-none text-xs font-medium px-3.5 py-2 rounded-lg text-bg bg-brand hover:bg-accent active:bg-accent-hover transition-colors"
           >
             결과 입력
           </button>
         ) : (
           <button
             onClick={onOpen}
-            className="flex-none text-xs font-medium px-3.5 py-2 rounded-lg text-text-primary bg-brand hover:bg-accent active:bg-accent-hover transition-colors"
+            className="flex-none text-xs font-medium px-3.5 py-2 rounded-lg text-bg bg-brand hover:bg-accent active:bg-accent-hover transition-colors"
           >
             스텝 열기 →
           </button>
@@ -180,6 +183,8 @@ export function BoardDetail() {
   const { data: app, isLoading, isError } = useApplication(id!)
   const { mutate: update } = useUpdateApplication(id!)
   const { mutate: updateStep } = useUpdateCurrentStep()
+  // 면접 단계로 이동하면 안내 모달 (StepPage 는 제외 — 거기엔 이미 진입 버튼이 있다)
+  const nudge = useInterviewNudgeFlow()
   const { mutate: updateSteps, isPending: isSavingSteps } = useUpdateSteps(id!)
 
   const [showResultModal, setShowResultModal] = useState(false)
@@ -252,7 +257,7 @@ export function BoardDetail() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="min-h-[44px] px-4 rounded-lg bg-brand hover:bg-brand-hover text-bg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+            className="min-h-[44px] px-4 rounded-lg bg-brand hover:bg-accent text-bg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
           >
             ← 이전으로
           </button>
@@ -263,7 +268,7 @@ export function BoardDetail() {
           className={`min-h-[44px] px-4 rounded-lg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg ${
             canGoBack
               ? 'border border-line text-text-secondary hover:bg-surface-2'
-              : 'bg-brand hover:bg-brand-hover text-bg'
+              : 'bg-brand hover:bg-accent text-bg'
           }`}
         >
           지원 현황 보드로 →
@@ -304,7 +309,10 @@ export function BoardDetail() {
       setPendingStepIndex(index)
       setShowPassConfirm(true)
     } else {
-      updateStep({ id: app.id, stepIndex: index })
+      updateStep(
+        { id: app.id, stepIndex: index },
+        { onSuccess: (moved) => nudge.consider(moved, index) },
+      )
       if (tourActive && tourStep === 7) tourNext()
     }
   }
@@ -629,7 +637,7 @@ export function BoardDetail() {
         </div>
         <div className="flex gap-2 mt-5">
           <button onClick={() => setShowEditModal(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
-          <button onClick={handleSaveEdit} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors">저장</button>
+          <button onClick={handleSaveEdit} className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors">저장</button>
         </div>
       </Modal>
 
@@ -663,7 +671,7 @@ export function BoardDetail() {
         </button>
         <div className="flex gap-2">
           <button onClick={() => setShowStepEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
-          <button data-tour="save-steps-btn" onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40">
+          <button data-tour="save-steps-btn" onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40">
             {isSavingSteps ? '저장 중...' : '저장'}
           </button>
         </div>
@@ -695,7 +703,7 @@ export function BoardDetail() {
                 취소
               </button>
               <button
-                onClick={() => { updateStep({ id: app.id, stepIndex: pendingStepIndex }, { onSuccess: () => celebrate(app.companyName) }); setShowPassConfirm(false) }}
+                onClick={() => { updateStep({ id: app.id, stepIndex: pendingStepIndex }, { onSuccess: (moved) => { celebrate(app.companyName); nudge.consider(moved, pendingStepIndex) } }); setShowPassConfirm(false) }}
                 className="flex-1 py-3 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
               >
                 합격 처리
@@ -703,6 +711,38 @@ export function BoardDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 면접 유도 모달 — 이 화면 안이라 이동 없이 탭만 바꾼다 */}
+      <InterviewNudgeModal
+        open={nudge.pending !== null}
+        variant={nudge.pending?.variant ?? 'first'}
+        stepName={nudge.pending?.stepName ?? ''}
+        companyName={nudge.pending?.companyName ?? ''}
+        domain={nudge.pending?.domain}
+        scheduledDate={nudge.pending?.scheduledDate ?? null}
+        onClose={nudge.close}
+        onGo={(dismissForever) => {
+          // 탭도 같이 바꿔 둔다 — 생성 모달을 닫으면 면접 탭이 보이는 게 자연스럽다
+          setActiveTab('interview')
+          nudge.go(dismissForever)
+        }}
+      />
+      {/* CTA → 세션 생성 모달을 **바로** 연다 (면접 차수는 방금 이동한 스텝으로 미리 채움) */}
+      {nudge.creating && (
+        <NewInterviewSessionModal
+          applicationId={nudge.creating.appId}
+          defaultStepId={nudge.creating.stepId}
+          onClose={nudge.cancelCreating}
+          onCreated={(sessionId) => {
+            nudge.cancelCreating()
+            navigate(`/interviews/${sessionId}`)
+          }}
+          onNeedCoverletter={() => {
+            nudge.cancelCreating()
+            setActiveTab('coverletter')
+          }}
+        />
       )}
     </div>
   )
