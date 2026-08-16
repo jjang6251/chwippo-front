@@ -254,7 +254,7 @@ export function ForcePlanChangeModal({
             type="button"
             onClick={() => change.mutate()}
             disabled={!valid || change.isPending}
-            className="flex-1 bg-brand hover:bg-accent text-text-primary text-sm font-semibold py-2.5 rounded-md disabled:opacity-50"
+            className="flex-1 bg-brand hover:bg-accent text-bg text-sm font-semibold py-2.5 rounded-md disabled:opacity-50"
           >
             {change.isPending ? '변경 중...' : '변경'}
           </button>

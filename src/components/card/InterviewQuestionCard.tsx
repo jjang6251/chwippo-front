@@ -728,7 +728,7 @@ export function InterviewQuestionCard({
                   rows={2}
                   aria-label="질문 내용 수정"
                   /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
-                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none leading-relaxed"
+                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none leading-relaxed"
                 />
               ) : (
                 <>
@@ -767,7 +767,7 @@ export function InterviewQuestionCard({
                   type="button"
                   onClick={saveEdit}
                   disabled={(canEditText && !editText.trim()) || savingEdit}
-                  className="shrink-0 min-h-9 bg-brand hover:bg-brand-hover text-white text-xs font-medium px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="shrink-0 min-h-9 bg-brand hover:bg-accent text-bg text-xs font-medium px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   저장
                 </button>
@@ -1184,7 +1184,7 @@ export function InterviewQuestionCard({
                 maxLength={5000}
                 style={{ minHeight: 82 }}
                 /* 손으로 끄는 손잡이는 두지 않는다 — 다음 글자를 치는 순간 자동 높이가 덮어써서 싸운다 */
-                className="w-full bg-transparent px-3.5 py-3 text-[16px] text-text-primary placeholder:text-text-quaternary focus:outline-none resize-none leading-[1.8]"
+                className="w-full bg-transparent px-3.5 py-3 text-[16px] text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none leading-[1.8]"
               />
               <p
                 className={`px-3.5 pb-2.5 text-right text-[11px] ${memo.length >= 5000 ? 'text-danger' : memo.length >= 4500 ? 'text-warning' : 'text-text-quaternary'}`}

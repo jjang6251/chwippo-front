@@ -110,7 +110,7 @@ export function InterviewPrepTab({
           </p>
           <button
             onClick={() => setCreating(true)}
-            className="bg-brand hover:bg-brand-hover text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors"
+            className="bg-brand hover:bg-accent text-bg text-xs font-semibold px-4 py-2 rounded-md transition-colors"
           >
             첫 세션 만들기
           </button>

@@ -183,6 +183,8 @@ export interface BulkCreateQuestionsDto {
 }
 
 export interface CreateSessionDto {
+  /** 이 세션이 속한 전형 스텝. 「직접 입력」이면 없다 (그 세션은 서버에서 stepId=null) */
+  stepId?: string
   applicationId: string
   round: string
   interviewType?: InterviewType

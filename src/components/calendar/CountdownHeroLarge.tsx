@@ -89,7 +89,7 @@ export function CountdownHeroLarge({ event, streakDays }: Props) {
       ? 'bg-accent hover:bg-accent-hover'
       : color === 'violet'
         ? 'bg-violet hover:bg-violet/90'
-        : 'bg-brand hover:bg-brand-hover'
+        : 'bg-brand hover:bg-accent'
 
   // AI hide 중이면 자소서 관련 next_action 을 no_action 으로 강등 (자소서 페이지가 hide 상태)
   const effectiveAction: NextAction = !aiEnabled &&

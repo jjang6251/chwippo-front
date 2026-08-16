@@ -2,8 +2,27 @@ import { useEffect, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import { useCelebrationStore } from '@/stores/celebrationStore'
 
-// 합격 축하 — sage + coral + 보조색 (새 톤 정체성)
-const PARTICLE_COLORS = ['#6b9c7f', '#e88b6f', '#7eb393', '#d4b045', '#ebe9e3']
+/**
+ * 합격 축하 컨페티 — sage + coral + 보조색.
+ *
+ * 🔴 **hex 를 박아두지 않는다** (2026-08-17). 예전엔 `#6b9c7f` 처럼 그때의 다크 토큰값을
+ * 복사해 뒀는데, 토큰이 바뀌자 **여기만 옛 색으로 남았다.** canvas-confetti 는 CSS 클래스를
+ * 못 받으므로 **실행 시점에 토큰을 읽어** 넘긴다 — 테마가 바뀌면 컨페티 색도 따라간다.
+ */
+function tokenColors(): string[] {
+  const cs = getComputedStyle(document.documentElement)
+  const rgb = (name: string, fallback: string) => {
+    const v = cs.getPropertyValue(name).trim()
+    return v ? `rgb(${v.replace(/\s+/g, ' ')})` : fallback
+  }
+  return [
+    rgb('--brand', '#82bb99'),
+    rgb('--accent', '#f79476'),
+    rgb('--success', '#84bb9a'),
+    rgb('--warning', '#d4b045'),
+    rgb('--text-primary', '#ebe9e3'),
+  ]
+}
 
 export function CelebrationOverlay() {
   const companyName = useCelebrationStore((s) => s.companyName)
@@ -21,11 +40,11 @@ export function CelebrationOverlay() {
     if (!firedRef.current) {
       firedRef.current = true
       // 중앙 위쪽에서 한 번 크게, 그 뒤 양쪽 아래 코너에서 ~2.2초간 잔잔히
-      confetti({ particleCount: 70, spread: 95, startVelocity: 32, origin: { x: 0.5, y: 0.42 }, colors: PARTICLE_COLORS, gravity: 1, ticks: 220, scalar: 1, disableForReducedMotion: true })
+      confetti({ particleCount: 70, spread: 95, startVelocity: 32, origin: { x: 0.5, y: 0.42 }, colors: tokenColors(), gravity: 1, ticks: 220, scalar: 1, disableForReducedMotion: true })
       const end = Date.now() + 2200
       const frame = () => {
-        confetti({ particleCount: 3, angle: 60, spread: 50, startVelocity: 42, origin: { x: 0, y: 0.95 }, colors: PARTICLE_COLORS, gravity: 1.1, ticks: 180, scalar: 0.9, disableForReducedMotion: true })
-        confetti({ particleCount: 3, angle: 120, spread: 50, startVelocity: 42, origin: { x: 1, y: 0.95 }, colors: PARTICLE_COLORS, gravity: 1.1, ticks: 180, scalar: 0.9, disableForReducedMotion: true })
+        confetti({ particleCount: 3, angle: 60, spread: 50, startVelocity: 42, origin: { x: 0, y: 0.95 }, colors: tokenColors(), gravity: 1.1, ticks: 180, scalar: 0.9, disableForReducedMotion: true })
+        confetti({ particleCount: 3, angle: 120, spread: 50, startVelocity: 42, origin: { x: 1, y: 0.95 }, colors: tokenColors(), gravity: 1.1, ticks: 180, scalar: 0.9, disableForReducedMotion: true })
         if (Date.now() < end) requestAnimationFrame(frame)
       }
       requestAnimationFrame(frame)
@@ -71,7 +90,7 @@ export function CelebrationOverlay() {
         <button
           autoFocus
           onClick={dismiss}
-          className="text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-5 py-2.5 rounded-lg transition-colors"
+          className="text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover px-5 py-2.5 rounded-lg transition-colors"
         >
           고마워요
         </button>

@@ -126,7 +126,7 @@ export function GenerateQuestionsModal({
             <button
               type="button"
               onClick={() => navigate(`/board/${applicationId}/coverletter`)}
-              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors"
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 bg-brand hover:bg-accent text-bg text-sm font-semibold px-5 py-2.5 rounded-md transition-colors"
             >
               <FileText size={14} strokeWidth={2} aria-hidden="true" />
               자소서 쓰러 가기
@@ -217,7 +217,7 @@ export function GenerateQuestionsModal({
             onClick={start}
             disabled={capReached || generating || quotaBlocked}
             title={quotaReason ?? undefined}
-            className="w-full min-h-[44px] bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full min-h-[44px] bg-brand hover:bg-accent text-bg text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {/* 버튼 로딩은 하우스 패턴대로 **텍스트 변경**만 (스피너 없음) */}
             {generating ? '만들고 있어요…' : `✨ ${count}개 생성 시작`}

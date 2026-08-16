@@ -93,7 +93,7 @@ export function QuickCapture({ weekCount }: QuickCaptureProps) {
           <button
             onClick={handleSave}
             disabled={isPending || !content.trim()}
-            className="shrink-0 px-4 rounded-xl bg-brand hover:bg-accent text-sm font-medium text-text-primary transition-colors disabled:opacity-40"
+            className="shrink-0 px-4 rounded-xl bg-brand hover:bg-accent text-sm font-medium text-bg transition-colors disabled:opacity-40"
           >
             기록
           </button>

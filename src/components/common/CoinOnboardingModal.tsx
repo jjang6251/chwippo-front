@@ -95,7 +95,7 @@ export function CoinOnboardingModal() {
           type="button"
           onClick={handleClose}
           disabled={isPending}
-          className="w-full bg-brand hover:bg-brand-hover text-text-primary text-sm font-semibold px-4 py-2.5 rounded-md transition-colors disabled:opacity-50"
+          className="w-full bg-brand hover:bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-md transition-colors disabled:opacity-50"
         >
           {isPending ? '저장 중...' : '확인했어요'}
         </button>

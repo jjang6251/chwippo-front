@@ -13,6 +13,17 @@ export interface ApplicationStep {
   pinnedContent: string | null
 }
 
+/**
+ * 면접 유도 모달 판정 — 서버가 **단계 이동 응답에 실어 준다.**
+ *
+ * 🔴 `show` 는 「띄워도 되는 상태인가」만 뜻한다 (노출 이력·영구차단·이 스텝 세션).
+ * **「이 스텝이 면접인가」는 서버가 모른다** — 프론트가 `isInterviewLikeForNudge` 로 합친다.
+ */
+export interface InterviewNudge {
+  show: boolean
+  variant: 'first' | 'again' | 'noCoverletter'
+}
+
 /** PR_B1c — 자소서 생성 (회사조사 trigger) 상태 */
 export type CoverletterGenerationStatus =
   | 'idle'

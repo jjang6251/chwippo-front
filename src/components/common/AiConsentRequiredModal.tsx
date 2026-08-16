@@ -101,7 +101,7 @@ export function AiConsentRequiredModal() {
             type="button"
             onClick={handleAgree}
             disabled={submitting}
-            className="flex-[1.5] px-4 py-2.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-md transition-colors disabled:opacity-50"
+            className="flex-[1.5] px-4 py-2.5 text-xs font-semibold text-bg bg-brand hover:bg-accent rounded-md transition-colors disabled:opacity-50"
           >
             {submitting ? '처리 중...' : '동의하고 계속'}
           </button>

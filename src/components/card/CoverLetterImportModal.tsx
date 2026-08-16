@@ -164,7 +164,7 @@ export function CoverLetterImportModal({
                     </button>
                     <button
                       onClick={() => apply('overwrite')}
-                      className="flex-1 py-1.5 text-[11px] font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-md transition-colors"
+                      className="flex-1 py-1.5 text-[11px] font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-md transition-colors"
                     >
                       덮어쓰기
                     </button>

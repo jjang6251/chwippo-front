@@ -21,6 +21,8 @@ const h = vi.hoisted(() => ({
   app: null as Application | null,
   navigate: vi.fn(),
   sessions: [] as { id: string; round: string }[],
+  /** 잠금 완화 판정용 — 기본 0건 (기존 테스트의 「노트 없으면 잠김」 기대를 유지) */
+  coverletters: [] as { id: string }[],
 }))
 
 vi.mock('@/hooks/useApplications', () => ({
@@ -36,6 +38,10 @@ vi.mock('@/hooks/useStepDetail', () => ({
   useUpdateStep: () => ({ mutate: vi.fn() }),
 }))
 vi.mock('@/hooks/useDemoNavigate', () => ({ useDemoNavigate: () => h.navigate }))
+// 잠금 완화 — 「노트·자소서 둘 다 없을 때만 잠금」 판정에 쓰인다. 기본은 자소서 0건.
+vi.mock('@/hooks/useApplicationCoverletters', () => ({
+  useCoverletters: () => ({ data: h.coverletters }),
+}))
 vi.mock('@/utils/nativeBridge', () => ({ postToNative: vi.fn() }))
 vi.mock('@/hooks/useInterviewPrep', () => ({
   useInterviewPrepSessions: () => ({
@@ -185,12 +191,30 @@ describe('🎤 버튼 자리 — 준비 노트 라벨 행 우측', () => {
 })
 
 describe('🔴 넘길 내용이 없으면 잠근다', () => {
-  it('🔴 노트가 비면 disabled — 코인만 쓰고 빈 폼을 만나지 않는다', () => {
+  beforeEach(() => {
+    h.coverletters = [] // 기본은 자소서 0건
+  })
+
+  it('🔴 노트·자소서 둘 다 없으면 disabled — 코인만 쓰고 빈 폼을 만나지 않는다', () => {
     setApp([step(0, '1차 면접', { notes: null })])
     draw()
     const btn = bridgeBtn()!
     expect(btn.hasAttribute('disabled')).toBe(true)
-    expect(btn.getAttribute('title')).toContain('비어 있어요')
+    expect(btn.getAttribute('title')).toContain('있어야')
+  })
+
+  /**
+   * 🔴 **잠금 완화 (2026-08-16).** 원래 잠근 이유는 「빈 폼을 만난다」였는데,
+   * **자소서가 있으면 그걸 바탕으로 질문이 생성되므로 빈 폼이 아니다.**
+   * 노트만 보고 잠그면 **처음 온 사람은 이 기능에 영영 못 들어간다** — 그게 이 기능의 발단이었다.
+   */
+  it('🔴 노트가 비어도 자소서가 있으면 활성 — 처음 온 사람의 문을 막지 않는다', () => {
+    h.coverletters = [{ id: 'cl-1' }]
+    setApp([step(0, '1차 면접', { notes: null })])
+    draw()
+    const btn = bridgeBtn()!
+    expect(btn.hasAttribute('disabled')).toBe(false)
+    expect(btn.getAttribute('title')).toContain('자소서를 바탕으로')
   })
 
   it('빈 문단만 있는 노트도 비어 있는 것으로 본다', () => {

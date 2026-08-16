@@ -109,9 +109,9 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
               key={d}
               className={`h-5 flex items-center justify-center text-[9px] font-medium ${
                 i === 0
-                  ? 'text-danger/60'
+                  ? 'text-danger'
                   : i === 6
-                    ? 'text-info/60'
+                    ? 'text-info'
                     : 'text-text-quaternary'
               }`}
             >
@@ -160,9 +160,9 @@ export function CalendarSideMinimap({ events, selectedDate, onSelectDate, onToda
                       : isSelected
                         ? 'font-semibold text-accent'
                         : isSun || holidayName
-                          ? 'text-danger/70'
+                          ? 'text-danger'
                           : isSat
-                            ? 'text-info/70'
+                            ? 'text-info'
                             : 'text-text-tertiary'
                   }`}
                 >

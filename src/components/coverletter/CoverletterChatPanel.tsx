@@ -548,7 +548,7 @@ export function CoverletterChatPanel({
                   setReferencesOpen(true)
                   setActivityTreeOpen(true)
                 }}
-                className="text-[11px] font-semibold px-2.5 py-1 rounded bg-brand text-text-primary hover:bg-accent transition-colors"
+                className="text-[11px] font-semibold px-2.5 py-1 rounded bg-brand text-bg hover:bg-accent transition-colors"
               >
                 자료 선택하기
               </button>
@@ -623,7 +623,7 @@ export function CoverletterChatPanel({
           <button
             onClick={() => handleSend()}
             disabled={!input.trim() || sending || quotaBlocked}
-            className="shrink-0 w-9 h-9 flex items-center justify-center text-base font-bold text-text-primary bg-brand hover:bg-accent active:scale-95 disabled:opacity-30 disabled:hover:bg-brand rounded-xl transition-all"
+            className="shrink-0 w-9 h-9 flex items-center justify-center text-base font-bold text-bg bg-brand hover:bg-accent active:scale-95 disabled:opacity-30 disabled:hover:bg-brand rounded-xl transition-all"
             aria-label="메시지 전송"
             title="메시지 전송 (Enter)"
           >
@@ -833,7 +833,7 @@ export function MessageBubble({
       <div
         className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
           isUser
-            ? 'bg-brand text-text-primary rounded-tr-sm'
+            ? 'bg-brand text-bg rounded-tr-sm'
             : 'bg-surface-2 text-text-primary border border-line rounded-tl-sm'
         }`}
       >
@@ -907,7 +907,7 @@ export function MessageBubble({
               return unhandled.length >= 2 && !isPendingAssistant ? (
                 <button
                   onClick={() => onBulkApply(unhandled)}
-                  className="w-full text-[11px] font-semibold px-2 py-1.5 rounded bg-brand text-text-primary hover:bg-accent transition-colors"
+                  className="w-full text-[11px] font-semibold px-2 py-1.5 rounded bg-brand text-bg hover:bg-accent transition-colors"
                   title="미처리 제안을 요약 확인 후 한 번에 적용"
                 >
                   모두 적용 ({unhandled.length}개 문항)
@@ -987,7 +987,7 @@ export function MessageBubble({
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => onApply(u)}
-                        className="flex-1 text-[11px] font-semibold px-2 py-1 rounded bg-brand text-text-primary hover:bg-accent transition-colors"
+                        className="flex-1 text-[11px] font-semibold px-2 py-1 rounded bg-brand text-bg hover:bg-accent transition-colors"
                         title="제안 답변 확인 — 변경 영역 미리보기 후 적용"
                       >
                         답변 확인하기

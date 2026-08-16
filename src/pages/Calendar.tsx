@@ -253,7 +253,7 @@ export function Calendar() {
               setAddSheetDate(todayStr)
               setAddSheetOpen(true)
             }}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-brand hover:bg-brand-hover text-bg text-xs font-bold transition-colors"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-brand hover:bg-accent text-bg text-xs font-bold transition-colors"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M6 1v10M1 6h10" />
@@ -516,7 +516,7 @@ function CalendarErrorCard({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="inline-flex h-9 items-center rounded-lg bg-brand px-5 text-xs font-bold text-bg transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+        className="inline-flex h-9 items-center rounded-lg bg-brand px-5 text-xs font-bold text-bg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
       >
         다시 시도
       </button>

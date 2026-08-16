@@ -105,7 +105,7 @@ export function ProfileSettings() {
               </button>
               <button
                 onClick={handleLogout}
-                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent active:bg-accent-hover transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-brand text-bg text-sm font-medium hover:bg-accent active:bg-accent-hover transition-colors"
               >
                 로그아웃
               </button>

@@ -4,6 +4,7 @@ import type {
   CreateApplicationDto,
   UpdateApplicationDto,
   UpdateStepsDto,
+  InterviewNudge,
 } from '@/types/application'
 
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
@@ -20,7 +21,16 @@ export const applicationsApi = {
     apiClient.patch<{ data: Application }>(`/applications/${id}`, dto).then(unwrap),
 
   updateCurrentStep: (id: string, stepIndex: number) =>
-    apiClient.patch<{ data: Application }>(`/applications/${id}/step`, { stepIndex }).then(unwrap),
+    apiClient
+      .patch<{ data: Application & { interviewNudge?: InterviewNudge } }>(
+        `/applications/${id}/step`,
+        { stepIndex },
+      )
+      .then(unwrap),
+
+  /** 면접 유도 모달을 이 스텝에서 띄웠다고 기록 (멱등). 닫는 방법 4가지가 전부 여기로 온다 */
+  markInterviewNudgeShown: (id: string, stepId: string) =>
+    apiClient.post(`/applications/${id}/steps/${stepId}/interview-nudge-shown`),
 
   updateSteps: (id: string, dto: UpdateStepsDto) =>
     apiClient.put<{ data: Application }>(`/applications/${id}/steps`, dto).then(unwrap),

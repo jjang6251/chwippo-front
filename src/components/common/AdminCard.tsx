@@ -32,7 +32,7 @@ export function AdminCard({
       className={`bg-surface-2 border border-line rounded-xl shadow-sm overflow-hidden mb-5 ${className}`}
     >
       {(title || action) && (
-        <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line bg-card/40">
+        <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line bg-card">
           {title && (
             <h2 className="text-text-primary text-sm font-semibold inline-flex items-center gap-1.5">
               {title}

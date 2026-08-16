@@ -17,25 +17,36 @@
   --surface: 35 33 31;
   --surface-2: 44 42 40;
   --surface-3: 54 51 48;
-  /* 입력 전용 — 컨테이너(surface-2)보다 +36 톤 밝아 입력 영역 명확. 베타 UIUX polish */
-  --input-bg: 80 75 70;
+  /* 입력 전용 — 컨테이너보다 밝아 입력 영역이 구분된다.
+     🔴 2026-08-17: 80 75 70 → 52 49 46. 너무 밝아 **플레이스홀더가 3.03:1** 이었다
+     (`placeholder:text-text-tertiary` — 앱 표준). 52 49 46 이면 4.55 ✅ 이면서
+     surface-2(44 42 40)·surface(35 33 31)보다 여전히 밝아 구분 의도는 유지된다. */
+  --input-bg: 52 49 46;
 
   --text-primary: 235 233 227;
   --text-secondary: 192 189 179;
-  /* 2026-07-18 묶음 2b — 대비 4.5:1 정책: tert 5.64·quat 4.52 (vs surface, 워스트) */
-  --text-tertiary: 156 153 146;
-  --text-quaternary: 138 136 129;
+  /* 2026-07-18 묶음 2b — 대비 4.5:1 정책. 당시 워스트를 `surface` 로 잡았는데
+     실제 워스트는 **surface-3(54 51 48)** 이었다 → 2026-08-17 재조정.
+     quaternary 를 4.5 로 올리면 tertiary 와 값이 겹쳐 위계가 붕괴하므로,
+     **tertiary 를 함께 띄워** 4단을 유지한 채 전부 통과시켰다 (명도 간격 sec-ter .106 / ter-quat .071):
+       secondary 6.68 · tertiary 5.41 · quaternary 4.56  (전부 vs surface-3) */
+  --text-tertiary: 173 170 162;
+  --text-quaternary: 158 156 148;
 
-  --brand: 107 156 127;
-  --brand-hover: 88 138 106;
-  --accent: 232 139 111;
-  --accent-hover: 212 119 90;
+  /* 🔴 2026-08-17 대비 재조정 (워스트 = surface-3 위 텍스트, 4.5:1)
+     brand 107→115 · violet 164→171 · danger 212→233.
+     brand-hover 는 **배경 전용**이라 기준이 다르다 — `text-bg` 를 얹었을 때 4.5 만 넘으면 되고
+     (4.99 ✅), 본색과의 명도 간격 1.34배를 유지해 hover 가 눈에 보이게 남겼다. */
+  --brand: 130 187 153;
+  --brand-hover: 113 164 134;
+  --accent: 247 148 118;
+  --accent-hover: 226 127 96;
 
-  --success: 126 179 147;
+  --success: 132 187 154;
   --warning: 212 176 69;
-  --info: 125 169 184;
-  --violet: 164 139 191;
-  --danger: 212 113 92;
+  --info: 136 183 199;
+  --violet: 190 162 221;
+  --danger: 255 142 116;
 
   /* border·shadow는 일반 색이 아니라 그대로 */
   --border: rgba(235, 233, 227, 0.07);
@@ -51,6 +62,25 @@
   --line-strong: rgba(255, 255, 255, 0.14);
   --divider: rgba(255, 255, 255, 0.08);
   --text-faint: rgba(255, 255, 255, 0.30);
+
+
+  /* 🔴 데이터 시각화 태그 색 (활동 역량·자소서 카테고리) — 2026-08-17.
+     전에는 `constants.ts` 에 **테마 무관 고정 RGB** 였다. 칩 글자로 쓰이는데
+     라이트에서 2.06:1 · 다크에서 2.7:1 로 어느 쪽이든 반드시 깨졌다 —
+     한 색으로 양 테마 4.5 를 만족하는 건 **수학적으로 불가능**하다
+     (라이트는 L≤0.171 이어야 하고 다크는 L≥0.293 이어야 한다).
+     그래서 토큰화해 테마별로 명도를 뒤집는다. 호출부(`tagColorStyle`)는 그대로다. */
+  --tag-blue: 96 165 250;
+  --tag-orange: 251 146 60;
+  --tag-emerald: 52 211 153;
+  --tag-indigo: 129 140 248;
+  --tag-purple: 192 132 252;
+  --tag-cyan: 34 211 238;
+  --tag-pink: 244 114 182;
+  --tag-yellow: 250 204 21;
+  --tag-red: 248 113 113;
+  --tag-teal: 45 212 191;
+  --tag-amber: 251 191 36;
 
   --shadow-sm: none;
   --shadow-md: none;
@@ -69,20 +99,38 @@
 
   --text-primary: 26 24 22;
   --text-secondary: 74 70 64;
-  /* 2026-07-18 묶음 2b — 대비 4.5:1 정책: tert 5.64·quat 4.56 (vs 베이지 bg, 워스트) */
+  /* 2026-07-18 묶음 2b — 대비 4.5:1 정책. 워스트를 베이지 bg 로 잡았으나 실제 워스트는
+     **surface-3/input(235 230 217)** 이라 quaternary 가 4.38 로 미달이었다 → 2026-08-17 미세 조정.
+     secondary 7.52 · tertiary 5.42 · quaternary 4.53 (전부 vs surface-3) */
   --text-tertiary: 95 91 83;
-  --text-quaternary: 109 105 97;
+  --text-quaternary: 106 103 95;
 
-  --brand: 74 139 107;
-  --brand-hover: 58 112 83;
-  --accent: 198 102 64;
-  --accent-hover: 168 80 45;
+  /* 🔴 2026-08-17 `/uiux` — 라이트 sage 를 한 단계 낮춤. 대비 4.5:1 정책의 연장선
+     (2026-07-18 묶음 2b 에서 텍스트 토큰만 맞췄고 brand 는 빠져 있었다).
 
-  --success: 74 139 107;
-  --warning: 168 132 30;
-  --info: 77 128 148;
-  --violet: 122 106 153;
-  --danger: 184 80 64;
+     이전 값 rgb(74,139,107) 은 **밝은 글자로는 AA 를 못 넘는 색**이었다 —
+     흰색을 얹어도 4.04 가 상한이라 CTA 글자색을 바꿔서는 해결이 안 되고,
+     색 자체를 낮추는 방법밖에 없었다. 실측(변경 후):
+       text-bg on bg-brand   3.37 → 4.50 ✅   (모든 brand CTA — 앱 전역 17곳)
+       text-brand on surface 4.04 → 5.39 ✅
+       text-brand on card    3.81 → 5.09 ✅   (크림 카드 위 — 여기도 미달이었다)
+     hover 명도 간격은 그대로 유지(1.43 → 1.42)해 눌림 피드백이 죽지 않게 했다. */
+  --brand: 54 102 78;
+  --brand-hover: 41 80 60;
+  /* 🔴 2026-08-17 — 라이트 의미색 일괄 하향. 워스트 표면인 페이지 배경(240 234 222) 위에서
+     전부 4.5:1 미만이었다 (warning 2.93 · accent 3.26 · success 3.37 · info 3.63 · violet 4.03 · danger 4.12).
+     색상각·채도비는 선형 공간 균일 배율로 보존하고 명도만 낮췄다.
+     accent 는 `bg-brand hover:bg-accent` 버튼 74곳의 **hover 배경**이기도 해서,
+     그 위 `text-bg` 대비도 3.26 → 4.56 으로 같이 해소된다.
+     accent-hover 는 본색과의 명도 간격(1.54배)을 유지해 hover 가 죽지 않게 했다. */
+  --accent: 143 72 44;
+  --accent-hover: 117 58 34;
+
+  --success: 53 102 78;
+  --warning: 114 89 17;
+  --info: 58 98 113;
+  --violet: 100 86 126;
+  --danger: 152 65 52;
 
   --border: rgba(26, 24, 22, 0.10);
   --border-strong: rgba(26, 24, 22, 0.18);
@@ -97,33 +145,58 @@
   --divider: rgba(26, 24, 22, 0.10);
   --text-faint: rgba(26, 24, 22, 0.45);
 
+  /* 라이트 — 같은 색상각의 -700 계열 (위 다크 블록과 짝) */
+  --tag-blue: 29 78 216;
+  --tag-orange: 194 65 12;
+  --tag-emerald: 4 120 87;
+  --tag-indigo: 67 56 202;
+  --tag-purple: 126 34 206;
+  --tag-cyan: 14 116 144;
+  --tag-pink: 190 24 93;
+  --tag-yellow: 161 98 7;
+  --tag-red: 185 28 28;
+  --tag-teal: 15 118 110;
+  --tag-amber: 180 83 9;
+
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
-/* 기본 다크 — data-theme 미지정 시 fallback (위와 동일) */
+/* 기본 다크 — data-theme 미지정 시 fallback.
+   🔴 **위 다크 블록과 값이 항상 같아야 한다.** 2026-08-17 대비 조정 때 이 블록이 안 따라와
+   테마 미지정 사용자만 옛 색을 보고 있었다 — 「위와 동일」이라는 주석이 사실이 아니었다.
+   (중복 `--text-tertiary` hex 선언 2줄도 이때 정리 — 아래 triplet 에 덮여 죽은 코드였다) */
 :root:not([data-theme]) {
   color-scheme: dark;
   --bg: 26 24 22;
   --surface: 35 33 31;
   --surface-2: 44 42 40;
   --surface-3: 54 51 48;
-  --input-bg: 80 75 70;
+  --input-bg: 52 49 46;
   --text-primary: 235 233 227;
   --text-secondary: 192 189 179;
-  --text-tertiary: #9c9992;
-  --text-quaternary: #8a8881;
-  --text-tertiary: 156 153 146;
-  --text-quaternary: 138 136 129;
-  --brand: 107 156 127;
-  --brand-hover: 88 138 106;
-  --accent: 232 139 111;
-  --accent-hover: 212 119 90;
-  --success: 126 179 147;
+  --text-tertiary: 173 170 162;
+  --text-quaternary: 158 156 148;
+  --brand: 130 187 153;
+  --brand-hover: 113 164 134;
+  --accent: 247 148 118;
+  --accent-hover: 226 127 96;
+  --success: 132 187 154;
   --warning: 212 176 69;
-  --info: 125 169 184;
-  --violet: 164 139 191;
-  --danger: 212 113 92;
+  --info: 136 183 199;
+  --violet: 190 162 221;
+  --danger: 255 142 116;
+  --tag-blue: 96 165 250;
+  --tag-orange: 251 146 60;
+  --tag-emerald: 52 211 153;
+  --tag-indigo: 129 140 248;
+  --tag-purple: 192 132 252;
+  --tag-cyan: 34 211 238;
+  --tag-pink: 244 114 182;
+  --tag-yellow: 250 204 21;
+  --tag-red: 248 113 113;
+  --tag-teal: 45 212 191;
+  --tag-amber: 251 191 36;
   --border: rgba(235, 233, 227, 0.07);
   --border-strong: rgba(235, 233, 227, 0.14);
   --shadow-sm: none;

@@ -71,7 +71,7 @@ export function FailedTakeawayBox({ application }: { application: Application })
             <button
               onClick={save}
               disabled={isPending}
-              className="text-[11px] font-medium text-text-primary bg-brand hover:bg-accent px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
+              className="text-[11px] font-medium text-bg bg-brand hover:bg-accent px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
             >
               저장
             </button>

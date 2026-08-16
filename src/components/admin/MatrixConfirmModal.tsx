@@ -156,7 +156,7 @@ export function MatrixConfirmModal({
           <button
             type="button"
             onClick={() => onConfirm(applyMode)}
-            className="flex-1 bg-brand hover:bg-accent text-text-primary text-sm font-semibold py-2.5 rounded-md"
+            className="flex-1 bg-brand hover:bg-accent text-bg text-sm font-semibold py-2.5 rounded-md"
           >
             확인
           </button>

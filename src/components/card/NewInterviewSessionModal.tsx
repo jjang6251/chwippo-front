@@ -20,6 +20,12 @@ interface Props {
    * 경로는 부모가 안다 — 이 모달은 어디서 열렸는지 모르기 때문이다.
    */
   onNeedCoverletter: () => void
+  /**
+   * 면접 유도 모달에서 열릴 때 **방금 이동한 스텝**을 미리 골라 둔다.
+   * 그 순간 우리는 사용자가 어느 단계로 갔는지 알고 있는데, 비워 두면
+   * 드롭다운을 다시 열어 같은 걸 고르게 된다 (필수 입력이라 더 어색하다).
+   */
+  defaultStepId?: string
 }
 
 const TYPE_OPTIONS: Array<{ value: InterviewType; label: string }> = (
@@ -42,8 +48,18 @@ export function NewInterviewSessionModal({
   onClose,
   onCreated,
   onNeedCoverletter,
+  defaultStepId,
 }: Props) {
-  const [roundChoice, setRoundChoice] = useState('')
+  /**
+   * 🔴 값이 스텝 **이름**이 아니라 **id** 다 (2026-08-16 변경).
+   *
+   * 예전엔 `value={s.name}` 이라 이름 문자열만 남았고, 그래서 ① 스텝 이름을 고치면
+   * 세션 `round` 가 옛 이름으로 굳고 ② 「이 스텝의 세션이 있나?」를 물을 수 없었다.
+   * id 로 바꾸면서 **동명 스텝**(「2차 면접」이 둘)도 구분된다.
+   *
+   * `CUSTOM_ROUND` 센티널과 uuid 가 같은 state 에 섞이므로 판별을 명시적으로 한다.
+   */
+  const [roundChoice, setRoundChoice] = useState(defaultStepId ?? '')
   const [customRound, setCustomRound] = useState('')
   const [interviewType, setInterviewType] = useState<InterviewType | ''>('')
   // 공고 요건 섹션 접힘 — 정리된 내용이 없으면 펼쳐서 CTA 를 바로 보이게 한다
@@ -92,8 +108,6 @@ export function NewInterviewSessionModal({
     return next
   }
 
-  const round =
-    roundChoice === CUSTOM_ROUND ? customRound.trim() : roundChoice.trim()
 
   const handleSubmit = async () => {
     if (!round) {
@@ -121,6 +135,8 @@ export function NewInterviewSessionModal({
       {
         applicationId,
         round,
+        // 「직접 입력」이면 스텝이 없다 — 그 세션은 stepId=null 로 남는다 (설계대로)
+        stepId: selectedStep?.id,
         interviewType: interviewType || undefined,
         coverletterIds: Array.from(selectedClIds),
         extraLogIds: Array.from(selectedLogIds),
@@ -139,6 +155,17 @@ export function NewInterviewSessionModal({
     (a, b) => (b.isInbox ? 1 : 0) - (a.isInbox ? 1 : 0),
   )
   const steps = app?.steps ?? []
+
+  /** 선택된 스텝 — 센티널·빈값이면 undefined (「직접 입력」 또는 미선택) */
+  const selectedStep =
+    roundChoice && roundChoice !== CUSTOM_ROUND
+      ? steps.find((s) => s.id === roundChoice)
+      : undefined
+  const round =
+    roundChoice === CUSTOM_ROUND
+      ? customRound.trim()
+      : (selectedStep?.name ?? '').trim()
+
 
   return (
     <Modal open onClose={onClose} title="새 면접 세션" width="max-w-2xl">
@@ -181,7 +208,7 @@ export function NewInterviewSessionModal({
                   maxLength={100}
                   placeholder="예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계"
                   /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
-                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
                 />
                 <p className="text-warning text-[11px] mt-1.5">
                   <span className="inline-flex items-start gap-1">
@@ -224,7 +251,7 @@ export function NewInterviewSessionModal({
                     전형 단계를 선택하세요
                   </option>
                   {steps.map((s) => (
-                    <option key={s.id} value={s.name}>
+                    <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
                   ))}
@@ -255,7 +282,7 @@ export function NewInterviewSessionModal({
                   placeholder="예: 모의 면접 / 코딩테스트 회고"
                   autoFocus
                   /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
-                  className="mt-2 w-full bg-surface border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-faint focus:border-brand/45 outline-none"
+                  className="mt-2 w-full bg-surface border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand/45 outline-none"
                 />
               )}
               {steps.length === 0 && roundChoice !== CUSTOM_ROUND && (
@@ -469,7 +496,7 @@ export function NewInterviewSessionModal({
           // 자소서는 더 이상 조건이 아니다 — 직접 적은 질문만으로도 세션이 성립한다.
           disabled={isPending || !round || !jobReady}
           title={!jobReady ? '지원 직무를 입력해 주세요' : undefined}
-          className="px-4 py-1.5 text-xs bg-brand hover:bg-brand-hover text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-1.5 text-xs bg-brand hover:bg-accent text-bg rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? '생성 중…' : '세션 만들기'}
         </button>

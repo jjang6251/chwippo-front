@@ -19,7 +19,7 @@ export function DemoBanner() {
         </Link>
         <button
           onClick={showLogin}
-          className="text-[11px] font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-2.5 py-1.5 rounded-md transition-colors"
+          className="text-[11px] font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover px-2.5 py-1.5 rounded-md transition-colors"
         >
           무료로 시작하기
         </button>

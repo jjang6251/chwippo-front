@@ -61,7 +61,7 @@ export function EmptyDeadlineHero({ variant = 'no-deadline' }: Props) {
       <div className="relative flex items-center justify-center gap-2">
         <Link
           to={boardTo}
-          className="h-9 px-4 rounded-lg bg-brand hover:bg-brand-hover text-bg text-[11px] font-bold transition-colors inline-flex items-center"
+          className="h-9 px-4 rounded-lg bg-brand hover:bg-accent text-bg text-[11px] font-bold transition-colors inline-flex items-center"
         >
           {isOnboarding ? '카드 추가하기 →' : '새 카드 추가 →'}
         </Link>

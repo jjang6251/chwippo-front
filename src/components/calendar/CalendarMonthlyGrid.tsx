@@ -192,9 +192,9 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
               key={d}
               className={`py-2.5 text-center text-xs font-medium ${
                 i === 0
-                  ? 'text-danger/70'
+                  ? 'text-danger'
                   : i === 6
-                    ? 'text-info/70'
+                    ? 'text-info'
                     : 'text-text-quaternary'
               }`}
             >
@@ -232,9 +232,9 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
             const dateBadge = isToday
               ? 'bg-brand text-bg'
               : isSun || holidayName
-                ? 'text-danger/80'
+                ? 'text-danger'
                 : isSat
-                  ? 'text-info/80'
+                  ? 'text-info'
                   : 'text-text-secondary'
 
             const cellBg = isSelected
@@ -288,7 +288,7 @@ export function CalendarMonthlyGrid({ events, selectedDate, onSelectDate, onToda
                     </span>
                   )}
                   {holidayName && (
-                    <span className="text-[9px] text-danger/70 font-medium truncate min-w-0 flex-1 leading-tight" title={holidayName}>
+                    <span className="text-[9px] text-danger font-medium truncate min-w-0 flex-1 leading-tight" title={holidayName}>
                       {holidayName}
                     </span>
                   )}

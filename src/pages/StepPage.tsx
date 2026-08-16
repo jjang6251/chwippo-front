@@ -6,6 +6,7 @@ import { useNativeMode } from '@/hooks/useNativeMode'
 import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
 import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/hooks/useApplications'
+import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
 import { SheetedNoteEditor } from '@/components/editor/SheetedNoteEditor'
 import { Modal } from '@/components/common/Modal'
@@ -63,6 +64,21 @@ export function StepPage() {
   const { mutate: deleteItem } = useDeleteChecklistItem(appId!, stepId!)
   const { mutate: updateCurrentStep } = useUpdateCurrentStep()
   const { mutate: updateApplication } = useUpdateApplication(appId!)
+  /**
+   * 잠금 완화 (2026-08-16) — 「이 내용으로 면접 질문 만들기」 가 노트 없이도 눌리려면
+   * 자소서 유무를 알아야 한다.
+   *
+   * 🔴 **훅은 early return 위에 있어야 한다** (rules-of-hooks). 그래서 스텝 유형을
+   *    알기 전에 호출되고, `enabled` 로 실제 요청만 막는다 —
+   *    이 값이 false 면 네트워크는 안 나간다.
+   */
+  const { data: stepCoverletters } = useCoverletters(
+    appId ?? '',
+    // 🔴 면접 스텝일 때만 실제로 부른다 — 모든 스텝 진입마다 부르면 불필요한 쿼리가 는다.
+    //    `step` 은 early return 전에도 계산돼 있어 여기서 판정할 수 있다.
+    !!appId && !!step && getStepType(step.name) === 'interview',
+  )
+  const hasCoverletter = (stepCoverletters?.length ?? 0) > 0
 
   function handleDateBlur() {
     setEditingField(null)
@@ -408,7 +424,7 @@ export function StepPage() {
             {inputText.trim() && (
               <button
                 onClick={handleAddItem}
-                className="shrink-0 whitespace-nowrap h-8 px-3 text-[13px] sm:h-7 sm:px-2.5 sm:text-[12px] rounded-lg bg-brand hover:bg-accent active:bg-accent-hover text-text-primary font-semibold flex items-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+                className="shrink-0 whitespace-nowrap h-8 px-3 text-[13px] sm:h-7 sm:px-2.5 sm:text-[12px] rounded-lg bg-brand hover:bg-accent active:bg-accent-hover text-bg font-semibold flex items-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
               >
                 추가
               </button>
@@ -440,11 +456,19 @@ export function StepPage() {
               applicationId={appId}
               label="이 내용으로 면접 질문 만들기"
               navState={{ bridgeText: noteText }}
-              disabled={!hasNoteText}
+              /*
+                🔴 잠금 조건을 **완화**했다 (2026-08-16): `노트 없음` → `노트·자소서 둘 다 없음`.
+                원래 잠근 이유("빈 채로 넘어가면 세션 생성만 쓰고 빈 폼을 만난다")는 **자소서까지
+                없을 때** 성립한다 — 자소서가 있으면 그걸 바탕으로 질문이 생성되므로 빈 폼이 아니다.
+                노트가 비었다고 잠그면 **처음 온 사람은 이 기능에 영영 못 들어간다.**
+              */
+              disabled={!hasNoteText && !hasCoverletter}
               title={
                 hasNoteText
                   ? '준비 노트를 붙여넣기 칸에 채워서 질문으로 만들어요'
-                  : '준비 노트가 비어 있어요 — 예상 질문·기출을 먼저 적어 주세요'
+                  : hasCoverletter
+                    ? '자소서를 바탕으로 예상 질문을 만들어요 (준비 노트를 적으면 그 내용도 함께 씁니다)'
+                    : '준비 노트나 자소서가 있어야 질문을 만들 수 있어요'
               }
               /* 자소서 화면이 아니다 — 닫기만 하면 갈 곳이 없다 */
               onNeedCoverletter={() => navigate(`/board/${appId}/coverletter`)}
@@ -555,7 +579,7 @@ function StepCompleteCta({
     ? 'bottom-4'
     : 'bottom-[calc(68px+env(safe-area-inset-bottom,0px))] lg:bottom-4'
   const CTA_COLOR =
-    'bg-brand hover:bg-accent active:bg-accent-hover text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
+    'bg-brand hover:bg-accent active:bg-accent-hover text-bg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
 
   return (
     <>
