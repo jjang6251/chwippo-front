@@ -58,7 +58,7 @@ export function EmptyBoardState({ onAddFirst }: Props) {
         type="button"
         onClick={onAddFirst}
         className="
-          bg-brand hover:bg-brand-hover text-text-primary
+          bg-brand hover:bg-accent text-bg
           px-7 py-3 rounded-lg text-sm font-semibold
           transition-colors
         "

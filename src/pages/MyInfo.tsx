@@ -126,7 +126,7 @@ function useSaved() {
 // InfoModal 안 body section 그룹핑 (Education 톤과 통일)
 function ModalSection({ title, children, first }: { title: string; children: React.ReactNode; first?: boolean }) {
   return (
-    <div className={first ? '' : 'pt-6 border-t border-line/50'}>
+    <div className={first ? '' : 'pt-6 border-t border-line'}>
       <p className="text-[13px] font-bold text-text-primary mb-3.5">{title}</p>
       {children}
     </div>
@@ -173,7 +173,7 @@ function Field({
   required?: boolean; disabled?: boolean
 }) {
   // Toss 톤 — h-12 (48px), text-base, rounded-xl, focus 4px halo
-  const base = 'w-full bg-input border border-line/70 rounded-xl text-base text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all'
+  const base = 'w-full bg-input border border-line rounded-xl text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all'
   const cls = `${base} px-4 h-12 ${copyable ? 'pr-12' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
   const textareaCls = `${base} px-4 py-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
   // 자소서 소재 textarea — 베타 피드백 패턴 (auto-resize 200~500 + lineHeight 1.6)
@@ -245,7 +245,7 @@ function SelectField({ label, value, onChange, options, required }: {
     <div>
       <FieldLabel label={label} required={required} />
       <div className="relative">
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full appearance-none bg-input border border-line/70 rounded-xl pl-4 pr-11 h-12 text-base text-text-primary cursor-pointer focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full appearance-none bg-input border border-line rounded-xl pl-4 pr-11 h-12 text-base text-text-primary cursor-pointer focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all">
           <option value="">선택</option>
           {options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -466,7 +466,7 @@ export function MyInfo() {
                 <span>{s.label}</span>
                 {status && status.active && (
                   status.kind === 'multi'
-                    ? <span className={`text-[10px] font-mono tabular-nums ${status.count > 0 ? 'text-brand/70' : 'text-text-quaternary/50'}`}>({status.count})</span>
+                    ? <span className={`text-[10px] font-mono tabular-nums ${status.count > 0 ? 'text-brand' : 'text-text-quaternary'}`}>({status.count})</span>
                     : status.filled
                       ? <span className="text-success text-[10px]">✓</span>
                       : null
@@ -492,7 +492,7 @@ export function MyInfo() {
                   {isFirstExcluded && (
                     <div className="my-2 px-3">
                       <div className="h-px bg-card-strong" />
-                      <p className="text-[10px] text-text-quaternary/70 font-medium uppercase tracking-wider mt-2">기타</p>
+                      <p className="text-[10px] text-text-quaternary font-medium uppercase tracking-wider mt-2">기타</p>
                     </div>
                   )}
                 <button
@@ -507,10 +507,10 @@ export function MyInfo() {
                   <span className="text-[11px] font-medium truncate flex-1">{s.label}</span>
                   {status && status.active && (
                     status.kind === 'multi'
-                      ? <span className={`text-[10px] font-mono tabular-nums flex-none ${status.count > 0 ? 'text-brand' : 'text-text-quaternary/70'}`}>({status.count})</span>
+                      ? <span className={`text-[10px] font-mono tabular-nums flex-none ${status.count > 0 ? 'text-brand' : 'text-text-quaternary'}`}>({status.count})</span>
                       : status.filled
                         ? <span className="text-success text-[10px] flex-none" aria-label="채움 완료">✓</span>
-                        : <span className="text-text-quaternary/70 text-[10px] flex-none" aria-label="미입력">○</span>
+                        : <span className="text-text-quaternary text-[10px] flex-none" aria-label="미입력">○</span>
                   )}
                 </button>
                 </div>
@@ -1590,7 +1590,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               placeholder="목표 입력 후 Enter (예: TOEIC 900점 달성)"
               className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-tertiary"
             />
-            <button onClick={addGoal} disabled={!newGoal.trim()} className="shrink-0 whitespace-nowrap bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">추가</button>
+            <button onClick={addGoal} disabled={!newGoal.trim()} className="shrink-0 whitespace-nowrap bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-bg text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">추가</button>
             <button onClick={() => setAdding(false)} className="shrink-0 whitespace-nowrap text-xs text-text-quaternary px-2 hover:text-text-secondary rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">취소</button>
           </div>
         ) : (
@@ -1694,7 +1694,7 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
                     placeholder="항목명 입력 후 Enter (예: 해외 경험)"
                     className="flex-1 bg-card border border-brand/40 rounded-xl px-4 py-2.5 text-xs text-text-primary focus:outline-none ring-1 ring-brand/15 placeholder:text-text-tertiary"
                   />
-                  <button onClick={handleAddCustom} disabled={!newLabel.trim()} className="shrink-0 whitespace-nowrap bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">추가</button>
+                  <button onClick={handleAddCustom} disabled={!newLabel.trim()} className="shrink-0 whitespace-nowrap bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-bg text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">추가</button>
                   <button onClick={() => setAddingLabel(false)} className="shrink-0 whitespace-nowrap text-xs text-text-quaternary px-2 hover:text-text-secondary rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg">취소</button>
                 </div>
               ) : (
@@ -2072,7 +2072,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                 <button
                   onClick={handleSave}
                   disabled={!title.trim() || slot.kind === 'empty' || saving}
-                  className="flex-1 py-2 text-xs font-semibold bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary rounded-lg transition-colors"
+                  className="flex-1 py-2 text-xs font-semibold bg-brand hover:bg-accent active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-bg rounded-lg transition-colors"
                 >
                   {saving ? '저장 중...' : '저장'}
                 </button>

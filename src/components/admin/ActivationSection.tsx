@@ -94,7 +94,7 @@ export function ActivationSection() {
               </thead>
               <tbody>
                 {data.cohorts.map((c: ActivationCohort) => (
-                  <tr key={c.weekStart} className="border-b border-line/50 last:border-0">
+                  <tr key={c.weekStart} className="border-b border-line last:border-0">
                     <td className="py-2 text-text-secondary">{dayjs(c.weekStart).format('M/D')} 주</td>
                     <td className="py-2 text-right tabular-nums text-text-secondary">{c.cohortSize}</td>
                     <td className="py-2 text-right tabular-nums">{formatShare(c.setup, c.cohortSize, { compact: true })}</td>

@@ -291,8 +291,8 @@ function Spotlight({ rect, isClick }: { rect: DOMRect | null; isClick: boolean }
           style={{
             position: 'fixed', left: x, top: y, width: w, height: h,
             zIndex: 10000, borderRadius: BORDER_R,
-            border: '1.5px solid rgba(107,156,127,0.7)',
-            boxShadow: '0 0 0 1px rgba(107,156,127,0.15), 0 0 24px rgba(107,156,127,0.2)',
+            border: '1.5px solid rgb(var(--brand) / 0.7)',
+            boxShadow: '0 0 0 1px rgb(var(--brand) / 0.15), 0 0 24px rgb(var(--brand) / 0.2)',
             pointerEvents: 'none',
           }}
         />
@@ -430,13 +430,13 @@ function TourTooltip({ rect, placement, title, desc, step, total, canGoBack, isC
           ) : <div />}
 
           {isClick ? (
-            <span className="text-[11px] text-brand/80 font-medium">
+            <span className="text-[11px] text-brand font-medium">
               ↑ 클릭해서 진행하세요
             </span>
           ) : (
             <button
               onClick={onNext}
-              className="flex items-center gap-1.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-xs font-semibold text-bg bg-brand hover:bg-accent active:bg-accent-hover px-3 py-1.5 rounded-lg transition-colors"
             >
               {step === total - 1 ? '마무리' : '다음'} →
             </button>
@@ -584,7 +584,7 @@ function WelcomeModal({ onNext, onClose }: { onNext: () => void; onClose: () => 
         <div className="px-6 pb-8 md:pb-6 mt-2">
           <button
             onClick={onNext}
-            className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-sm font-semibold transition-colors"
+            className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-bg text-sm font-semibold transition-colors"
           >
             직접 둘러보기 →
           </button>
@@ -654,7 +654,7 @@ function WrapUpModal({
         <div className="px-6 pb-8 md:pb-6 mt-2 flex flex-col gap-2.5">
           <button
             onClick={onMyinfo}
-            className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-text-primary text-sm font-semibold transition-colors"
+            className="w-full py-3 rounded-xl bg-brand hover:bg-accent active:bg-accent-hover text-bg text-sm font-semibold transition-colors"
           >
             내 정보 채우러 가기
           </button>

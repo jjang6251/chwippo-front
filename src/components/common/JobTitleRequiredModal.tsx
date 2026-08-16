@@ -102,7 +102,7 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
             autoComplete="off"
             autoFocus
             /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 (text-base) */
-            className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
           <p className="text-text-faint text-[11px] mt-1.5 flex items-center gap-1">
             <Briefcase size={12} strokeWidth={1.75} aria-hidden="true" />
@@ -124,7 +124,7 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
             onClick={() => void handleSave()}
             disabled={submitting || !trimmed}
             aria-live="polite"
-            className="flex-[1.5] px-4 py-2.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-[1.5] px-4 py-2.5 text-xs font-semibold text-bg bg-brand hover:bg-accent rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? '저장 중…' : '저장하고 계속'}
           </button>

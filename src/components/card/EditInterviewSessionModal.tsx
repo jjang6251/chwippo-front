@@ -202,7 +202,7 @@ export function EditInterviewSessionModal({
               disabled={identityLocked}
               maxLength={40}
               placeholder="예: 1차 면접 / 임원 면접"
-              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -432,7 +432,7 @@ export function EditInterviewSessionModal({
         <button
           onClick={handleSubmit}
           disabled={isSaving}
-          className="px-4 py-1.5 text-sm bg-brand hover:bg-brand-hover text-white rounded-md font-medium disabled:opacity-50"
+          className="px-4 py-1.5 text-sm bg-brand hover:bg-accent text-bg rounded-md font-medium disabled:opacity-50"
         >
           {isSaving ? '저장 중…' : '저장'}
         </button>

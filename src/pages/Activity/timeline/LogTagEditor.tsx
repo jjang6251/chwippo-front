@@ -187,7 +187,7 @@ export function LogTagEditor({
           onChange={(e) => setKeywords(e.target.value)}
           placeholder="예: 결제, 리팩터링"
           aria-label="키워드"
-          className="w-full bg-input border border-line rounded-lg px-2 py-1.5 text-[11px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand/60"
+          className="w-full bg-input border border-line rounded-lg px-2 py-1.5 text-[11px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/60"
         />
       </div>
       {quant && (
@@ -205,7 +205,7 @@ export function LogTagEditor({
         <button
           onClick={handleSave}
           disabled={update.isPending}
-          className="text-[11px] px-2.5 py-1 rounded-lg bg-brand hover:bg-accent text-text-primary font-medium transition-colors disabled:opacity-40"
+          className="text-[11px] px-2.5 py-1 rounded-lg bg-brand hover:bg-accent text-bg font-medium transition-colors disabled:opacity-40"
         >
           {update.isPending ? '저장 중...' : '저장'}
         </button>

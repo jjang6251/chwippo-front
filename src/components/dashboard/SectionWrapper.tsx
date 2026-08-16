@@ -21,7 +21,7 @@ export function SectionWrapper({ id, editMode, onRemove, children }: SectionWrap
       <button
         {...attributes}
         {...listeners}
-        className="sm:hidden absolute -top-4 left-1/2 -translate-x-1/2 w-12 h-8 flex items-center justify-center text-text-quaternary/50 hover:text-text-quaternary/80 cursor-grab active:cursor-grabbing transition-colors touch-none"
+        className="sm:hidden absolute -top-4 left-1/2 -translate-x-1/2 w-12 h-8 flex items-center justify-center text-text-quaternary hover:text-text-quaternary cursor-grab active:cursor-grabbing transition-colors touch-none"
         aria-label="드래그해서 순서 변경"
       >
         <span className="flex gap-1">
@@ -33,7 +33,7 @@ export function SectionWrapper({ id, editMode, onRemove, children }: SectionWrap
       <button
         {...attributes}
         {...listeners}
-        className="hidden sm:flex absolute top-2 -left-6 w-6 h-8 flex-col gap-[3.5px] items-center justify-center text-text-quaternary/40 hover:text-text-quaternary/70 cursor-grab active:cursor-grabbing transition-colors"
+        className="hidden sm:flex absolute top-2 -left-6 w-6 h-8 flex-col gap-[3.5px] items-center justify-center text-text-quaternary hover:text-text-quaternary cursor-grab active:cursor-grabbing transition-colors"
         aria-label="드래그해서 순서 변경"
       >
         {[0, 1, 2].map((i) => (

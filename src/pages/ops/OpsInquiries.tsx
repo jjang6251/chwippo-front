@@ -214,7 +214,7 @@ export function OpsInquiries() {
                   <button
                     onClick={() => commentMutation.mutate()}
                     disabled={!comment.trim() || commentMutation.isPending}
-                    className="flex-1 py-2 bg-brand text-text-primary text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-accent active:bg-accent-hover transition-colors"
+                    className="flex-1 py-2 bg-brand text-bg text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-accent active:bg-accent-hover transition-colors"
                   >
                     {commentMutation.isPending ? '전송 중...' : '답변 전송'}
                   </button>

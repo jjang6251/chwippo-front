@@ -107,7 +107,7 @@ export function InfoModal({
         type="button"
         onClick={onClose}
         disabled={saving}
-        className="flex-1 sm:flex-none sm:min-w-[6rem] h-12 px-4 sm:px-5 text-sm font-medium text-text-secondary border border-line/70 rounded-xl hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50"
+        className="flex-1 sm:flex-none sm:min-w-[6rem] h-12 px-4 sm:px-5 text-sm font-medium text-text-secondary border border-line rounded-xl hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50"
       >
         취소
       </button>

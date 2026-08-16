@@ -161,7 +161,7 @@ export function AddCardModal({
         {tourActive && tourStep === 4 && (
           <div className="flex items-center gap-2 px-3 py-2.5 bg-brand/10 border border-brand/20 rounded-lg">
             <Lightbulb size={15} strokeWidth={1.75} className="text-brand shrink-0" aria-hidden="true" />
-            <p className="text-xs text-brand/90">
+            <p className="text-xs text-brand">
               회사 이름만 입력해도 지원 단계가 자동 생성돼요
             </p>
           </div>
@@ -317,7 +317,7 @@ export function AddCardModal({
           <button
             type="submit"
             disabled={!companyName.trim() || isPending}
-            className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-brand-hover active:bg-brand-hover rounded-lg transition-colors disabled:opacity-40"
+            className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40"
           >
             {isPending ? '추가 중...' : '추가하기'}
           </button>

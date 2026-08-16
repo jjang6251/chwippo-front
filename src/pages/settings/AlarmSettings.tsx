@@ -315,7 +315,7 @@ export function AlarmSettings() {
                 onClick={() =>
                   postToNative({ type: 'open-notification-settings' })
                 }
-                className="w-full rounded-lg bg-brand text-bg text-sm font-semibold py-2.5 hover:bg-brand-hover transition-colors"
+                className="w-full rounded-lg bg-brand text-bg text-sm font-semibold py-2.5 hover:bg-accent transition-colors"
               >
                 알림 권한 설정
               </button>

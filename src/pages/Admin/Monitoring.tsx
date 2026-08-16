@@ -416,7 +416,7 @@ export function Monitoring() {
               <button
                 onClick={save}
                 disabled={!dirty || updating}
-                className="px-4 py-2 bg-brand hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-md"
+                className="px-4 py-2 bg-brand hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed text-bg text-xs font-medium rounded-md"
               >
                 {updating ? '저장 중...' : '저장'}
               </button>
@@ -562,7 +562,7 @@ function SentryLinkCard() {
             href={SENTRY_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 px-3 py-1.5 bg-brand hover:bg-accent text-white text-xs font-medium rounded-md"
+            className="shrink-0 px-3 py-1.5 bg-brand hover:bg-accent text-bg text-xs font-medium rounded-md"
           >
             Sentry 열기 ↗
           </a>

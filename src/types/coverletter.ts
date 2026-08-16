@@ -21,12 +21,12 @@ export const COVERLETTER_CATEGORY_EMOJI: Record<string, string> = {
 }
 
 export const COVERLETTER_CATEGORY_STYLE: Record<string, string> = {
-  '지원동기': 'text-sky-400 bg-sky-400/10 border-sky-400/25',
-  '성장과정·가치관': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25',
-  '입사후포부': 'text-amber-400 bg-amber-400/10 border-amber-400/25',
-  '직무역량·핵심경험': 'text-violet-400 bg-violet-400/10 border-violet-400/25',
-  '협업·갈등경험': 'text-rose-400 bg-rose-400/10 border-rose-400/25',
-  '도전·실패경험': 'text-orange-400 bg-orange-400/10 border-orange-400/25',
+  '지원동기': 'text-sky-800 bg-sky-800/10 border-sky-800/25 dark:text-sky-300 dark:bg-sky-300/10 dark:border-sky-300/25',
+  '성장과정·가치관': 'text-emerald-800 bg-emerald-800/10 border-emerald-800/25 dark:text-emerald-300 dark:bg-emerald-300/10 dark:border-emerald-300/25',
+  '입사후포부': 'text-amber-800 bg-amber-800/10 border-amber-800/25 dark:text-amber-300 dark:bg-amber-300/10 dark:border-amber-300/25',
+  '직무역량·핵심경험': 'text-violet-800 bg-violet-800/10 border-violet-800/25 dark:text-violet-300 dark:bg-violet-300/10 dark:border-violet-300/25',
+  '협업·갈등경험': 'text-rose-800 bg-rose-800/10 border-rose-800/25 dark:text-rose-300 dark:bg-rose-300/10 dark:border-rose-300/25',
+  '도전·실패경험': 'text-orange-800 bg-orange-800/10 border-orange-800/25 dark:text-orange-300 dark:bg-orange-300/10 dark:border-orange-300/25',
   '기타': 'text-text-tertiary bg-card border-line',
 }
 

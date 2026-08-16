@@ -283,7 +283,7 @@ export function UserDetailPage() {
         <button
           type="button"
           onClick={() => setShowGrant(true)}
-          className="bg-brand hover:bg-accent text-text-primary text-xs font-semibold px-3 py-1.5 rounded-md"
+          className="bg-brand hover:bg-accent text-bg text-xs font-semibold px-3 py-1.5 rounded-md"
         >
           🪙 코인 지급
         </button>

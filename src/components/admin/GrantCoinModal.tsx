@@ -131,7 +131,7 @@ export function GrantCoinModal({ userId, nickname, onClose }: Props) {
             type="button"
             onClick={() => grant.mutate()}
             disabled={!valid || grant.isPending}
-            className="flex-1 bg-brand hover:bg-accent text-text-primary text-sm font-semibold py-2.5 rounded-md disabled:opacity-50"
+            className="flex-1 bg-brand hover:bg-accent text-bg text-sm font-semibold py-2.5 rounded-md disabled:opacity-50"
           >
             {grant.isPending ? '지급 중...' : '지급'}
           </button>

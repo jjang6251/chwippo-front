@@ -47,7 +47,7 @@ export function Login() {
         {isSuspended && (
           <div role="alert" className="w-full bg-danger/10 border border-danger/25 rounded-xl px-4 py-3.5 text-center">
             <p className="text-sm font-semibold text-danger mb-1">계정이 정지되었습니다</p>
-            <p className="text-xs text-danger/70 leading-relaxed">
+            <p className="text-xs text-danger leading-relaxed">
               운영 정책 위반으로 계정이 제한되었습니다.<br />
               문의:{' '}
               <a

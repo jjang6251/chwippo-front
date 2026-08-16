@@ -58,7 +58,7 @@ export function NeedCoverletterModal({
           <button
             type="button"
             onClick={() => navigate(`/board/${applicationId}/coverletter`)}
-            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 bg-brand hover:bg-accent text-bg text-sm font-semibold px-5 py-2.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
           >
             <FileText size={14} strokeWidth={2} aria-hidden="true" />
             자소서 쓰러 가기

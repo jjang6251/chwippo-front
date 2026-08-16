@@ -553,7 +553,7 @@ function EmptyFirstQuestion({ weekCount }: { weekCount: number }) {
         <button
           onClick={handleSave}
           disabled={isPending || !content.trim()}
-          className="shrink-0 px-4 rounded-xl bg-brand hover:bg-accent text-sm font-medium text-text-primary transition-colors disabled:opacity-40"
+          className="shrink-0 px-4 rounded-xl bg-brand hover:bg-accent text-sm font-medium text-bg transition-colors disabled:opacity-40"
         >
           기록
         </button>
@@ -662,7 +662,7 @@ function WeeklyPromptCard({
               <button
                 onClick={handleSave}
                 disabled={isPending || !answer.trim()}
-                className="flex-1 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
+                className="flex-1 py-2 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
               >
                 남기기
               </button>
@@ -672,7 +672,7 @@ function WeeklyPromptCard({
           <div className="flex gap-2">
             <button
               onClick={() => setAnswering(true)}
-              className="flex-1 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+              className="flex-1 py-2 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors"
             >
               답하기
             </button>

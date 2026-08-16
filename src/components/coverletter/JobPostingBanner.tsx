@@ -469,7 +469,7 @@ function ConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={disabled}
-            className={`flex-1 py-2 text-xs font-medium text-text-primary rounded-lg transition-colors disabled:opacity-50 ${
+            className={`flex-1 py-2 text-xs font-medium text-bg rounded-lg transition-colors disabled:opacity-50 ${
               danger ? 'bg-danger/80 hover:bg-danger' : 'bg-brand hover:bg-accent'
             }`}
           >

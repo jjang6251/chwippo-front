@@ -86,7 +86,7 @@ export function CoverLetterCard({ cl, applicationId }: CoverLetterCardProps) {
       )}
 
       {hasAnswer && sourceRefs.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-line/60">
+        <div className="mt-3 pt-3 border-t border-line">
           <div className="text-[10px] text-text-quaternary mb-1.5">
             <span className="inline-flex items-center gap-1">
               <Sparkle size={13} strokeWidth={1.75} aria-hidden="true" />

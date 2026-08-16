@@ -98,7 +98,7 @@ export function AiQuotas() {
               disabled={t !== 'free'}
               className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 tier === t
-                  ? 'bg-brand text-text-primary'
+                  ? 'bg-brand text-bg'
                   : 'bg-card text-text-secondary hover:bg-card-strong disabled:opacity-40 disabled:cursor-not-allowed'
               }`}
               title={
@@ -141,7 +141,7 @@ export function AiQuotas() {
             >
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-              <thead className="bg-card/40">
+              <thead className="bg-card">
                 <tr>
                   <th className="text-left text-text-tertiary text-xs font-medium px-4 py-2.5">
                     기능
@@ -256,7 +256,7 @@ function FeatureRow({ row }: { row: FeatureQuotaConfig }) {
   }
 
   return (
-    <tr className="border-t border-line hover:bg-card/30 transition-colors">
+    <tr className="border-t border-line hover:bg-card transition-colors">
       <td className="px-4 py-2 text-text-primary">
         <div>{labelFor(row.feature)}</div>
         <div className="text-text-quaternary text-[10px] font-mono">

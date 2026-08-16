@@ -18,7 +18,7 @@ const ACCENT = {
     value:    'text-brand',
     glow:     'hover:shadow-brand/12',
     gradient: 'from-brand/10',
-    label:    'text-brand/80',
+    label:    'text-brand',
   },
   success: {
     border:   'border-success/25',
@@ -26,7 +26,7 @@ const ACCENT = {
     value:    'text-success',
     glow:     'hover:shadow-success/12',
     gradient: 'from-success/10',
-    label:    'text-success/80',
+    label:    'text-success',
   },
   warning: {
     border:   'border-warning/25',
@@ -34,7 +34,7 @@ const ACCENT = {
     value:    'text-warning',
     glow:     'hover:shadow-warning/12',
     gradient: 'from-warning/10',
-    label:    'text-warning/80',
+    label:    'text-warning',
   },
   info: {
     border:   'border-info/25',
@@ -42,7 +42,7 @@ const ACCENT = {
     value:    'text-info',
     glow:     'hover:shadow-info/12',
     gradient: 'from-info/10',
-    label:    'text-info/80',
+    label:    'text-info',
   },
   neutral: {
     border:   'border-line',
@@ -77,7 +77,7 @@ export function StatCard({ label, value, icon, description, filterKey, accent = 
           <p className={`text-xs font-semibold truncate ${c.label}`}>{label}</p>
         </div>
         {filterKey && (
-          <svg className="flex-none text-text-quaternary/60" width="11" height="11" viewBox="0 0 12 12" fill="none">
+          <svg className="flex-none text-text-quaternary" width="11" height="11" viewBox="0 0 12 12" fill="none">
             <path d="M2.5 6h7M6.5 2.5L10 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}

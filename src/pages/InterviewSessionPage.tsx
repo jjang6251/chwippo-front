@@ -892,7 +892,7 @@ export function InterviewSessionPage() {
               aria-pressed={readMode}
               className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
                 readMode
-                  ? 'bg-brand text-text-primary border-brand'
+                  ? 'bg-brand text-bg border-brand'
                   : 'text-text-tertiary hover:text-brand border-line hover:border-brand/40 bg-surface-2'
               }`}
               title={
@@ -1272,7 +1272,7 @@ export function InterviewSessionPage() {
                 <button
                   onClick={() => setGenerateOpen(true)}
                   disabled={generating || quotaBlocked}
-                  className="min-h-8 text-xs font-medium text-text-primary bg-brand hover:bg-brand-hover px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                  className="min-h-8 text-xs font-medium text-bg bg-brand hover:bg-accent px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                 >
                   다시 시도
                 </button>
@@ -1332,7 +1332,7 @@ export function InterviewSessionPage() {
                     <button
                       onClick={openAddForm}
                       aria-expanded={addOpen}
-                      className="bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors"
+                      className="bg-brand hover:bg-accent text-bg text-sm font-semibold px-5 py-2.5 rounded-md transition-colors"
                     >
                       ＋ 질문 추가
                     </button>
@@ -2396,7 +2396,7 @@ function CategoryFilterAndList({
             onClick={() => setSelectedCat(null)}
             className={`shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border transition-colors ${
               selectedCat === null
-                ? 'bg-brand text-text-primary border-brand'
+                ? 'bg-brand text-bg border-brand'
                 : 'bg-card hover:bg-card-strong border-line text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -2462,7 +2462,7 @@ function CategoryFilterAndList({
                 */
                 className={`shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border transition-colors ${
                   isActive
-                    ? 'bg-brand text-text-primary border-brand font-medium'
+                    ? 'bg-brand text-bg border-brand font-medium'
                     : `${CATEGORY_STYLE[cat] ?? CATEGORY_STYLE_FALLBACK} hover:brightness-110`
                 }`}
               >

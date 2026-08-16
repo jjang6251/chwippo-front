@@ -136,7 +136,7 @@ export function AiConsentToggle() {
         type="button"
         onClick={handleAgree}
         disabled={submitting}
-        className="shrink-0 px-3 py-1.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-md transition-colors disabled:opacity-50"
+        className="shrink-0 px-3 py-1.5 text-xs font-semibold text-bg bg-brand hover:bg-accent rounded-md transition-colors disabled:opacity-50"
       >
         {submitting ? '처리 중...' : '동의하기'}
       </button>

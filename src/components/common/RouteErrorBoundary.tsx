@@ -43,7 +43,7 @@ export class RouteErrorBoundary extends Component<Props, State> {
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-brand text-white text-xs font-medium px-3 py-1.5 rounded-md"
+            className="bg-brand text-bg text-xs font-medium px-3 py-1.5 rounded-md"
           >
             새로고침
           </button>

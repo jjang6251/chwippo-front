@@ -74,7 +74,7 @@ export function ScheduleQuestionCard({ question, onDone }: ScheduleQuestionCardP
               <button
                 onClick={handleSave}
                 disabled={isPending || !answer.trim()}
-                className="flex-1 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
+                className="flex-1 py-2 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
               >
                 남기기
               </button>
@@ -84,7 +84,7 @@ export function ScheduleQuestionCard({ question, onDone }: ScheduleQuestionCardP
           <div className="flex gap-2">
             <button
               onClick={() => setAnswering(true)}
-              className="flex-1 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+              className="flex-1 py-2 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors"
             >
               한 줄 남기기
             </button>

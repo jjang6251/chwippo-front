@@ -91,14 +91,14 @@ export function JobTitleField({ applicationId, variant = 'inline' }: Props) {
              */
             autoComplete="off"
             /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
-            className="flex-1 min-w-0 bg-input border border-line rounded-lg px-3 py-2 text-base text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            className="flex-1 min-w-0 bg-input border border-line rounded-lg px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
           />
           <button
             type="button"
             onClick={() => void save()}
             disabled={saving || !trimmed}
             aria-live="polite"
-            className="shrink-0 px-3 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-brand-hover rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="shrink-0 px-3 py-2 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? '저장 중…' : '저장'}
           </button>
