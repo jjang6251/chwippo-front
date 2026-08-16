@@ -46,7 +46,7 @@ interface Props {
 const PILL_BASE =
   'inline-flex items-center justify-center min-h-[44px] sm:min-h-8 whitespace-nowrap text-[12px] px-3 sm:px-2.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60'
 /** 필터 행·카테고리 칩과 **같은 문법** — 고른 것은 brand 채움 */
-const PILL_ON = 'bg-brand text-text-primary border-brand font-medium'
+const PILL_ON = 'bg-brand text-bg border-brand font-medium'
 const PILL_OFF =
   'border-line text-text-secondary hover:border-line-strong hover:text-text-primary'
 
@@ -530,7 +530,7 @@ export function PracticeSettings({ questions, onStart }: Props) {
             type="button"
             onClick={() => onStart({ ...settings, count, timer })}
             disabled={picked === 0 || blank}
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg w-full min-h-[48px] bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg w-full min-h-[48px] bg-brand hover:bg-accent text-bg text-sm font-semibold px-5 py-2.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ {picked}개로 시작하기
           </button>

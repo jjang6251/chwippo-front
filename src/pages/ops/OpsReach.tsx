@@ -306,7 +306,7 @@ function ReachTable({
                 onKeyDown={(e) =>
                   (e.key === 'Enter' || e.key === ' ') && onSelect(row.userId)
                 }
-                className="border-b border-line/50 last:border-0 hover:bg-card cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand/40"
+                className="border-b border-line last:border-0 hover:bg-card cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand/40"
               >
                 <td className="px-4 py-3 text-xs text-text-tertiary tabular-nums whitespace-nowrap">
                   {dayjs(row.signupDate).format('YY.MM.DD')}
@@ -431,7 +431,7 @@ function ReachSkeleton() {
         <table className="w-full text-sm">
           <tbody>
             {Array.from({ length: 8 }).map((_, i) => (
-              <tr key={i} className="border-b border-line/50 last:border-0">
+              <tr key={i} className="border-b border-line last:border-0">
                 {[70, 110, 60, 70, 50, 50, 90, 50, 70, 80].map((w, j) => (
                   <td key={j} className="px-4 py-3.5">
                     <div className="h-3 rounded bg-card animate-pulse" style={{ width: w }} />

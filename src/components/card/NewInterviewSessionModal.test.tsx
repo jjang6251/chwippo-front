@@ -78,8 +78,10 @@ describe('새 면접 세션 — 자소서 0건', () => {
 
   it('🔴 1) 자소서가 0건이어도 세션 생성이 호출된다', async () => {
     draw()
+    // 🔴 드롭다운 value 는 스텝 **이름이 아니라 id** 다 (2026-08-16 — 세션↔스텝 FK 연결).
+    //    이름을 넣으면 아무 것도 선택되지 않아 「세션 만들기」가 잠긴 채로 남는다.
     fireEvent.change(screen.getByRole('combobox'), {
-      target: { value: '1차 실무 면접' },
+      target: { value: 'st-1' },
     })
 
     const submit = screen.getByRole('button', { name: '세션 만들기' })

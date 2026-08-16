@@ -110,7 +110,7 @@ export function InquiryNew() {
         <button
           onClick={() => mutation.mutate()}
           disabled={!valid || mutation.isPending}
-          className="w-full py-3 bg-brand text-text-primary font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent active:bg-accent-hover transition-colors"
+          className="w-full py-3 bg-brand text-bg font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent active:bg-accent-hover transition-colors"
         >
           {mutation.isPending ? '제출 중...' : '문의 제출'}
         </button>

@@ -43,7 +43,7 @@ const showAddErrorUnlessServerDid = (err: unknown) => {
 
 const PILL_BASE =
   'min-h-8 whitespace-nowrap text-xs px-3 py-1.5 rounded-full border transition-colors'
-const PILL_ON = 'bg-brand text-text-primary border-brand font-medium'
+const PILL_ON = 'bg-brand text-bg border-brand font-medium'
 const PILL_OFF =
   'bg-card hover:bg-card-strong border-line text-text-secondary hover:text-text-primary'
 
@@ -51,7 +51,7 @@ const PILL_OFF =
 const CANCEL_BTN =
   'text-xs text-text-tertiary hover:text-text-primary transition-colors px-2 py-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60'
 const SUBMIT_BTN =
-  'shrink-0 min-h-8 inline-flex items-center gap-1 bg-brand hover:bg-brand-hover text-white text-xs font-medium px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60'
+  'shrink-0 min-h-8 inline-flex items-center gap-1 bg-brand hover:bg-accent text-bg text-xs font-medium px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60'
 
 interface Props {
   sessionId: string
@@ -177,7 +177,7 @@ export function AddInterviewQuestionForm({
             placeholder="예: 프로젝트에서 가장 어려웠던 기술적 결정은 무엇이었나요?"
             aria-label="질문 내용"
             /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
-            className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none leading-relaxed"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none leading-relaxed"
           />
 
           <CategoryChipPicker
@@ -233,7 +233,7 @@ export function AddInterviewQuestionForm({
             placeholder="면접 다녀왔다면 받은 질문을 기록해 두세요 — 다음 차수·다른 회사에서 다시 나옵니다.&#10;&#10;1. 1분 자기소개 해주세요&#10;2. 가장 어려웠던 협업 경험은?"
             aria-label="붙여넣을 질문 목록"
             /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
-            className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
           />
 
           {parsed.length > 0 && (

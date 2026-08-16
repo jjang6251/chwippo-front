@@ -89,10 +89,10 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
                     className={`
                       relative flex-none rounded-full transition-all duration-200 flex items-center justify-center
                       ${nodeSize}
-                      ${isDone ? 'bg-brand shadow-[0_0_6px_rgba(107,156,127,0.4)]' : ''}
-                      ${isCurrent ? 'bg-brand shadow-[0_0_10px_rgba(107,156,127,0.6)]' : ''}
+                      ${isDone ? 'bg-brand shadow-[0_0_6px_rgb(var(--brand)/0.4)]' : ''}
+                      ${isCurrent ? 'bg-brand shadow-[0_0_10px_rgb(var(--brand)/0.6)]' : ''}
                       ${!isDone && !isCurrent ? 'bg-card-strong border border-line' : ''}
-                      ${onStepClick ? 'cursor-pointer hover:scale-125 hover:shadow-[0_0_12px_rgba(107,156,127,0.5)]' : 'cursor-default'}
+                      ${onStepClick ? 'cursor-pointer hover:scale-125 hover:shadow-[0_0_12px_rgb(var(--brand)/0.5)]' : 'cursor-default'}
                     `}
                   >
                     {isCurrent && (
@@ -136,13 +136,17 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
               onClick={(e) => { e.stopPropagation(); onStepNameClick?.(step.id) }}
               disabled={!onStepNameClick}
               title={step.name}
+              /* 🔴 예전엔 미도달 단계가 text-faint 였다 — DESIGN.md 가 「장식 전용·본문성
+                 정보 금지」로 규정한 토큰인데 전형 단계 이름은 정보다 (다크 2.65 · 라이트 2.88,
+                 2026-08-17 실측). 약하게 두되 읽히도록 tertiary 로 올렸다.
+                 ⚠️ 이 주석을 아래 템플릿 리터럴 **안**으로 옮기지 말 것 — 백틱이 리터럴을 끊는다. */
               className={`
                 flex-1 min-w-0 text-center overflow-hidden text-ellipsis whitespace-nowrap
                 leading-tight px-0.5 py-0.5 rounded transition-all duration-150
                 ${size === 'sm' ? 'text-[8px]' : 'text-[9px] font-medium'}
                 ${isCurrent ? 'text-brand' : ''}
-                ${isDone ? 'text-text-quaternary' : ''}
-                ${!isDone && !isCurrent ? 'text-text-faint' : ''}
+                ${isDone ? 'text-text-tertiary' : ''}
+                ${!isDone && !isCurrent ? 'text-text-tertiary' : ''}
                 ${onStepNameClick
                   ? 'cursor-pointer hover:bg-card-strong active:bg-surface-3 hover:text-text-primary'
                   : 'cursor-default'
@@ -185,7 +189,7 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
               disabled={!onStepNameClick}
               className={`flex items-center gap-1.5 group/cur ${onStepNameClick ? 'cursor-pointer' : 'cursor-default'}`}
             >
-              <span className="w-2 h-2 rounded-full bg-brand shadow-[0_0_6px_rgba(107,156,127,0.6)] inline-block shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-brand shadow-[0_0_6px_rgb(var(--brand)/0.6)] inline-block shrink-0" />
               <span
                 className={`text-text-secondary text-sm font-medium transition-colors ${
                   onStepNameClick ? 'group-hover/cur:text-text-primary group-hover/cur:underline underline-offset-2' : ''

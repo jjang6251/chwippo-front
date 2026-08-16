@@ -7,6 +7,9 @@ import { StepBar } from './StepBar'
 import { DdayBadge } from './DdayBadge'
 import { StarToggle } from './StarToggle'
 import { useUpdateCurrentStep, useDeleteApplication, useUpdateApplication } from '@/hooks/useApplications'
+import { useInterviewNudgeFlow } from '@/hooks/useInterviewNudgeFlow'
+import { InterviewNudgeModal } from '@/components/card/InterviewNudgeModal'
+import { NewInterviewSessionModal } from '@/components/card/NewInterviewSessionModal'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { toast } from '@/stores/toastStore'
 import { celebrate, showFailedCare } from '@/stores/celebrationStore'
@@ -42,6 +45,8 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   const [pendingStepIndex, setPendingStepIndex] = useState<number | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const { mutate: updateStep } = useUpdateCurrentStep()
+  // 면접 단계로 이동하면 안내 모달 — 판정은 서버 응답 + 프론트 면접 유형 판정의 AND
+  const nudge = useInterviewNudgeFlow()
   const { mutate: deleteApp, isPending: isDeleting } = useDeleteApplication()
   const { mutate: updateApp } = useUpdateApplication(application.id)
   const isMobile = useIsMobile()
@@ -103,7 +108,10 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
       setPendingStepIndex(index)
       setShowPassConfirm(true)
     } else {
-      updateStep({ id: application.id, stepIndex: index })
+      updateStep(
+        { id: application.id, stepIndex: index },
+        { onSuccess: (app) => nudge.consider(app, index) },
+      )
     }
   }
 
@@ -464,7 +472,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
             <div className="flex gap-2">
               <button onClick={() => setShowPassConfirm(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
               <button
-                onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }, { onSuccess: () => celebrate(application.companyName) }); setShowPassConfirm(false) }}
+                onClick={() => { updateStep({ id: application.id, stepIndex: pendingStepIndex }, { onSuccess: (app) => { celebrate(application.companyName); nudge.consider(app, pendingStepIndex) } }); setShowPassConfirm(false) }}
                 className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-success/80 hover:bg-success rounded-lg transition-colors"
               >
                 합격 처리
@@ -474,6 +482,35 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
         </div>
       )}
       </div>
+
+      {/* 면접 유도 모달 — 닫기 4경로(X·오버레이·ESC·CTA)가 전부 close() 로 온다 */}
+      <InterviewNudgeModal
+        open={nudge.pending !== null}
+        variant={nudge.pending?.variant ?? 'first'}
+        stepName={nudge.pending?.stepName ?? ''}
+        companyName={nudge.pending?.companyName ?? ''}
+        domain={nudge.pending?.domain}
+        scheduledDate={nudge.pending?.scheduledDate ?? null}
+        onClose={nudge.close}
+        onGo={nudge.go}
+      />
+      {/* CTA → 세션 생성 모달을 **바로** 연다 (면접 차수는 방금 이동한 스텝으로 미리 채움) */}
+      {nudge.creating && (
+        <NewInterviewSessionModal
+          applicationId={nudge.creating.appId}
+          defaultStepId={nudge.creating.stepId}
+          onClose={nudge.cancelCreating}
+          onCreated={(sessionId) => {
+            nudge.cancelCreating()
+            navigate(`/interviews/${sessionId}`)
+          }}
+          onNeedCoverletter={() => {
+            const appId = nudge.creating?.appId
+            nudge.cancelCreating()
+            if (appId) navigate(`/board/${appId}/coverletter`)
+          }}
+        />
+      )}
     </div>
   )
 }

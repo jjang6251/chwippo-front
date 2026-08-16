@@ -168,7 +168,7 @@ export function AiQuotaOverrideCard({ userId }: { userId: string }) {
           <button
             onClick={() => setMutation.mutate()}
             disabled={!capValid || setMutation.isPending}
-            className="text-xs text-white bg-brand hover:bg-brand-hover px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="text-xs text-bg bg-brand hover:bg-accent px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
           >
             {override ? '덮어쓰기' : '설정'}
           </button>

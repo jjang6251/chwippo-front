@@ -41,6 +41,16 @@ export const dismissCalendarHomeIntro = () =>
   apiClient.post('/users/me/dismiss-calendar-home-intro').then(() => undefined)
 
 /**
+ * 면접 유도 모달 「다시 보지 않기」 — 전 카드 영구 차단 (멱등).
+ *
+ * 🔴 **이건 실패를 그냥 넘기면 안 된다.** 다른 dismiss 는 실패해도 「한 번 더 뜨는」 정도지만,
+ * 이건 사용자가 명시적으로 체크한 약속이라 실패 후 또 뜨면 약속 파기가 된다.
+ * 호출부(`useDismissInterviewNudge`)가 재시도 + localStorage 보조 기록으로 한 겹 더 막는다.
+ */
+export const dismissInterviewNudge = () =>
+  apiClient.post('/users/me/dismiss-interview-nudge').then(() => undefined)
+
+/**
  * 데스크탑 웹 사용 스탬프 (관측 전용) — **자소서 게이트와 같은 조건**일 때만 부른다.
  * 서버는 최초 1회만 기록하고 재호출은 0행이다. 실패해도 화면에 영향을 주지 않는다.
  */

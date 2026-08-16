@@ -321,7 +321,7 @@ export function CompanyResearchCard({
         저장은 질문 카드의 `내 답변 메모` 와 같은 1.5초 debounce 자동 저장이다.
       */}
       <div className="border border-line bg-surface-2 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between gap-2 px-3.5 py-3 border-b border-line/50">
+        <div className="flex items-center justify-between gap-2 px-3.5 py-3 border-b border-line">
           <h3 className="text-text-primary text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
             <PenLine size={14} strokeWidth={1.75} aria-hidden="true" />
             내가 알아본 정보
@@ -357,7 +357,7 @@ export function CompanyResearchCard({
             maxLength={5000}
             rows={4}
             placeholder="예: 회사 분위기는 자유로움 / 작년 면접관은 기술 깊이 위주로 물어봤음"
-            className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-faint focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
+            className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-y leading-relaxed"
           />
           <p
             className={`text-[10px] text-right ${

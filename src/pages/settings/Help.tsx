@@ -55,7 +55,7 @@ export function Help() {
               >
                 <div className="flex items-center gap-3">
                   <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    isOpen ? 'bg-brand text-text-primary' : 'bg-card-strong text-text-tertiary'
+                    isOpen ? 'bg-brand text-bg' : 'bg-card-strong text-text-tertiary'
                   }`}>
                     Q
                   </span>

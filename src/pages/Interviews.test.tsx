@@ -261,35 +261,33 @@ describe('Interviews — 세션 생성 후 이동', () => {
 })
 
 /**
- * 🔴 **브랜드 CTA 대비** (2026-08-07 /uiux 실측).
+ * 🔴 **브랜드 CTA 대비** (2026-08-07 최초 · **2026-08-17 재실측으로 결론이 바뀜**).
  *
- * `text-text-primary` 를 `bg-brand` 위에 얹고 있었다. **둘 다 테마에 따라 뒤집혀서**
- * 다크에서 같이 밝아진다 — `src/index.css` 토큰으로 계산한 실측:
+ * 8/07 당시 결론은 「세 후보 어느 것도 양쪽 AA 4.5 를 못 넘으니 최악값만 올리자」 였고
+ * 그래서 `text-white` 로 갔다. **그 전제가 8/17 에 사라졌다** — 라이트 `--brand` 가
+ * 4.5 를 넘도록 낮아지면서(`74,139,107` → `62,117,90`) `text-bg` 가 양쪽을 통과한다.
  *
  * | 텍스트 토큰            | 다크   | 라이트 | 최악 |
  * |----------------------|-------|-------|------|
- * | `text-text-primary`  | 2.59  | 4.38  | 2.59 |
- * | `text-white`         | 3.14  | 4.04  | 3.14 |
- * | `text-bg`            | 5.64  | 3.37  | 3.37 |
+ * | `text-text-primary`  | 2.59  | 3.29  | 2.59 |
+ * | `text-white`         | 3.14  | 5.39  | 3.14 |
+ * | **`text-bg`**        | **5.64** | **4.50** | **4.50 ✅** |
  *
- * 2.59 는 AA(4.5) 는 물론 large-text 기준(3.0)도 못 넘는 **유일한** 조합이었다.
+ * 그래서 앱 전역 80곳을 `text-bg` 로 통일했다 — DESIGN.md 규칙 5(「브랜드 CTA 텍스트 =
+ * `text-bg` 단일화」)가 원래 지시하던 값이고, 이제 실측으로도 맞다.
  *
- * 🔴 게다가 같은 일을 하는 `InterviewPrepTab` 의 CTA 는 `text-white` 를 쓰고 있었다 —
- * **면접 세션 만들기 버튼이 두 진입점에서 다르게 생겼다.** 이동 동작이 갈라져 있던 것과
- * 같은 종류의 문제라 함께 맞춘다.
- *
- * (sage 브랜드가 중간 명도라 세 후보 **어느 것도** 양쪽 AA 4.5 를 만족하지 못한다.
- *  그건 팔레트 차원의 별건이고, 여기서는 최악값을 올리고 형제와 맞추는 데까지가 범위다.)
+ * 🔴 **`text-white` 로 되돌리면 다크가 3.14 로 떨어진다.** 그게 이 테스트가 막는 것이다.
  */
 describe('Interviews — 빈 상태 CTA 대비', () => {
-  it('🔴 brand 배경 위에 테마 따라 뒤집히는 텍스트 토큰을 쓰지 않는다', async () => {
+  it('🔴 brand CTA 글자색은 text-bg — 다크에서 무너지는 후보를 막는다', async () => {
     listMock.mockResolvedValueOnce([])
     render(<Interviews />, { wrapper })
     const cta = await screen.findByText('면접 차수 만들기')
     expect(cta.className).toContain('bg-brand')
-    expect(cta.className).toContain('text-white')
-    // 되돌아오면 다크에서 2.59:1 이 된다
+    expect(cta.className).toContain('text-bg')
+    // 다크 2.59 (테마 따라 같이 밝아짐)
     expect(cta.className).not.toContain('text-text-primary')
+    // 다크 3.14 (8/07 의 옛 결론 — brand 가 낮아진 지금은 더 나쁜 선택이다)
+    expect(cta.className.split(/\s+/)).not.toContain('text-white')
   })
 })
-

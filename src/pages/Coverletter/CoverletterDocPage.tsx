@@ -295,7 +295,7 @@ export function CoverletterDocPage() {
               <button
                 onClick={() => createCl({ question: '' })}
                 disabled={creating}
-                className="px-4 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
+                className="px-4 py-2 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
               >
                 + 첫 문항 추가하기
               </button>
@@ -381,7 +381,7 @@ export function CoverletterDocPage() {
       {aiEnabled && !readOnly && (
         <button
           onClick={() => setMobileChatOpen(true)}
-          className="lg:hidden fixed bottom-[100px] right-4 z-40 px-4 py-3 bg-brand text-text-primary text-sm font-semibold rounded-full shadow-lg hover:bg-accent active:scale-95 transition-all"
+          className="lg:hidden fixed bottom-[100px] right-4 z-40 px-4 py-3 bg-brand text-bg text-sm font-semibold rounded-full shadow-lg hover:bg-accent active:scale-95 transition-all"
           aria-label="AI 채팅 패널 열기"
         >
           ✨ AI

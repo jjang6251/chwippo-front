@@ -38,7 +38,7 @@ export function InquiryList() {
         </div>
         <Link
           to="/inquiry/new"
-          className="px-4 py-2 bg-brand text-text-primary text-sm font-semibold rounded-lg hover:bg-accent active:bg-accent-hover transition-colors"
+          className="px-4 py-2 bg-brand text-bg text-sm font-semibold rounded-lg hover:bg-accent active:bg-accent-hover transition-colors"
         >
           + 새 문의
         </Link>

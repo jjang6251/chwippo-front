@@ -12,13 +12,13 @@ export const JOB_CATEGORY_ICON: Record<string, LucideIcon> = {
 }
 
 export const JOB_CATEGORY_COLOR: Record<string, string> = {
-  'IT개발':   'text-blue-400 bg-blue-400/10 border-blue-400/25',
-  '기획·PM':  'text-violet-400 bg-violet-400/10 border-violet-400/25',
-  '디자인':   'text-pink-400 bg-pink-400/10 border-pink-400/25',
-  '마케팅':   'text-orange-400 bg-orange-400/10 border-orange-400/25',
-  '영업':     'text-emerald-400 bg-emerald-400/10 border-emerald-400/25',
-  '경영지원': 'text-slate-400 bg-slate-400/10 border-slate-400/25',
-  '금융':     'text-yellow-400 bg-yellow-400/10 border-yellow-400/25',
+  'IT개발':   'text-blue-800 bg-blue-800/10 border-blue-800/25 dark:text-blue-300 dark:bg-blue-300/10 dark:border-blue-300/25',
+  '기획·PM':  'text-violet-800 bg-violet-800/10 border-violet-800/25 dark:text-violet-300 dark:bg-violet-300/10 dark:border-violet-300/25',
+  '디자인':   'text-pink-800 bg-pink-800/10 border-pink-800/25 dark:text-pink-300 dark:bg-pink-300/10 dark:border-pink-300/25',
+  '마케팅':   'text-orange-800 bg-orange-800/10 border-orange-800/25 dark:text-orange-300 dark:bg-orange-300/10 dark:border-orange-300/25',
+  '영업':     'text-emerald-800 bg-emerald-800/10 border-emerald-800/25 dark:text-emerald-300 dark:bg-emerald-300/10 dark:border-emerald-300/25',
+  '경영지원': 'text-slate-800 bg-slate-800/10 border-slate-800/25 dark:text-slate-300 dark:bg-slate-300/10 dark:border-slate-300/25',
+  '금융':     'text-yellow-800 bg-yellow-800/10 border-yellow-800/25 dark:text-yellow-300 dark:bg-yellow-300/10 dark:border-yellow-300/25',
   '기타':     'text-text-tertiary bg-card border-line',
 }
 
@@ -38,11 +38,11 @@ const AVATAR_COLORS = [
   'bg-emerald-600 text-white',
   'bg-amber-600 text-white',
   'bg-rose-600 text-white',
-  'bg-cyan-700 text-white',
+  'bg-cyan-800 text-white',
   'bg-orange-600 text-white',
   'bg-pink-600 text-white',
   'bg-indigo-600 text-white',
-  'bg-teal-700 text-white',
+  'bg-teal-800 text-white',
 ]
 
 export function getAvatarColor(name: string): string {

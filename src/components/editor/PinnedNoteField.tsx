@@ -28,7 +28,7 @@ export function PinnedNoteField({ initialValue, onSave }: Props) {
         className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none resize-none leading-relaxed"
       />
       <div className="flex items-center justify-between mt-2">
-        <p className="text-[10px] text-brand/60">
+        <p className="text-[10px] text-brand">
           면접 D-1 · 당일에 대시보드 상단에 표시됩니다
         </p>
         <p className={`text-[10px] ${value.length >= 2000 ? 'text-danger' : value.length >= 1800 ? 'text-warning' : 'text-text-quaternary'}`}>

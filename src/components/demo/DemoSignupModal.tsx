@@ -101,11 +101,14 @@ export function DemoSignupModal() {
         🔴 **주 CTA 를 키우고 부 액션은 링크로 내린다.** 예전엔 둘 다 같은 크기·같은 모양의
         전체 폭 버튼이라 「더 둘러보기」가 대등하게 보여 눈이 아래로 흘렀다.
         🔴 `text-bg` — DESIGN.md 규칙 5(브랜드 CTA 텍스트 색 단일화). `text-text-primary` 는
-        테마에 따라 뒤집혀 다크에서 **2.59:1** 이 되고, `text-white` 도 다크 **3.14:1** 에 그친다.
-        `text-bg` 는 다크 **5.64:1**. (라이트는 3.37 로 낮은데 이건 brand 토큰 자체의 문제라
-        기존 CTA 13곳이 전부 같다 — 토큰 차원에서 따로 다뤄야 한다)
-        🔴 `hover:bg-brand-hover` — 예전 `hover:bg-accent` 는 sage→coral 로 튀었다.
-        accent 는 합격·pinned 전용이라 토큰 의미 위반이다 (위생 백로그 ㉒).
+        테마에 따라 뒤집혀 다크에서 **2.59:1**, `text-white` 도 다크 **3.14:1** 에 그친다.
+        (여기 적혀 있던 「라이트 3.37 은 brand 토큰 자체 문제」는 **2026-08-17 에 해소**됐다 —
+         라이트 brand 를 낮춰 `text-bg` 가 양 테마 모두 통과한다: 다크 8.02 · 라이트 5.53)
+        🔴 `hover:bg-accent` — **2026-08-17 에 방향이 뒤집혔다.** 여기엔 「accent 는 합격·pinned
+        전용이라 토큰 의미 위반」이라고 적혀 있었는데, 그 근거는 DESIGN.md 문구였고 **코드 실제와
+        달랐다** — 합격은 `success`(초록)이고 accent 는 원래부터 카테고리 강조에 흩어져 쓰인다.
+        초록→코랄 색상 변화가 눌림 피드백으로 더 명확하다는 CEO 판단으로 앱 전역 107곳을
+        `hover:bg-accent` 로 통일했다 (대비 유지: 다크 7.97 · 라이트 5.60). 위생 백로그 ㉒ 종결.
 
         🔴 **라벨에 provider 를 단정하지 않는다** — 이 버튼은 카카오로 바로 가지 않고
         **로그인 모달**을 연다(거기서 카카오·애플을 고른다). `카카오로 시작하기` 는
@@ -113,7 +116,7 @@ export function DemoSignupModal() {
       */}
       <button
         onClick={goLogin}
-        className="block w-full text-center py-3.5 text-sm font-semibold text-bg bg-brand hover:bg-brand-hover active:bg-brand-hover rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+        className="block w-full text-center py-3.5 text-sm font-semibold text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
       >
         로그인하고 시작하기
       </button>

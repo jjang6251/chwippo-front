@@ -71,28 +71,29 @@ export const CL_LABEL: Record<string, string> = {
  * DESIGN.md 의 "단일 브랜드 액센트" 원칙은 *인터랙티브 요소* 한정 (DESIGN §1).
  * 데이터 시각화는 사용자 직관 보조 차원에서 예외 — 10 역량·6 카테고리 각각 다른 색.
  *
- * Tailwind 색 palette 사용 (rgb 정의된 inline 단순화 회피). 채도 낮춰서 (`/40` 정도) 화려함 X.
+ * 🔴 2026-08-17 — 고정 RGB → **테마 토큰**(`--tag-*`). 칩 글자로 쓰이는데 고정색이라
+ * 라이트 2.06 · 다크 2.7 로 어느 한쪽은 반드시 깨졌다. `index.css` 에서 테마별로 정의한다.
  */
 export const COMP_COLOR: Record<string, string> = {
-  technical: 'rgb(59 130 246)', // blue
-  leadership: 'rgb(249 115 22)', // orange
-  communication: 'rgb(16 185 129)', // emerald
-  planning: 'rgb(94 106 210)', // brand indigo
-  analytical: 'rgb(168 85 247)', // purple
-  problem_solving: 'rgb(6 182 212)', // cyan
-  collaboration: 'rgb(236 72 153)', // pink
-  creativity: 'rgb(234 179 8)', // yellow
-  responsibility: 'rgb(220 38 38)', // red
-  adaptability: 'rgb(20 184 166)', // teal
+  technical: 'rgb(var(--tag-blue))', // blue
+  leadership: 'rgb(var(--tag-orange))', // orange
+  communication: 'rgb(var(--tag-emerald))', // emerald
+  planning: 'rgb(var(--tag-indigo))', // brand indigo
+  analytical: 'rgb(var(--tag-purple))', // purple
+  problem_solving: 'rgb(var(--tag-cyan))', // cyan
+  collaboration: 'rgb(var(--tag-pink))', // pink
+  creativity: 'rgb(var(--tag-yellow))', // yellow
+  responsibility: 'rgb(var(--tag-red))', // red
+  adaptability: 'rgb(var(--tag-teal))', // teal
 }
 
 export const CL_COLOR: Record<string, string> = {
-  personality: 'rgb(168 85 247)', // purple
-  background: 'rgb(16 185 129)', // emerald
-  job_competency: 'rgb(59 130 246)', // blue
-  own_strength: 'rgb(245 158 11)', // amber
-  collaboration: 'rgb(236 72 153)', // pink
-  challenge: 'rgb(220 38 38)', // red
+  personality: 'rgb(var(--tag-purple))', // purple
+  background: 'rgb(var(--tag-emerald))', // emerald
+  job_competency: 'rgb(var(--tag-blue))', // blue
+  own_strength: 'rgb(var(--tag-amber))', // amber
+  collaboration: 'rgb(var(--tag-pink))', // pink
+  challenge: 'rgb(var(--tag-red))', // red
 }
 
 // LogDetailModal·LogTagEditor 공용 감정 칩 (autoTag 미지원 — 수동 선택 전용)

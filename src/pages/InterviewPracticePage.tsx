@@ -176,7 +176,7 @@ export function InterviewPracticePage() {
                     })
                     setTally(null)
                   }}
-                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 w-full min-h-[48px] bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 rounded-md transition-colors"
+                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 w-full min-h-[48px] bg-brand hover:bg-accent text-bg text-sm font-semibold px-5 rounded-md transition-colors"
                 >
                   다시 볼 것만 한 번 더 ({tally.again}개)
                 </button>
@@ -239,7 +239,7 @@ export function InterviewPracticePage() {
             </p>
             <Link
               to={sessionPath}
-              className="inline-flex items-center justify-center min-h-[44px] bg-brand hover:bg-brand-hover text-white text-sm font-semibold px-5 rounded-md transition-colors"
+              className="inline-flex items-center justify-center min-h-[44px] bg-brand hover:bg-accent text-bg text-sm font-semibold px-5 rounded-md transition-colors"
             >
               질문 추가하러 가기
             </Link>

@@ -137,7 +137,7 @@ export function InquiryActions({ inquiry }: Props) {
             type="button"
             onClick={() => setSla.mutate()}
             disabled={!slaInput || setSla.isPending}
-            className="text-[10px] bg-brand text-text-primary px-2 py-1 rounded-md font-semibold disabled:opacity-40"
+            className="text-[10px] bg-brand text-bg px-2 py-1 rounded-md font-semibold disabled:opacity-40"
           >
             설정
           </button>

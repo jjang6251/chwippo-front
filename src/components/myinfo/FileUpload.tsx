@@ -202,7 +202,7 @@ export function FileUpload({ slot, scope: _scope, onChange, hint, disabled }: Fi
         </svg>
         파일 첨부 (PDF / JPG / PNG, 10MB 이하)
       </button>
-      {hint && <p className="text-[11px] text-text-quaternary/80 mt-1.5 pl-1">{hint}</p>}
+      {hint && <p className="text-[11px] text-text-quaternary mt-1.5 pl-1">{hint}</p>}
     </>
   )
 }

@@ -154,7 +154,7 @@ export function FirstCardCelebration() {
               dismiss()
               navigate(`/board/${data.appId}`)
             }}
-            className="text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover px-5 py-2.5 rounded-lg transition-colors"
+            className="text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover px-5 py-2.5 rounded-lg transition-colors"
           >
             카드 보러가기 →
           </button>

@@ -156,7 +156,7 @@ export function CoverLetterTab({ applicationId, active }: { applicationId: strin
               </div>
               <Link
                 to={fullscreenHref}
-                className="shrink-0 px-3 py-2 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+                className="shrink-0 px-3 py-2 text-xs font-semibold text-bg bg-brand hover:bg-accent rounded-lg transition-colors"
               >
                 열기 →
               </Link>

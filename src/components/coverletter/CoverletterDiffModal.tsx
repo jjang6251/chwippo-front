@@ -61,7 +61,7 @@ export function CoverletterDiffModal({
             return (
               <span
                 key={i}
-                className="bg-success/15 text-success/95 rounded-sm"
+                className="bg-success/15 text-success rounded-sm"
                 style={{ textDecoration: 'none' }}
               >
                 {t.text}
@@ -71,7 +71,7 @@ export function CoverletterDiffModal({
           return (
             <span
               key={i}
-              className="bg-danger/15 text-danger/95 line-through rounded-sm"
+              className="bg-danger/15 text-danger line-through rounded-sm"
             >
               {t.text}
             </span>
@@ -90,7 +90,7 @@ export function CoverletterDiffModal({
             onApply()
             onClose()
           }}
-          className="flex-1 py-2.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+          className="flex-1 py-2.5 text-xs font-semibold text-bg bg-brand hover:bg-accent rounded-lg transition-colors"
         >
           ✓ 적용
         </button>

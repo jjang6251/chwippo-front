@@ -72,7 +72,7 @@ const TAIL = byFlow(ALL_SLUGS.filter((s) => !DEFAULT_VISIBLE.includes(s)))
  */
 const CHIP_BASE =
   'inline-flex items-center justify-center min-h-7 whitespace-nowrap text-[11px] px-2 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60'
-const CHIP_ON = 'bg-brand text-text-primary border-brand font-medium'
+const CHIP_ON = 'bg-brand text-bg border-brand font-medium'
 
 interface Props {
   /** `null` = 미분류 (필터로 쓰는 화면에선 「전체」 — `nullLabel` 참조) */

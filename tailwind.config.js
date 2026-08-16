@@ -1,7 +1,18 @@
+import defaultColors from 'tailwindcss/colors'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
-  darkMode: 'class',
+  /**
+   * 🔴 치뽀는 `.dark` **클래스가 아니라 `data-theme` 속성**으로 테마를 바꾼다.
+   * `'class'` 로 두면 `dark:` variant 가 **영원히 발동하지 않는다** — 실제로 코드 전체에
+   * `dark:` 사용 0건이었고(2026-08-17 확인), 그래서 이 오설정이 드러난 적이 없다.
+   *
+   * 켜는 이유: 다크 전용 팔레트(`-400` 계열)를 라이트에서 그대로 쓰는 곳들이 있는데
+   * (직군 태그 대비 **1.39:1**), 의미 토큰으로는 8색을 표현할 수 없어 테마 분기가 필요하다.
+   * `data-theme` 미지정(=다크 fallback)도 함께 잡는다.
+   */
+  darkMode: ['variant', ['&:is([data-theme="dark"] *)', '&:is(:root:not([data-theme]) *)']],
   theme: {
     extend: {
       fontFamily: {
@@ -13,6 +24,25 @@ export default {
       boxShadow: {
         sm: 'var(--shadow-sm)',
         md: 'var(--shadow-md)',
+      },
+      /**
+       * 🔴 **알파 modifier 스케일 보강** (2026-08-17 `/uiux` 실측).
+       *
+       * Tailwind 기본 opacity 스케일엔 5의 배수만 있다. `bg-warning/8` 처럼 **없는 값을 쓰면
+       * 클래스가 아예 방출되지 않아 배경이 안 그려진다** — 에러도 경고도 없이 조용히 사라진다.
+       * 실측 결과 코드 곳곳에서 `/4 /6 /8 /12 /14 /18` 을 쓰고 있었고 **전부 무효**였다
+       * (`bg-warning/8` 13곳 · `bg-brand/8` 12곳 · `bg-info/8` 9곳 …).
+       *
+       * 값을 5의 배수로 스냅하면 의도한 톤보다 진해지므로, **스케일 쪽을 넓힌다.**
+       * 이렇게 하면 호출부를 한 줄도 안 고치고 전부 살아난다.
+       */
+      opacity: {
+        4: '0.04',
+        6: '0.06',
+        8: '0.08',
+        12: '0.12',
+        14: '0.14',
+        18: '0.18',
       },
       colors: {
         // 색은 RGB triplet 변수 + tailwind opacity modifier 지원 (bg-warning/10 등)
@@ -38,7 +68,17 @@ export default {
         danger: 'rgb(var(--danger) / <alpha-value>)',
         warning: 'rgb(var(--warning) / <alpha-value>)',
         info: 'rgb(var(--info) / <alpha-value>)',
-        violet: 'rgb(var(--violet) / <alpha-value>)',
+        /**
+         * 🔴 **팔레트를 통째로 덮어쓰지 않는다** (2026-08-17 `/uiux` 실측).
+         *
+         * 여기에 문자열 하나만 두면 Tailwind 기본 `violet-50…950` 이 **전부 사라진다.**
+         * 그래서 `text-violet-400`·`bg-violet-600` 이 조용히 no-op 이 되어
+         *   · 「기획·PM」 직군 태그 (다른 7개 직군은 전부 색이 있는데 이것만 무색)
+         *   · 자소서 「직무역량·핵심경험」 카테고리
+         *   · 회사 아바타 10색 중 1색 → **투명 배경 + 흰 글자** (라이트에서 거의 안 보임)
+         * 이 셋이 색을 잃고 있었다. DEFAULT 로 의미 토큰을 두고 shade 는 되살린다.
+         */
+        violet: { ...defaultColors.violet, DEFAULT: 'rgb(var(--violet) / <alpha-value>)' },
 
         // 의미 토큰 — `bg-white/N`·`text-white/N` 대체용. alpha 미리 박혀있는 완전한 값.
         //

@@ -68,7 +68,7 @@ export function Interviews() {
           </p>
           <Link
             to="/board"
-            className="inline-block px-5 py-2.5 text-sm font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+            className="inline-block px-5 py-2.5 text-sm font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors"
           >
             보드로 이동 →
           </Link>
@@ -93,7 +93,7 @@ export function Interviews() {
             onClick={() => setTypeFilter(t)}
             className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
               typeFilter === t
-                ? 'bg-brand text-text-primary border-brand'
+                ? 'bg-brand text-bg border-brand'
                 : 'bg-card hover:bg-card-strong border-line text-text-secondary'
             }`}
           >
@@ -108,7 +108,7 @@ export function Interviews() {
             onClick={() => setPeriodFilter(p)}
             className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
               periodFilter === p
-                ? 'bg-brand text-text-primary border-brand'
+                ? 'bg-brand text-bg border-brand'
                 : 'bg-card hover:bg-card-strong border-line text-text-secondary'
             }`}
           >
@@ -327,7 +327,7 @@ function ApplicationInterviewGroup({
           <button
             type="button"
             onClick={onCreate}
-            className="min-h-8 px-4 py-2 text-xs font-medium text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors"
+            className="min-h-8 px-4 py-2 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors"
           >
             면접 차수 만들기
           </button>
@@ -398,7 +398,7 @@ function SessionCard({
               </span>
             )}
           </div>
-          <span className="text-text-faint text-xs shrink-0">
+          <span className="text-text-quaternary text-xs shrink-0">
             {new Date(s.createdAt).toLocaleDateString('ko-KR')}
           </span>
         </div>

@@ -105,8 +105,8 @@ export function AiUsage() {
               onClick={() => setPreset(p.key)}
               className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                 preset === p.key
-                  ? 'bg-brand text-text-primary'
-                  : 'text-text-secondary hover:text-text-primary'
+                  ? 'bg-brand text-bg'
+                  : 'text-text-secondary hover:text-bg'
               }`}
             >
               {p.label}
@@ -711,7 +711,7 @@ export function AiUsageMetricsSection() {
               onClick={() => setPeriod(p.key)}
               className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
                 period === p.key
-                  ? 'bg-brand text-text-primary shadow-sm'
+                  ? 'bg-brand text-bg shadow-sm'
                   : 'text-text-tertiary hover:text-text-primary hover:bg-card-strong'
               }`}
               aria-pressed={period === p.key}

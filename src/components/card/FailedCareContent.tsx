@@ -85,7 +85,7 @@ export function FailedCareContent({ applicationId, app, onDone }: FailedCareCont
           <button
             onClick={handleSave}
             disabled={isPending || !takeaway.trim()}
-            className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
           >
             남기기
           </button>
@@ -111,7 +111,7 @@ export function FailedCareContent({ applicationId, app, onDone }: FailedCareCont
       </ul>
       <button
         onClick={onDone}
-        className="w-full py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+        className="w-full py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors"
       >
         확인
       </button>

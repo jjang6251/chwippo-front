@@ -309,7 +309,7 @@ export function Sidebar() {
           {isDemo ? (
             <button
               onClick={showLogin}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold bg-brand text-text-primary hover:bg-accent active:bg-accent-hover transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold bg-brand text-bg hover:bg-accent active:bg-accent-hover transition-colors"
             >
               가입하고 시작하기 →
             </button>
@@ -322,7 +322,7 @@ export function Sidebar() {
                 collapsed ? 'justify-center px-0' : 'gap-2 px-3'
               } ${
                 location.pathname === '/inquiry'
-                  ? 'bg-brand text-text-primary'
+                  ? 'bg-brand text-bg'
                   : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
               }`}
             >
@@ -348,7 +348,7 @@ export function Sidebar() {
               </button>
               <button
                 onClick={handleLogout}
-                className="flex-1 py-2.5 rounded-lg bg-brand text-text-primary text-sm font-medium hover:bg-accent active:bg-accent-hover transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-brand text-bg text-sm font-medium hover:bg-accent active:bg-accent-hover transition-colors"
               >
                 로그아웃
               </button>

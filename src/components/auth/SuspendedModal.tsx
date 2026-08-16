@@ -96,7 +96,7 @@ export function SuspendedModal({
         <div className="flex gap-2 pt-1">
           <Link
             to="/inquiry"
-            className="flex-1 bg-brand hover:bg-accent text-text-primary text-sm font-semibold px-4 py-2.5 rounded-md text-center transition-colors"
+            className="flex-1 bg-brand hover:bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-md text-center transition-colors"
           >
             문의하기
           </Link>

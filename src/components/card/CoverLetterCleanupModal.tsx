@@ -105,7 +105,7 @@ export function CoverLetterCleanupModal({ text, limit, onClose, onApply, aiFeedb
             {!onlyOverLimit && (
               <button
                 onClick={() => { onApply(cleaned); onClose() }}
-                className="flex-1 py-2.5 text-xs font-medium text-text-primary bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors"
+                className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors"
               >
                 정리된 내용으로 바꾸기
               </button>

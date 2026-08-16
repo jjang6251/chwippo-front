@@ -27,7 +27,7 @@ export function SampleCardGuideOverlay({ index }: Props) {
     <div
       className="
         absolute left-1/2 -translate-x-1/2 -bottom-[42px]
-        bg-brand text-text-primary text-xs font-medium
+        bg-brand text-bg text-xs font-medium
         px-3.5 py-2 rounded-lg whitespace-nowrap
         opacity-0 pointer-events-none
         group-hover/sample-card:opacity-100 group-hover/sample-card:-bottom-[48px]

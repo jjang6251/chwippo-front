@@ -49,7 +49,7 @@ export function CalendarDaySheet({ open, date, events, onClose, onAddOnDate }: P
           <div className="px-5 pt-2 pb-6 border-t border-line bg-surface shrink-0">
             <button
               onClick={() => onAddOnDate(date)}
-              className="w-full h-12 rounded-xl bg-brand hover:bg-brand-hover text-bg text-sm font-bold flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+              className="w-full h-12 rounded-xl bg-brand hover:bg-accent text-bg text-sm font-bold flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
             >
               <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M6 1v10M1 6h10" />

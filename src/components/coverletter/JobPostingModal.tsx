@@ -265,7 +265,7 @@ export function JobPostingModal({
           <button
             onClick={() => handleParse()}
             disabled={parsing || soldOut || rawText.trim().length < RAW_MIN}
-            className="w-full mt-2 py-2.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-brand"
+            className="w-full mt-2 py-2.5 text-xs font-semibold text-bg bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-brand"
           >
             {parsing ? '정리하는 중…' : '✨ AI로 정리하기'}
           </button>
@@ -345,7 +345,7 @@ export function JobPostingModal({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 py-2.5 text-xs font-semibold text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
+              className="flex-1 py-2.5 text-xs font-semibold text-bg bg-brand hover:bg-accent rounded-lg transition-colors disabled:opacity-40"
             >
               {saving ? '저장 중…' : '저장'}
             </button>
@@ -536,7 +536,7 @@ function ChipSection({
               <button
                 onClick={() => remove(idx)}
                 aria-label={`${it} 삭제`}
-                className="w-4 h-4 flex items-center justify-center text-info/70 hover:text-info"
+                className="w-4 h-4 flex items-center justify-center text-info hover:text-info"
               >
                 <svg width="8" height="8" viewBox="0 0 14 14" fill="none">
                   <path

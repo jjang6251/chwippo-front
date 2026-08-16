@@ -150,7 +150,7 @@ export function MyInfoItemRow({
       </div>
 
       {hasDetail && expanded && (
-        <div className="px-4 pb-4 pt-3 border-t border-line/60">
+        <div className="px-4 pb-4 pt-3 border-t border-line">
           <div className="space-y-0.5">
             {detailFields!.filter((f) => f.value.trim().length > 0).map((f) => {
               const copyable = f.copyable !== false

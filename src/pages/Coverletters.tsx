@@ -135,7 +135,7 @@ export function Coverletters() {
           </p>
           <Link
             to={link('/board')}
-            className="inline-block px-4 py-2 text-xs font-medium text-text-primary bg-brand hover:bg-accent rounded-lg transition-colors"
+            className="inline-block px-4 py-2 text-xs font-medium text-bg bg-brand hover:bg-accent rounded-lg transition-colors"
           >
             보드로 이동 →
           </Link>

@@ -177,7 +177,7 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
             <button
               onClick={handleSaveMemo}
               disabled={!memoText.trim() || isSubmittingMemo}
-              className="h-10 px-5 rounded-lg bg-brand hover:bg-brand-hover text-bg text-xs font-bold disabled:opacity-40"
+              className="h-10 px-5 rounded-lg bg-brand hover:bg-accent text-bg text-xs font-bold disabled:opacity-40"
             >
               {isSubmittingMemo ? '저장 중…' : '저장'}
             </button>

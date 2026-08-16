@@ -21,9 +21,9 @@ function degreeToKind(degree: string): SchoolKind | null {
 
 // Toss 톤 — 큰 필드 (h-12 48px), rounded-xl, focus 4px halo
 const INPUT_MODAL =
-  'w-full bg-input border border-line/70 rounded-xl px-4 h-12 text-base text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all'
+  'w-full bg-input border border-line rounded-xl px-4 h-12 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all'
 const SELECT_MODAL =
-  'w-full appearance-none bg-input border border-line/70 rounded-xl pl-4 pr-11 h-12 text-base text-text-primary cursor-pointer focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all'
+  'w-full appearance-none bg-input border border-line rounded-xl pl-4 pr-11 h-12 text-base text-text-primary cursor-pointer focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all'
 
 const DEGREE_STYLE: Record<string, { emoji: string; ring: string; bg: string; text: string }> = {
   '고등학교':        { emoji: '🏫', ring: 'ring-warning/30', bg: 'bg-warning/10', text: 'text-warning' },
@@ -284,7 +284,7 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="flex-1 sm:flex-none sm:min-w-[6rem] h-12 px-4 sm:px-5 text-sm font-medium text-text-secondary border border-line/70 rounded-xl hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50"
+            className="flex-1 sm:flex-none sm:min-w-[6rem] h-12 px-4 sm:px-5 text-sm font-medium text-text-secondary border border-line rounded-xl hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50"
           >
             취소
           </button>
@@ -292,7 +292,7 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 sm:flex-none sm:min-w-[7rem] h-12 px-4 sm:px-6 text-sm font-bold bg-brand hover:bg-accent active:bg-accent-hover text-text-primary rounded-xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-accent/30 transition-all disabled:opacity-50 disabled:shadow-none"
+            className="flex-1 sm:flex-none sm:min-w-[7rem] h-12 px-4 sm:px-6 text-sm font-bold bg-brand hover:bg-accent active:bg-accent-hover text-bg rounded-xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-accent/30 transition-all disabled:opacity-50 disabled:shadow-none"
           >
             {saving ? '저장 중...' : isEdit ? '수정' : '추가'}
           </button>
@@ -522,7 +522,7 @@ function ModalHeader({ isEdit, degree, schoolName, onClose }: { isEdit: boolean;
 // ── 섹션 (flat + 큰 subheader + 상단 divider) ───────────
 function Section({ title, children, first }: { title: string; children: React.ReactNode; first?: boolean }) {
   return (
-    <div className={first ? '' : 'pt-6 border-t border-line/50'}>
+    <div className={first ? '' : 'pt-6 border-t border-line'}>
       <p className="text-[13px] font-bold text-text-primary mb-3.5">
         {title}
       </p>

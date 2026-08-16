@@ -69,7 +69,7 @@ export function UserNotificationModal({ notification }: Props) {
           type="button"
           onClick={() => dismiss.mutate()}
           disabled={dismiss.isPending}
-          className="w-full bg-brand hover:bg-accent text-text-primary text-sm font-semibold px-4 py-2.5 rounded-md transition-colors disabled:opacity-50"
+          className="w-full bg-brand hover:bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-md transition-colors disabled:opacity-50"
         >
           확인했어요
         </button>
