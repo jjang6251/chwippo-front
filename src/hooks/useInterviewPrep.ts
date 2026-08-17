@@ -25,7 +25,8 @@ import type {
  * (2026-08-09 — 카드가 remount 되는 모바일 집중 화면에서 캐시가 낡으면 답변이 빈 칸으로 돌아온다).
  */
 
-const sessionListKey = (applicationId: string) =>
+/** 목록 쿼리 키 — Interviews 페이지의 부모 정렬(useQueries)이 같은 키를 써야 캐시가 공유된다 */
+export const sessionListKey = (applicationId: string) =>
   ['interview-prep-sessions', applicationId] as const
 /**
  * 🔴 **키는 여기서만 만든다.** 화면에서 배열 리터럴을 복붙하면 오타가 나도

@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import { useQueries } from '@tanstack/react-query'
+import { interviewPrepApi } from '@/api/interviewPrep'
+import { sessionListKey } from '@/hooks/useInterviewPrep'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApplications } from '@/hooks/useApplications'
 import {
@@ -17,6 +20,7 @@ import type {
   InterviewPrepSession,
   InterviewType,
 } from '@/types/interviewPrep'
+import type { ApplicationStatus } from '@/types/application'
 
 /**
  * F6 PR 2 Phase 4 — 면접 준비 통합 페이지 (`/interviews`).
@@ -32,13 +36,61 @@ export function Interviews() {
   const [typeFilter, setTypeFilter] = useState<InterviewType | 'all'>('all')
   const [periodFilter, setPeriodFilter] = useState<'all' | '7d' | '30d'>('all')
 
+  /**
+   * 🔴 `'PLANNED'` 다 — 예전엔 `'CREATED'` 였는데 **그런 상태는 존재하지 않는다**
+   * (`ApplicationStatus = 'PLANNED' | 'IN_PROGRESS' | 'PASSED' | 'FAILED'`).
+   * F6 PR 2 Phase 4(6월)부터의 구명칭 잔재로, 배열 리터럴이 string[] 으로 넓어져
+   * `includes()` 가 타입 검사를 안 탔다. `as ApplicationStatus[]` 를 붙이면 무효값이
+   * **컴파일 에러**가 된다 — 이 표기가 있었으면 원버그를 잡았다.
+   * 결과: **지원 예정 카드가 이 페이지에서 영영 안 보였고**, 카드 상세에서 세션을
+   * 만들어도 모아보기에 안 떴다 (2026-08-17 발견).
+   * FAILED 제외는 의도다 — 불합격 기록은 카드 상세로 접근한다 (자소서 페이지의 탭과 같은 정책).
+   */
   const active = useMemo(
     () =>
       applications.filter((a) =>
-        ['CREATED', 'IN_PROGRESS', 'PASSED'].includes(a.status),
+        (['PLANNED', 'IN_PROGRESS', 'PASSED'] as ApplicationStatus[]).includes(a.status),
       ),
     [applications],
   )
+
+  /**
+   * 세션 있는 카드를 위로 (2026-08-17 CEO 지시).
+   *
+   * 섹션 자식이 각자 세션을 fetch 하므로 부모는 몰랐다 — `useQueries` 로 **같은 쿼리 키**를
+   * 부모에서도 구독한다. react-query 가 키로 dedupe 하므로 **네트워크 요청은 늘지 않고**
+   * (자식 N개가 어차피 전부 병렬 fetch), 부모는 캐시를 읽어 정렬만 한다.
+   *
+   * 정렬: ① 세션 있는 카드 먼저 ② 그 안에선 최신 세션순 (최근 준비하던 게 맨 위)
+   * ③ 세션 없는 카드는 기존 순서 유지. 로딩 중(undefined)은 0개 취급이라
+   * 데이터 도착 시 한 번 재정렬될 수 있다 — 캐시가 차면 다음 방문부턴 즉시 정렬 상태다.
+   */
+  const sessionQueries = useQueries({
+    queries: active.map((app) => ({
+      queryKey: sessionListKey(app.id),
+      queryFn: () => interviewPrepApi.list(app.id),
+    })),
+  })
+  const sorted = useMemo(() => {
+    const meta = new Map(
+      active.map((app, i) => {
+        const sessions = sessionQueries[i]?.data ?? []
+        const latest = sessions.reduce(
+          (acc, sess) => Math.max(acc, new Date(sess.createdAt).getTime()),
+          0,
+        )
+        return [app.id, { count: sessions.length, latest }] as const
+      }),
+    )
+    return [...active].sort((a, b) => {
+      const ma = meta.get(a.id)!
+      const mb = meta.get(b.id)!
+      if ((ma.count > 0) !== (mb.count > 0)) return ma.count > 0 ? -1 : 1
+      if (ma.count > 0 && mb.count > 0 && ma.latest !== mb.latest)
+        return mb.latest - ma.latest
+      return 0 // 안정 정렬 — 같은 그룹 안에선 기존 순서 유지
+    })
+  }, [active, sessionQueries])
 
   if (isLoading) {
     return (
@@ -142,7 +194,7 @@ export function Interviews() {
         컨테이너가 실제로 비었다는 사실을 **CSS 로** 읽어 아래 안내를 띄운다.
       */}
       <div className="peer space-y-6 mt-6">
-        {active.map((app) => (
+        {sorted.map((app) => (
           <ApplicationInterviewGroup
             key={app.id}
             applicationId={app.id}
