@@ -8,7 +8,6 @@
  *   - 패널 제거 → 스텝 이름 클릭·CTA 전부 /board/:id/steps/:stepId 풀페이지 직행
  *   - 결과 대기 배너 흡수 (카드 안 상태 + 결과 입력)
  *   - 🔴 회귀: date-only input(type="date") 잔존 0 (시간 소실 결함 원천 제거)
- *   - 투어 앵커 유지 (step-bar · step-edit-btn · add-step-btn · save-steps-btn · coverletter-tab)
  */
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -167,8 +166,11 @@ describe('BoardDetail — 기본 정보 편집 모달', () => {
 
 describe('BoardDetail — 진행 상황 + 현재 스텝 카드', () => {
   it('IN_PROGRESS — step-bar + 현재 스텝 카드(날짜+시간 KST · 체크리스트 N/M)', () => {
-    const { container } = renderDetail()
-    expect(container.querySelector('[data-tour="step-bar"]')).not.toBeNull()
+    renderDetail()
+    // 🔴 예전엔 투어 앵커(`[data-tour="step-bar"]`)를 선택자로 썼다. 투어가 사라지며
+    //    앵커도 없어졌으므로 **화면에 실제로 보이는 제목**으로 찾는다 — 사용자가 보는 것과
+    //    같은 기준이라 선택자가 구현 세부에 덜 묶인다.
+    expect(screen.getByRole('heading', { name: /진행 상황/ })).toBeInTheDocument()
     // KST 14:00 이 05:00 로 밀리지 않음 (TZ=UTC 실행 대비)
     expect(screen.getByText(/7월 22일 \(수\)/)).toBeInTheDocument()
     expect(screen.getByText('14:00')).toBeInTheDocument()
@@ -234,8 +236,8 @@ describe('BoardDetail — 회사 메모 저장 정책 (거짓 저장 방지)', (
 describe('BoardDetail — 상태 5종', () => {
   it('PLANNED — 진행 상황(step-bar) 미노출', () => {
     h.app = makeApp({ status: 'PLANNED', currentStepIndex: 0 })
-    const { container } = renderDetail()
-    expect(container.querySelector('[data-tour="step-bar"]')).toBeNull()
+    renderDetail()
+    expect(screen.queryByRole('heading', { name: /진행 상황/ })).not.toBeInTheDocument()
     // 회사 메모는 여전히 노출
     expect(screen.getByText('회사 메모')).toBeInTheDocument()
   })
@@ -318,21 +320,9 @@ describe('BoardDetail — 상태 5종', () => {
   })
 })
 
-describe('BoardDetail — 투어 앵커 유지', () => {
-  it('step-bar · step-edit-btn · coverletter-tab 존재', () => {
-    const { container } = renderDetail()
-    expect(container.querySelector('[data-tour="step-bar"]')).not.toBeNull()
-    expect(container.querySelector('[data-tour="step-edit-btn"]')).not.toBeNull()
-    expect(container.querySelector('[data-tour="coverletter-tab"]')).not.toBeNull()
-  })
-
-  it('스텝 편집 모달 열면 add-step-btn · save-steps-btn 존재', () => {
-    const { container } = renderDetail()
-    fireEvent.click(screen.getByRole('button', { name: '스텝 편집' }))
-    expect(container.querySelector('[data-tour="add-step-btn"]')).not.toBeNull()
-    expect(container.querySelector('[data-tour="save-steps-btn"]')).not.toBeNull()
-  })
-})
+// 🔴 `describe('BoardDetail — 투어 앵커 유지')` 2건은 2026-08-17 온보딩 투어 제거와 함께 삭제.
+//    `data-tour` 앵커 14곳이 전부 없어졌으므로 「앵커가 존재하는가」는 검증할 대상이 아니다.
+//    ⚠️ 앵커를 **선택자로 쓰던 위 2개 테스트**는 살아 있다 — 제목 기반 쿼리로 옮겼다.
 
 describe('BoardDetail — 공고 요건 섹션', () => {
   it('steps 탭에 variant="section" 으로 렌더', () => {

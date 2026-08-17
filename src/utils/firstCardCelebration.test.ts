@@ -24,7 +24,6 @@ const base = {
   userId: USER,
   existingApplications: [] as Application[],
   createdId: 'new-1',
-  tourActive: false,
 }
 
 describe('shouldCelebrateFirstCard', () => {
@@ -69,10 +68,8 @@ describe('shouldCelebrateFirstCard', () => {
     expect(shouldCelebrateFirstCard({ ...base, createdId: 'new-2' })).toBe(false)
   })
 
-  it('6) 투어 중 → false + seen 마킹 (기회 소진)', () => {
-    expect(shouldCelebrateFirstCard({ ...base, tourActive: true })).toBe(false)
-    expect(hasCelebratedFirstCard(USER)).toBe(true)
-  })
+  // 6) 「투어 중 → 생략」 케이스는 2026-08-17 온보딩 투어 제거로 함께 삭제.
+  //    겹칠 오버레이가 없어져 판정 축 자체가 사라졌다.
 
   it('7) userId 없음 → false + 마킹 안 함', () => {
     expect(shouldCelebrateFirstCard({ ...base, userId: undefined })).toBe(false)

@@ -34,9 +34,8 @@ export function shouldCelebrateFirstCard(opts: {
   existingApplications: Application[] | undefined
   /** 방금 생성된 카드 id — 캐시에 이미 반영됐어도 제외하고 판정 */
   createdId: string
-  tourActive: boolean
 }): boolean {
-  const { userId, existingApplications, createdId, tourActive } = opts
+  const { userId, existingApplications, createdId } = opts
   if (!userId || !existingApplications) return false
   if (hasCelebratedFirstCard(userId)) return false
 
@@ -49,7 +48,11 @@ export function shouldCelebrateFirstCard(opts: {
     return false
   }
 
-  // 여기부터는 "진짜 첫 카드" — 보여주든 투어로 생략하든 기회는 1회 소진
+  // 여기부터는 "진짜 첫 카드" — 기회는 1회 소진
+  //
+  // 🔴 예전엔 `tourActive` 를 받아 **투어 중이면 연출을 생략**했다 (온보딩 투어와
+  // 축하 오버레이가 겹치면 둘 다 안 읽힌다). 2026-08-17 투어를 제거하면서 축을 없앴다 —
+  // 겹칠 상대가 사라졌으므로 「진짜 첫 카드면 무조건 축하」로 단순해진다.
   markFirstCardCelebrated(userId)
-  return !tourActive
+  return true
 }
