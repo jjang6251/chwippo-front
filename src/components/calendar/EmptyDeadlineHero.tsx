@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useDemoMode } from '@/contexts/demoMode'
+import { JobSiteChips } from '@/components/common/JobSiteChips'
 
 /**
  * 캘린더 UX 재구성 — Hero 자리 빈 상태.
@@ -73,6 +74,12 @@ export function EmptyDeadlineHero({ variant = 'no-deadline' }: Props) {
             회고 보기
           </Link>
         )}
+      </div>
+      {/* 공고 허브 — 🔴 빈 상태가 이 기능의 본진이다. 「카드를 추가하세요」는
+          추가할 공고가 없는 사람에게 막다른 길이라, 공고 찾으러 갈 문을 같은 자리에 둔다.
+          (onboarding 변형 = 카드 0개 신규 유저 — 관측된 「카드 도달 안 함」의 직접 처방) */}
+      <div className="relative mt-6 pt-5 border-t border-line">
+        <JobSiteChips placement="emptyDeadline" />
       </div>
     </div>
   )
