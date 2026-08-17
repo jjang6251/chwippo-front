@@ -6,7 +6,6 @@ import { MobileNav } from './MobileNav'
 import { MobileHeader } from './MobileHeader'
 import { useDemoMode } from '@/contexts/demoMode'
 import { DemoBanner } from '@/components/demo/DemoBanner'
-import { TourOverlay } from '@/components/onboarding/TourOverlay'
 import { AnnouncementContainer } from '@/components/announcement/AnnouncementContainer'
 import { CoinChip } from '@/components/common/CoinChip'
 import { CoinOnboardingModal } from '@/components/common/CoinOnboardingModal'
@@ -51,7 +50,6 @@ export function AppShell() {
         </div>
       </div>
       {!isNative && <MobileNav />}
-      <TourOverlay />
       {!isDemo && aiEnabled && <CoinOnboardingModal />}
       {/* PR_B2 Phase 1 — Q13 SuspendedModal (dismiss 불가) — 모든 다른 modal 보다 우선 */}
       {!isDemo && coinBalance?.suspendedAt && (

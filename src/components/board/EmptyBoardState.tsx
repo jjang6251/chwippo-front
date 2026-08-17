@@ -2,6 +2,8 @@
  * W1 — 샘플 dismiss + 진짜 카드 0건일 때 보드 빈 상태.
  * unDraw 스타일 inline SVG (sage+coral 토큰) + 따뜻한 카피 + brand "+ 첫 회사 추가" CTA.
  */
+import { JobSiteChips } from '@/components/common/JobSiteChips'
+
 interface Props {
   /** 클릭 시 AddCardModal open */
   onAddFirst: () => void
@@ -65,6 +67,11 @@ export function EmptyBoardState({ onAddFirst }: Props) {
       >
         + 첫 회사 추가
       </button>
+      {/* 공고 허브 — 위 CTA 의 전제(「추가할 회사가 있다」)가 없는 사람을 위한 문.
+          여기가 관측된 이탈 지점(가입 후 카드 미도달)이라 빈 상태 중 가장 절실한 자리다. */}
+      <div className="mt-8 pt-6 border-t border-line max-w-[420px] mx-auto">
+        <JobSiteChips placement="emptyBoard" />
+      </div>
     </div>
   )
 }

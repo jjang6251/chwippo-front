@@ -12,7 +12,7 @@
  * 시나리오: 미설정 · 설정됨 · 앱 · 플랫폼 태그(app/web) · 중복 호출 · 마스킹 상수
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CLARITY_MASK, initClarity, isClarityActive } from './clarity'
+import { CLARITY_MASK, initClarity, isClarityActive, trackClarityEvent } from './clarity'
 
 function cleanup() {
   document.getElementById('clarity-script')?.remove()
@@ -164,5 +164,46 @@ describe('CLARITY_MASK', () => {
    */
   it("문자열 'true' 로 마스킹 속성을 준다", () => {
     expect(CLARITY_MASK).toEqual({ 'data-clarity-mask': 'true' })
+  })
+})
+
+/**
+ * trackClarityEvent (2026-08-17 · 공고 허브 계측) — 분기 3개를 전부 실행한다.
+ * 🔴 핵심 계약: **계측 실패가 기능(외부 이동)을 막으면 안 된다** — 광고 차단기가
+ * 스크립트를 막은 환경에서도 클릭은 정상이어야 한다.
+ */
+describe('trackClarityEvent', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    delete (window as unknown as { clarity?: unknown }).clarity
+  })
+
+  it('프로젝트 ID 미설정 → 완전 no-op (window.clarity 를 건드리지도 않는다)', () => {
+    vi.stubEnv('VITE_CLARITY_PROJECT_ID', '')
+    const spy = vi.fn()
+    ;(window as unknown as { clarity?: unknown }).clarity = spy
+    trackClarityEvent('jobhub_test')
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it("ID 설정 + clarity 존재 → ('event', 이름) 으로 호출", () => {
+    vi.stubEnv('VITE_CLARITY_PROJECT_ID', 'abc123')
+    const spy = vi.fn()
+    ;(window as unknown as { clarity?: unknown }).clarity = spy
+    trackClarityEvent('jobhub_jobkorea_calendar')
+    expect(spy).toHaveBeenCalledWith('event', 'jobhub_jobkorea_calendar')
+  })
+
+  it('🔴 clarity 미존재(광고 차단기) → 안 던진다', () => {
+    vi.stubEnv('VITE_CLARITY_PROJECT_ID', 'abc123')
+    expect(() => trackClarityEvent('jobhub_test')).not.toThrow()
+  })
+
+  it('🔴 clarity 가 던져도 삼킨다 — 계측 실패 ≠ 기능 실패', () => {
+    vi.stubEnv('VITE_CLARITY_PROJECT_ID', 'abc123')
+    ;(window as unknown as { clarity?: unknown }).clarity = () => {
+      throw new Error('clarity boom')
+    }
+    expect(() => trackClarityEvent('jobhub_test')).not.toThrow()
   })
 })

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { useTourStore } from '@/stores/tourStore'
 import { useThemeStore, type Theme } from '@/stores/themeStore'
 import { apiClient } from '@/api/client'
 import { isInNativeApp, postToNative } from '@/utils/nativeBridge'
@@ -25,7 +24,6 @@ const MENU = [
 export function Settings() {
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
-  const startTour = useTourStore((s) => s.start)
   const theme = useThemeStore((s) => s.theme)
   const setTheme = useThemeStore((s) => s.setTheme)
   const navigate = useNavigate()
@@ -106,20 +104,6 @@ export function Settings() {
       {/* ① 앱 잠금 (Face ID/Touch ID) — 네이티브 + 지원 기기에서만 렌더.
           데모(비로그인)에선 숨김 — 기기 잠금은 로그인 사용자 데이터 보호용. */}
       {!isDemo && <AppLockSection />}
-
-      <div className="bg-surface-2 border border-line rounded-xl mb-4">
-        <button
-          onClick={isDemo ? () => showDemoSignup() : startTour}
-          className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-card active:bg-card-strong transition-colors"
-        >
-          <span className="text-xl w-7 text-center">🚀</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">온보딩 다시 보기</p>
-            <p className="text-xs text-text-tertiary mt-0.5">치뽀 시작 안내 다시 확인하기</p>
-          </div>
-          <span className="text-text-tertiary text-sm">›</span>
-        </button>
-      </div>
 
       <div className="bg-surface-2 border border-line rounded-xl">
         <button

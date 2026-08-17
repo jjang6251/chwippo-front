@@ -148,7 +148,11 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
       <div
         {...(isMobile ? swipeHandlers : {})}
         onClick={handleCardClick}
-        data-tour-card-id={application.id}
+        /* 🔴 e2e 전용 식별자. 예전엔 `data-tour-card-id` 였는데 **투어 앵커가 아니라
+           카드 열거용 선택자**로 쓰이고 있었다 (`e2e/board-card-height.spec.ts` — 카드 높이
+           통일 검증이 이걸로 카드를 센다). 2026-08-17 투어를 지우며 함께 없앨 뻔했다 —
+           `src` 만 grep 해서 「소비처 0」으로 오판했고 `e2e/` 를 안 봤다. 이름에서 tour 를 뗀다. */
+        data-card-id={application.id}
         style={isMobile && swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)`, transition: 'none' } : undefined}
         className={`
           relative group border-l-2 rounded-xl p-4 cursor-pointer

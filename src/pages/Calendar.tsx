@@ -22,6 +22,7 @@ import { CountdownHeroLarge } from '@/components/calendar/CountdownHeroLarge'
 import { TodayBriefingBanner } from '@/components/calendar/TodayBriefingBanner'
 import { CountdownPillCard } from '@/components/calendar/CountdownPillCard'
 import { EmptyDeadlineHero } from '@/components/calendar/EmptyDeadlineHero'
+import { JobSiteChips } from '@/components/common/JobSiteChips'
 import { AddEventSheet } from '@/components/calendar/AddEventSheet'
 
 type CalendarView = 'agenda' | 'month'
@@ -341,7 +342,7 @@ export function Calendar() {
                   <CountdownHeroLarge event={heroEvent} streakDays={streakDays} />
                 </div>
                 {pillEvents.length > 0 && (
-                  <div className={`mb-10 gap-3 ${pillEvents.length === 2 ? 'grid grid-cols-1 sm:grid-cols-2' : 'grid grid-cols-1'}`}>
+                  <div className={`mb-3 gap-3 ${pillEvents.length === 2 ? 'grid grid-cols-1 sm:grid-cols-2' : 'grid grid-cols-1'}`}>
                     {pillEvents.map((e) => (
                       <CountdownPillCard
                         key={(e.stepId ?? e.examId ?? '') + e.date}
@@ -350,6 +351,12 @@ export function Calendar() {
                     ))}
                   </div>
                 )}
+                {/* 공고 허브 — 일정 확인(들어온 이유) 직후의 「나가는 문」.
+                    🔴 히어로가 있을 때만 여기 선다 — 빈 상태에선 EmptyDeadlineHero 안에
+                    이미 들어 있어서 이중 노출이 된다. 클러스터의 닫는 여백(mb-10)을 인계받는다. */}
+                <div className="mb-10">
+                  <JobSiteChips placement="calendar" />
+                </div>
               </>
             ) : hasCards ? (
               <div className="mb-10">

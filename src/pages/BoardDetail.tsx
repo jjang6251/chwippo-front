@@ -37,7 +37,6 @@ import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import { loadCollapseExpanded, saveCollapseExpanded, JOB_POSTING_EXPANDED_STORAGE_KEY } from '@/utils/collapsePref'
 import { toast } from '@/stores/toastStore'
 import { celebrate } from '@/stores/celebrationStore'
-import { useTourStore } from '@/stores/tourStore'
 import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
 import { getStepType, STEP_TYPE_CONFIG } from '@/utils/stepTemplates'
 import { formatStepSchedule } from '@/utils/datetime'
@@ -72,7 +71,6 @@ function SortableStepRow({
         <button
           {...attributes}
           {...listeners}
-          {...(index === 0 ? { 'data-tour': 'drag-handle' } : {})}
           aria-label="드래그로 순서 변경"
           className="flex-none text-text-quaternary hover:text-text-tertiary cursor-grab active:cursor-grabbing p-1 touch-none"
         >
@@ -221,9 +219,6 @@ export function BoardDetail() {
       return next
     })
 
-  const tourActive = useTourStore((s) => s.active)
-  const tourStep = useTourStore((s) => s.step)
-  const tourNext = useTourStore((s) => s.next)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -313,7 +308,6 @@ export function BoardDetail() {
         { id: app.id, stepIndex: index },
         { onSuccess: (moved) => nudge.consider(moved, index) },
       )
-      if (tourActive && tourStep === 7) tourNext()
     }
   }
 
@@ -327,8 +321,6 @@ export function BoardDetail() {
       location: s.location,
     })))
     setShowStepEditor(true)
-    // Delay so modal open animation settles before measuring element position
-    if (tourActive && tourStep === 8) setTimeout(() => tourNext(), 280)
   }
 
   const openEditModal = () => {
@@ -369,7 +361,6 @@ export function BoardDetail() {
         onSuccess: () => {
           setShowStepEditor(false)
           toast.show('스텝이 저장됐어요.')
-          if (tourActive && tourStep === 11) tourNext()
         },
         onError: () => toast.error('저장에 실패했습니다.'),
       },
@@ -489,7 +480,7 @@ export function BoardDetail() {
         {[
           { v: 'steps' as const, label: '전형 단계' },
           ...(aiEnabled
-            ? [{ v: 'coverletter' as const, label: '자소서', tourAttr: 'coverletter-tab' }]
+            ? [{ v: 'coverletter' as const, label: '자소서' }]
             : []),
           ...(interviewAiEnabled
             ? [{ v: 'interview' as const, label: '면접 준비' }]
@@ -497,11 +488,7 @@ export function BoardDetail() {
         ].map((t) => (
           <button
             key={t.v}
-            onClick={() => {
-              setActiveTab(t.v)
-              if (tourActive && tourStep === 12 && t.v === 'coverletter') tourNext()
-            }}
-            {...('tourAttr' in t ? { 'data-tour': t.tourAttr } : {})}
+            onClick={() => setActiveTab(t.v)}
             className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors
               ${activeTab === t.v ? 'bg-surface-3 text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
           >
@@ -514,7 +501,7 @@ export function BoardDetail() {
         <>
           {/* 진행 상황 — 스텝바 + 현재 스텝 카드 */}
           {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
-            <div data-tour="step-bar" className="border border-line bg-surface-2 rounded-xl p-5 mb-4">
+            <div className="border border-line bg-surface-2 rounded-xl p-5 mb-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-text-primary text-sm font-semibold">
                   진행 상황{' '}
@@ -524,7 +511,6 @@ export function BoardDetail() {
                 </h2>
                 {app.status !== 'PASSED' && (
                   <button
-                    data-tour="step-edit-btn"
                     onClick={openStepEditor}
                     className="text-xs text-text-tertiary hover:text-text-secondary border border-line hover:border-line-strong px-2.5 py-1.5 rounded-lg transition-all"
                   >
@@ -660,10 +646,8 @@ export function BoardDetail() {
           </SortableContext>
         </DndContext>
         <button
-          data-tour="add-step-btn"
           onClick={() => {
             setEditSteps((prev) => [...prev, { id: crypto.randomUUID(), name: '', scheduledDate: null, location: null }])
-            if (tourActive && tourStep === 9) tourNext()
           }}
           className="w-full py-2 text-xs text-text-tertiary border border-dashed border-line rounded-lg hover:border-line-strong hover:text-text-secondary transition-all mb-4"
         >
@@ -671,7 +655,7 @@ export function BoardDetail() {
         </button>
         <div className="flex gap-2">
           <button onClick={() => setShowStepEditor(false)} className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors">취소</button>
-          <button data-tour="save-steps-btn" onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40">
+          <button onClick={handleSaveSteps} disabled={isSavingSteps} className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40">
             {isSavingSteps ? '저장 중...' : '저장'}
           </button>
         </div>

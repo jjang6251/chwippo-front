@@ -88,6 +88,24 @@ export function isClarityActive(): boolean {
 }
 
 /**
+ * 커스텀 이벤트 발송 (2026-08-17 · 공고 허브 계측에서 도입).
+ *
+ * - 미설정(로컬·CI)이면 no-op — `initClarity` 와 같은 정책
+ * - 스크립트 로드 전이어도 큐 shim(`w.clarity.q`)에 쌓였다가 재생되므로 유실 없음
+ * - 🔴 **계측 실패가 기능을 막으면 안 된다** — 광고 차단기가 스크립트를 막아도
+ *   클릭(외부 이동)은 정상 동작해야 하므로 조용히 삼킨다
+ */
+export function trackClarityEvent(name: string): void {
+  if (!isClarityActive()) return
+  const w = window as unknown as { clarity?: (...args: unknown[]) => void }
+  try {
+    w.clarity?.('event', name)
+  } catch {
+    /* 무시 — 위 주석 참조 */
+  }
+}
+
+/**
  * 민감 화면 컨테이너에 붙이는 마스킹 속성.
  *
  * ```tsx

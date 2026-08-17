@@ -61,7 +61,7 @@ async function collectHeights(page: Parameters<typeof mockAuth>[0]): Promise<num
   await page.goto('/board')
   await expect(page.getByText('풀정보회사')).toBeVisible()
   await expect(page.getByText('합격회사')).toBeVisible()
-  return page.$$eval('[data-tour-card-id]', (els) => els.map((el) => (el as HTMLElement).offsetHeight))
+  return page.$$eval('[data-card-id]', (els) => els.map((el) => (el as HTMLElement).offsetHeight))
 }
 
 test.describe('보드 카드 높이 통일', () => {
