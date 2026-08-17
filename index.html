@@ -5,7 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="치뽀 — 취준생을 위한 취업 일정·자소서·면접 올인원 관리 웹앱" />
-    <link rel="canonical" href="https://chwippo.com/" />
+    <!-- 🔴 canonical 하드코딩 금지 (2026-08-17 GSC 색인 제외 사고).
+         여기 홈 canonical 을 박으면 SPA 전 라우트의 원시 HTML 이 「표준 주소는 홈」이 되어
+         구글이 /login·/demo/* 를 홈의 대체 페이지로 분류하고 색인에서 뺀다.
+         canonical 은 RouteMeta 컴포넌트가 라우트별로 생성한다 — 원시 HTML 은 무신호가 맞다. -->
     <!-- 검색엔진 소유확인 (2026-07-26) — 구글은 자동 인증 완료라 태그 불필요 -->
     <meta name="naver-site-verification" content="ec51c5edd6c3596844cb20c44658c9384b7355be" />
 

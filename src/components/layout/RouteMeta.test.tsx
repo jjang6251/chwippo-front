@@ -13,10 +13,14 @@ import sitemapXml from '../../../public/sitemap.xml?raw'
  *  ② sitemap ↔ ROUTE_META 가 **같은 목록**인가 (한쪽만 늘어나면 다시 홈으로 뭉개진다)
  */
 
-/** `index.html` 이 가진 head 를 그대로 재현 — 없는 태그는 갱신되지 않는 게 정상이다 */
+/**
+ * `index.html` 이 가진 head 를 그대로 재현.
+ * 🔴 canonical 은 **일부러 없다** (2026-08-17) — 하드코딩 홈 canonical 이 GSC 색인 제외
+ * 사고의 원인이라 index.html 에서 제거했고, RouteMeta 가 렌더 시점에 생성한다.
+ * 픽스처에 canonical 을 되살리면 「생성 경로」가 영영 안 돌므로 되살리지 말 것.
+ */
 function setupHead() {
   document.head.innerHTML = `
-    <link rel="canonical" href="https://chwippo.com/" />
     <meta name="description" content="${DEFAULT_META.description}" />
     <meta property="og:title" content="${DEFAULT_META.title}" />
     <meta property="og:description" content="${DEFAULT_META.description}" />
@@ -103,15 +107,21 @@ describe('RouteMeta', () => {
     },
   )
 
-  // 설계상 **없는 태그는 만들지 않는다** (`index.html` 에 있는 것만 갱신).
-  // 누가 이걸 "친절하게" 태그 생성으로 바꾸면 head 가 조용히 불어나므로 여기서 고정한다.
-  it('head 에 태그가 없으면 만들지 않는다 (title 만 갱신)', () => {
+  // 설계상 **meta 태그는 없으면 만들지 않는다** (`index.html` 의 og 기본값이 JS 없는
+  // 크롤러의 fallback 이라 하드코딩을 남겼고, 여기 것만 갱신한다).
+  // 🔴 **canonical 만 정책이 다르다** (2026-08-17 GSC 사고) — index.html 에서 하드코딩을
+  // 제거했으므로 RouteMeta 가 **생성**해야 한다. 안 만들면 SPA 전 라우트가 무canonical 이
+  // 아니라... 무canonical 이 맞긴 한데, 렌더를 실행하는 구글에게 줄 올바른 신호가 사라진다.
+  it('meta 는 없으면 안 만들지만, canonical 은 없으면 만든다', () => {
     document.head.innerHTML = ''
     document.title = '이전'
     expect(() => renderAt('/privacy')).not.toThrow()
     expect(document.title).toBe(ROUTE_META['/privacy'].title)
     expect(document.querySelector('meta[name="description"]')).toBeNull()
-    expect(document.querySelector('link[rel="canonical"]')).toBeNull()
+    // 🔴 생성 경로 — 하드코딩 제거 후 유일한 canonical 공급원
+    expect(
+      document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href,
+    ).toBe('https://chwippo.com/privacy')
   })
 
   it('끝의 / 가 붙어도 같은 페이지로 본다', () => {

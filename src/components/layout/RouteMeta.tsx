@@ -29,8 +29,26 @@ export function RouteMeta() {
     setTagContent('meta[name="twitter:title"]', meta.title)
     setTagContent('meta[name="twitter:description"]', meta.description)
 
-    const link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
-    if (link) link.href = canonical
+    /**
+     * 🔴 canonical 은 **없으면 만든다** (2026-08-17 — GSC 「대체 페이지」 색인 제외 사고).
+     *
+     * 예전엔 `index.html` 의 홈 하드코딩 태그를 갱신만 했는데, 그 하드코딩 자체가
+     * 사고의 원인이었다 — 원시 HTML 단계에서 /login·/demo/* 가 전부 「내 표준 주소는
+     * 홈」이라고 선언해, 구글이 sitemap 에 올린 페이지들을 홈의 대체로 분류하고
+     * 색인에서 뺐다. 그래서 하드코딩을 **제거**했고(틀린 신호 < 무신호), 이제 이
+     * 컴포넌트가 렌더 시점에 올바른 값으로 생성한다.
+     *
+     * ⚠️ og:url 등 meta 태그는 여전히 「있으면 갱신」이다 — og 는 색인이 아니라 공유
+     * 카드용이고, JS 없는 크롤러(카카오·네이버)에게 index.html 의 기본값이 fallback
+     * 으로 필요해서 하드코딩을 남겼다. canonical 만 정책이 다르다.
+     */
+    let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'canonical'
+      document.head.appendChild(link)
+    }
+    link.href = canonical
   }, [pathname])
 
   return null
