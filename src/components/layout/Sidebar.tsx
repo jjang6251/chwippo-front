@@ -193,8 +193,6 @@ export function Sidebar() {
               <Link
                 key={path}
                 to={link(path)}
-                {...(path === '/board' ? { 'data-tour': 'board-nav' } : {})}
-                {...(path === '/activity' ? { 'data-tour': 'activity-nav' } : {})}
                 aria-current={isActive(path) ? 'page' : undefined}
                 /*
                   🔴 접히면 링크의 이름이 안쪽 점의 `aria-label` 을 **덮는다** — 연속 기록이

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useActiveAnnouncement } from '@/hooks/useActiveAnnouncement'
-import { useTourStore } from '@/stores/tourStore'
 import { useAuthStore } from '@/stores/authStore'
 import { AnnouncementBanner } from './AnnouncementBanner'
 import { AnnouncementModal } from './AnnouncementModal'
@@ -14,7 +13,6 @@ function isDismissed(userId: string, id: string): boolean {
 
 export function AnnouncementContainer() {
   const isDemo = useDemoMode()
-  const isTourActive = useTourStore((s) => s.active)
   const userId = useAuthStore((s) => s.user?.id ?? '')
   const { data: announcement } = useActiveAnnouncement()
   const [dismissed, setDismissed] = useState(false)
@@ -23,7 +21,7 @@ export function AnnouncementContainer() {
   // LRR P1T3 PR K L-4 — auth 로딩 윈도우(userId='') 동안 dismiss 키 오염 차단.
   // 빈 userId로 dismiss 키 만들어두면 다른 유저 로그인 직후 같은 ''로 매칭될 수 있음.
   if (!userId) return null
-  if (isDemo || isTourActive || !announcement || isDismissed(userId, announcement.id) || dismissed) return null
+  if (isDemo || !announcement || isDismissed(userId, announcement.id) || dismissed) return null
 
   function handleDismiss() {
     try { localStorage.setItem(DISMISS_KEY(userId, announcement!.id), '1') } catch { /* ignore */ }

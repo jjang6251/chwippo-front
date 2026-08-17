@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Lightbulb } from 'lucide-react'
 import { Modal } from '@/components/common/Modal'
 import { CompanyAutocomplete } from '@/components/board/CompanyAutocomplete'
 import { useCreateApplication } from '@/hooks/useApplications'
@@ -14,7 +13,6 @@ import { JOB_GROUPS, type JobCategory } from '@/utils/sampleData'
 import { todayLocal } from '@/utils/datetime'
 import { postToNative } from '@/utils/nativeBridge'
 import { toast } from '@/stores/toastStore'
-import { useTourStore } from '@/stores/tourStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { showFirstCardCelebration } from '@/stores/celebrationStore'
 import { shouldCelebrateFirstCard } from '@/utils/firstCardCelebration'
@@ -56,9 +54,6 @@ export function AddCardModal({
   const [showMoreGroups, setShowMoreGroups] = useState(false)
   const { mutate: create, isPending } = useCreateApplication()
   const qc = useQueryClient()
-  const tourActive = useTourStore((s) => s.active)
-  const tourStep = useTourStore((s) => s.step)
-  const onCardCreated = useTourStore((s) => s.onCardCreated)
 
   const isPlanned = defaultStatus === 'PLANNED'
   // signup 답변 = pre-fill default (모달 open 시점 1회)
@@ -107,14 +102,12 @@ export function AddCardModal({
           toast.success(`${companyName} 카드가 추가됐어요.`)
           // ⑦ 마감일 포함 카드 생성 = 가치 순간 → native soft-ask 트리거 (WebView 밖 no-op)
           if (deadline) postToNative({ type: 'deadline-saved' })
-          if (tourActive && tourStep === 4) onCardCreated(data.id)
           // A5 — 첫 실 카드면 보상 연출 (계정당 1회 · 투어 중 생략은 판정 함수가 처리)
           if (
             shouldCelebrateFirstCard({
               userId: user?.id,
               existingApplications: qc.getQueryData<Application[]>(['applications']),
               createdId: data.id,
-              tourActive,
             })
           ) {
             showFirstCardCelebration({
@@ -158,15 +151,6 @@ export function AddCardModal({
       width="max-w-lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {tourActive && tourStep === 4 && (
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-brand/10 border border-brand/20 rounded-lg">
-            <Lightbulb size={15} strokeWidth={1.75} className="text-brand shrink-0" aria-hidden="true" />
-            <p className="text-xs text-brand">
-              회사 이름만 입력해도 지원 단계가 자동 생성돼요
-            </p>
-          </div>
-        )}
-
         <div>
           <label className="block text-xs text-text-tertiary mb-1.5">회사명 *</label>
           <CompanyAutocomplete
