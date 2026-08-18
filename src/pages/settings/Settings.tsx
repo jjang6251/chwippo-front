@@ -14,7 +14,14 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
   { value: 'system', label: '시스템', icon: '🖥️' },
 ]
 
+/**
+ * 🔴 **「내 정보 창고」가 맨 위다.** 하단 탭에서 공부 노트에 자리를 내주고 여기로 왔다
+ * (CEO 결정 3). 늘 있던 자리에서 사라진 항목은 **찾을 수 있는 자리**에 있어야 하고,
+ * 「이사왔어요」 뱃지가 "없어진 게 아니라 옮겼다" 를 한 번에 말한다.
+ * 라우트(`/myinfo`)·다른 화면의 CTA 는 그대로라 직링크·즐겨찾기는 계속 동작한다.
+ */
 const MENU = [
+  { label: '내 정보 창고', sub: '학력·자격증·경험 정리', path: '/myinfo', icon: '📦', badge: '이사왔어요' },
   { label: '프로필 설정', sub: '닉네임 변경, 계정 탈퇴', path: '/settings/profile', icon: '👤' },
   { label: '알림 설정', sub: '마감·면접 알림 (준비 중)', path: '/settings/alarm', icon: '🔔' },
   { label: '도움말', sub: '자주 묻는 질문', path: '/settings/help', icon: '❓' },
@@ -45,17 +52,21 @@ export function Settings() {
       <h1 className="text-xl font-bold mb-6">설정</h1>
 
       <div className="bg-surface-2 border border-line rounded-xl divide-y divide-line mb-4">
-        {MENU.map(({ label, sub, path, icon }) => (
-          <SettingsMenuRow
-            key={path}
-            icon={icon}
-            label={label}
-            sub={sub}
-            to={path}
-            demo={isDemo}
-            onDemoTap={showDemoSignup}
-          />
-        ))}
+        {MENU
+          /* 데모는 하단 탭에 「내정보」가 그대로 있다 (스왑 제외) — 여기 또 두면 중복이다 */
+          .filter((item) => !isDemo || item.path !== '/myinfo')
+          .map((item) => (
+            <SettingsMenuRow
+              key={item.path}
+              icon={item.icon}
+              label={item.label}
+              sub={item.sub}
+              to={item.path}
+              badge={'badge' in item ? item.badge : undefined}
+              demo={isDemo}
+              onDemoTap={showDemoSignup}
+            />
+          ))}
 
         {user?.role === 'admin' && (
           <Link
@@ -160,6 +171,7 @@ function SettingsMenuRow({
   label,
   sub,
   to,
+  badge,
   demo,
   onDemoTap,
 }: {
@@ -167,6 +179,8 @@ function SettingsMenuRow({
   label: string
   sub: string
   to: string
+  /** 「이사왔어요」 같은 이동 안내 — 있을 때만 렌더 */
+  badge?: string
   demo: boolean
   onDemoTap: () => void
 }) {
@@ -179,6 +193,11 @@ function SettingsMenuRow({
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-text-tertiary mt-0.5">{sub}</p>
       </div>
+      {badge && (
+        <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
+          {badge}
+        </span>
+      )}
       <span className="text-text-tertiary text-sm">›</span>
     </>
   )

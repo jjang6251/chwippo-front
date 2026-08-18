@@ -159,6 +159,35 @@ describe('Settings — 앱 웹뷰 로그아웃', () => {
   })
 })
 
+/**
+ * 🔴 **내 정보 창고 이사** (2026-08-18 · CEO 결정 3). 하단 탭 자리를 공부 노트에 내주고
+ * 설정 **맨 위**로 왔다. 늘 있던 자리에서 사라진 항목은 찾을 수 있는 자리에 있어야 하고,
+ * 「이사왔어요」 뱃지가 "없어진 게 아니라 옮겼다" 를 한 번에 말한다. 라우트는 그대로다.
+ */
+describe('Settings — 내 정보 창고 이사', () => {
+  it('메뉴 맨 위에 「내 정보 창고」 + /myinfo 링크', () => {
+    renderSettings()
+    const link = screen.getByRole('link', { name: /내 정보 창고/ })
+    expect(link.getAttribute('href')).toBe('/myinfo')
+
+    const menuLinks = screen.getAllByRole('link')
+    expect(menuLinks[0].textContent).toContain('내 정보 창고')
+  })
+
+  it('「이사왔어요」 뱃지가 그 행에 붙는다', () => {
+    renderSettings()
+    const link = screen.getByRole('link', { name: /내 정보 창고/ })
+    expect(link.textContent).toContain('이사왔어요')
+    // 다른 행에는 안 붙는다 — 뱃지가 흔하면 신호가 죽는다
+    expect(screen.getAllByText('이사왔어요')).toHaveLength(1)
+  })
+
+  it('데모에는 안 뜬다 (데모 하단 탭에 「내정보」가 그대로 있다)', () => {
+    renderDemoSettings()
+    expect(screen.queryByText('내 정보 창고')).toBeNull()
+  })
+})
+
 describe('Settings — 관리자 페이지 진입 링크', () => {
   it('admin role: "관리자 페이지" 링크 노출 + /ops 링크', () => {
     useAuthStore.setState((s) => ({ user: { ...s.user!, role: 'admin' } }))

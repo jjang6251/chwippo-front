@@ -37,6 +37,11 @@ const NAV_ITEMS: readonly NavItem[] = [
   { label: '지원 현황 보드', path: '/board', icon: BoardIcon },
   { label: '회고', path: '/dashboard', icon: GridIcon },
   { label: '활동 일지', path: '/activity', icon: JournalIcon },
+  /*
+    공부 노트 — 활동 일지 아래 (mockup). `demoReady: false` 인 이유는 `/demo/study-notes`
+    라우트도 샘플 데이터도 없어서다. 데모에 뜨면 눌러도 캘린더로 튕긴다 (2026-08-08 사고).
+  */
+  { label: '공부 노트', path: '/study-notes', icon: StudyNoteIcon, demoReady: false },
   // F6 PR 1 — 자소서 통합 페이지 (데스크탑 only. MobileNav 변경 X — 모바일은 카드 상세에서 진입)
   { label: '자소서', path: '/coverletters', icon: CoverLetterIcon, ai: true },
   // F6 PR 2 Phase 4 — 면접 준비 통합 페이지 (데스크탑 only. 동일 정책)
@@ -115,7 +120,7 @@ export function Sidebar() {
     if (path === '/board') {
       return location.pathname.startsWith(target) && !isCoverletterDoc
     }
-    if (path === '/activity' || path === '/interviews') {
+    if (path === '/activity' || path === '/interviews' || path === '/study-notes') {
       return location.pathname.startsWith(target)
     }
     return location.pathname === target
@@ -396,6 +401,10 @@ function CalendarIcon({ size }: { size: number }) {
 }
 function JournalIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2h7a2 2 0 012 2v10a1 1 0 01-1 1H4a2 2 0 01-2-2V4a2 2 0 012-2z" /><line x1="5" y1="6" x2="10" y2="6" /><line x1="5" y1="8.5" x2="10" y2="8.5" /><line x1="5" y1="11" x2="8" y2="11" /></svg>
+}
+/** 공부 노트 — 펼친 공책. viewBox 만 24 라 stroke 를 2 로 맞춰 다른 항목과 굵기가 같아 보인다 */
+function StudyNoteIcon({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
 }
 function CoverLetterIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" /><polyline points="10 2 10 5 13 5" /><line x1="5" y1="9" x2="11" y2="9" /><line x1="5" y1="11.5" x2="9" y2="11.5" /></svg>

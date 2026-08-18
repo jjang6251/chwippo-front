@@ -52,8 +52,9 @@ describe('CompanyMemoCard — 리치 에디터', () => {
     expect(screen.getByRole('button', { name: /왜 이 회사/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('카운터 노출 (N / 2000)', () => {
+  /* 카운터 표기는 천 단위로 끊긴다 (`RichTextEditor` — 로캘 `en-US` 고정) */
+  it('카운터 노출 (N / 2,000)', () => {
     renderCard()
-    expect(screen.getByText(/\/ 2000/)).toBeInTheDocument()
+    expect(screen.getByText(/\/ 2,000/)).toBeInTheDocument()
   })
 })

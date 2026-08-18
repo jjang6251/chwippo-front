@@ -6,9 +6,9 @@
  * 원인은 스위치 하나가 두 곳(실서비스·데모)을 동시에 켠 것이었고, **"데모에 준비됐는가"**
  * 라는 질문이 코드에 없었다. 그래서 `demoReady` 축을 뒀다.
  *
- * 지금은 데모에 면접 세션·라우트·adapter 엔드포인트가 모두 갖춰져 **`demoReady: false` 인
- * 항목이 없다.** 그래도 축은 남긴다 — **데모는 구조적으로 기능보다 늦는다.** 다음에 새 화면을
- * 공개할 때 한 단어로 막을 수 있고, 없으면 같은 사고를 다시 겪는다.
+ * 축은 실제로 다시 쓰였다 — **「공부 노트」가 `demoReady: false`** 다 (2026-08-18).
+ * `/demo/study-notes` 라우트도 샘플 노트도 없어서, 데모에 띄우면 눌러도 캘린더로 튕긴다.
+ * **데모는 구조적으로 기능보다 늦는다** 는 전제가 이 축의 존재 이유다.
  *
  * 이 spec 이 지키는 것: **데모에서 메뉴가 과잉 차단되지 않는다.** 필터를 잘못 건드리면
  * 둘러보기가 통째로 망가지는데, 그건 아무 테스트도 안 잡는 자리였다.
@@ -92,5 +92,31 @@ describe('Sidebar — 데모 모드 메뉴 노출', () => {
     demoMock.mockReturnValue(true)
     renderSidebar()
     expect(screen.queryByText('면접 준비')).not.toBeNull()
+  })
+
+  /**
+   * 🔴 **공부 노트는 데모에서 숨긴다** (2026-08-18). 데모 라우트·샘플이 준비되면
+   * `demoReady: false` 한 줄만 떼면 되고, 그 전까지 여기가 되살아나는 걸 막는다.
+   */
+  it('🔴 데모에 「공부 노트」는 안 보인다 (라우트·샘플 미준비)', () => {
+    demoMock.mockReturnValue(true)
+    renderSidebar()
+    expect(screen.queryByText('공부 노트')).toBeNull()
+  })
+
+  it('실서비스에는 「공부 노트」가 활동 일지 아래에 있다', () => {
+    demoMock.mockReturnValue(false)
+    renderSidebar()
+    const labels = screen
+      .getAllByRole('link')
+      .map((a) => a.textContent?.trim() ?? '')
+      .filter((t) => t === '활동 일지' || t === '공부 노트')
+    expect(labels).toEqual(['활동 일지', '공부 노트'])
+  })
+
+  it('내 정보 창고는 사이드바에 그대로 남는다 (탭에서만 자리를 내줬다)', () => {
+    demoMock.mockReturnValue(false)
+    renderSidebar()
+    expect(screen.queryByText('내 정보 창고')).not.toBeNull()
   })
 })
