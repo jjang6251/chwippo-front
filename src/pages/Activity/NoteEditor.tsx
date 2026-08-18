@@ -8,14 +8,8 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
-import Highlight from '@tiptap/extension-highlight'
-import Link from '@tiptap/extension-link'
-import Placeholder from '@tiptap/extension-placeholder'
-import TaskList from '@tiptap/extension-task-list'
-import TaskItem from '@tiptap/extension-task-item'
 import { Node, mergeAttributes } from '@tiptap/core'
+import { buildEditorExtensions } from '@/components/editor/editorExtensions'
 
 // 💡 콜아웃 — mock 6311 의 .callout 블록 (이모지 + 본문)
 // content: paragraph 1개 이상. HTML 출력: <div class="callout">...</div>
@@ -193,18 +187,16 @@ export const NoteEditor = forwardRef<NoteEditorHandle, Props>(function NoteEdito
 
   const editor = useEditor(
     {
+      // 확장은 공용 세트로 승격 (study-notes Phase 2a). 여기서 따로 들고 있던 StarterKit·
+      // Link·TaskList 배선이 `Duplicate extension names found: ['link','underline']` 를
+      // 찍고 있었다 — 같은 확장이 두 벌 등록돼 어느 설정이 이기는지가 순서에 달려 있었다.
+      // Callout 은 활동 노트 전용이라 여기 남는다.
       extensions: [
-        StarterKit,
-        Underline,
-        Highlight,
-        Link.configure({ openOnClick: false, autolink: true }),
-        TaskList,
-        TaskItem.configure({ nested: true }),
-        Callout,
-        Placeholder.configure({
+        ...buildEditorExtensions({
           placeholder:
             '여기에 자세히 적기 — Notion·블로그처럼.\n\n상단 툴바 또는 마크다운 단축어 (## 헤딩, - 리스트, > 인용)',
         }),
+        Callout,
       ],
       content: initialContent ?? null,
       editorProps: {

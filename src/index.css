@@ -369,18 +369,37 @@ input[type='time']::-webkit-calendar-picker-indicator {
 /* card-detail-remodel — 리치 에디터(tiptap) 본문 위계·placeholder.
    typography 플러그인 미사용이라 preflight 가 heading 을 평평하게 만든 것을 H2/H3 위계로 복원.
    (CEO 2026-07-20 — 글자별 폰트 조절 대신 H2/H3 위계). 소비 측: .chw-prose */
+/* 목차 클릭 이동 — 데스크탑 sticky 헤더(h-12) 밑에 제목이 숨지 않게 (2026-08-18 실기 검증) */
+.chw-prose h1,
+.chw-prose h2,
+.chw-prose h3 {
+  scroll-margin-top: 72px;
+}
+/* 🔴 h1 규칙 부재 = 리셋(1em·보통 굵기)이 이겨서 h1 이 h2 보다 작아 보였다 (2026-08-18 실기) */
+.chw-prose h1 {
+  /* 위계 2026-08-18 최종 — 노션 실측 비율(1.875/1.5/1.25em · 굵기 600)로 정렬 (CEO B안).
+     본문 14px 기준 H1 26.3 / H2 21 / H3 17.5px. 페이지 제목은 28px 로 동반 상향해 위계 유지. */
+  font-size: 1.875em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.5em 0 0.5em;
+}
 .chw-prose h2 {
-  font-size: 1.15em;
-  font-weight: 700;
+  font-size: 1.5em;
+  font-weight: 600;
   line-height: 1.35;
+  /* 섹션 경계 — 위는 넉넉히, 아래는 본문과 붙게 (2026-08-18 실기: 여백 0이라 제목이 앞 문단에 붙어 보였다) */
+  margin: 1.4em 0 0.45em;
   margin: 0.7em 0 0.3em;
 }
 .chw-prose h3 {
-  font-size: 1.02em;
+  font-size: 1.25em;
   font-weight: 600;
   line-height: 1.4;
+  margin: 1.1em 0 0.35em;
   margin: 0.6em 0 0.25em;
 }
+.chw-prose h1:first-child,
 .chw-prose h2:first-child,
 .chw-prose h3:first-child {
   margin-top: 0;
@@ -412,4 +431,370 @@ input[type='time']::-webkit-calendar-picker-indicator {
   .chw-prose {
     font-size: 16px;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   study-notes Phase 2a — 공용 에디터 확장 스타일
+   시각 스펙 = mockups/study-notes/paste-demo.html · detail-desktop.html
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* 형광펜 5색 — 🔴 다크/라이트 **두 벌**. 다크 값을 라이트에 그대로 얹으면
+   어두운 색 알파 틴트라 회색으로 죽어서 형광펜으로 안 보인다. */
+:root[data-theme='dark'] {
+  --hl-yellow: rgba(212, 176, 69, 0.32);
+  --hl-green: rgba(130, 187, 153, 0.28);
+  --hl-blue: rgba(136, 183, 199, 0.3);
+  --hl-red: rgba(255, 142, 116, 0.3);
+  --hl-purple: rgba(190, 162, 221, 0.3);
+}
+:root[data-theme='light'] {
+  --hl-yellow: rgba(250, 204, 21, 0.45);
+  --hl-green: rgba(134, 239, 172, 0.55);
+  --hl-blue: rgba(147, 197, 253, 0.55);
+  --hl-red: rgba(252, 165, 165, 0.6);
+  --hl-purple: rgba(216, 180, 254, 0.55);
+}
+
+/* color 없는 옛 하이라이트(멀티컬러 이전 문서)는 노랑으로 — 브라우저 기본 노랑+검정
+   글자가 다크 모드에서 그대로 튀어나오는 걸 막는다 */
+.chw-prose mark {
+  background: var(--hl-yellow);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.chw-prose mark[data-color='yellow'] {
+  background: var(--hl-yellow);
+}
+.chw-prose mark[data-color='green'] {
+  background: var(--hl-green);
+}
+.chw-prose mark[data-color='blue'] {
+  background: var(--hl-blue);
+}
+.chw-prose mark[data-color='red'] {
+  background: var(--hl-red);
+}
+.chw-prose mark[data-color='purple'] {
+  background: var(--hl-purple);
+}
+
+/* 툴바 형광펜 점 — 의미 토큰을 그대로 써서 두 테마 모두 이미 맞춰진 색을 쓴다 */
+.hl-dot[data-hl-dot='yellow'] {
+  background: rgb(var(--warning) / 0.6);
+  box-shadow: 0 0 0 1px rgb(var(--warning));
+}
+.hl-dot[data-hl-dot='green'] {
+  background: rgb(var(--brand) / 0.6);
+  box-shadow: 0 0 0 1px rgb(var(--brand));
+}
+.hl-dot[data-hl-dot='blue'] {
+  background: rgb(var(--info) / 0.6);
+  box-shadow: 0 0 0 1px rgb(var(--info));
+}
+.hl-dot[data-hl-dot='red'] {
+  background: rgb(var(--danger) / 0.6);
+  box-shadow: 0 0 0 1px rgb(var(--danger));
+}
+.hl-dot[data-hl-dot='purple'] {
+  background: rgb(var(--violet) / 0.6);
+  box-shadow: 0 0 0 1px rgb(var(--violet));
+}
+
+/* 링크·인용·인라인 코드 — Link 가 공용으로 올라오면서 스타일이 필요해졌다
+   (지금까지는 브라우저 기본 파랑 밑줄이 다크 배경에 그대로 나왔다) */
+.chw-prose a {
+  color: rgb(var(--brand));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.chw-prose blockquote {
+  border-left: 3px solid rgb(var(--brand));
+  padding: 2px 0 2px 14px;
+  margin: 0.5em 0;
+  color: rgb(var(--text-secondary));
+}
+.chw-prose code:not(pre code) {
+  background: var(--card-strong);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.86em;
+}
+
+/* 코드 블록 + 문법 하이라이팅.
+   🔴 팔레트는 **의미 토큰**으로만 쓴다 — 토큰은 다크/라이트 두 벌이 이미 있고
+   라이트 값은 대비 4.5:1 로 조정돼 있어서, 색을 하드코딩하면 라이트에서 반드시 깨진다.
+   매핑은 mockup 스펙 그대로: keyword=violet · string=accent · comment=quaternary
+   · title=brand · type=info */
+.chw-prose pre {
+  background: rgb(var(--surface-2));
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  margin: 0.6em 0;
+}
+
+/* 코드 블록 헤더 (mockup paste-demo·detail-desktop — 좌: 언어 select · 우: 복사).
+
+   🔴 **틀(테두리·배경·radius)을 wrapper 로 승격한다.** 헤더가 생기면서 `pre` 위에 한 겹이
+   더 얹혔는데, 안쪽 `pre` 가 자기 테두리를 그대로 들고 있으면 **테두리가 두 겹**으로 보이고
+   헤더와 코드 사이에 없는 선이 하나 더 생긴다. 그래서 wrapper 가 틀을 지고 `pre` 는
+   내용만 그린다. 색은 기존 토큰 그대로라 두 테마 모두 이전과 같은 면이 된다. */
+.chw-prose .chw-codeblock {
+  background: rgb(var(--surface-2));
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0.6em 0;
+}
+.chw-prose .chw-codeblock > pre {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+}
+.chw-prose .chw-codeblock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px 4px 6px;
+  border-bottom: 1px solid var(--line);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: rgb(var(--text-quaternary));
+  /* 헤더는 문서가 아니다 — 드래그로 글자처럼 잡히면 코드 선택이 헝클어진다 */
+  user-select: none;
+}
+/* select 는 네이티브 chevron 을 쓰지 않는다 (프로젝트 규칙) — 자리를 비우고 SVG 를 얹는다 */
+.chw-prose .chw-codeblock-lang {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.chw-prose .chw-codeblock-lang select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  padding: 2px 18px 2px 4px;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+}
+.chw-prose .chw-codeblock-lang select:hover:not(:disabled) {
+  background: var(--card-strong);
+  color: rgb(var(--text-secondary));
+}
+.chw-prose .chw-codeblock-lang select:disabled {
+  cursor: default;
+  /* 읽기 모드 — 값은 그대로 읽히되 누를 수 있어 보이면 안 된다 */
+  opacity: 0.75;
+}
+.chw-prose .chw-codeblock-lang select:focus-visible {
+  box-shadow: 0 0 0 2px rgb(var(--brand) / 0.6);
+}
+.chw-prose .chw-codeblock-chevron {
+  position: absolute;
+  right: 3px;
+  display: inline-flex;
+  pointer-events: none;
+  color: rgb(var(--text-quaternary));
+}
+.chw-prose .chw-codeblock-lang select:disabled + .chw-codeblock-chevron {
+  opacity: 0.4;
+}
+.chw-prose .chw-codeblock-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.chw-prose .chw-codeblock-copy:hover {
+  background: var(--card-strong);
+  color: rgb(var(--text-secondary));
+}
+.chw-prose .chw-codeblock-copy:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--brand) / 0.6);
+}
+.chw-prose pre code {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.86em;
+  line-height: 1.65;
+  background: none;
+  padding: 0;
+}
+.chw-prose .hljs-keyword,
+.chw-prose .hljs-selector-tag,
+.chw-prose .hljs-meta {
+  color: rgb(var(--violet));
+}
+.chw-prose .hljs-string,
+.chw-prose .hljs-number,
+.chw-prose .hljs-literal,
+.chw-prose .hljs-regexp {
+  color: rgb(var(--accent));
+}
+.chw-prose .hljs-comment,
+.chw-prose .hljs-quote {
+  color: rgb(var(--text-quaternary));
+  font-style: italic;
+}
+.chw-prose .hljs-title,
+.chw-prose .hljs-section,
+.chw-prose .hljs-built_in,
+.chw-prose .hljs-name {
+  color: rgb(var(--brand));
+}
+.chw-prose .hljs-type,
+.chw-prose .hljs-attr,
+.chw-prose .hljs-attribute,
+.chw-prose .hljs-variable {
+  color: rgb(var(--info));
+}
+
+/* 체크리스트 */
+.chw-prose ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+.chw-prose ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.chw-prose ul[data-type='taskList'] li > label {
+  margin-top: 0.25em;
+  flex: none;
+}
+.chw-prose ul[data-type='taskList'] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.chw-prose ul[data-type='taskList'] input[type='checkbox'] {
+  accent-color: rgb(var(--brand));
+  width: 15px;
+  height: 15px;
+}
+.chw-prose ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: rgb(var(--text-quaternary));
+  text-decoration: line-through;
+}
+
+/* 토글(Details) — mockup 의 카드 스타일. 닫힘 = self-test */
+.chw-prose [data-type='details'] {
+  display: flex;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0.6em 0;
+}
+.chw-prose [data-type='details'] > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 1.6em;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: rgb(var(--text-quaternary));
+}
+/* 순수 CSS 셰브론 — 데이터 URI SVG 는 색을 하드코딩해야 해서 테마를 못 탄다 */
+.chw-prose [data-type='details'] > button::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+.chw-prose [data-type='details'].is-open > button::before {
+  transform: rotate(45deg);
+}
+.chw-prose [data-type='details'] > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.chw-prose [data-type='details'] summary {
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+.chw-prose [data-type='details'] summary::-webkit-details-marker {
+  display: none;
+}
+.chw-prose [data-type='detailsContent'] {
+  margin-top: 8px;
+  color: rgb(var(--text-secondary));
+}
+.chw-prose [data-type='detailsContent'][hidden] {
+  display: none;
+}
+
+/* 표 — 🔴 320px 보호. 넘치는 표는 페이지가 아니라 **자기 래퍼 안에서** 가로 스크롤한다 */
+.chw-prose .tableWrapper {
+  overflow-x: auto;
+  margin: 0.6em 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.chw-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93em;
+  table-layout: fixed;
+}
+.chw-prose th,
+.chw-prose td {
+  padding: 8px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-right: 1px solid var(--line);
+  min-width: 5em;
+}
+.chw-prose th:last-child,
+.chw-prose td:last-child {
+  border-right: 0;
+}
+.chw-prose th {
+  background: rgb(var(--surface-2));
+  color: rgb(var(--text-secondary));
+  font-weight: 500;
+}
+.chw-prose td {
+  border-top: 1px solid var(--line);
+  color: rgb(var(--text-secondary));
+}
+.chw-prose .selectedCell {
+  background: rgb(var(--brand) / 0.1);
+}
+
+/* 노트 멘션 칩 — NodeView 가 못 붙는 경로(getHTML·정적 렌더)의 대비 */
+.chw-prose .study-note-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgb(var(--brand) / 0.1);
+  color: rgb(var(--brand));
+  font-size: 0.93em;
 }
