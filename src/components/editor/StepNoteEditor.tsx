@@ -34,10 +34,15 @@ export function StepNoteEditor({
   editorRef,
 }: Props) {
   return (
-    // card-solid 승격 — 준비 체크리스트 카드와 동급 시인성
-    <div className="border border-line-strong bg-card-solid shadow-sm rounded-xl overflow-hidden">
+    // card-solid 승격 — 준비 체크리스트 카드와 동급 시인성.
+    // 🔴 overflow-clip (hidden 금지): hidden 은 이 카드를 스크롤 컨테이너로 만들어 안의
+    // sticky 툴바를 조용히 죽인다 — "툴바가 안 따라온다" 실사고 (2026-08-19 CEO 실기).
+    // clip 은 모서리만 자르고 스크롤 컨테이너를 안 만든다. iOS 15.x 는 clip 미지원이라
+    // 모서리 클립이 빠지지만, 툴바 배경이 카드와 같은 색이라 티가 안 난다.
+    <div className="border border-line-strong bg-card-solid shadow-sm rounded-xl overflow-clip">
       <RichTextEditor
         initialContent={initialContent}
+        stickyToolbar="card"
         onSave={onSave}
         placeholder="이 단계에서 준비한 것들을 자유롭게 기록해 보세요..."
         minHeightClass="min-h-[360px]"

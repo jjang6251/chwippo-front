@@ -29,6 +29,16 @@ interface Props {
   hasMention?: boolean
   /** 지정 시 「내보내기」 버튼 노출 (md 내보내기는 공부 노트 전용 — plan §2) */
   onExportMarkdown?: () => void
+  /**
+   * 상단 고정 — 긴 문서를 내려가며 쓸 때 툴바가 따라온다. 배경이 문맥마다 달라 변형이 둘:
+   *   'page' = 페이지 바닥(bg) 위 풀페이지 문서 (공부 노트)
+   *   'card' = card-solid 카드 안 에디터 (준비 노트 — bg/95 를 쓰면 카드 속 이색 띠가 된다.
+   *            card-solid 는 통값 토큰이라 알파 부착이 no-op — 불투명 그대로 쓴다)
+   * 🔴 조상에 overflow-visible 아닌 요소가 있으면 sticky 는 조용히 죽는다 — 카드 래퍼는
+   * overflow-clip(스크롤 컨테이너를 안 만든다) 로. hidden 이 원인이던 실사고: 2026-08-19.
+   * 미지정 = 비고정 (활동 노트 등 기존 배치 유지).
+   */
+  sticky?: 'page' | 'card'
 }
 
 interface ToolBtn {
@@ -114,7 +124,7 @@ function promptLink(editor: Editor) {
   }
 }
 
-export function EditorToolbar({ editor, hasMention, onExportMarkdown }: Props) {
+export function EditorToolbar({ editor, hasMention, onExportMarkdown, sticky }: Props) {
   const [tip, setTip] = useState<{ key: string; left: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
 
@@ -332,7 +342,14 @@ export function EditorToolbar({ editor, hasMention, onExportMarkdown }: Props) {
     */
     <div
       ref={wrapRef}
-      className="sticky top-12 z-20 bg-bg/95 backdrop-blur-sm border-b border-line py-1.5"
+      /* sticky 도 positioned 라 툴팁 absolute 앵커 유지 — 비고정일 땐 relative 가 그 역할 */
+      className={`${
+        sticky === 'page'
+          ? 'sticky top-12 z-20 bg-bg/95 backdrop-blur-sm'
+          : sticky === 'card'
+            ? 'sticky top-12 z-20 bg-card-solid'
+            : 'relative'
+      } border-b border-line py-1.5`}
     >
       {/* 🔴 py-1.5 -my-1.5 = 세로 스크롤 방지 (JobSiteChips 회귀 패턴).
           바깥 래퍼가 실제 여백을 주고, 스크롤 컨테이너 안쪽 6px 은 focus ring 을 품는 슬랙이다 */}

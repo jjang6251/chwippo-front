@@ -290,3 +290,34 @@ describe('툴바 — 접근성 · 툴팁', () => {
     expect(tip.closest('.overflow-x-auto')).toBeNull()
   })
 })
+
+describe('툴바 — 상단 고정은 opt-in (2026-08-19 준비 노트 실기)', () => {
+  it('기본은 비고정 — 섹션 안 에디터(준비·활동 노트)는 툴바가 제자리에 남는다', () => {
+    const { container } = setup()
+    const root = container.firstElementChild as HTMLElement
+    expect(root.className).not.toContain('sticky')
+    // 툴팁 absolute 앵커는 여전히 필요하다 — 비고정이면 relative 가 그 역할
+    expect(root.className).toContain('relative')
+  })
+
+  it("sticky='page' — 상단 고정 + 페이지 배경 비침 방지 (풀페이지 공부 노트)", () => {
+    const editor = makeEditor()
+    const { container } = render(<EditorToolbar editor={editor} sticky="page" />)
+    const root = container.firstElementChild as HTMLElement
+    expect(root.className).toContain('sticky')
+    expect(root.className).toContain('top-12')
+    expect(root.className).toContain('bg-bg/95')
+  })
+
+  it("sticky='card' — 카드 안에선 카드색 불투명 배경 (bg/95 면 카드 속 이색 띠)", () => {
+    const editor = makeEditor()
+    const { container } = render(<EditorToolbar editor={editor} sticky="card" />)
+    const root = container.firstElementChild as HTMLElement
+    expect(root.className).toContain('sticky')
+    expect(root.className).toContain('top-12')
+    expect(root.className).toContain('bg-card-solid')
+    // card-solid 는 rgba 통값 토큰 — 알파(/95) 붙이면 클래스 자체가 no-op 으로 사라진다
+    expect(root.className).not.toContain('bg-card-solid/')
+    expect(root.className).not.toContain('backdrop-blur')
+  })
+})

@@ -549,6 +549,7 @@ export function StudyNoteDocPage() {
               placeholder="정리한 내용을 붙여넣거나 직접 적어 보세요. AI가 정리해 준 마크다운도 서식 그대로 들어와요."
               minHeightClass="min-h-[420px]"
               characterLimit={CONTENT_MAX}
+              stickyToolbar="page"
               readOnly={readOnly}
               mention={mention}
               onExportMarkdown={handleExport}

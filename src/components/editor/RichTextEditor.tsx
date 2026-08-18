@@ -70,6 +70,11 @@ interface Props {
   mention?: StudyNoteMentionOptions
   /** 지정 시 툴바에 「내보내기」 노출. 인자는 직렬화된 마크다운 (열화 명세: markdownIO.ts) */
   onExportMarkdown?: (markdown: string) => void
+  /**
+   * 툴바 상단 고정 변형 — 'page'(공부 노트 풀페이지) · 'card'(준비 노트 card-solid 카드 안).
+   * 배경이 문맥을 따라가야 해서 변형이 둘이다 (EditorToolbar 주석). 미지정 = 비고정.
+   */
+  stickyToolbar?: 'page' | 'card'
 }
 
 /** 붙여넣기가 글자 제한에 걸렸을 때 뜨는 안내 — 조용히 사라지면 사용자는 소실을 모른다 */
@@ -89,6 +94,7 @@ export function RichTextEditor({
   readOnly,
   mention,
   onExportMarkdown,
+  stickyToolbar,
 }: Props) {
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [truncated, setTruncated] = useState(false)
@@ -188,6 +194,7 @@ export function RichTextEditor({
       {editor && !readOnly && (
         <EditorToolbar
           editor={editor}
+          sticky={stickyToolbar}
           hasMention={Boolean(mention)}
           onExportMarkdown={
             onExportMarkdown ? () => onExportMarkdown(editorToMarkdown(editor)) : undefined
