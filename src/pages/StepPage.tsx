@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useDemoMode } from '@/contexts/demoMode'
 import { useNativeMode } from '@/hooks/useNativeMode'
@@ -15,11 +15,14 @@ import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTe
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
 import { postToNative } from '@/utils/nativeBridge'
 import { mergePinnedIntoNotes, notesToPlainText } from '@/utils/stepNotes'
+import { PREP_NOTES_ANCHOR } from '@/pages/StudyNotes/studyNotesModel'
 import { Calendar, Check, MapPin, PartyPopper } from 'lucide-react'
 import { useNavCollapsedStore } from '@/stores/navCollapsedStore'
 
 export function StepPage() {
   const { id: appId, stepId } = useParams<{ id: string; stepId: string }>()
+  /* 아래에 면접 장소용 `location` state 가 따로 있다 — 라우터 쪽은 필요한 조각만 꺼내 쓴다 */
+  const { hash } = useLocation()
   const navigate = useDemoNavigate()
   const isDemo = useDemoMode()
   const isNative = useNativeMode()
@@ -50,6 +53,18 @@ export function StepPage() {
   const [liveNoteText, setLiveNoteText] = useState<string | null>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
   const locationInputRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * 공부 노트 허브에서 `#prep-notes` 로 들어온 딥링크의 착지 처리.
+   *
+   * 🔴 **브라우저의 앵커 점프에 기댈 수 없다.** SPA 라 주소가 바뀌는 순간엔 카드·스텝이
+   * 아직 로딩 중이고 그 자리에 스켈레톤만 있다 — 앵커가 없는 문서로 점프하면 아무 일도
+   * 안 일어난다. 데이터가 온 **뒤에** 직접 스크롤한다.
+   */
+  useEffect(() => {
+    if (hash !== `#${PREP_NOTES_ANCHOR}` || !step) return
+    document.getElementById(PREP_NOTES_ANCHOR)?.scrollIntoView({ block: 'start' })
+  }, [hash, step?.id])
 
   if (step && !initialized) {
     setScheduledDate(step.scheduledDate ? dayjs(step.scheduledDate).format('YYYY-MM-DDTHH:mm') : '')
@@ -434,8 +449,13 @@ export function StepPage() {
         </div>
       </div>
 
-      {/* ── 준비 노트 (핵심 메모 통합) ─────────────────── */}
-      <div className="mb-6">
+      {/*
+        ── 준비 노트 (핵심 메모 통합) ───────────────────
+        🔴 `id` 는 **공부 노트 허브의 딥링크 착지점**이다 (`PREP_NOTES_ANCHOR`).
+        허브의 「회사 준비」 행·백링크가 `#prep-notes` 로 들어와 이 섹션까지 스크롤한다 —
+        이 id 가 사라지면 이동은 되는데 화면 맨 위에 떨어져서 아무 일도 안 난 것처럼 보인다.
+      */}
+      <div id={PREP_NOTES_ANCHOR} className="mb-6 scroll-mt-16">
         {/*
           🔴 **노트 → 면접 질문 은행.** 이 기능의 출발점이 "준비 노트에 기출을 적던
           사람" 인데, 정작 노트에서 은행으로 가는 길이 없었다 (공통 조상인 카드 상세뿐).

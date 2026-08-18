@@ -75,6 +75,17 @@ const InsightsPage = lazyWithReload(() =>
     default: m.InsightsPage,
   })),
 )
+// 공부 노트 — tiptap 확장 세트(코드 하이라이팅·표)를 끌고 오므로 lazy
+const StudyNotesHub = lazyWithReload(() =>
+  import('@/pages/StudyNotes/StudyNotesHub').then((m) => ({
+    default: m.StudyNotesHub,
+  })),
+)
+const StudyNoteDocPage = lazyWithReload(() =>
+  import('@/pages/StudyNotes/StudyNoteDocPage').then((m) => ({
+    default: m.StudyNoteDocPage,
+  })),
+)
 const Interviews = lazyWithReload(() =>
   import('@/pages/Interviews').then((m) => ({ default: m.Interviews })),
 )
@@ -207,6 +218,9 @@ export default function App() {
               <Route path="/activity" element={<ActivityTimelinePage />} />
               <Route path="/activity/manage" element={<ActivityPage />} />
               <Route path="/activity/insights" element={<InsightsPage />} />
+              {/* 공부 노트 — 본문이 개인 학습 자료라 준비 노트와 같은 마스킹 정책 */}
+              <Route path="/study-notes" element={<StudyNotesHub />} />
+              <Route path="/study-notes/:id" element={<StudyNoteDocPage />} />
               <Route element={<AiFeatureGuard />}>
                 <Route path="/coverletters" element={<Coverletters />} />
                 <Route
