@@ -6,7 +6,7 @@ import {
   parseEditorContent,
   type EditorFeatures,
 } from './editorExtensions'
-import { editorToMarkdown, handleMarkdownPaste } from './markdownIO'
+import { editorToMarkdown, handleMarkdownPaste, looksLikeCodeEditorHtml } from './markdownIO'
 import type { StudyNoteMentionOptions } from './StudyNoteMention'
 import { docToMemoValue, memoCounterColor, type TiptapDoc } from '@/utils/memoSections'
 
@@ -141,8 +141,13 @@ export function RichTextEditor({
         const current = editorRef.current
         const text = event.clipboardData?.getData('text/plain')
         if (!text || !current) return false
-        // HTML 이 함께 왔으면 tiptap 기본 경로가 서식을 더 잘 살린다 — 평문일 때만 우리가 판정
-        if (event.clipboardData?.types.includes('text/html')) return false
+        // HTML 이 함께 왔으면 원칙적으로 tiptap 기본 경로가 서식을 더 잘 살린다(웹페이지·노션).
+        // 🔴 예외 — 코드 에디터(VS Code 등) 복사물: HTML 이 "색칠된 평문"이라 양보하면
+        //    마크다운이 문자 그대로 박힌다. 그 경우만 md 판정을 계속한다 (markdownIO 주석)
+        if (event.clipboardData?.types.includes('text/html')) {
+          const html = event.clipboardData.getData('text/html')
+          if (!looksLikeCodeEditorHtml(html)) return false
+        }
         const result = handleMarkdownPaste(current, text, characterLimit)
         if (!result.handled) return false
         setTruncated(result.truncated)

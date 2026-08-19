@@ -260,7 +260,8 @@ test('모바일 375px — 하단 탭에 「공부 노트」 · 허브에 새 노
   // 내정보 탭은 설정 안으로 이사했다 (CEO 결정 3)
   await expect(page.locator('nav[data-nav] a', { hasText: '내정보' })).toHaveCount(0)
 
-  const fab = page.getByRole('button', { name: '새 노트' })
+  // exact — 폴더 헤더 [+]('…폴더에 새 노트')가 부분일치로 걸린다 (2026-08-19)
+  const fab = page.getByRole('button', { name: '새 노트', exact: true })
   await expect(fab).toBeVisible()
 
   // 문서 페이지에서도 탭이 켜져 있어야 한다
@@ -374,21 +375,23 @@ test('목차 세부 동작 — h1 포함 · 클릭 시 sticky 헤더에 안 가�
   expect(pads[1]).toBeLessThan(pads[2]) // h2 < h3
   expect(pads[3]).toBe(pads[1]) // 같은 레벨(h2)은 같은 깊이
 
-  // ② 중간 항목 클릭 → 제목이 sticky 헤더(48px) **아래, 상단 근처에** 온다
+  // ② 중간 항목 클릭 → 제목이 **화면 중간 살짝 위**(38vh)에 온다 (2026-08-19 CEO —
+  //    상단 붙임(72px)에서 변경: 읽는 위치로 내려와야 스크롤 추적 감각과 맞는다)
   //    (양쪽 경계를 다 잰다 — 아래만 재면 「스크롤이 아예 안 됐다」도 통과해 버린다)
-  await items.nth(2).click() // 컨텍스트 스위칭 (h3 · 중간이라 상단 도달이 보장됨)
+  await items.nth(2).click() // 컨텍스트 스위칭 (h3 · 중간이라 착지 보장)
+  const vh = await page.evaluate(() => window.innerHeight)
   await expect
     .poll(async () => {
       const h = page.locator('.chw-prose h3', { hasText: '컨텍스트 스위칭' })
       return h.evaluate((el) => Math.round(el.getBoundingClientRect().top))
     })
-    .toBeGreaterThanOrEqual(48) // scroll-margin-top 없으면 ~0 → 헤더 밑에 숨는다
+    .toBeGreaterThanOrEqual(Math.round(vh * 0.3)) // 상단에 붙지 않았다
   await expect
     .poll(async () => {
       const h = page.locator('.chw-prose h3', { hasText: '컨텍스트 스위칭' })
       return h.evaluate((el) => Math.round(el.getBoundingClientRect().top))
     })
-    .toBeLessThan(160) // 상단 근처 = 실제로 이동했다
+    .toBeLessThan(Math.round(vh * 0.45)) // 중간을 넘지 않았다 (착지 38vh ± 여유)
   await expect(items.nth(2)).toHaveClass(/text-brand/)
 
   // ②' 🔴 마지막 항목 — 짧은 마지막 섹션은 제목이 120px 선을 못 넘는다.
@@ -460,4 +463,70 @@ test('목차 노출 기준 — 읽기 1120px+ · 편집 1280px+ (iPad 가로 구
   await expect(nav).toBeVisible()
   await page.getByRole('tab', { name: '편집' }).click()
   await expect(nav).toBeVisible()
+})
+
+/** 2026-08-19 — VS Code 복사물(HTML 동반)도 마크다운으로 파싱된다 (학습 md 이관 실사용 발견) */
+test('코드 에디터 복사물 붙여넣기 — HTML이 있어도 모노스페이스 시그니처면 md 파싱', async ({ page }) => {
+  await mockStudyNotesApi(page, {
+    notes: [{ id: NOTE_A, title: '이관 테스트', content: doc(para('기존 내용')) }],
+  })
+  await gotoDoc(page)
+  const editor = page.locator('.ProseMirror').first()
+  await editor.click()
+  await page.evaluate(() => {
+    const dt = new DataTransfer()
+    dt.setData(
+      'text/html',
+      `<meta charset='utf-8'><div style="color: #d4d4d4;background-color: #1e1e1e;font-family: Menlo, Monaco, 'Courier New', monospace;white-space: pre;"><div># 붙임 제목</div><div>| 열A | 열B |</div></div>`,
+    )
+    dt.setData('text/plain', '# 붙임 제목\n\n| 열A | 열B |\n| --- | --- |\n| 1 | 2 |')
+    const target = document.querySelector('.ProseMirror')!
+    target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  })
+  // md 로 파싱됐다면 h1 노드와 실제 표가 생긴다 (평문이면 '#'·'|' 문자가 그대로 보인다)
+  await expect(editor.locator('h1', { hasText: '붙임 제목' })).toBeVisible()
+  await expect(editor.locator('table td', { hasText: '1' })).toBeVisible()
+  await expect(editor).not.toContainText('# 붙임')
+})
+
+/** 2026-08-19 실사용(학습 문서 이관) — 목차 내부 스크롤·활성 따라오기·depth 증폭 */
+
+function h(level: number, text: string) {
+  return { type: 'heading', attrs: { level }, content: [{ type: 'text', text }] }
+}
+function p(text: string) {
+  return { type: 'paragraph', content: [{ type: 'text', text: text.repeat(30) }] }
+}
+test('목차 — 제목 40개 문서에서 내부 스크롤되고 활성 항목이 따라온다', async ({ page }) => {
+  // 제목 40개짜리 긴 문서 — 목차가 뷰포트를 확실히 넘게
+  const blocks: unknown[] = []
+  for (let c = 1; c <= 8; c++) {
+    blocks.push(h(1, `${c}장 챕터`), p('본문 '))
+    for (let sIdx = 1; sIdx <= 2; sIdx++) {
+      blocks.push(h(2, `${c}-${sIdx} 절`), p('내용 '))
+      blocks.push(h(3, `${c}-${sIdx}-a 항`), p('세부 '))
+    }
+  }
+  await mockStudyNotesApi(page, { notes: [{ id: NOTE_A, title: '긴 문서', content: doc(...blocks) }] })
+  await page.goto(`/study-notes/${NOTE_A}`, { waitUntil: 'domcontentloaded' })
+  const nav = page.locator('[data-toc-nav]')
+  await expect(nav).toBeVisible()
+
+  // ① 내부 스크롤 여지가 있다
+  const scrollable = await nav.evaluate((el) => el.scrollHeight - el.clientHeight)
+  expect(scrollable).toBeGreaterThan(100)
+
+  // ② 본문을 끝까지 내리면 활성 항목이 목차 내부 스크롤로 따라와 보인다
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForTimeout(600)
+  const followed = await nav.evaluate((el) => {
+    const active = el.querySelector('.border-brand')
+    if (!active) return { ok: false as const }
+    const nr = el.getBoundingClientRect(); const ar = active.getBoundingClientRect()
+    return { ok: true as const, visible: ar.top >= nr.top - 1 && ar.bottom <= nr.bottom + 1, scrollTop: el.scrollTop }
+  })
+  expect(followed.ok).toBe(true)
+  expect(followed.visible).toBe(true)
+  expect(followed.scrollTop).toBeGreaterThan(0)
+
 })
