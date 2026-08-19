@@ -42,7 +42,19 @@ export function extractToc(editor: Editor): TocItem[] {
  */
 export function tocIndentClass(level: number, minLevel: number): string {
   const depth = Math.max(0, Math.min(2, level - minLevel))
-  return ['pl-3', 'pl-5', 'pl-7'][depth]
+  // 8px 간격은 벽처럼 보였다 (2026-08-19 실사용 — 제목 60개짜리 학습 문서에서 체감).
+  // 들여쓰기 12px 간격 + 타이포 차등(tocLevelClass)이 짝이다
+  return ['pl-3', 'pl-6', 'pl-9'][depth]
+}
+
+/**
+ * 목차 레벨별 타이포 차등 — 들여쓰기만으로는 depth 가 안 보인다 (2026-08-19).
+ * 최상위 = 또렷하게, 아래로 갈수록 작고 옅게. 활성/조상 색은 호출부 state 가 덮는다
+ * (여기선 크기·굵기만 담당 — 색까지 주면 활성 하이라이트와 충돌).
+ */
+export function tocLevelClass(level: number, minLevel: number): string {
+  const depth = Math.max(0, Math.min(2, level - minLevel))
+  return ['text-xs font-medium', 'text-xs', 'text-[11px]'][depth]
 }
 
 /**

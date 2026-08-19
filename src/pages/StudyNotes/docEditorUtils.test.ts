@@ -131,18 +131,18 @@ describe('countDetails · setAllDetailsOpen', () => {
   })
 })
 
-describe('tocIndentClass — 최상위 레벨 기준 상대 들여쓰기 (2026-08-18)', () => {
+describe('tocIndentClass — 최상위 레벨 기준 상대 들여쓰기 (2026-08-18 · 간격 증폭 08-19)', () => {
   it('h2 만 쓰는 문서(템플릿 전부)는 기존 모습 그대로', () => {
     expect(tocIndentClass(2, 2)).toBe('pl-3')
-    expect(tocIndentClass(3, 2)).toBe('pl-5')
+    expect(tocIndentClass(3, 2)).toBe('pl-6')
   })
   it('h1 챕터 문서는 3단 위계가 생긴다', () => {
     expect(tocIndentClass(1, 1)).toBe('pl-3')
-    expect(tocIndentClass(2, 1)).toBe('pl-5')
-    expect(tocIndentClass(3, 1)).toBe('pl-7')
+    expect(tocIndentClass(2, 1)).toBe('pl-6')
+    expect(tocIndentClass(3, 1)).toBe('pl-9')
   })
   it('깊이 캡 — 셋째 단을 넘지 않는다', () => {
-    expect(tocIndentClass(5, 1)).toBe('pl-7')
+    expect(tocIndentClass(5, 1)).toBe('pl-9')
   })
 })
 

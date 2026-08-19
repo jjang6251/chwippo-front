@@ -13,7 +13,7 @@ import { describe, it, expect } from 'vitest'
 import { Editor, type JSONContent } from '@tiptap/core'
 import { buildEditorExtensions } from './editorExtensions'
 import { STUDY_NOTE_MENTION_TYPE } from './StudyNoteMention'
-import { countMarkdownSignals, looksLikeMarkdown, editorToMarkdown, handleMarkdownPaste } from './markdownIO'
+import { countMarkdownSignals, looksLikeMarkdown, editorToMarkdown, handleMarkdownPaste, looksLikeCodeEditorHtml } from './markdownIO'
 
 const make = (opts?: { characterLimit?: number; mention?: boolean; content?: JSONContent }) =>
   new Editor({
@@ -283,5 +283,25 @@ describe('마크다운 붙여넣기 — raw HTML 미주입 (html:false 회귀 �
     // ③ 실행되지 않았다
     expect((window as { __pwned?: number }).__pwned).toBeUndefined()
     expect((window as { __pwned2?: number }).__pwned2).toBeUndefined()
+  })
+})
+
+describe('looksLikeCodeEditorHtml — 코드 에디터 복사물 판정 (2026-08-19)', () => {
+  const VSCODE_HTML =
+    '<meta charset=\'utf-8\'><div style="color: #d4d4d4;background-color: #1e1e1e;font-family: Menlo, Monaco, \'Courier New\', monospace;font-weight: normal;font-size: 12px;line-height: 18px;white-space: pre;"><div><span style="color: #569cd6;"># 제목</span></div></div>'
+  const NOTION_HTML =
+    '<meta charset="utf-8"><h1>제목</h1><p>본문 <strong>굵게</strong></p><table><tr><td>셀</td></tr></table>'
+
+  it('VS Code 복사물(모노스페이스 인라인 스타일) → true', () => {
+    expect(looksLikeCodeEditorHtml(VSCODE_HTML)).toBe(true)
+  })
+
+  it('웹페이지·노션 복사물(시맨틱 HTML) → false — 기존 양보 경로 유지', () => {
+    expect(looksLikeCodeEditorHtml(NOTION_HTML)).toBe(false)
+  })
+
+  it('본문 뒤쪽 코드블록의 모노스페이스는 오탐하지 않는다 (앞 600자만 판정)', () => {
+    const webWithCodeBlock = NOTION_HTML + 'x'.repeat(600) + '<pre style="font-family: Consolas, monospace">code</pre>'
+    expect(looksLikeCodeEditorHtml(webWithCodeBlock)).toBe(false)
   })
 })

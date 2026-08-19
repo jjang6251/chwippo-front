@@ -129,12 +129,13 @@ export function StudyNotesHub() {
   const searching = query.trim() !== ''
   const isExpanded = (id: string) => searching || !collapsed.includes(id)
 
-  async function openNewNote(template?: StudyNoteTemplate) {
+  async function openNewNote(template?: StudyNoteTemplate, folderId?: string) {
     if (createNote.isPending) return
     try {
-      const note = await createNote.mutateAsync(
-        template ? { title: template.title, content: templateContent(template) } : {},
-      )
+      const note = await createNote.mutateAsync({
+        ...(template ? { title: template.title, content: templateContent(template) } : {}),
+        ...(folderId ? { folderId } : {}),
+      })
       navigate(`/study-notes/${note.id}`)
     } catch {
       // 서버 문구 토스트는 훅(onError)이 낸다 — 500개 상한이 현재 개수를 실어 온다
@@ -304,6 +305,7 @@ export function StudyNotesHub() {
                     }}
                     onCancelRename={() => setRenamingFolderId(null)}
                     onRequestDelete={() => setFolderPendingDelete(folder)}
+                    onCreateNote={() => void openNewNote(undefined, folder.id)}
                   />
                   {isExpanded(folder.id) && (
                     <div className="space-y-1.5">
@@ -326,35 +328,26 @@ export function StudyNotesHub() {
                 </div>
               ))}
 
-              {/* 목록 끝 ghost — 「새 폴더」와 같은 동작, 손이 이미 아래에 있을 때의 자리 */}
-              {filter !== 'prep' &&
-                (creatingFolder ? (
-                  <div className="flex items-center gap-1.5 mb-5">
-                    <span className="text-[13px]" aria-hidden="true">
-                      📁
-                    </span>
-                    <InlineNameInput
-                      initial=""
-                      ariaLabel="새 폴더 이름"
-                      onCommit={commitNewFolder}
-                      onCancel={() => setCreatingFolder(false)}
-                    />
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setCreatingFolder(true)}
-                    className="flex items-center gap-1.5 mb-5 text-[13px] text-text-quaternary hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 rounded"
-                  >
-                    <PlusIcon />
-                    폴더 만들기
-                  </button>
-                ))}
+              {/* 새 폴더 입력 앵커 — 진입은 우상단 「새 폴더」 하나 (목록 끝 ghost 버튼은
+                  2026-08-19 실사용 지적으로 제거: 같은 동작이 두 군데면 헷갈린다) */}
+              {filter !== 'prep' && creatingFolder && (
+                <div className="flex items-center gap-1.5 mb-5">
+                  <span className="text-[13px]" aria-hidden="true">
+                    📁
+                  </span>
+                  <InlineNameInput
+                    initial=""
+                    ariaLabel="새 폴더 이름"
+                    onCommit={commitNewFolder}
+                    onCancel={() => setCreatingFolder(false)}
+                  />
+                </div>
+              )}
 
               {/* ── 미분류 ── */}
               {model.unfiled.length > 0 && (
                 <div className="mb-7">
-                  <div className="mb-2 text-[13px] font-medium text-text-quaternary pl-[18px]">
+                  <div className="mb-2 text-base font-semibold text-text-quaternary pl-[18px]">
                     미분류
                   </div>
                   <div className="space-y-1.5">

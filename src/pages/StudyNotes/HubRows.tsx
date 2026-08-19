@@ -274,6 +274,7 @@ export function FolderHeader({
   onRename,
   onCancelRename,
   onRequestDelete,
+  onCreateNote,
 }: {
   folder: StudyNoteFolder
   count: number
@@ -284,6 +285,8 @@ export function FolderHeader({
   onRename: (name: string) => void
   onCancelRename: () => void
   onRequestDelete: () => void
+  /** 이 폴더 안에 바로 새 노트 (2026-08-19 실사용 — 만들고 일일이 옮기는 동선 제거) */
+  onCreateNote: () => void
 }) {
   if (renaming) {
     return (
@@ -308,12 +311,21 @@ export function FolderHeader({
         type="button"
         onClick={onToggle}
         aria-expanded={!collapsed}
-        className="flex items-center gap-1.5 text-[13px] font-medium text-text-secondary hover:text-text-primary transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+        className="flex items-center gap-1.5 text-left text-base font-semibold text-text-primary hover:text-brand transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
       >
         <CollapsibleChevron open={!collapsed} />
         <span aria-hidden="true">📁</span>
         <span>{folder.name}</span>
         <span className="text-[11px] text-text-quaternary font-normal">{count}</span>
+      </button>
+      <button
+        type="button"
+        onClick={onCreateNote}
+        aria-label={`'${folder.name}' 폴더에 새 노트`}
+        title="이 폴더에 새 노트"
+        className="min-w-[32px] min-h-[32px] max-lg:min-w-[44px] max-lg:min-h-[44px] max-lg:-my-2 inline-flex items-center justify-center rounded-md text-text-quaternary hover:text-brand hover:bg-card transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-lg:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+      >
+        <PlusSmallIcon />
       </button>
       <DotsMenu label={`'${folder.name}' 폴더 메뉴`} footnote="삭제해도 노트는 미분류로 남아요">
         {(close) => (
@@ -339,6 +351,14 @@ export function FolderHeader({
         )}
       </DotsMenu>
     </div>
+  )
+}
+
+function PlusSmallIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   )
 }
 

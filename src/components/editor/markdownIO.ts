@@ -141,6 +141,24 @@ export interface MarkdownPasteResult {
  * 글자 제한(CharacterCount)이 걸려 있으면 초과분은 **조용히 잘린다** — 그래서 삽입
  * 전후 글자수를 재서 잘렸는지 돌려준다 (10만자 노트에 긴 AI 답변을 붙이는 흐름).
  */
+/**
+ * 클립보드의 text/html 이 **코드 에디터 복사물**(VS Code 등)인지 판정.
+ *
+ * 🔴 왜 필요한가 (2026-08-19 실사용): 학습 md 파일을 VS Code 에서 복사해 붙이면
+ * 클립보드에 "색칠된 평문" HTML 이 같이 실린다. 기존 로직은 HTML 이 있으면 마크다운
+ * 파싱을 양보했는데(웹페이지 복사엔 그게 맞다), 코드 에디터의 HTML 은 서식이 아니라
+ * **모노스페이스로 칠한 생 텍스트**라 — 양보하면 마크다운이 문자 그대로 박힌다.
+ *
+ * 판정: 코드 에디터 HTML 의 시그니처는 인라인 스타일의 모노스페이스 폰트 지정이다
+ * (VS Code: `font-family: Menlo/Monaco/Consolas/'Courier New'/monospace…` + `white-space: pre`).
+ * 웹페이지·노션 복사물엔 이 조합이 통째로 걸리지 않는다 (코드블록 일부에만 있을 수 있어
+ * **문서 앞부분**에서만 본다 — 전체 검색이면 코드블록 하나로 오탐).
+ */
+export function looksLikeCodeEditorHtml(html: string): boolean {
+  const head = html.slice(0, 600)
+  return /font-family:[^;"']*(?:Menlo|Monaco|Consolas|Courier|monospace)/i.test(head)
+}
+
 export function handleMarkdownPaste(
   editor: Editor,
   text: string,

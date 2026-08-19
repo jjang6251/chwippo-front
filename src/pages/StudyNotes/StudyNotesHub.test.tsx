@@ -286,7 +286,7 @@ describe('허브 — 폴더 관리', () => {
 
   it('11 ESC 는 취소 — 생성 호출 없음', async () => {
     await renderLoaded()
-    fireEvent.click(screen.getByRole('button', { name: '폴더 만들기' }))
+    fireEvent.click(screen.getAllByRole('button', { name: '새 폴더' })[0])
     const input = screen.getByLabelText('새 폴더 이름')
     fireEvent.change(input, { target: { value: '버릴이름' } })
     fireEvent.keyDown(input, { key: 'Escape' })
@@ -439,5 +439,20 @@ describe('허브 — 첫 방문 빈 상태', () => {
     expect(body.title).toBe('CS 정리')
     expect(body.content).toContain('details')
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/study-notes/tpl-1'))
+  })
+})
+
+describe('폴더에 바로 새 노트 (2026-08-19 실사용 — 만들고 옮기는 동선 제거)', () => {
+  it("폴더 헤더의 [+] 가 그 폴더의 folderId 로 노트를 만든다", async () => {
+    mocked.createStudyNote.mockResolvedValue({ ...NOTES[0], id: 'n-new', content: '', createdAt: NOTES[0].updatedAt })
+    await renderLoaded()
+    fireEvent.click(screen.getByRole('button', { name: "'CS 기초' 폴더에 새 노트" }))
+    await waitFor(() => expect(mocked.createStudyNote).toHaveBeenCalledTimes(1))
+    expect(mocked.createStudyNote.mock.calls[0][0]).toMatchObject({ folderId: FOLDERS[0].id })
+  })
+
+  it('목록 끝 ghost 「폴더 만들기」 버튼은 없다 — 새 폴더 진입은 우상단 하나', async () => {
+    await renderLoaded()
+    expect(screen.queryByRole('button', { name: '폴더 만들기' })).not.toBeInTheDocument()
   })
 })
