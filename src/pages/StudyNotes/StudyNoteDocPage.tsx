@@ -31,6 +31,7 @@ import {
   setAllDetailsOpen,
   tocAncestorPositions,
   tocIndentClass,
+  tocLevelClass,
   type TocItem,
 } from './docEditorUtils'
 import {
@@ -327,6 +328,21 @@ export function StudyNoteDocPage() {
   const [details, setDetails] = useState({ total: 0, open: 0 })
   const [activePos, setActivePos] = useState<number | null>(null)
 
+  /**
+   * 목차 내부 스크롤 따라오기 (2026-08-19) — 활성 항목이 목차의 스크롤 밖이면 목차만 굴린다.
+   * 🔴 scrollIntoView 는 조상 전부를 굴려 **본문까지 튄다** — 컨테이너 scrollTop 수동 보정만
+   */
+  useEffect(() => {
+    if (activePos === null) return
+    const nav = document.querySelector('[data-toc-nav]')
+    const item = nav?.querySelector(`[data-toc-pos="${activePos}"]`)
+    if (!nav || !(item instanceof HTMLElement)) return
+    const navRect = nav.getBoundingClientRect()
+    const itemRect = item.getBoundingClientRect()
+    if (itemRect.top < navRect.top) nav.scrollTop += itemRect.top - navRect.top - 8
+    else if (itemRect.bottom > navRect.bottom) nav.scrollTop += itemRect.bottom - navRect.bottom + 8
+  }, [activePos])
+
   useEffect(() => {
     if (!editor) return
     const sync = () => {
@@ -354,10 +370,13 @@ export function StudyNoteDocPage() {
       if (atBottom) {
         current = toc[toc.length - 1].pos
       } else {
+        /* 기준선 = 화면 42% — 착지점(scroll-margin 38vh) 바로 아래라 클릭 직후에도
+           그 제목이 활성으로 잡힌다. "지금 읽는 위치(중상단)" 감각과도 일치 (2026-08-19 CEO) */
+        const baseline = window.innerHeight * 0.42
         for (const item of toc) {
           const dom = editor.view.nodeDOM(item.pos) as HTMLElement | null
           const top = dom?.getBoundingClientRect?.().top ?? Number.POSITIVE_INFINITY
-          if (top <= 120) current = item.pos
+          if (top <= baseline) current = item.pos
         }
       }
       setActivePos(current)
@@ -619,7 +638,15 @@ export function StudyNoteDocPage() {
                 </button>
               )}
               {toc.length > 0 && (
-            <nav aria-label="목차" className={aiEnabled && !readOnly ? 'hidden xl:block' : ''}>
+            /* 내부 스크롤 — 학습 문서(제목 60개+)에서 목차가 뷰포트를 넘는다 (2026-08-19).
+               max-h = 화면 − sticky top(72) − 하단 여유. 활성 따라오기는 activePos effect */
+            <nav
+              aria-label="목차"
+              data-toc-nav
+              className={`max-h-[calc(100vh-120px)] overflow-y-auto overscroll-contain ${
+                aiEnabled && !readOnly ? 'hidden xl:block' : ''
+              }`}
+            >
               <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-2.5">
                 목차
               </div>
@@ -642,7 +669,11 @@ export function StudyNoteDocPage() {
                         dom?.scrollIntoView?.({ block: 'start' })
                         setActivePos(item.pos)
                       }}
+                      data-toc-pos={item.pos}
                       className={`block w-full text-left py-0.5 -ml-px border-l-2 transition-colors truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 ${tocIndentClass(
+                        item.level,
+                        Math.min(...toc.map((t) => t.level)),
+                      )} ${tocLevelClass(
                         item.level,
                         Math.min(...toc.map((t) => t.level)),
                       )} ${state}`}

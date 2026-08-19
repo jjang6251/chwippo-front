@@ -56,6 +56,9 @@
   --card: rgba(255, 255, 255, 0.04);
   --card-hover: rgba(255, 255, 255, 0.06);
   --card-strong: rgba(255, 255, 255, 0.08);
+  /* 노트 본문 박스류 전용 — 주변과 배경차 ≥1.2 목표 (2026-08-19 실측: 토글 1.11 등 동화) */
+  --prose-chip-bg: rgba(255, 255, 255, 0.12);
+  --prose-box-bg: rgba(255, 255, 255, 0.08);
   /* U29 — 리스트 카드 불투명 배경: 다크=surface-2 승격(면 분리), 라이트=흰색(Hero 문법) */
   --card-solid: rgb(44, 42, 40);
   --line: rgba(255, 255, 255, 0.08);
@@ -139,6 +142,9 @@
   --card: rgb(252, 248, 240);
   --card-hover: rgb(235, 230, 217);
   --card-strong: rgb(245, 240, 228);
+  /* 라이트가 특히 약했다 — 인라인코드 1.05·박스류 1.13 (크림 위 크림) */
+  --prose-chip-bg: rgba(26, 24, 22, 0.095);
+  --prose-box-bg: rgba(26, 24, 22, 0.08);
   --card-solid: rgb(255, 255, 255);
   --line: rgba(26, 24, 22, 0.10);
   --line-strong: rgba(26, 24, 22, 0.18);
@@ -373,7 +379,7 @@ input[type='time']::-webkit-calendar-picker-indicator {
 .chw-prose h1,
 .chw-prose h2,
 .chw-prose h3 {
-  scroll-margin-top: 72px;
+  scroll-margin-top: 38vh; /* 목차 클릭 착지 = 화면 중간 살짝 위 (2026-08-19 CEO — 72px 상단 붙임 → 읽는 위치로). 추적 기준선(42vh)과 짝 */
 }
 /* 🔴 h1 규칙 부재 = 리셋(1em·보통 굵기)이 이겨서 h1 이 h2 보다 작아 보였다 (2026-08-18 실기) */
 .chw-prose h1 {
@@ -413,6 +419,11 @@ input[type='time']::-webkit-calendar-picker-indicator {
   margin: 0.3em 0;
   list-style: revert;
 }
+/* 최상위 리스트는 본문보다 살짝 들여쓰기 — 중첩 단계 폭(1.25em)은 유지. taskList 는 뒤의 padding-left:0 이 이긴다 */
+.chw-prose > ul,
+.chw-prose > ol {
+  padding-left: 1.75em;
+}
 .chw-prose hr {
   margin: 0.8em 0;
   border: 0;
@@ -448,8 +459,9 @@ input[type='time']::-webkit-calendar-picker-indicator {
   --hl-purple: rgba(190, 162, 221, 0.3);
 }
 :root[data-theme='light'] {
-  --hl-yellow: rgba(250, 204, 21, 0.45);
-  --hl-green: rgba(134, 239, 172, 0.55);
+  /* 노랑·초록은 고휘도 원색이라 크림 위에서 동화된다(구분 1.1x 실측) — 앰버·진초록 톤 */
+  --hl-yellow: rgba(234, 179, 8, 0.5);
+  --hl-green: rgba(74, 222, 128, 0.55);
   --hl-blue: rgba(147, 197, 253, 0.55);
   --hl-red: rgba(252, 165, 165, 0.6);
   --hl-purple: rgba(216, 180, 254, 0.55);
@@ -529,11 +541,14 @@ input[type='time']::-webkit-calendar-picker-indicator {
   color: rgb(var(--text-secondary));
 }
 .chw-prose code:not(pre code) {
-  background: var(--card-strong);
+  background: var(--prose-chip-bg);
   border-radius: 4px;
   padding: 1px 5px;
   font-family: 'DM Mono', monospace;
   font-size: 0.86em;
+  /* 본문과의 구분감 — coral 계열 (2026-08-19 CEO. 노션 인라인 코드의 붉은 심상).
+     brand 는 링크·CTA 색이라 "눌리나?" 오해 → accent. 대비는 양 테마 실측 후 확정 */
+  color: rgb(var(--accent));
 }
 
 /* 코드 블록 + 문법 하이라이팅.
@@ -557,7 +572,7 @@ input[type='time']::-webkit-calendar-picker-indicator {
    헤더와 코드 사이에 없는 선이 하나 더 생긴다. 그래서 wrapper 가 틀을 지고 `pre` 는
    내용만 그린다. 색은 기존 토큰 그대로라 두 테마 모두 이전과 같은 면이 된다. */
 .chw-prose .chw-codeblock {
-  background: rgb(var(--surface-2));
+  background: var(--prose-box-bg); /* surface-2 라이트 1.13 동화 — 전용값 + 보더로 구분 (2026-08-19) */
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   overflow: hidden;
@@ -667,6 +682,11 @@ input[type='time']::-webkit-calendar-picker-indicator {
   color: rgb(var(--text-quaternary));
   font-style: italic;
 }
+/* 라이트에서 quaternary 주석은 코드블록 배경 대비 4.03 미달 (2026-08-19 실측) */
+:root[data-theme='light'] .chw-prose .hljs-comment,
+:root[data-theme='light'] .chw-prose .hljs-quote {
+  color: rgb(var(--text-tertiary));
+}
 .chw-prose .hljs-title,
 .chw-prose .hljs-section,
 .chw-prose .hljs-built_in,
@@ -712,8 +732,8 @@ input[type='time']::-webkit-calendar-picker-indicator {
 .chw-prose [data-type='details'] {
   display: flex;
   gap: 8px;
-  border: 1px solid var(--line);
-  background: var(--card);
+  border: 1px solid var(--line-strong);
+  background: var(--prose-box-bg);
   border-radius: 10px;
   padding: 10px 14px;
   margin: 0.6em 0;
@@ -789,7 +809,7 @@ input[type='time']::-webkit-calendar-picker-indicator {
   border-right: 0;
 }
 .chw-prose th {
-  background: rgb(var(--surface-2));
+  background: var(--prose-chip-bg); /* surface-2 는 라이트에서 배경차 1.13 — 동화 (2026-08-19 실측) */
   color: rgb(var(--text-secondary));
   font-weight: 500;
 }
