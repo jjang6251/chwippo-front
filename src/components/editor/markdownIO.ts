@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core'
-import { DOMParser as PMDOMParser } from '@tiptap/pm/model'
+import { DOMParser as PMDOMParser, type Fragment, type Node as PMNode } from '@tiptap/pm/model'
 
 /**
  * study-notes Phase 2a — 마크다운 붙여넣기 파싱 · 내보내기.
@@ -54,8 +54,13 @@ export function looksLikeMarkdown(text: string): boolean {
   return countMarkdownSignals(text) >= 2
 }
 
-interface MarkdownStorage {
+export interface MarkdownStorage {
   parser: { parse: (content: string, options?: { inline?: boolean }) => string }
+  /**
+   * 문서·조각 → 마크다운. `doc.slice(from, to).content`(Fragment)를 그대로 받는다 —
+   * 라이브러리 자신이 클립보드 직렬화에 같은 방식으로 쓴다(`clipboardTextSerializer`).
+   */
+  serializer: { serialize: (content: Fragment | PMNode) => string }
   getMarkdown: () => string
 }
 
@@ -67,9 +72,11 @@ declare module '@tiptap/core' {
 }
 
 /** 확장이 꺼진 소비처(features.markdown=false)에서도 안전하게 — storage 자체가 없다 */
-function markdownStorage(editor: Editor): MarkdownStorage | null {
+export function markdownStorage(editor: Editor): MarkdownStorage | null {
   const storage = editor.storage.markdown
-  return storage && typeof storage.getMarkdown === 'function' && storage.parser ? storage : null
+  return storage && typeof storage.getMarkdown === 'function' && storage.parser && storage.serializer
+    ? storage
+    : null
 }
 
 /**
@@ -84,6 +91,35 @@ function markdownStorage(editor: Editor): MarkdownStorage | null {
  */
 export function editorToMarkdown(editor: Editor): string {
   return markdownStorage(editor)?.getMarkdown() ?? editor.getText({ blockSeparator: '\n\n' })
+}
+
+/**
+ * 마크다운 → **doc JSON 노드 배열**. 붙여넣기와 AI 결과 삽입이 같이 쓴다.
+ *
+ * 🔴 **여기엔 `looksLikeMarkdown` 게이트가 없다.** 게이트는 "사용자가 붙여넣은 평문을
+ * 마음대로 재조립하지 않는다" 는 규칙이라 붙여넣기 경로에만 있어야 한다. AI 결과는
+ * 애초에 마크다운으로 달라고 시킨 출력이고, 「쉽게 풀어쓰기」 처럼 **신호가 0종인 산문**이
+ * 정상 결과인 액션이 있다 — 게이트를 여기에 두면 그 결과가 통째로 삼켜진다.
+ *
+ * 🔴 결과는 **JSON 으로만** 삽입해야 한다. 문자열을 `insertContent(At)` 에 넘기면 Markdown
+ * 확장이 그 명령을 가로채 한 번 더 마크다운으로 읽고(html:false 라) 태그를 이스케이프해서
+ * `&lt;h1&gt;…` 평문이 박힌다. JSON 은 가로채기 대상이 아니라 그대로 지나간다.
+ *
+ * (에디터의 **살아 있는 schema** 로 파싱한다 — `generateJSON` 은 확장 목록으로 스키마를
+ *  새로 짜느라 StarterKit 하위 확장이 중복 등록된 것처럼 보여 경고를 뱉는다.)
+ *
+ * 마크다운 확장이 꺼진 소비처거나 내용이 비면 빈 배열 — 삽입 측이 "넣을 게 없다" 로 받는다.
+ */
+export function markdownToDocNodes(editor: Editor, markdown: string): unknown[] {
+  const storage = markdownStorage(editor)
+  if (!storage) return []
+
+  const el = document.createElement('div')
+  el.innerHTML = storage.parser.parse(markdown)
+  const parsedDoc = PMDOMParser.fromSchema(editor.schema).parse(el).toJSON() as {
+    content?: unknown[]
+  }
+  return parsedDoc.content ?? []
 }
 
 export interface MarkdownPasteResult {
@@ -111,26 +147,16 @@ export function handleMarkdownPaste(
   characterLimit?: number,
 ): MarkdownPasteResult {
   if (!looksLikeMarkdown(text)) return { handled: false, truncated: false }
-  const storage = markdownStorage(editor)
-  if (!storage) return { handled: false, truncated: false }
+  if (!markdownStorage(editor)) return { handled: false, truncated: false }
 
   const before = editor.state.doc.content.size
 
-  // 🔴 파서 결과(HTML 문자열)를 그대로 insertContent 에 넘기면 안 된다 — Markdown 확장이
-  //    `insertContentAt` 을 가로채 **문자열을 한 번 더 마크다운으로 읽는다**. html:false 라
-  //    그 두 번째 파싱이 태그를 통째로 이스케이프해서 `&lt;h1&gt;…` 평문이 박힌다.
-  //    JSON 은 가로채기 대상이 아니라 그대로 지나간다.
-  //    (에디터의 살아 있는 schema 로 파싱한다 — `generateJSON` 은 확장 목록으로 스키마를
-  //     새로 짜느라 StarterKit 하위 확장이 중복 등록된 것처럼 보여 경고를 뱉는다.)
-  const el = document.createElement('div')
-  el.innerHTML = storage.parser.parse(text)
-  const parsedDoc = PMDOMParser.fromSchema(editor.schema).parse(el).toJSON() as {
-    content?: unknown[]
-  }
   editor
     .chain()
     .focus()
-    .insertContent((parsedDoc.content ?? []) as Parameters<typeof editor.commands.insertContent>[0])
+    .insertContent(
+      markdownToDocNodes(editor, text) as Parameters<typeof editor.commands.insertContent>[0],
+    )
     .run()
   const after = editor.state.doc.content.size
 

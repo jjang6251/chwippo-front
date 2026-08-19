@@ -6,6 +6,9 @@ import { Modal } from '@/components/common/Modal'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
 import { editorToMarkdown } from '@/components/editor/markdownIO'
 import type { StudyNoteMentionOptions } from '@/components/editor/StudyNoteMention'
+import { AiNoteBubbleMenu } from '@/components/ai-note/AiNoteBubbleMenu'
+import { AiNotePanel } from '@/components/ai-note/AiNotePanel'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useUnloadGuard } from '@/hooks/useUnloadGuard'
 import {
   useDeleteStudyNote,
@@ -96,6 +99,12 @@ export function StudyNoteDocPage() {
   const [dirty, setDirty] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  /**
+   * 노트 AI 패널. 🔴 **라우트 안에서만 산다** — 다른 노트로 옮기거나 새로고침하면
+   * 히스토리가 사라진다 (plan D6). 여기서 여닫기만 들고, 대화는 패널이 들고 있다.
+   */
+  const [aiOpen, setAiOpen] = useState(false)
+  const aiEnabled = useAiEnabled()
 
   const readOnly = mode === 'read'
 
@@ -361,7 +370,11 @@ export function StudyNoteDocPage() {
   function switchMode(next: NoteMode) {
     if (next === mode) return
     // 읽기로 넘어가기 전에 미저장분을 보낸다 — 툴바가 사라진 뒤에 실패하면 알릴 자리가 없다
-    if (next === 'read') flush()
+    if (next === 'read') {
+      flush()
+      // 읽기 모드엔 적용할 자리가 없다 — 결과만 띄워 두면 누를 수 없는 버튼이 된다
+      setAiOpen(false)
+    }
     setMode(next)
     saveNoteMode(next)
   }
@@ -412,6 +425,9 @@ export function StudyNoteDocPage() {
   const folder = folders.find((f) => f.id === note.folderId) ?? null
 
   return (
+    // 🔴 패널은 fixed 라 그냥 두면 본문을 덮는다 — 열릴 때 우측 380px 을 비워 밀어낸다
+    //    (2026-08-19 CEO 실기 "패널이 노트를 가린다"). PAGE 의 px 와 충돌하지 않게 바깥 래퍼에
+    <div className={`transition-[padding] duration-200 ${aiOpen ? 'lg:pr-[380px]' : ''}`}>
     <div className={PAGE}>
       {/* ── 상단: 브레드크럼 · 저장 상태 · 모드 ── */}
       <div className="flex items-center justify-between gap-3 mb-5">
@@ -553,8 +569,15 @@ export function StudyNoteDocPage() {
               readOnly={readOnly}
               mention={mention}
               onExportMarkdown={handleExport}
+              onAiOpen={aiEnabled && !readOnly ? () => setAiOpen(true) : undefined}
+              aiEntryMobileOnly
               header={editorSlot}
             />
+
+            {/* 드래그 → 「AI」 (데스크탑). 모바일은 툴바 버튼이 같은 자리를 대신한다 */}
+            {aiEnabled && !readOnly && editor && (
+              <AiNoteBubbleMenu editor={editor} onOpen={() => setAiOpen(true)} />
+            )}
 
             <BacklinkPanel items={backlinks} />
           </div>
@@ -564,14 +587,39 @@ export function StudyNoteDocPage() {
             편집 = xl(1280+) — 툴바+본문 우선, 좁은 화면에 목차까지 끼우면 그쪽이 불편해진다.
             읽기 = 1120px+ — 본문 최소 612px(한글 38자/줄) 보장선. iPad 가로 전 기종(1080~1366)
             중 1080 만 제외되고 1180·1194·1366 은 포함 — 35자 미만으로 눌리는 폭이 존재하지 않는다. */}
-        {toc.length > 0 && (
+        {/* 🔴 AI 패널이 열리면 목차가 자리를 양보한다 — 우측 380px 을 둘이 나눠 가지면
+            본문이 읽기 폭 아래로 눌린다. 닫으면 그대로 돌아온다 (plan UIUX ①). */}
+        {/* 레일 노출: AI 버튼(편집+AI on)은 lg+, 목차는 기존 기준 유지 (편집 xl / 읽기 1120px).
+            레일 자체가 안 뜨는 조합(읽기+목차 없음 등)은 통째로 생략 */}
+        {!aiOpen && ((aiEnabled && !readOnly) || toc.length > 0) && (
           <aside
-            className={`${readOnly ? 'hidden min-[1120px]:block' : 'hidden xl:block'} w-[180px] shrink-0`}
+            className={`${
+              aiEnabled && !readOnly
+                ? 'hidden lg:block'
+                : readOnly
+                  ? 'hidden min-[1120px]:block'
+                  : 'hidden xl:block'
+            } w-[180px] shrink-0`}
           >
             {/* 🔴 top-[72px] = 고정 헤더(48px) + 여유 — top-6(24px) 이던 시절엔 스크롤하면
                 목차 상단이 헤더 밑으로 미끄러져 들어가 "안 따라오는" 것처럼 보였다 (2026-08-18 실기).
                 본문 제목의 scroll-margin(72px)과 같은 선이라 시선 축이 맞는다. */}
-            <nav aria-label="목차" className="sticky top-[72px]">
+            <div className="sticky top-[72px] space-y-4">
+              {/* 🔴 레일 AI 버튼 — "툴바 ✦ 는 안 보인다" (2026-08-19 CEO 실기). 데스크탑 주 진입.
+                  드래그 버블과 병존 — 이건 무선택 생성·발견성 담당 */}
+              {aiEnabled && !readOnly && (
+                <button
+                  type="button"
+                  data-testid="ai-rail-open"
+                  onClick={() => setAiOpen(true)}
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-brand text-bg text-xs font-semibold shadow-sm hover:bg-accent active:bg-accent-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+                >
+                  <span aria-hidden="true">✦</span>
+                  AI 도움
+                </button>
+              )}
+              {toc.length > 0 && (
+            <nav aria-label="목차" className={aiEnabled && !readOnly ? 'hidden xl:block' : ''}>
               <div className="text-[10px] font-medium text-text-quaternary uppercase tracking-wider mb-2.5">
                 목차
               </div>
@@ -605,9 +653,19 @@ export function StudyNoteDocPage() {
                 })}
               </div>
             </nav>
+              )}
+            </div>
           </aside>
         )}
       </div>
+
+      {/* 🔴 닫아도 언마운트하지 않는다 — 히스토리가 `open` 보다 위에 있어야 유지된다 */}
+      <AiNotePanel
+        editor={editor}
+        resource={{ type: 'study_note', noteId: id }}
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+      />
 
       <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title="노트 삭제">
         <p className="text-text-secondary text-sm mb-5 leading-relaxed">
@@ -634,6 +692,7 @@ export function StudyNoteDocPage() {
           </button>
         </div>
       </Modal>
+    </div>
     </div>
   )
 }

@@ -19,6 +19,8 @@ export type LlmFeature =
   | 'company_research'
   | 'coverletter_chat'
   | 'jobposting_parse'
+  // 노트 AI 패널 (2026-08-19) — 공부 노트·준비 노트 본문 선택 변환 / 무선택 생성
+  | 'note_ai_action'
 
 /** GET /me/ai-quotas 응답 row */
 export interface MyAiQuotaRow {
