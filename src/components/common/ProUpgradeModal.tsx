@@ -12,6 +12,7 @@ const QUOTA_FEATURES: { feature: LlmFeature; label: string }[] = [
   { feature: 'coverletter_chat', label: '자소서 AI 채팅' },
   { feature: 'coverletter_feedback', label: 'AI 심층 점검' },
   { feature: 'note_summary', label: '활동 노트 AI 요약' },
+  { feature: 'note_ai_action', label: '노트 AI 편집' },
 ]
 
 /** 사용량 색: 소진 → danger, 임박(80%+) → warning, 그 외 기본 */

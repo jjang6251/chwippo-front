@@ -19,6 +19,14 @@ interface Props {
    * (렌더물은 없다 — 손잡이만 받는다).
    */
   editorRef?: RefObject<Editor | null>
+  /**
+   * 같은 `header` 통로의 **알림판**. `editorRef` 는 조용히 채워지기만 해서, 인스턴스가
+   * 생겼다는 걸 바깥이 알 방법이 없다 — 노트 AI 패널·버블 메뉴는 editor 를 **렌더 입력**으로
+   * 쓰므로 알림이 필요하다. 렌더 중 호출되니 받는 쪽은 다음 틱에 반영할 것.
+   */
+  onEditorReady?: (editor: Editor) => void
+  /** 지정 시 툴바 맨 앞 AI 버튼 (모바일의 유일한 진입점) */
+  onAiOpen?: () => void
 }
 
 /**
@@ -32,6 +40,8 @@ export function StepNoteEditor({
   onSave,
   onTextChange,
   editorRef,
+  onEditorReady,
+  onAiOpen,
 }: Props) {
   return (
     // card-solid 승격 — 준비 체크리스트 카드와 동급 시인성.
@@ -48,10 +58,12 @@ export function StepNoteEditor({
         minHeightClass="min-h-[360px]"
         template={getDefaultTemplate(stepName)}
         onTextChange={onTextChange}
+        onAiOpen={onAiOpen}
         header={
-          editorRef
+          editorRef || onEditorReady
             ? (editor) => {
-                editorRef.current = editor
+                if (editorRef) editorRef.current = editor
+                onEditorReady?.(editor)
                 return null
               }
             : undefined

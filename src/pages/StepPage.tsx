@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { Editor } from '@tiptap/react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { useDemoMode } from '@/contexts/demoMode'
@@ -9,6 +10,9 @@ import { useApplication, useUpdateApplication, useUpdateCurrentStep } from '@/ho
 import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { useChecklist, useCreateChecklistItem, useUpdateChecklistItem, useDeleteChecklistItem, useUpdateStep } from '@/hooks/useStepDetail'
 import { SheetedNoteEditor } from '@/components/editor/SheetedNoteEditor'
+import { AiNoteBubbleMenu } from '@/components/ai-note/AiNoteBubbleMenu'
+import { AiNotePanel } from '@/components/ai-note/AiNotePanel'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { Modal } from '@/components/common/Modal'
 import { GoToInterviewButton } from '@/components/card/GoToInterviewButton'
 import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTemplates'
@@ -53,6 +57,26 @@ export function StepPage() {
   const [liveNoteText, setLiveNoteText] = useState<string | null>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
   const locationInputRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * 노트 AI 패널 — 준비 노트에도 1차부터 붙는다 (plan D2).
+   *
+   * 🔴 **활성 시트의 에디터**를 잡는다. 시트를 바꾸면 tiptap 이 remount 되므로 손잡이가
+   * 갈아 끼워져야 한다 — 안 그러면 패널이 이미 사라진 인스턴스에 결과를 넣으려 한다.
+   * 렌더 중에 알림이 오므로(`header` 슬롯) 다음 틱에 반영한다 (공부 노트와 같은 관례).
+   *
+   * 면접 질문 다리(`onActiveTextChange`)와는 서로 모른다 — 같은 에디터를 각자 다른
+   * 통로로 볼 뿐이라 간섭이 없다.
+   */
+  const [aiOpen, setAiOpen] = useState(false)
+  const [noteEditor, setNoteEditor] = useState<Editor | null>(null)
+  const noteEditorRef = useRef<Editor | null>(null)
+  const aiEnabled = useAiEnabled()
+  const handleEditorReady = useCallback((ed: Editor) => {
+    if (noteEditorRef.current === ed) return
+    noteEditorRef.current = ed
+    queueMicrotask(() => setNoteEditor(ed))
+  }, [])
 
   /**
    * 공부 노트 허브에서 `#prep-notes` 로 들어온 딥링크의 착지 처리.
@@ -200,6 +224,8 @@ export function StepPage() {
   const hasNoteText = noteText.trim().length > 0
 
   return (
+    // 패널 열림 시 본문 밀어내기 — 공부 노트와 동일 (fixed 패널이 본문을 덮지 않게)
+    <div className={`transition-[padding] duration-200 ${aiOpen ? 'lg:pr-[380px]' : ''}`}>
     <div className="w-full mx-auto px-[18px] pt-6 pb-[160px] lg:max-w-[1100px] lg:px-9 lg:py-9 lg:pb-28">
       {/* 뒤로가기 */}
       <div className="pt-6 pb-4">
@@ -501,8 +527,24 @@ export function StepPage() {
           stepName={step.name}
           fallbackContent={initialNotes}
           onActiveTextChange={isInterviewStep ? setLiveNoteText : undefined}
+          onEditorReady={aiEnabled ? handleEditorReady : undefined}
+          onAiOpen={aiEnabled ? () => setAiOpen(true) : undefined}
         />
+        {/* 드래그 → 「AI」 (데스크탑). 모바일은 툴바 버튼이 같은 자리를 대신한다 */}
+        {aiEnabled && noteEditor && (
+          <AiNoteBubbleMenu editor={noteEditor} onOpen={() => setAiOpen(true)} />
+        )}
       </div>
+
+      {/* 🔴 닫아도 언마운트하지 않는다 — 히스토리가 `open` 보다 위에 있어야 유지된다 */}
+      {appId && stepId && (
+        <AiNotePanel
+          editor={noteEditor}
+          resource={{ type: 'application_step', appId, stepId }}
+          open={aiOpen}
+          onClose={() => setAiOpen(false)}
+        />
+      )}
 
       {isCurrentStep && (
         <StepCompleteCta
@@ -533,6 +575,7 @@ export function StepPage() {
           </button>
         </div>
       </Modal>
+    </div>
     </div>
   )
 }

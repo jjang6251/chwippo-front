@@ -19,6 +19,7 @@ export const FEATURE_LABEL_KR: Record<string, string> = {
   interview_prep_answer: '면접 예상 답변',
   company_research: '회사 조사',
   jobposting_parse: '공고 요건 정리',
+  note_ai_action: '노트 AI 편집',
   // legacy / deprecated
   coverletter: '자소서 (legacy)',
   interview: '면접 (legacy)',
@@ -118,6 +119,7 @@ export const FEATURE_CATEGORY_KR: Record<string, string> = {
   interview_prep_answer: '면접',
   company_research: '회사 조사',
   note_summary: '노트',
+  note_ai_action: '노트',
 }
 
 /** 카테고리 표시 순서 — 미분류(legacy 등)는 '기타' 로 맨 뒤 */
