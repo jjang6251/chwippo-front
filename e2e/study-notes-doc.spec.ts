@@ -396,13 +396,15 @@ test('목차 세부 동작 — h1 포함 · 클릭 시 sticky 헤더에 안 가�
   await items.last().click()
   await expect(items.last()).toHaveClass(/text-brand/)
 
-  // ②'' 목차 자신도 헤더 아래에 온전히 붙어 따라온다 — top-6(24px) 시절엔
-  //     헤더(48px) 밑으로 미끄러져 상단이 잘렸다 (2026-08-18 실기)
-  const navTop = await page
+  // ②'' 목차 레일도 헤더 아래에 온전히 붙어 따라온다 — top-6(24px) 시절엔
+  //     헤더(48px) 밑으로 미끄러져 상단이 잘렸다 (2026-08-18 실기).
+  //     2026-08-19 레일 개편: sticky 는 래퍼로 옮겨갔고 nav 위에 AI 버튼이 앉는다 —
+  //     "따라옴" 판정은 sticky 래퍼 기준 (nav 는 버튼 높이만큼 아래가 정상)
+  const railTop = await page
     .locator('nav[aria-label="목차"]')
-    .evaluate((el) => Math.round(el.getBoundingClientRect().top))
-  expect(navTop).toBeGreaterThanOrEqual(48)
-  expect(navTop).toBeLessThanOrEqual(90)
+    .evaluate((el) => Math.round(el.closest('.sticky')!.getBoundingClientRect().top))
+  expect(railTop).toBeGreaterThanOrEqual(48)
+  expect(railTop).toBeLessThanOrEqual(90)
 
   // ③ 맨 위로 스크롤 → 첫 항목이 활성으로 돌아온다 (스크롤 추적)
   await page.evaluate(() => window.scrollTo(0, 0))

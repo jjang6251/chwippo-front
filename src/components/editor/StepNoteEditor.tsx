@@ -19,6 +19,14 @@ interface Props {
    * (렌더물은 없다 — 손잡이만 받는다).
    */
   editorRef?: RefObject<Editor | null>
+  /**
+   * 같은 `header` 통로의 **알림판**. `editorRef` 는 조용히 채워지기만 해서, 인스턴스가
+   * 생겼다는 걸 바깥이 알 방법이 없다 — 노트 AI 패널·버블 메뉴는 editor 를 **렌더 입력**으로
+   * 쓰므로 알림이 필요하다. 렌더 중 호출되니 받는 쪽은 다음 틱에 반영할 것.
+   */
+  onEditorReady?: (editor: Editor) => void
+  /** 지정 시 툴바 맨 앞 AI 버튼 (모바일의 유일한 진입점) */
+  onAiOpen?: () => void
 }
 
 /**
@@ -32,21 +40,30 @@ export function StepNoteEditor({
   onSave,
   onTextChange,
   editorRef,
+  onEditorReady,
+  onAiOpen,
 }: Props) {
   return (
-    // card-solid 승격 — 준비 체크리스트 카드와 동급 시인성
-    <div className="border border-line-strong bg-card-solid shadow-sm rounded-xl overflow-hidden">
+    // card-solid 승격 — 준비 체크리스트 카드와 동급 시인성.
+    // 🔴 overflow-clip (hidden 금지): hidden 은 이 카드를 스크롤 컨테이너로 만들어 안의
+    // sticky 툴바를 조용히 죽인다 — "툴바가 안 따라온다" 실사고 (2026-08-19 CEO 실기).
+    // clip 은 모서리만 자르고 스크롤 컨테이너를 안 만든다. iOS 15.x 는 clip 미지원이라
+    // 모서리 클립이 빠지지만, 툴바 배경이 카드와 같은 색이라 티가 안 난다.
+    <div className="border border-line-strong bg-card-solid shadow-sm rounded-xl overflow-clip">
       <RichTextEditor
         initialContent={initialContent}
+        stickyToolbar="card"
         onSave={onSave}
         placeholder="이 단계에서 준비한 것들을 자유롭게 기록해 보세요..."
         minHeightClass="min-h-[360px]"
         template={getDefaultTemplate(stepName)}
         onTextChange={onTextChange}
+        onAiOpen={onAiOpen}
         header={
-          editorRef
+          editorRef || onEditorReady
             ? (editor) => {
-                editorRef.current = editor
+                if (editorRef) editorRef.current = editor
+                onEditorReady?.(editor)
                 return null
               }
             : undefined

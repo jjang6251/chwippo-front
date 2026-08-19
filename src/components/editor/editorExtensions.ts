@@ -29,6 +29,7 @@ import { Markdown } from 'tiptap-markdown'
 import type { MarkdownSerializerState } from 'prosemirror-markdown'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { StudyNoteMention, type StudyNoteMentionOptions } from './StudyNoteMention'
+import { AiTargetHighlight } from './aiTargetHighlight'
 
 /**
  * study-notes Phase 2a — **공용** 에디터 확장 세트.
@@ -407,6 +408,9 @@ export function buildEditorExtensions({
         ]
       : []),
     ...(characterLimit ? [CharacterCount.configure({ limit: characterLimit })] : []),
+    // 노트 AI 패널이 「지금 보고 있는 대상」을 본문에 표시한다. 데코레이션뿐이라 문서·저장
+    // 형식을 건드리지 않고, 명령을 안 부르면 아무것도 안 그린다 — 항상 켜 둬도 무해하다
+    AiTargetHighlight,
   ]
 }
 

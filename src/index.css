@@ -501,6 +501,20 @@ input[type='time']::-webkit-calendar-picker-indicator {
   box-shadow: 0 0 0 1px rgb(var(--violet));
 }
 
+/* AI 패널 대상 하이라이트 (note-ai-panel) — 선택을 최상위 블록으로 확장한 범위 표시.
+   ProseMirror **데코레이션 전용**이라 문서에는 아무것도 안 남는다(자동 저장 미발화) —
+   그래서 `mark` 가 아니라 클래스 하나만 받는다: `aiTargetHighlight.ts`.
+   형광펜과 같은 이유로 두 벌 — 다크 값을 라이트에 그대로 얹으면 회색으로 죽는다.
+   기본(선택자 없는 쪽)이 다크다: `data-theme` 미지정 fallback 이 다크라서.
+   알파는 tailwind theme.opacity 에 있는 값만 쓴다 (/14 · /18). */
+.chw-prose .chw-ai-target {
+  background: rgb(var(--brand) / 0.14);
+  border-radius: 3px;
+}
+:root[data-theme='light'] .chw-prose .chw-ai-target {
+  background: rgb(var(--brand) / 0.18);
+}
+
 /* 링크·인용·인라인 코드 — Link 가 공용으로 올라오면서 스타일이 필요해졌다
    (지금까지는 브라우저 기본 파랑 밑줄이 다크 배경에 그대로 나왔다) */
 .chw-prose a {

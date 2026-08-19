@@ -29,6 +29,29 @@ interface Props {
   hasMention?: boolean
   /** 지정 시 「내보내기」 버튼 노출 (md 내보내기는 공부 노트 전용 — plan §2) */
   onExportMarkdown?: () => void
+  /**
+   * 지정 시 1군 **맨 앞**에 AI 버튼 노출 — 노트 AI 패널을 여는 손잡이.
+   *
+   * 모바일에는 드래그 팝오버(BubbleMenu)를 두지 않으므로 **이 버튼이 유일한 진입점**이다.
+   * 미지정이면 버튼 자체가 없다 (AI 비활성·읽기 모드·AI 미지원 소비처).
+   */
+  onAiOpen?: () => void
+  /**
+   * 상단 고정 — 긴 문서를 내려가며 쓸 때 툴바가 따라온다. 배경이 문맥마다 달라 변형이 둘:
+   *   'page' = 페이지 바닥(bg) 위 풀페이지 문서 (공부 노트)
+   *   'card' = card-solid 카드 안 에디터 (준비 노트 — bg/95 를 쓰면 카드 속 이색 띠가 된다.
+   *            card-solid 는 통값 토큰이라 알파 부착이 no-op — 불투명 그대로 쓴다)
+   * 🔴 조상에 overflow-visible 아닌 요소가 있으면 sticky 는 조용히 죽는다 — 카드 래퍼는
+   * overflow-clip(스크롤 컨테이너를 안 만든다) 로. hidden 이 원인이던 실사고: 2026-08-19.
+   * 미지정 = 비고정 (활동 노트 등 기존 배치 유지).
+   */
+  sticky?: 'page' | 'card'
+  /**
+   * AI 버튼을 모바일(<lg)에서만 노출. 공부 노트는 데스크탑 진입이 목차 레일 버튼 + 드래그
+   * 버블이라 툴바 ✦ 가 중복이다 (2026-08-19 CEO 실기 — "툴바에서 빼서 목차 공간에").
+   * 레일이 없는 스텝 페이지는 미지정 = 전 폭 노출.
+   */
+  aiEntryMobileOnly?: boolean
 }
 
 interface ToolBtn {
@@ -40,6 +63,8 @@ interface ToolBtn {
   render: () => React.ReactNode
   action: () => void
   active?: () => boolean
+  /** 추가 클래스 (반응형 노출 제어용 — AI 버튼의 lg:hidden) */
+  className?: string
 }
 
 const ICON = 'mx-auto'
@@ -114,7 +139,14 @@ function promptLink(editor: Editor) {
   }
 }
 
-export function EditorToolbar({ editor, hasMention, onExportMarkdown }: Props) {
+export function EditorToolbar({
+  editor,
+  hasMention,
+  onExportMarkdown,
+  sticky,
+  onAiOpen,
+  aiEntryMobileOnly,
+}: Props) {
   const [tip, setTip] = useState<{ key: string; left: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
 
@@ -135,6 +167,19 @@ export function EditorToolbar({ editor, hasMention, onExportMarkdown }: Props) {
 
   // ── 1군: 모바일 첫 화면 (사용 빈도 높은 순) ──
   const primary: ToolBtn[] = [
+    // 맨 앞자리 — 선택한 부분을 다듬는 동선이 서식보다 먼저 손에 닿아야 한다
+    ...(onAiOpen
+      ? [
+          {
+            key: 'ai',
+            title: 'AI 도움',
+            desc: '선택한 부분을 다듬거나 새로 만들어요',
+            render: () => <span className="text-brand">✦</span>,
+            action: onAiOpen,
+            className: aiEntryMobileOnly ? 'lg:hidden' : undefined,
+          },
+        ]
+      : []),
     {
       key: 'bold',
       title: '굵게',
@@ -332,7 +377,14 @@ export function EditorToolbar({ editor, hasMention, onExportMarkdown }: Props) {
     */
     <div
       ref={wrapRef}
-      className="sticky top-12 z-20 bg-bg/95 backdrop-blur-sm border-b border-line py-1.5"
+      /* sticky 도 positioned 라 툴팁 absolute 앵커 유지 — 비고정일 땐 relative 가 그 역할 */
+      className={`${
+        sticky === 'page'
+          ? 'sticky top-12 z-20 bg-bg/95 backdrop-blur-sm'
+          : sticky === 'card'
+            ? 'sticky top-12 z-20 bg-card-solid'
+            : 'relative'
+      } border-b border-line py-1.5`}
     >
       {/* 🔴 py-1.5 -my-1.5 = 세로 스크롤 방지 (JobSiteChips 회귀 패턴).
           바깥 래퍼가 실제 여백을 주고, 스크롤 컨테이너 안쪽 6px 은 focus ring 을 품는 슬랙이다 */}
@@ -367,7 +419,7 @@ export function EditorToolbar({ editor, hasMention, onExportMarkdown }: Props) {
                     t.active?.()
                       ? 'bg-brand/12 text-brand'
                       : 'text-text-quaternary hover:bg-card active:bg-card-strong hover:text-text-secondary'
-                  }`}
+                  } ${t.className ?? ''}`}
                 >
                   {t.render()}
                 </button>

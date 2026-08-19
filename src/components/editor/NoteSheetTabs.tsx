@@ -164,9 +164,12 @@ export function NoteSheetTabs({
 
   return (
     <div
-      /* 탭 줄이 넘치면 가로로 흐른다 (400px 분할 열·모바일). 뒤 페이지로 스크롤이 새지 않게 contain */
-      /* 탭 줄이 넘치면 가로로 흐른다 (400px 분할 열·모바일). 뒤 페이지로 스크롤이 새지 않게 contain */
-      className="flex items-stretch gap-1 px-2 overflow-x-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      /* 탭 줄이 넘치면 가로로 흐른다 (400px 분할 열·모바일). 뒤 페이지로 스크롤이 새지 않게 contain 은 가로축만 —
+         세로까지 contain 하면 탭 줄 위에서 페이지 휠이 통째로 먹힌다 (2026-08-19 실측: scrollY 무반응) */
+      /* 🔴 pb-px -mb-px: 탭들의 -mb-px(카드 윗선 1px 겹침)가 스크롤 컨테이너 밖으로 삐져나와
+         세로 1px 스크롤 여지를 만든다 — 패딩으로 상자 안에 품고, 컨테이너가 대신 1px 내려앉아 겹침 유지
+         (툴바의 py-1.5 -my-1.5 와 같은 처방) */
+      className="flex items-stretch gap-1 px-2 pb-px -mb-px overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div
         role="tablist"

@@ -58,6 +58,13 @@ interface Props {
    * 「이 내용으로 면접 질문 만들기」 다리가 쓴다 — **활성 시트만** 넘긴다(CEO 결정).
    */
   onActiveTextChange?: (plainText: string) => void
+  /**
+   * 활성 시트의 tiptap 인스턴스를 바깥으로 알린다 — 노트 AI 패널·버블 메뉴가 쓴다.
+   * 시트 전환마다 에디터가 remount 되므로 **다시 불린다** (받는 쪽이 갈아 끼워야 한다).
+   */
+  onEditorReady?: (editor: Editor) => void
+  /** 지정 시 툴바 맨 앞 AI 버튼 (모바일의 유일한 진입점) */
+  onAiOpen?: () => void
 }
 
 interface TabModel {
@@ -72,6 +79,8 @@ export function SheetedNoteEditor({
   stepName,
   fallbackContent,
   onActiveTextChange,
+  onEditorReady,
+  onAiOpen,
 }: Props) {
   const { data: sheets = [], isLoading } = useNoteSheets(appId, stepId)
   const create = useCreateNoteSheet(appId, stepId)
@@ -292,6 +301,8 @@ export function SheetedNoteEditor({
           onSave={handleSave}
           onTextChange={handleTextChange}
           editorRef={editorRef}
+          onEditorReady={onEditorReady}
+          onAiOpen={onAiOpen}
         />
       </div>
 
