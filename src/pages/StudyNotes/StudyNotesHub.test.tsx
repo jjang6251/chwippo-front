@@ -22,6 +22,8 @@
  *   노트 15  ⋯ → 폴더 이동 (folderId PATCH)
  *        16  ⋯ → 삭제 = ConfirmModal (영구 삭제 명시) → 삭제 호출
  *   생성 17  「새 노트」 → 즉시 생성 후 문서로 이동
+ *   키보드 20~22 ⋯ 메뉴 ↓↑ 순환·Home/End·ESC 후 트리거 복귀 (세 메뉴 **공용 계약**)
+ *              🔴 항목 수가 가변(폴더 2 · 노트 2+N)이라 두 크기로 잰다
  *   빈   18  노트·폴더 0 → 템플릿 카드 **7종** + 「빈 문서로 시작」 (2026-08-18 확장)
  *        19  템플릿 카드 = 그 템플릿 본문으로 생성
  */
@@ -34,6 +36,7 @@ import * as api from '@/api/studyNotes'
 import type { StorageUsage } from '@/api/myinfo'
 import { STUDY_NOTE_TEMPLATES } from '@/data/studyNoteTemplates'
 import { useStorageUsage } from '@/hooks/useStorageUsage'
+import { assertMenuKeyboardContract } from '@/test/menuKeyboardContract'
 import { StudyNotesHub } from './StudyNotesHub'
 
 /** 템플릿 제목에 정규식 메타문자(`·` 는 아니지만 `.` 등)가 섞여도 안전하게 */
@@ -407,6 +410,65 @@ describe('허브 — 노트 관리·생성', () => {
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/study-notes/new-1'))
     expect(mocked.createStudyNote).toHaveBeenCalledWith({})
+  })
+})
+
+/**
+ * ⋯ 메뉴 키보드 탐색 — `role="menu"` 를 선언한 이상 화살표 이동이 표준 기대다.
+ *
+ * 🔴 허브 ⋯ 는 **항목 수가 고정이 아니다** — 폴더 메뉴는 2개, 노트 메뉴는 「폴더 이동」
+ * 목록이 폴더 수만큼 늘어난다(미분류 + 폴더 N + 삭제). 열 때 목록을 담아두면 순환이
+ * 어긋나므로 `useMenuKeyboard` 는 매번 다시 질의한다 — 그걸 여기서 두 크기로 잰다.
+ *
+ * 계약 본문은 `src/test/menuKeyboardContract.ts` 한 벌 — 툴바 「내보내기」·노트 메뉴 spec 도
+ * **같은 함수**를 부른다. 세 메뉴가 정말 같은 동작인지의 증거가 그것이다.
+ *
+ *  20  폴더 ⋯ (항목 2개) 계약 전부
+ *  21  노트 ⋯ (항목 4개 = 미분류 + 폴더 2 + 삭제) 계약 전부 — 순환이 항목 수를 따라간다
+ *  22  마우스로 열면 첫 항목에 포커스를 주지 않는다
+ */
+describe('허브 — ⋯ 메뉴 키보드 탐색', () => {
+  const harnessFor = (name: string) => {
+    const trigger = () => screen.getByRole('button', { name })
+    return {
+      trigger,
+      openByMouse: () => fireEvent.click(trigger(), { detail: 1 }),
+      openByKeyboard: () => fireEvent.click(trigger(), { detail: 0 }),
+    }
+  }
+
+  it('20 폴더 ⋯ — 항목 2개로 계약 전부 통과', async () => {
+    await renderLoaded()
+    const h = harnessFor("'CS 기초' 폴더 메뉴")
+    h.openByMouse()
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      '이름 바꾸기',
+      '삭제',
+    ])
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    assertMenuKeyboardContract(h)
+  })
+
+  it('21 노트 ⋯ — 항목 4개(폴더 수만큼 늘어난 목록)로도 순환이 맞는다', async () => {
+    await renderLoaded()
+    const h = harnessFor("'운영체제 정리' 노트 메뉴")
+    h.openByMouse()
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      '미분류',
+      '📁 CS 기초',
+      '📁 알고리즘',
+      '삭제',
+    ])
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    assertMenuKeyboardContract(h)
+  })
+
+  it('22 마우스로 열면 첫 항목에 포커스를 주지 않는다', async () => {
+    await renderLoaded()
+    harnessFor("'CS 기초' 폴더 메뉴").openByMouse()
+    expect(screen.getAllByRole('menuitem')).not.toContain(document.activeElement)
   })
 })
 

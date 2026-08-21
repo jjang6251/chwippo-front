@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
+import { useMenuKeyboard } from '@/hooks/useMenuKeyboard'
 import {
   HIGHLIGHT_COLORS,
   DEFAULT_TABLE,
@@ -30,6 +31,14 @@ interface Props {
   /** 지정 시 「내보내기」 버튼 노출 (md 내보내기는 공부 노트 전용 — plan §2) */
   onExportMarkdown?: () => void
   /**
+   * 지정 시 「내보내기」가 **형식 선택 메뉴**가 된다 (마크다운 / PDF).
+   *
+   * 미지정이면 버튼은 예전 그대로 — 누르면 곧장 마크다운이다. 형식이 하나뿐인데 메뉴를
+   * 열면 **선택 없는 한 번 더 누르기**라서, 항목이 1개로 줄어드는 경우(앱 웹뷰·PDF 를
+   * 안 주는 소비처)는 메뉴 자체를 만들지 않는다.
+   */
+  onExportPdf?: () => void
+  /**
    * 지정 시 📷 버튼 노출 — 파일 선택창을 여는 손잡이. 업로드 자체는 소비 측이 한다.
    * 붙여넣기·드롭이 같은 일을 하지만 **눌러서 넣는 길**이 없으면 기능이 있는 줄 모른다.
    */
@@ -59,6 +68,15 @@ interface Props {
   aiEntryMobileOnly?: boolean
 }
 
+/** 드롭다운 항목 — 지금은 「내보내기」의 형식 선택만 쓴다 */
+interface MenuItem {
+  key: string
+  label: string
+  /** 항목 아래 한 줄 — 툴팁 desc 와 같은 자리·같은 값(무엇이 열화되는지)을 여기로 옮겼다 */
+  desc: string
+  action: () => void
+}
+
 interface ToolBtn {
   key: string
   /** 툴팁 제목 */
@@ -66,13 +84,37 @@ interface ToolBtn {
   /** 툴팁 한 줄 설명 */
   desc?: string
   render: () => React.ReactNode
-  action: () => void
+  /** 누르면 곧장 실행. `menu` 가 있으면 대신 메뉴가 열리므로 그때는 비어 있다 */
+  action?: () => void
+  /** 지정 시 버튼이 **메뉴 트리거**가 된다 — 실행은 항목이 한다 */
+  menu?: MenuItem[]
   active?: () => boolean
   /** 추가 클래스 (반응형 노출 제어용 — AI 버튼의 lg:hidden) */
   className?: string
 }
 
 const ICON = 'mx-auto'
+
+/**
+ * 드롭다운 폭 = DocMenu 의 `w-48`(192px)과 같은 값.
+ *
+ * 클래스가 아니라 숫자로 두는 이유: 툴바의 마지막 버튼이라 좌표를 화면 안으로 **잘라내야**
+ * 하는데, 그 계산에 폭이 필요하다. 두 곳에 192 와 w-48 을 나눠 적으면 갈라진다.
+ */
+const MENU_W = 192
+
+/**
+ * 트리거 버튼 아래에 놓을 x (툴바 기준).
+ *
+ * 버튼 중앙 정렬을 원칙으로 두되 좌우 8px 안쪽으로 가둔다 — 「내보내기」는 툴바의 **마지막**
+ * 버튼이라 그냥 중앙에 두면 좁은 화면에서 오른쪽이 화면 밖으로 나간다.
+ */
+function menuLeftOf(el: HTMLElement, wrap: HTMLElement): number {
+  const b = el.getBoundingClientRect()
+  const w = wrap.getBoundingClientRect()
+  const centered = b.left - w.left + b.width / 2 - MENU_W / 2
+  return Math.max(8, Math.min(centered, w.width - MENU_W - 8))
+}
 
 function Icon({ d, fill }: { d: string; fill?: boolean }) {
   return (
@@ -148,13 +190,46 @@ export function EditorToolbar({
   editor,
   hasMention,
   onExportMarkdown,
+  onExportPdf,
   onInsertImage,
   sticky,
   onAiOpen,
   aiEntryMobileOnly,
 }: Props) {
   const [tip, setTip] = useState<{ key: string; left: number } | null>(null)
+  const [menu, setMenu] = useState<{ key: string; left: number } | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
+  const menuBoxRef = useRef<HTMLDivElement | null>(null)
+  const menuTriggerRef = useRef<HTMLElement | null>(null)
+
+  /**
+   * 바깥 클릭으로 닫기 — DocMenu(StudyNoteDocPage)와 같은 구현.
+   *
+   * 🔴 판정 기준은 **툴바 전체**(wrapRef)지 메뉴 상자가 아니다. 트리거가 `mousedown` 에서
+   * 열기 때문에, 메뉴 상자만 기준으로 잡으면 **여는 그 클릭이 곧바로 바깥 클릭으로 잡혀**
+   * 열자마자 닫힌다 (React 가 이 리스너를 등록한 뒤에도 같은 mousedown 이 document 까지
+   * 계속 올라온다 — jsdom 에서는 안 나고 실브라우저에서만 났다: 2026-08-21).
+   * 툴바 안 다른 버튼을 눌렀을 때 닫는 일은 `press` 가 따로 한다.
+   *
+   * ESC 와 화살표 이동은 `useMenuKeyboard` 가 진다 (세 메뉴 공용 — 주인은 한 곳뿐이다).
+   */
+  useEffect(() => {
+    if (!menu) return
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as globalThis.Node)) setMenu(null)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+    }
+  }, [menu])
+
+  const { markOpenedByKeyboard } = useMenuKeyboard({
+    open: menu !== null,
+    menuRef: menuBoxRef,
+    triggerRef: menuTriggerRef,
+    onClose: () => setMenu(null),
+  })
 
   /**
    * 🔴 `transaction` 을 직접 구독한다 — 부모의 `onUpdate` 재렌더만 믿으면 **커서만 움직인
@@ -279,6 +354,27 @@ export function EditorToolbar({
       ]
     : []
 
+  /**
+   * 「내보내기」 형식 — **둘 다 있을 때만** 메뉴가 된다.
+   *
+   * 앱(WebView)에서는 소비 측이 `onExportPdf` 를 안 넘긴다(WKWebView 는 `window.print()` 가
+   * 무동작 — DocMenu 의 `onPrint` 와 같은 근거·같은 조건). 그러면 남는 형식이 마크다운
+   * 하나뿐이라 메뉴 없이 예전처럼 곧장 실행한다. PDF 를 아예 안 쓰는 소비처(준비·활동·
+   * 회사 메모 노트)도 같은 이유로 무변경이다.
+   */
+  const exportMenu: MenuItem[] | undefined =
+    onExportMarkdown && onExportPdf
+      ? [
+          {
+            key: 'md',
+            label: '마크다운(.md)',
+            desc: '토글·형광펜은 열화돼요',
+            action: onExportMarkdown,
+          },
+          { key: 'pdf', label: 'PDF로 저장', desc: '인쇄 창에서 저장해요', action: onExportPdf },
+        ]
+      : undefined
+
   // ── 2군: 스크롤 뒤 ──
   const secondary: ToolBtn[] = [
     {
@@ -363,10 +459,14 @@ export function EditorToolbar({
       ? [
           {
             key: 'export',
-            title: '마크다운 내보내기',
-            desc: '토글·형광펜은 열화돼요',
+            // 형식이 둘이면 「내보내기」(고르는 손잡이), 하나면 예전 이름 그대로다
+            title: exportMenu ? '내보내기' : '마크다운 내보내기',
+            // 🔴 「토글·형광펜은 열화돼요」는 **마크다운 전용** 경고라, 형식을 고르게 된
+            //    순간부터 버튼이 아니라 md 항목에 붙는다 (아래 exportMenu)
+            desc: exportMenu ? '마크다운·PDF 중에 골라요' : '토글·형광펜은 열화돼요',
             render: () => <Icon d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />,
-            action: onExportMarkdown,
+            action: exportMenu ? undefined : onExportMarkdown,
+            menu: exportMenu,
           },
         ]
       : []),
@@ -384,7 +484,48 @@ export function EditorToolbar({
     setTip({ key, left: b.left - w.left + b.width / 2 })
   }
 
+  function toggleMenu(key: string, el: HTMLElement) {
+    const wrap = wrapRef.current
+    if (menu?.key === key || !wrap) {
+      setMenu(null)
+      return
+    }
+    setMenu({ key, left: menuLeftOf(el, wrap) })
+  }
+
+  /**
+   * 툴바를 밀면 메뉴도 따라간다.
+   *
+   * 🔴 **닫지 않는다** — 「내보내기」는 툴바 맨 끝이라 모바일에서는 먼저 밀어야 닿는데,
+   * 관성 스크롤이 탭 직후까지 이어져 `scroll` 이 늦게 도착한다. 닫는 구현은 열자마자
+   * 닫히는 버튼이 된다 (2026-08-21 Playwright 에서 실제로 재현됐다).
+   */
+  function reanchorMenu() {
+    const wrap = wrapRef.current
+    if (!menu || !wrap) return
+    const el = wrap.querySelector<HTMLElement>(`[data-tool="${menu.key}"]`)
+    if (!el) return
+    const left = menuLeftOf(el, wrap)
+    if (left !== menu.left) setMenu({ key: menu.key, left })
+  }
+
+  /**
+   * 버튼 하나 누름 — 메뉴 트리거는 열고, 나머지는 열려 있던 메뉴를 닫고 실행한다.
+   *
+   * `viaKeyboard` 는 첫 항목 자동 포커스 여부를 가른다 (`useMenuKeyboard` 주석 참고).
+   */
+  function press(t: ToolBtn, el: HTMLElement, viaKeyboard: boolean) {
+    if (t.menu) {
+      markOpenedByKeyboard(viaKeyboard)
+      toggleMenu(t.key, el)
+      return
+    }
+    setMenu(null)
+    t.action?.()
+  }
+
   const tipBtn = tip ? groups.flat().find((t) => t.key === tip.key) : null
+  const menuBtn = menu ? groups.flat().find((t) => t.key === menu.key) : null
 
   return (
     /*
@@ -396,17 +537,18 @@ export function EditorToolbar({
     <div
       ref={wrapRef}
       /* sticky 도 positioned 라 툴팁 absolute 앵커 유지 — 비고정일 땐 relative 가 그 역할 */
+      /* print:hidden — 종이에 서식 도구가 찍힐 이유가 없다 (공부 노트 PDF 저장) */
       className={`${
         sticky === 'page'
           ? 'sticky top-12 z-20 bg-bg/95 backdrop-blur-sm'
           : sticky === 'card'
             ? 'sticky top-12 z-20 bg-card-solid'
             : 'relative'
-      } border-b border-line py-1.5`}
+      } border-b border-line py-1.5 print:hidden`}
     >
       {/* 🔴 py-1.5 -my-1.5 = 세로 스크롤 방지 (JobSiteChips 회귀 패턴).
           바깥 래퍼가 실제 여백을 주고, 스크롤 컨테이너 안쪽 6px 은 focus ring 을 품는 슬랙이다 */}
-      <div className="overflow-x-auto px-2 py-1.5 -my-1.5">
+      <div className="overflow-x-auto px-2 py-1.5 -my-1.5" onScroll={reanchorMenu}>
         <div className="flex items-center gap-0.5 w-max">
           {groups.map((group, gi) => (
             <div key={gi} className="flex items-center gap-0.5">
@@ -416,18 +558,28 @@ export function EditorToolbar({
                   key={t.key}
                   type="button"
                   data-tool={t.key}
+                  /* 메뉴 트리거만 기억한다 — 메뉴가 닫힐 때 포커스가 돌아올 자리 */
+                  ref={
+                    t.menu
+                      ? (el) => {
+                          menuTriggerRef.current = el
+                        }
+                      : undefined
+                  }
                   aria-label={t.title}
                   aria-pressed={t.active ? t.active() : undefined}
+                  aria-haspopup={t.menu ? 'menu' : undefined}
+                  aria-expanded={t.menu ? menu?.key === t.key : undefined}
                   // mousedown 의 기본 동작(포커스 이동)을 막아야 ProseMirror selection 이 살아
                   // 있고, 그래야 선택 영역 기반 명령(형광펜·링크)이 동작한다
                   onMouseDown={(e) => {
                     e.preventDefault()
-                    t.action()
+                    press(t, e.currentTarget, false)
                   }}
                   // 🔴 키보드(Enter·Space)는 mousedown 을 안 낸다 — 이것 없으면 툴바 전체가
                   //    키보드로 못 쓰는 버튼이 된다. detail===0 = 키보드로 발생한 click
                   onClick={(e) => {
-                    if (e.detail === 0) t.action()
+                    if (e.detail === 0) press(t, e.currentTarget, true)
                   }}
                   onMouseEnter={(e) => showTip(t.key, e.currentTarget)}
                   onMouseLeave={() => setTip(null)}
@@ -446,6 +598,48 @@ export function EditorToolbar({
           ))}
         </div>
       </div>
+
+      {/*
+        「내보내기」 형식 선택 — 🔴 **스크롤 행 밖**이라 잘리지 않는다 (툴팁과 같은 기법:
+        wrapRef 직계 자식 + 계산된 left 로 앵커). 안에 두면 overflow-x-auto 가 세로도 auto 로
+        만들어 통째로 잘린다(파일 상단 주석).
+
+        툴팁과 달리 `hidden lg:block`·`pointer-events-none` 은 **쓰지 않는다** — 모바일에서도
+        보이고 눌려야 하는 진짜 손잡이다.
+
+        생김새는 문서 메뉴(StudyNoteDocPage 의 DocMenu)와 같은 값으로 맞췄다. 트리거와
+        앵커 방식이 서로 달라(⋯ 버튼 + relative 부모 ↔ 스크롤 행 안 버튼 + 좌표 계산)
+        공용 컴포넌트로 뽑아도 남는 공유분이 클래스 두 줄뿐이라, 여기서는 값만 맞추고
+        서로를 주석으로 가리킨다. 한쪽을 고치면 다른 쪽도 같이 고칠 것.
+      */}
+      {menuBtn?.menu && menu && (
+        <div
+          ref={menuBoxRef}
+          role="menu"
+          aria-label={menuBtn.title}
+          data-testid="export-menu"
+          style={{ left: menu.left, width: MENU_W }}
+          className="absolute top-full z-30 mt-1 rounded-lg bg-surface-2 border border-line-strong shadow-xl py-1 text-[13px]"
+        >
+          {menuBtn.menu.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              role="menuitem"
+              /* desc 까지 읽히면 이름이 길어진다 — 접근성 이름은 라벨로 고정 */
+              aria-label={m.label}
+              onClick={() => {
+                setMenu(null)
+                m.action()
+              }}
+              className="w-full px-3 py-2 text-left text-text-secondary hover:bg-card-hover transition-colors"
+            >
+              {m.label}
+              <span className="block text-[10px] text-text-quaternary mt-0.5">{m.desc}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 표 안일 때만 나오는 행·열 조작 — 항상 띄우면 툴바가 두 배가 된다 */}
       {editor.isActive('table') && (
@@ -472,8 +666,9 @@ export function EditorToolbar({
         </div>
       )}
 
-      {/* 데스크탑 hover 툴팁 — 스크롤 컨테이너 바깥이라 잘리지 않는다 */}
-      {tipBtn && tip && (
+      {/* 데스크탑 hover 툴팁 — 스크롤 컨테이너 바깥이라 잘리지 않는다.
+          메뉴가 열려 있으면 접는다 — 둘 다 `top-full` 이라 같은 자리에서 겹친다 */}
+      {tipBtn && tip && !menu && (
         <div
           role="tooltip"
           style={{ left: tip.left }}

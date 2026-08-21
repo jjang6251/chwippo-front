@@ -7,7 +7,7 @@ interface Props {
 
 export function AnnouncementBanner({ title, body, onExpand, onDismiss }: Props) {
   return (
-    <div className="w-full bg-brand flex items-start gap-3 px-4 py-2.5 shrink-0">
+    <div className="w-full bg-brand flex items-start gap-3 px-4 py-2.5 shrink-0 print:hidden">
       <MegaphoneIcon />
       <button
         type="button"

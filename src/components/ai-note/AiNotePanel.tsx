@@ -497,7 +497,7 @@ function AiNotePanelInner({
         aria-label="노트 AI"
         aria-hidden={!open}
         data-testid="ai-note-panel-desktop"
-        className={`fixed right-0 top-12 bottom-0 z-30 w-[380px] bg-surface border-l border-line shadow-md transition-transform duration-200 ${
+        className={`fixed right-0 top-12 bottom-0 z-30 w-[380px] bg-surface border-l border-line shadow-md transition-transform duration-200 print:hidden ${
           open ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         }`}
       >
@@ -515,10 +515,10 @@ function AiNotePanelInner({
       shouldScaleBackground={false}
     >
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm print:hidden" />
         <Drawer.Content
           aria-label="노트 AI"
-          className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[88dvh] h-[88dvh] flex flex-col shadow-2xl outline-none"
+          className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[88dvh] h-[88dvh] flex flex-col shadow-2xl outline-none print:hidden"
         >
           <Drawer.Title className="sr-only">노트 AI</Drawer.Title>
           <div

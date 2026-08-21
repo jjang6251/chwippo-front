@@ -143,7 +143,8 @@ export function Sidebar() {
     <>
       <aside
         data-nav
-        className={`hidden lg:flex flex-col shrink-0 bg-surface border-r border-line min-h-screen sticky top-0 h-screen transition-[width] duration-[240ms] ease-[cubic-bezier(.32,.72,0,1)] ${
+        /* print:hidden — 종이에는 내비게이션이 없다 (공부 노트 PDF 저장) */
+        className={`hidden lg:flex print:hidden flex-col shrink-0 bg-surface border-r border-line min-h-screen sticky top-0 h-screen transition-[width] duration-[240ms] ease-[cubic-bezier(.32,.72,0,1)] ${
           collapsed ? 'w-14' : 'w-56'
         }`}
       >

@@ -31,7 +31,7 @@ export function MobileHeader() {
   const isSettingsActive = pathname.startsWith('/settings')
 
   return (
-    <header className="lg:hidden sticky top-0 z-40 bg-surface border-b border-line flex items-center px-4 h-12">
+    <header className="lg:hidden print:hidden sticky top-0 z-40 bg-surface border-b border-line flex items-center px-4 h-12">
       <Link to={isDemo ? '/demo/dashboard' : '/dashboard'} className="text-brand font-bold text-base tracking-tight mr-3">
         치뽀{isDemo && <span className="ml-1 text-[9px] font-medium text-text-quaternary align-middle">데모</span>}
       </Link>

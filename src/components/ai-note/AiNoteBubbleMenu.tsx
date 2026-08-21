@@ -27,7 +27,7 @@ export function AiNoteBubbleMenu({
       editor={editor}
       /* 🔴 z-30: sticky 툴바(z-20)보다 위. 선택이 문서 상단이면 버블이 툴바 영역에 겹치는데,
          낮으면 툴바가 포인터를 가로채 버튼이 안 눌린다 (2026-08-19 Playwright 실측) */
-      className="hidden lg:block z-30"
+      className="hidden lg:block print:hidden z-30"
       shouldShow={({ editor: ed }) => ed.isEditable && canAiTargetSelection(ed)}
     >
       <button

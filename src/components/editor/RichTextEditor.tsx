@@ -84,6 +84,13 @@ interface Props {
   /** 지정 시 툴바에 「내보내기」 노출. 인자는 직렬화된 마크다운 (열화 명세: markdownIO.ts) */
   onExportMarkdown?: (markdown: string) => void
   /**
+   * 지정 시 툴바 「내보내기」가 마크다운·PDF **형식 선택 메뉴**가 된다.
+   *
+   * 인쇄는 소비 측이 한다 — 문서마다 준비(읽기 모드 전환·탭 제목·테마)가 달라서 공용
+   * 에디터가 대신 할 수 없다. 미지정이면 메뉴 없이 마크다운 단일 (기존 소비처 무변경).
+   */
+  onExportPdf?: () => void
+  /**
    * 툴바 상단 고정 변형 — 'page'(공부 노트 풀페이지) · 'card'(준비 노트 card-solid 카드 안).
    * 배경이 문맥을 따라가야 해서 변형이 둘이다 (EditorToolbar 주석). 미지정 = 비고정.
    */
@@ -133,6 +140,7 @@ export function RichTextEditor({
   readOnly,
   mention,
   onExportMarkdown,
+  onExportPdf,
   stickyToolbar,
   onAiOpen,
   aiEntryMobileOnly,
@@ -298,6 +306,7 @@ export function RichTextEditor({
           onExportMarkdown={
             onExportMarkdown ? () => onExportMarkdown(editorToMarkdown(editor)) : undefined
           }
+          onExportPdf={onExportPdf}
           /* 업로더와 스키마 노드가 **둘 다** 있어야 누를 수 있는 버튼이 된다 */
           onInsertImage={
             onUploadImage && editor.schema.nodes.image
@@ -335,7 +344,8 @@ export function RichTextEditor({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2 px-4 py-2 border-t border-line">
+      {/* 글자수·저장 상태 — 편집 도구지 문서가 아니다 (읽기 모드에서도 남아 있어 인쇄에서 뺀다) */}
+      <div className="flex items-center justify-between gap-2 px-4 py-2 border-t border-line print:hidden">
         <div className="flex items-center gap-2">
           {template && isEmpty && !readOnly && (
             <button
