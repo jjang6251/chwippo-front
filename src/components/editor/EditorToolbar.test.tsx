@@ -9,11 +9,23 @@
  *   표      행/열 조작은 커서가 표 안일 때만 노출
  *   동작    각 버튼이 실제로 문서를 바꾼다 (죽은 버튼 방지 — 데모 형광펜이 조용히 죽어 있던 사고)
  *   접근성  모든 버튼에 aria-label · 토글형은 aria-pressed
+ *
+ * 「내보내기」 형식 선택 메뉴 (2026-08-21 — 손잡이 하나에 형식 둘):
+ *   기본    PDF 콜백이 있어야 메뉴가 된다 · 없으면 예전 그대로 곧장 마크다운
+ *   항목    마크다운(.md) → PDF로 저장 순서 · 각각 콜백 1회 후 닫힘
+ *   🔴 잘림 메뉴는 `overflow-x-auto` 스크롤 행 **밖**에 산다 (안에 두면 통째로 잘린다)
+ *   닫힘    ESC · 바깥 클릭 · 다른 툴 버튼 · 트리거 재클릭
+ *   접근성  aria-haspopup="menu" · aria-expanded 가 열림/닫힘을 따라간다
+ *   겹침    메뉴가 열려 있으면 같은 자리(top-full)의 툴팁은 안 뜬다
+ *   문구    마크다운 전용 열화 경고는 버튼 툴팁이 아니라 md **항목**에 붙는다
+ *   키보드  ↓↑ 순환·Home/End·ESC 후 트리거 복귀 — 세 메뉴 **공용 계약**으로 잰다
+ *           (Enter·Space 는 네이티브 button 몫이라 가로채지 않는다)
  */
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { Editor } from '@tiptap/core'
 import type { Editor as ReactEditor } from '@tiptap/react'
+import { assertMenuKeyboardContract } from '@/test/menuKeyboardContract'
 import { EditorToolbar } from './EditorToolbar'
 import { buildEditorExtensions } from './editorExtensions'
 
@@ -33,6 +45,7 @@ function makeEditor(withMention = false) {
 function setup(opts?: {
   mention?: boolean
   onExport?: () => void
+  onExportPdf?: () => void
   onInsertImage?: () => void
 }) {
   const editor = makeEditor(opts?.mention)
@@ -41,6 +54,7 @@ function setup(opts?: {
       editor={editor}
       hasMention={opts?.mention}
       onExportMarkdown={opts?.onExport}
+      onExportPdf={opts?.onExportPdf}
       onInsertImage={opts?.onInsertImage}
     />,
   )
@@ -164,6 +178,191 @@ describe('툴바 — 조건부 노출', () => {
     const { container } = setup({ onInsertImage })
     fireEvent.mouseDown(container.querySelector('[data-tool="image"]')!)
     expect(onInsertImage).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('툴바 — 「내보내기」 형식 선택 메뉴', () => {
+  function openMenu(container: HTMLElement) {
+    fireEvent.mouseDown(container.querySelector('[data-tool="export"]')!)
+  }
+
+  function withBoth(extra?: { onExport?: () => void; onExportPdf?: () => void }) {
+    return setup({
+      onExport: extra?.onExport ?? vi.fn(),
+      onExportPdf: extra?.onExportPdf ?? vi.fn(),
+    })
+  }
+
+  it('누르기 전에는 메뉴가 없다 (트리거는 haspopup 을 알린다)', () => {
+    const { container } = withBoth()
+    const btn = container.querySelector('[data-tool="export"]')!
+    expect(btn.getAttribute('aria-haspopup')).toBe('menu')
+    expect(btn.getAttribute('aria-expanded')).toBe('false')
+    expect(btn.getAttribute('aria-label')).toBe('내보내기')
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('누르면 항목 2개 — 마크다운(.md) → PDF로 저장', () => {
+    const { container } = withBoth()
+    openMenu(container)
+    expect(screen.getAllByRole('menuitem').map((el) => el.getAttribute('aria-label'))).toEqual([
+      '마크다운(.md)',
+      'PDF로 저장',
+    ])
+    expect(container.querySelector('[data-tool="export"]')?.getAttribute('aria-expanded')).toBe(
+      'true',
+    )
+  })
+
+  it('마크다운 항목 = 기존 내보내기 1회 + 메뉴 닫힘', () => {
+    const onExport = vi.fn()
+    const onExportPdf = vi.fn()
+    const { container } = withBoth({ onExport, onExportPdf })
+    openMenu(container)
+    fireEvent.click(screen.getByRole('menuitem', { name: '마크다운(.md)' }))
+
+    expect(onExport).toHaveBeenCalledTimes(1)
+    expect(onExportPdf).not.toHaveBeenCalled()
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('PDF 항목 = 인쇄 콜백 1회 + 메뉴 닫힘', () => {
+    const onExport = vi.fn()
+    const onExportPdf = vi.fn()
+    const { container } = withBoth({ onExport, onExportPdf })
+    openMenu(container)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'PDF로 저장' }))
+
+    expect(onExportPdf).toHaveBeenCalledTimes(1)
+    expect(onExport).not.toHaveBeenCalled()
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  /**
+   * 🔴 툴바 행은 `overflow-x-auto` 라 세로도 auto 가 된다 — 그 안에 absolute 로 띄우면
+   * 메뉴가 통째로 잘린다. 툴팁이 이미 피해 간 길(스크롤 행 바깥)을 그대로 탄다.
+   * jsdom 은 레이아웃을 모르니 **어디에 사는지**로 고정하고, 실제 잘림 여부는 Playwright.
+   */
+  it('🔴 메뉴는 스크롤 컨테이너 밖에 있다', () => {
+    const { container } = withBoth()
+    openMenu(container)
+    expect(screen.getByRole('menu').closest('.overflow-x-auto')).toBeNull()
+  })
+
+  it('🔴 모바일에서도 보이고 눌린다 — 툴팁의 hidden·pointer-events-none 을 안 베꼈다', () => {
+    const { container } = withBoth()
+    openMenu(container)
+    const cls = screen.getByRole('menu').className
+    expect(cls).not.toContain('hidden')
+    expect(cls).not.toContain('pointer-events-none')
+  })
+
+  it('ESC 로 닫힌다', () => {
+    const { container } = withBoth()
+    openMenu(container)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('바깥 클릭으로 닫힌다', () => {
+    const { container } = withBoth()
+    openMenu(container)
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('트리거를 다시 누르면 닫힌다', () => {
+    const { container } = withBoth()
+    openMenu(container)
+    openMenu(container)
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('다른 툴 버튼을 누르면 닫힌다 (메뉴가 남아 서식 위에 떠 있지 않게)', () => {
+    const { container } = withBoth()
+    openMenu(container)
+    fireEvent.mouseDown(container.querySelector('[data-tool="bold"]')!)
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  /**
+   * 키보드 탐색 — 세 `role="menu"` 가 **똑같이** 움직인다 (`useMenuKeyboard` 공용).
+   * 계약 본문은 `src/test/menuKeyboardContract.ts` 에 한 벌만 있고, 노트 메뉴(DocMenu)·
+   * 허브 ⋯(DotsMenu) spec 도 **같은 함수**를 부른다 — 그게 "같음" 의 증거다.
+   */
+  it('키보드 탐색 계약 — ↓↑ 순환 · Home/End · ESC 복귀 (항목 2개)', () => {
+    const { container } = withBoth()
+    const trigger = () => container.querySelector<HTMLElement>('[data-tool="export"]')!
+    assertMenuKeyboardContract({
+      trigger,
+      // 툴바 트리거는 mousedown 에서 연다 (ProseMirror 선택 보존 — preventDefault)
+      openByMouse: () => fireEvent.mouseDown(trigger()),
+      // 키보드는 mousedown 을 안 낸다 — detail 0 click 이 그 경로다
+      openByKeyboard: () => fireEvent.click(trigger(), { detail: 0 }),
+    })
+  })
+
+  it('항목을 골라 닫혀도 포커스가 트리거로 돌아온다 (다음 Tab 이 페이지 맨 앞으로 안 튄다)', () => {
+    const onExport = vi.fn()
+    const { container } = withBoth({ onExport })
+    const trigger = container.querySelector<HTMLElement>('[data-tool="export"]')!
+    fireEvent.click(trigger, { detail: 0 })
+    const first = screen.getByRole('menuitem', { name: '마크다운(.md)' })
+    expect(document.activeElement).toBe(first)
+
+    fireEvent.click(first)
+    expect(onExport).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('마우스로 열면 첫 항목에 포커스를 주지 않는다 (안 누른 포커스 링·선택 영역 파괴 방지)', () => {
+    const { container } = withBoth()
+    openMenu(container)
+    expect(screen.getAllByRole('menuitem')).not.toContain(document.activeElement)
+  })
+
+  it('메뉴가 열려 있으면 툴팁은 안 뜬다 (둘 다 top-full — 같은 자리다)', () => {
+    const { container } = withBoth()
+    const btn = container.querySelector('[data-tool="export"]')!
+    fireEvent.mouseEnter(btn)
+    expect(screen.getByRole('tooltip')).toBeInTheDocument()
+    openMenu(container)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('🔴 마크다운 열화 경고는 md 항목에 붙는다 (버튼 툴팁에서 옮겨졌다)', () => {
+    const { container } = withBoth()
+    fireEvent.mouseEnter(container.querySelector('[data-tool="export"]')!)
+    expect(screen.getByRole('tooltip')).not.toHaveTextContent('토글·형광펜은 열화돼요')
+
+    openMenu(container)
+    expect(screen.getByRole('menuitem', { name: '마크다운(.md)' })).toHaveTextContent(
+      '토글·형광펜은 열화돼요',
+    )
+  })
+
+  /**
+   * 🔴 형식이 하나뿐이면 메뉴는 **선택 없는 한 번 더 누르기**다. 앱 웹뷰(print 무동작)와
+   * PDF 를 안 쓰는 소비처(준비·활동·회사 메모 노트)가 모두 이 경로를 탄다.
+   */
+  it('🔴 PDF 콜백이 없으면 메뉴가 아니라 예전처럼 곧장 마크다운이다', () => {
+    const onExport = vi.fn()
+    const { container } = setup({ onExport })
+    const btn = container.querySelector('[data-tool="export"]')!
+
+    expect(btn.getAttribute('aria-haspopup')).toBeNull()
+    expect(btn.getAttribute('aria-label')).toBe('마크다운 내보내기')
+
+    fireEvent.mouseDown(btn)
+    expect(onExport).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('키보드(Enter·Space)로도 메뉴가 열린다', () => {
+    const { container } = withBoth()
+    fireEvent.click(container.querySelector('[data-tool="export"]')!, { detail: 0 })
+    expect(screen.getAllByRole('menuitem')).toHaveLength(2)
   })
 })
 

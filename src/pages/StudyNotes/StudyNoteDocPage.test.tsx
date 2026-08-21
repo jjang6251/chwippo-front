@@ -25,8 +25,10 @@
  *        19  🔴 목록에 없는 id = 「삭제된 노트」 칩 (`isDeadNote` 배선)
  *        20  🔴 목록을 **못 받은 동안**에는 죽은 것으로 보지 않는다 (전부 끊긴 것처럼 보이면 안 된다)
  *   모달 21  「취소」·ESC 는 아무 것도 지우지 않는다
+ *   인쇄 26~37 「PDF로 저장」 — 아래 describe 머리말에 따로 나열
+ *   툴바 38~40 「내보내기」 형식 선택 — 아래 describe 머리말에 따로 나열
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -35,6 +37,7 @@ import * as api from '@/api/studyNotes'
 import { uploadNoteImage } from '@/components/editor/noteImageUpload'
 import { storageUsageKey } from '@/hooks/useStorageUsage'
 import { studyNotesKey } from '@/hooks/useStudyNotes'
+import { assertMenuKeyboardContract } from '@/test/menuKeyboardContract'
 import { StudyNoteDocPage } from './StudyNoteDocPage'
 
 vi.mock('@/api/studyNotes', () => ({
@@ -592,5 +595,315 @@ describe('문서 — 저장 용량 갱신', () => {
     await waitFor(() =>
       expect(document.querySelector('img[src="https://r2.example/n.png"]')).not.toBeNull(),
     )
+  })
+})
+
+/**
+ * 「PDF로 저장」 = 브라우저 인쇄 (study-note-media PR-B).
+ *
+ * 🔴 이 화면이 인쇄 동안 **빌려 쓰는 전역이 둘**이다 — `document.title`(브라우저가 PDF
+ * 파일명으로 가져간다)과 `documentElement[data-theme]`(다크로 보던 사람에게 검은 종이가
+ * 나오지 않게 라이트 강제). 빌린 걸 안 돌려주면 탭 제목과 앱 테마가 **영영** 바뀐 채로
+ * 남는다. 그래서 「바뀌었나」보다 「돌아왔나」가 더 많다.
+ *
+ * 시나리오 — 먼저 나열하고 그대로 구현한다:
+ *  26  읽기 모드에서 항목을 누르면 `window.print()` 가 **한 번** 불린다
+ *  27  🔴 편집 모드에서 누르면 **읽기로 전환된 뒤** 인쇄한다 (제목이 입력칸인 채로 찍히면 안 된다)
+ *  28  항목 자리 — 「마크다운으로 내보내기」 바로 **위**
+ *  29  🔴 앱(WebView)에서는 항목 자체가 없다 (WKWebView 는 print 무동작 = 거짓 어포던스)
+ *  30  제목이 노트 제목으로 바뀌고 `afterprint` 에 원래 탭 제목으로 돌아온다
+ *  31  파일명 정제 — 금지문자는 `_` (마크다운과 같은 규칙) · 확장자는 안 붙는다
+ *  32  빈 제목은 「공부 노트」 폴백
+ *  33  🔴 `data-theme` 를 light 로 강제하고 `afterprint` 에 **원래 값(dark)** 으로 복원
+ *  34  🔴 속성이 **없던** 경우의 복원은 'dark' 넣기가 아니라 **속성 제거**다 (미지정 = 다크 fallback)
+ *  35  🔴 예외 경로 — `print()` 가 던져도 제목·테마가 되돌아온다
+ *  36  🔴 뒤따라 온 `beforeprint` 가 원본을 덮지 않는다 (복원이 light·노트 제목으로 굳는 사고)
+ *  37  🔴 인쇄 중 이탈(언마운트) — 다른 화면에서 탭 제목이 노트 제목인 채로 굳지 않는다
+ */
+describe('문서 — PDF로 저장(인쇄)', () => {
+  const TAB_TITLE = '치뽀'
+  const print = vi.fn()
+
+  /** 인쇄 순간의 전역 상태 — 「바뀐 채로 print 가 불렸나」는 호출 시점에만 볼 수 있다 */
+  function snapshotOnPrint() {
+    const seen: { theme: string | null; title: string; titleInput: boolean }[] = []
+    print.mockImplementation(() => {
+      seen.push({
+        theme: document.documentElement.getAttribute('data-theme'),
+        title: document.title,
+        titleInput: document.querySelector('[aria-label="노트 제목"]') !== null,
+      })
+    })
+    return seen
+  }
+
+  beforeEach(() => {
+    print.mockReset()
+    vi.stubGlobal('print', print)
+    document.title = TAB_TITLE
+    document.documentElement.setAttribute('data-theme', 'dark')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    document.documentElement.removeAttribute('data-theme')
+    document.title = ''
+  })
+
+  function readMode() {
+    localStorage.setItem('study-notes:mode:v1', 'read')
+  }
+
+  async function clickPrint() {
+    fireEvent.click(screen.getByRole('button', { name: '노트 메뉴' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'PDF로 저장' }))
+    await waitFor(() => expect(print).toHaveBeenCalled())
+  }
+
+  /** 브라우저가 인쇄를 마쳤다고 알리는 순간 */
+  function afterPrint() {
+    fireEvent(window, new Event('afterprint'))
+  }
+
+  it('26 읽기 모드에서 누르면 인쇄가 한 번 열린다', async () => {
+    readMode()
+    await renderLoaded()
+    await clickPrint()
+
+    expect(print).toHaveBeenCalledTimes(1)
+    // 메뉴는 닫힌다 — 인쇄 다이얼로그 뒤에 떠 있으면 안 된다
+    expect(screen.queryByRole('menu', { name: '노트 메뉴' })).toBeNull()
+  })
+
+  it('27 🔴 편집 모드에서 누르면 읽기로 전환된 뒤에 인쇄한다', async () => {
+    const seen = snapshotOnPrint()
+    await renderLoaded()
+    // 편집 모드로 들어왔다는 것부터 확인 (제목이 입력칸)
+    expect(screen.getByLabelText('노트 제목')).toBeInTheDocument()
+
+    await clickPrint()
+
+    // 인쇄 **그 순간** 제목은 이미 입력칸이 아니었다
+    expect(seen).toHaveLength(1)
+    expect(seen[0].titleInput).toBe(false)
+    expect(screen.getByRole('heading', { name: '운영체제 정리', level: 1 })).toBeInTheDocument()
+  })
+
+  it('28 항목은 「마크다운으로 내보내기」 바로 위에 있다', async () => {
+    await renderLoaded()
+    fireEvent.click(screen.getByRole('button', { name: '노트 메뉴' }))
+
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      'PDF로 저장',
+      '마크다운으로 내보내기',
+      '노트 삭제',
+    ])
+  })
+
+  it('29 🔴 앱 웹뷰에서는 항목 자체가 없다', async () => {
+    vi.stubGlobal('ReactNativeWebView', { postMessage: vi.fn() })
+    await renderLoaded()
+    fireEvent.click(screen.getByRole('button', { name: '노트 메뉴' }))
+
+    expect(screen.queryByRole('menuitem', { name: 'PDF로 저장' })).toBeNull()
+    // 나머지 항목은 그대로다 — 앱에서 메뉴가 통째로 죽으면 안 된다
+    expect(screen.getByRole('menuitem', { name: '마크다운으로 내보내기' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '노트 삭제' })).toBeInTheDocument()
+  })
+
+  it('30 탭 제목이 노트 제목이 됐다가 afterprint 에 돌아온다', async () => {
+    readMode()
+    const seen = snapshotOnPrint()
+    await renderLoaded()
+    await clickPrint()
+
+    expect(seen[0].title).toBe('운영체제 정리')
+    afterPrint()
+    expect(document.title).toBe(TAB_TITLE)
+  })
+
+  it('31 파일명 정제 — 금지문자는 `_` · 확장자는 안 붙는다', async () => {
+    mocked.getStudyNote.mockResolvedValue({ ...NOTE, title: 'OS/메모리: 정리*1' })
+    readMode()
+    const seen = snapshotOnPrint()
+    renderDoc()
+    await screen.findByRole('heading', { name: /OS/, level: 1 })
+    await clickPrint()
+
+    expect(seen[0].title).toBe('OS_메모리_ 정리_1')
+    expect(seen[0].title).not.toMatch(/\.md$/)
+  })
+
+  it('32 빈 제목은 「공부 노트」 폴백', async () => {
+    mocked.getStudyNote.mockResolvedValue({ ...NOTE, title: '   ' })
+    readMode()
+    const seen = snapshotOnPrint()
+    renderDoc()
+    await screen.findByText('스레드는 스택만 따로 가진다.')
+    await clickPrint()
+
+    expect(seen[0].title).toBe('공부 노트')
+  })
+
+  it('33 🔴 다크였으면 인쇄는 라이트로, 끝나면 다시 다크로', async () => {
+    readMode()
+    const seen = snapshotOnPrint()
+    await renderLoaded()
+    await clickPrint()
+
+    expect(seen[0].theme).toBe('light')
+    afterPrint()
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it('34 🔴 속성이 없던 경우의 복원은 「속성 제거」다', async () => {
+    // 미지정 = 다크 fallback (tailwind darkMode 배선) — 'dark' 를 넣어 두면 그 상태가 아니다
+    document.documentElement.removeAttribute('data-theme')
+    readMode()
+    const seen = snapshotOnPrint()
+    await renderLoaded()
+    await clickPrint()
+
+    expect(seen[0].theme).toBe('light')
+    afterPrint()
+    expect(document.documentElement.hasAttribute('data-theme')).toBe(false)
+  })
+
+  it('35 🔴 print() 가 던져도 제목·테마가 되돌아온다', async () => {
+    readMode()
+    print.mockImplementation(() => {
+      throw new Error('인쇄 창을 못 열었다')
+    })
+    await renderLoaded()
+    await clickPrint()
+
+    // afterprint 는 오지 않는다 (다이얼로그가 열린 적이 없다)
+    expect(document.title).toBe(TAB_TITLE)
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it('36 🔴 뒤따라 온 beforeprint 가 원본을 덮지 않는다', async () => {
+    readMode()
+    print.mockImplementation(() => {
+      // 브라우저는 print() 안에서 beforeprint 를 낸다 — 이미 걸어 둔 뒤에 또 오는 경우
+      fireEvent(window, new Event('beforeprint'))
+    })
+    await renderLoaded()
+    await clickPrint()
+
+    afterPrint()
+    expect(document.title).toBe(TAB_TITLE)
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it('37 🔴 인쇄 중 이탈해도 탭 제목·테마가 굳지 않는다', async () => {
+    readMode()
+    // afterprint 가 영영 안 오는 상태에서 페이지를 떠난다
+    const { unmount } = await renderLoaded()
+    await clickPrint()
+    expect(document.title).toBe('운영체제 정리')
+
+    unmount()
+
+    expect(document.title).toBe(TAB_TITLE)
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
+})
+
+/**
+ * 노트 메뉴(⋯) 키보드 탐색 — `role="menu"` 를 선언한 이상 화살표 이동이 표준 기대다.
+ *
+ * 계약 본문은 `src/test/menuKeyboardContract.ts` 에 **한 벌만** 있고, 툴바 「내보내기」와
+ * 허브 ⋯ 메뉴 spec 도 같은 함수를 부른다 — 세 메뉴가 정말 같은 동작인지의 증거가 그것이다.
+ *
+ *  41  항목 3개(웹)에서 계약 전부 — ↓↑ 순환·Home/End·ESC 후 트리거 복귀
+ *  42  🔴 항목 2개(앱 웹뷰 — PDF 빠짐)에서도 **항목 수에 맞게** 순환한다
+ *  43  마우스로 열면 첫 항목에 포커스를 주지 않는다 (안 누른 포커스 링 방지)
+ */
+describe('문서 — 노트 메뉴 키보드 탐색', () => {
+  const trigger = () => screen.getByRole('button', { name: '노트 메뉴' })
+  const harness = {
+    trigger,
+    openByMouse: () => fireEvent.click(trigger(), { detail: 1 }),
+    openByKeyboard: () => fireEvent.click(trigger(), { detail: 0 }),
+  }
+
+  it('41 항목 3개 — 계약 전부 통과', async () => {
+    await renderLoaded()
+    assertMenuKeyboardContract(harness)
+  })
+
+  it('42 🔴 앱 웹뷰(항목 2개)에서도 항목 수에 맞게 순환한다', async () => {
+    vi.stubGlobal('ReactNativeWebView', { postMessage: vi.fn() })
+    await renderLoaded()
+    expect(screen.queryByRole('menuitem', { name: 'PDF로 저장' })).toBeNull()
+    assertMenuKeyboardContract(harness)
+    vi.unstubAllGlobals()
+  })
+
+  it('43 마우스로 열면 첫 항목에 포커스를 주지 않는다', async () => {
+    await renderLoaded()
+    harness.openByMouse()
+    expect(screen.getAllByRole('menuitem')).not.toContain(document.activeElement)
+  })
+})
+
+/**
+ * 툴바 「내보내기」 = 형식 선택 (2026-08-21).
+ *
+ * PDF 는 문서 메뉴(⋯)에만, 마크다운은 메뉴 + 툴바 둘 다 있어 비대칭이었다. 툴바 버튼을
+ * 형식 선택으로 바꿔 손잡이 하나에 형식 둘을 모은다. 메뉴 자체의 동작(닫힘·접근성·잘림)은
+ * `EditorToolbar.test.tsx` 가 잠그고, 여기서는 **배선**만 본다.
+ *
+ *  38  항목 2개 = 마크다운(.md) · PDF로 저장
+ *  39  🔴 PDF 항목이 기존 인쇄 경로를 그대로 탄다 (편집 중이어도 읽기로 전환된 뒤 인쇄)
+ *  40  🔴 앱 웹뷰 = PDF 가 빠져 형식이 하나뿐 → 메뉴가 아니라 예전처럼 곧장 마크다운
+ *      (문서 메뉴의 `onPrint` 와 같은 근거·같은 조건)
+ */
+describe('문서 — 툴바 「내보내기」 형식 선택', () => {
+  const print = vi.fn()
+
+  beforeEach(() => {
+    print.mockReset()
+    vi.stubGlobal('print', print)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    document.documentElement.removeAttribute('data-theme')
+  })
+
+  const trigger = () => screen.getByRole('button', { name: '내보내기' })
+
+  it('38 항목 2개 — 마크다운(.md) · PDF로 저장', async () => {
+    await renderLoaded()
+    fireEvent.mouseDown(trigger())
+
+    expect(screen.getAllByRole('menuitem').map((el) => el.getAttribute('aria-label'))).toEqual([
+      '마크다운(.md)',
+      'PDF로 저장',
+    ])
+  })
+
+  it('39 🔴 PDF 항목 = 읽기 모드로 전환된 뒤 인쇄 (기존 경로 재사용)', async () => {
+    await renderLoaded()
+    // 편집 모드로 들어왔다 (제목이 입력칸)
+    expect(screen.getByLabelText('노트 제목')).toBeInTheDocument()
+
+    fireEvent.mouseDown(trigger())
+    fireEvent.click(screen.getByRole('menuitem', { name: 'PDF로 저장' }))
+
+    await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+    expect(screen.getByRole('heading', { name: '운영체제 정리', level: 1 })).toBeInTheDocument()
+  })
+
+  it('40 🔴 앱 웹뷰에서는 메뉴가 아니라 마크다운 단일 버튼', async () => {
+    vi.stubGlobal('ReactNativeWebView', { postMessage: vi.fn() })
+    await renderLoaded()
+
+    // 누르면 곧장 내려받기가 시작되므로 **누르지 않고** 손잡이의 성격만 본다
+    const btn = screen.getByRole('button', { name: '마크다운 내보내기' })
+    expect(btn.getAttribute('aria-haspopup')).toBeNull()
+    expect(screen.queryByRole('button', { name: '내보내기' })).toBeNull()
   })
 })

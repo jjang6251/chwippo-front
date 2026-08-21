@@ -581,7 +581,9 @@ test('md 내보내기 — 다운로드가 실제로 떨어지고 내용이 마�
   await gotoDoc(page)
 
   const downloadPromise = page.waitForEvent('download')
+  // 「내보내기」는 형식 선택 메뉴다 (2026-08-21) — 마크다운은 그 안의 한 항목이 됐다
   await tool(page, 'export').click()
+  await page.getByRole('menuitem', { name: '마크다운(.md)' }).click()
   const download = await downloadPromise
 
   expect(download.suggestedFilename()).toBe('내보내기 노트.md')

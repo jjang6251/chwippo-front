@@ -24,7 +24,7 @@ export function ToastContainer() {
       data-toast-container
       role="status"
       aria-live="polite"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 items-center pointer-events-auto"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 items-center pointer-events-auto print:hidden"
     >
       {toasts.map((t) => (
         <div

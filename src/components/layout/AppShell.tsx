@@ -27,7 +27,10 @@ export function AppShell() {
   // 데모는 제외한다 (DemoShell 도 AppShell 을 쓴다 — 비로그인 방문자가 쏘면 안 된다)
   useDesktopSeenBeacon(!isDemo)
   return (
-    <div className="min-h-screen bg-bg text-text-primary flex flex-col">
+    // chw-app-surface — 인쇄에서 바탕을 비우는 지점 (index.css @media print).
+    // Tailwind `print:bg-transparent` 대신 클래스인 이유: 비우는 조건이 「라이트일 때만」이라
+    // 조상(`:root[data-theme]`)을 봐야 하는데 utility 로는 그 조건을 못 적는다.
+    <div className="min-h-screen bg-bg chw-app-surface text-text-primary flex flex-col">
       {isDemo && <DemoBanner />}
       <div className="flex-1 flex min-h-0">
         <Sidebar />
@@ -36,7 +39,7 @@ export function AppShell() {
           {!isNative && <MobileHeader />}
           {/* PR_B1b — 데스크탑 전용 sticky 헤더 (코인 chip 우상단) */}
           {!isDemo && aiEnabled && (
-            <div className="hidden lg:flex sticky top-0 z-30 bg-bg/95 backdrop-blur-sm border-b border-line h-12 items-center justify-end px-9">
+            <div className="hidden lg:flex print:hidden sticky top-0 z-30 bg-bg/95 backdrop-blur-sm border-b border-line h-12 items-center justify-end px-9">
               <CoinChip />
             </div>
           )}
