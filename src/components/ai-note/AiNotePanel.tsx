@@ -66,6 +66,13 @@ interface Props {
 
 const NO_SELECTION_HINT =
   '지금은 새로 만들기 모드 — 지시만 적으면 새 내용을 커서 자리에 넣어요. 본문을 다듬으려면 그 부분을 드래그하거나 문단을 클릭하세요.'
+/**
+ * 🔴 이미지가 낀 선택은 대상이 될 수 없다(`aiSelection.rangeHasImage`). 그런데 그 사실을
+ * 안 알리면 방금 드래그한 사람에게 「새로 만들기 모드」 안내가 뜬다 — 드래그가 씹힌 것으로
+ * 읽힌다. 새 시각 요소를 만들지 않고 **같은 자리의 문구만** 바꿔 이유를 준다.
+ */
+const IMAGE_SELECTION_HINT =
+  'AI는 글자만 읽을 수 있어요 — 사진이 들어간 선택은 대상이 되지 않아요. 사진을 뺀 글자 부분만 드래그해 주세요.'
 const TRUNCATED_NOTICE =
   '글자수 제한 때문에 결과가 다 들어가지 못했어요. 나눠서 적용해 주세요.'
 
@@ -337,7 +344,9 @@ function AiNotePanelInner({
             </p>
           </div>
         ) : (
-          <p className="text-[11px] text-text-quaternary leading-relaxed">{NO_SELECTION_HINT}</p>
+          <p className="text-[11px] text-text-quaternary leading-relaxed">
+            {selection.hasImage ? IMAGE_SELECTION_HINT : NO_SELECTION_HINT}
+          </p>
         )}
         {selectionTooLong && (
           <p className="text-[11px] text-danger leading-relaxed">

@@ -5,10 +5,12 @@ import type { StudyNoteBacklink, StudyNoteListItem } from '@/api/studyNotes'
 import { Modal } from '@/components/common/Modal'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
 import { editorToMarkdown } from '@/components/editor/markdownIO'
+import { uploadNoteImage } from '@/components/editor/noteImageUpload'
 import type { StudyNoteMentionOptions } from '@/components/editor/StudyNoteMention'
 import { AiNoteBubbleMenu } from '@/components/ai-note/AiNoteBubbleMenu'
 import { AiNotePanel } from '@/components/ai-note/AiNotePanel'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useInvalidateStorageUsage } from '@/hooks/useStorageUsage'
 import { useUnloadGuard } from '@/hooks/useUnloadGuard'
 import {
   useDeleteStudyNote,
@@ -66,6 +68,12 @@ import {
  * 쌓인다. 제목·본문이 **둘 다** 빈 채로 떠나면 지운다.
  * StrictMode 는 마운트 직후 한 번 언마운트했다가 다시 붙이므로, 지우기는 조금 미뤄 두고
  * **다시 마운트되면 취소**한다 — 안 그러면 방금 만든 노트가 개발 모드에서 즉시 증발한다.
+ *
+ * 🔴 **「비었다」는 글자 수가 아니다.** 이미지 한 장만 올려 둔 노트는 텍스트가 0자다 —
+ * 판정이 글자만 보면 그 노트는 떠나는 순간 삭제되고, 저장 값도 `''` 로 나가 이미지가
+ * 먼저 날아간다. 두 갈래 모두 미디어 노드를 「내용 있음」으로 세는 한 곳에 걸려 있다:
+ * 본문 판정은 `editor.isEmpty`(atom 노드를 내용으로 센다), 저장 값은
+ * `docToMemoValue` → `isEmptyDoc`(`utils/memoSections.ts` 의 `MEDIA_NODE_TYPES`).
  */
 
 const PAGE = 'w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9'
@@ -80,6 +88,9 @@ const TITLE_SAVE_DEBOUNCE_MS = 1000
 /** 떠난 뒤 지워야 할 빈 노트 — StrictMode 재마운트가 취소할 수 있게 모듈 단위로 둔다 */
 const pendingBlankDelete = new Map<string, ReturnType<typeof setTimeout>>()
 const BLANK_DELETE_DELAY_MS = 400
+
+/** 이미지는 공부 노트 전용 (plan §1 PR-A) — 매 렌더 새 객체를 만들지 않게 모듈 상수로 */
+const IMAGE_ON = { image: true } as const
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -161,6 +172,28 @@ export function StudyNoteDocPage() {
     // 본문은 즉시 저장 (실패 시 pendingBodyRef 가 이미 차 있어 떠날 때 flush 가 재시도)
     void persist({ content }).catch(() => {})
   }
+
+  /**
+   * 본문 이미지 업로드 — 압축·발급·PUT·첨부 등록·실패 안내는 전부 `uploadNoteImage` 안이다.
+   * 여기서 하는 일은 둘: **이 노트 id 를 묶어 주고**(공용 에디터는 자기가 어느 문서인지
+   * 모른다), 성공하면 **저장 용량 캐시를 무효화**한다.
+   *
+   * 🔴 무효화가 **여기** 있는 이유 — `uploadNoteImage` 는 훅을 쓸 수 없는 순수 함수다
+   * (붙여넣기·드롭·툴바 세 진입이 공유하고, spec 도 react-query 없이 돈다). 캐시를 아는
+   * 층은 화면이라 호출부가 진다. 실패하면 쓴 바이트도 없으니 성공 경로에서만 민다.
+   *
+   * 🔴 무효화를 **기다리지 않는다** — 여기서 await 하면 자리 표시가 이미지로 바뀌는 게
+   * 용량 재조회만큼 늦어진다. 숫자는 조금 뒤에 따라오면 된다.
+   */
+  const invalidateStorageUsage = useInvalidateStorageUsage()
+  const uploadImage = useCallback(
+    async (file: File) => {
+      const image = await uploadNoteImage(id, file)
+      void invalidateStorageUsage()
+      return image
+    },
+    [id, invalidateStorageUsage],
+  )
 
   // ── 멘션 소스 (목록 1회 로드 후 클라 필터) ─────────────────
   const notesRef = useRef<{ loaded: boolean; items: StudyNoteListItem[] }>({
@@ -591,6 +624,9 @@ export function StudyNoteDocPage() {
               onAiOpen={aiEnabled && !readOnly ? () => setAiOpen(true) : undefined}
               aiEntryMobileOnly
               header={editorSlot}
+              /* 이미지는 공부 노트에서만 — 준비·활동·회사 메모는 기본 off 그대로다 */
+              features={IMAGE_ON}
+              onUploadImage={uploadImage}
             />
 
             {/* 드래그 → 「AI」 (데스크탑). 모바일은 툴바 버튼이 같은 자리를 대신한다 */}

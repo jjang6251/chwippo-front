@@ -3,12 +3,28 @@ import { apiClient } from './client'
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
 // ── Storage Usage ─────────────────────────────────────────
+
+/**
+ * 100MB 한 통을 무엇이 채우고 있나. 불변식: `usedBytes === myinfoBytes + noteImageBytes`.
+ */
+export interface StorageBreakdown {
+  /** 내 정보 창고 증빙 파일 */
+  myinfoBytes: number
+  /** 공부 노트 본문 이미지 */
+  noteImageBytes: number
+}
+
 export interface StorageUsage {
   usedBytes: number
   limitBytes: number
   usedMB: number
   limitMB: number
   percentage: number
+  /**
+   * 🔴 optional — 프론트가 백엔드보다 먼저 나가는 창이 열려 있다. 없는 동안에는 분해 줄을
+   * 접고 경고 문구도 「어느 쪽」을 단정하지 않는다 (없는 값으로 한쪽을 고르면 거짓말이 된다).
+   */
+  breakdown?: StorageBreakdown
 }
 export const getStorageUsage = () =>
   apiClient.get('/myinfo/storage-usage').then(unwrap<StorageUsage>)

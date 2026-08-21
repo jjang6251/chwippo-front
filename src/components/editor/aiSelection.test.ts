@@ -5,6 +5,15 @@
  *   확장   빈 선택 → null (패널은 생성 모드) / 문단 일부 → 문단 전체 / 두 문단 걸침 → 둘 다
  *   확장   리스트·표·토글 **내부** 선택 → 그 리스트·표·토글 통째 (depth 1 조상 — 의도된 동작)
  *   확장   전체 선택(depth 0 좌표) → 문서 전체
+ *
+ * 이미지 (study-note-media 2026-08-21 — 「AI 는 글자에만 동작한다」):
+ *   진입   🔴 이미지 클릭(NodeSelection) → 대상 아님 · 버블 미노출 (옛 조건은 통과했다)
+ *   진입   🔴 글자+이미지 혼합 선택 → 차단 ([교체] 가 사진을 덮어쓰고 R2 객체까지 지우던 경로)
+ *   진입   글자 없는 선택(구분선만) → 차단 / 글자만 선택 → 기존대로 (회귀)
+ *   진입   커서만 = 버블 안 뜸 · 이미지 옆 문단 커서는 그 문단만 대상 (이미지 안 딸려 온다)
+ *   payload 🔴 직렬화에서 `![](…)` 가 빠진다 — **본문·md 내보내기는 그대로** (훼손 0)
+ *   payload 코드 블록에 적어 둔 `![](…)` 예시는 산다 (문자열 정규식이 아니라 노드 단위 제거)
+ *   회귀   이미지가 꺼진 소비처(준비·활동·메모)는 판정이 늘 false — AI 동작 무변경
  *   직렬화 🔴 인라인 조각은 마크를 잃는다 / 블록 확장이면 `**…**` 가 산다 (확장 결정의 근거)
  *   직렬화 표·체크리스트·코드 언어 보존 · markdown 확장 꺼짐 → 평문 fallback · 낡은 좌표 무예외
  *   파싱   🔴 평문 산문(md 신호 0종)이 `looksLikeMarkdown` 게이트를 우회해 노드가 된다
@@ -17,10 +26,17 @@ import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { Editor } from '@tiptap/core'
 import { closeHistory } from '@tiptap/pm/history'
-import { buildEditorExtensions } from './editorExtensions'
-import { handleMarkdownPaste, looksLikeMarkdown, markdownToDocNodes } from './markdownIO'
+import { buildEditorExtensions, type EditorFeatures } from './editorExtensions'
 import {
+  editorToMarkdown,
+  handleMarkdownPaste,
+  looksLikeMarkdown,
+  markdownToDocNodes,
+} from './markdownIO'
+import {
+  canAiTargetSelection,
   expandToBlockRange,
+  rangeHasImage,
   serializeRange,
   replaceRangeWithMarkdown,
   insertMarkdownAt,
@@ -56,12 +72,16 @@ afterEach(() => {
   opened.splice(0).forEach((editor) => editor.destroy())
 })
 
-function makeEditor(opts?: { characterLimit?: number; markdown?: boolean }) {
+function makeEditor(opts?: { characterLimit?: number; markdown?: boolean; image?: boolean }) {
+  const features: EditorFeatures = {}
+  if (opts?.markdown === false) features.markdown = false
+  if (opts?.image) features.image = true
+
   const editor = new Editor({
     extensions: buildEditorExtensions({
       placeholder: 'ph',
       characterLimit: opts?.characterLimit,
-      features: opts?.markdown === false ? { markdown: false } : undefined,
+      features,
     }),
     content: null,
   })
@@ -95,6 +115,32 @@ function makeTableNote() {
   editor.chain().insertContent(nodes).run()
   editor.view.dispatch(closeHistory(editor.state.tr))
   return editor
+}
+
+const IMAGE_SRC = 'https://cdn.example.com/study/circuit-diagram.png'
+
+/** 공부 노트 모양 — 글 · 그림 · 글. 이미지는 최상위 블록이라 문단과 형제다 */
+function makeImageNote() {
+  const editor = makeEditor({ image: true })
+  editor.commands.setContent({
+    type: 'doc',
+    content: [
+      { type: 'paragraph', content: [{ type: 'text', text: '회로 정리를 시작한다' }] },
+      { type: 'image', attrs: { src: IMAGE_SRC, attachmentId: 'att-1' } },
+      { type: 'paragraph', content: [{ type: 'text', text: '전압 분배 법칙을 적용한다' }] },
+    ],
+  })
+  return editor
+}
+
+/** 픽스처의 image 노드 위치 (클릭 = NodeSelection 을 재현하려면 필요하다) */
+function imagePos(editor: Editor): number {
+  let pos = -1
+  editor.state.doc.descendants((node, at) => {
+    if (node.type.name === 'image') pos = at
+  })
+  if (pos < 0) throw new Error('픽스처에 이미지가 없다')
+  return pos
 }
 
 /** 본문에서 텍스트 위치를 찾는다 — 픽스처 구조가 바뀌어도 spec 이 안 깨지게 */
@@ -211,6 +257,132 @@ describe('expandToBlockRange — 선택을 최상위 블록 경계로', () => {
     const editor = makeNote()
     editor.commands.selectAll()
     expect(expandToBlockRange(editor)).toEqual({ from: 0, to: editor.state.doc.content.size })
+  })
+
+  it('글자 없는 선택(구분선만)은 대상이 아니다 — AI 가 할 일이 없다', () => {
+    const editor = makeEditor()
+    editor.commands.setContent({
+      type: 'doc',
+      content: [
+        { type: 'horizontalRule' },
+        { type: 'paragraph', content: [{ type: 'text', text: '아래 문단' }] },
+      ],
+    })
+    editor.commands.setNodeSelection(0)
+    expect(editor.state.selection.empty).toBe(false)
+    expect(expandToBlockRange(editor)).toBeNull()
+    expect(canAiTargetSelection(editor)).toBe(false)
+  })
+})
+
+// ── 🔴 이미지 — 「AI 는 글자에만 동작한다」 ──────────────────────
+
+describe('이미지가 낀 선택은 AI 대상이 아니다', () => {
+  /**
+   * 🔴 옛 버블 조건(`from !== to`)은 NodeSelection 을 통과시켰다 — 이미지를 클릭하면
+   * AI 버튼이 떴는데 정작 할 수 있는 게 없는 **거짓 어포던스**였다.
+   */
+  it('이미지 클릭(NodeSelection) → 대상 아님 · 버블도 안 뜬다', () => {
+    const editor = makeImageNote()
+    editor.commands.setNodeSelection(imagePos(editor))
+
+    expect(editor.state.selection.empty).toBe(false) // 옛 조건은 여기서 통과했다
+    expect(expandToBlockRange(editor)).toBeNull()
+    expect(canAiTargetSelection(editor)).toBe(false)
+  })
+
+  /** 🔴 데이터 손실 경로 — 이 범위를 [교체] 하면 사진이 사라지고 R2 객체까지 지워졌다 */
+  it('글자+이미지 혼합 선택 → 차단', () => {
+    const editor = makeImageNote()
+    const first = findText(editor, '회로 정리')
+    const last = findText(editor, '전압 분배')
+    editor.commands.setTextSelection({ from: first.from, to: last.to })
+
+    expect(rangeHasImage(editor, { from: 0, to: editor.state.doc.content.size })).toBe(true)
+    expect(expandToBlockRange(editor)).toBeNull()
+    expect(canAiTargetSelection(editor)).toBe(false)
+  })
+
+  it('같은 노트라도 글자만 잡으면 그대로 동작한다 (회귀)', () => {
+    const editor = makeImageNote()
+    editor.commands.setTextSelection(findText(editor, '전압 분배'))
+
+    expect(canAiTargetSelection(editor)).toBe(true)
+    expect(serializeRange(editor, expandToBlockRange(editor)!)).toBe('전압 분배 법칙을 적용한다')
+  })
+
+  it('이미지 옆 문단에 커서 → 그 문단만 대상 (이미지는 딸려 오지 않는다) · 버블은 안 뜬다', () => {
+    const editor = makeImageNote()
+    editor.commands.setTextSelection(findText(editor, '전압 분배').from)
+
+    const range = expandToBlockRange(editor)
+    expect(range).not.toBeNull()
+    expect(serializeRange(editor, range!)).toBe('전압 분배 법칙을 적용한다')
+    expect(canAiTargetSelection(editor)).toBe(false) // 커서만 = 드래그 신호가 아니다
+  })
+
+  it('rangeHasImage — 글자만 범위는 false · 문서 밖 좌표에도 안 던진다', () => {
+    const editor = makeImageNote()
+    const size = editor.state.doc.content.size
+
+    expect(rangeHasImage(editor, findText(editor, '전압 분배'))).toBe(false)
+    expect(rangeHasImage(editor, { from: 0, to: size + 900 })).toBe(true)
+    expect(() => rangeHasImage(editor, { from: size + 500, to: size + 900 })).not.toThrow()
+  })
+
+  /** 준비·활동·회사 메모는 스키마에 image 노드가 아예 없다 — 이번 변경이 안 닿아야 한다 */
+  it('이미지가 꺼진 소비처는 판정이 늘 false — 기존 AI 동작 무변경', () => {
+    const editor = makeNote()
+    expect(editor.schema.nodes.image).toBeUndefined()
+    expect(rangeHasImage(editor, { from: 0, to: editor.state.doc.content.size })).toBe(false)
+
+    editor.commands.setTextSelection(findText(editor, '독립된 주소'))
+    expect(canAiTargetSelection(editor)).toBe(true)
+    expect(serializeRange(editor, expandToBlockRange(editor)!)).toBe(
+      '프로세스는 **독립된 주소 공간**을 가진다',
+    )
+  })
+})
+
+describe('🔴 LLM payload — 이미지는 걷어내고 굽는다 (2중 방어)', () => {
+  it('직렬화 결과에 `![](…)` 도 R2 주소도 없다 — 글자는 그대로', () => {
+    const editor = makeImageNote()
+    const md = serializeRange(editor, { from: 0, to: editor.state.doc.content.size })
+
+    expect(md).not.toContain('![')
+    expect(md).not.toContain(IMAGE_SRC)
+    expect(md).toContain('회로 정리를 시작한다')
+    expect(md).toContain('전압 분배 법칙을 적용한다')
+  })
+
+  it('본문·md 내보내기에는 이미지가 그대로 남는다 (사용자 문서 훼손 0)', () => {
+    const editor = makeImageNote()
+    const before = JSON.stringify(editor.getJSON())
+
+    serializeRange(editor, { from: 0, to: editor.state.doc.content.size })
+
+    expect(JSON.stringify(editor.getJSON())).toBe(before)
+    expect(editorToMarkdown(editor)).toContain(`![](${IMAGE_SRC})`)
+  })
+
+  /** 문자열 정규식으로 지웠다면 사용자가 적어 둔 예시가 함께 사라진다 */
+  it('코드 블록에 적어 둔 `![](…)` 예시는 살아남는다 (노드 단위 제거)', () => {
+    const editor = makeEditor({ image: true })
+    editor.commands.setContent({
+      type: 'doc',
+      content: [
+        {
+          type: 'codeBlock',
+          attrs: { language: 'markdown' },
+          content: [{ type: 'text', text: `![](${IMAGE_SRC})` }],
+        },
+      ],
+    })
+    editor.commands.selectAll()
+
+    const range = expandToBlockRange(editor)
+    expect(range).not.toBeNull()
+    expect(serializeRange(editor, range!)).toContain(`![](${IMAGE_SRC})`)
   })
 })
 
@@ -458,8 +630,28 @@ describe('useEditorSelection', () => {
     expect(off).toHaveBeenCalledWith('transaction', expect.any(Function))
   })
 
+  /** 패널 안내 문구가 이 값으로 갈린다 — 조용히 「새로 만들기 모드」로 빠지면 고장으로 읽힌다 */
+  it('이미지 선택 — empty=true 이면서 hasImage=true (이유를 알 수 있다)', () => {
+    const editor = makeImageNote()
+    editor.commands.setNodeSelection(imagePos(editor))
+    const { result } = renderHook(() => useEditorSelection(editor))
+
+    expect(result.current.empty).toBe(true)
+    expect(result.current.hasImage).toBe(true)
+    expect(result.current.charCount).toBe(0)
+  })
+
+  it('같은 노트의 글자 선택은 hasImage=false', () => {
+    const editor = makeImageNote()
+    editor.commands.setTextSelection(findText(editor, '전압 분배'))
+    const { result } = renderHook(() => useEditorSelection(editor))
+
+    expect(result.current.empty).toBe(false)
+    expect(result.current.hasImage).toBe(false)
+  })
+
   it('editor 가 아직 없으면 기본값', () => {
     const { result } = renderHook(() => useEditorSelection(null))
-    expect(result.current).toEqual({ empty: true, from: 0, to: 0, charCount: 0 })
+    expect(result.current).toEqual({ empty: true, from: 0, to: 0, charCount: 0, hasImage: false })
   })
 })

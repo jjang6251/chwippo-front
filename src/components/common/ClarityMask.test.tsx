@@ -45,6 +45,20 @@ describe('ClarityMask', () => {
     expect(masked).toContainElement(screen.getByText('로딩 중 스켈레톤'))
   })
 
+  /**
+   * study-note-media PR-A — 공부 노트 본문에 **사용자가 올린 이미지**가 들어온다.
+   * 마스킹 경계가 라우트 단위라 본문에 무엇이 그려지든(글이든 그림이든) 같은 경계 안이다 —
+   * 이미지만 따로 마스킹 클래스를 붙일 필요가 없다는 근거를 여기 잠가 둔다.
+   */
+  it('본문 이미지도 같은 경계 안이다 (공부 노트 첨부)', () => {
+    const { container } = renderAt(
+      '/secret',
+      <img src="https://cdn.example/note.png" alt="필기 사진" />,
+    )
+    const masked = container.querySelector('[data-clarity-mask="true"]')
+    expect(masked).toContainElement(screen.getByAltText('필기 사진'))
+  })
+
   /** 값이 boolean 으로 바뀌면 React 가 속성을 지워 마스킹이 조용히 사라진다 */
   it("속성값이 문자열 'true' 로 렌더된다", () => {
     const { container } = renderAt('/secret', <p>x</p>)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Editor } from '@tiptap/core'
+import { Fragment, type Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { CharacterCount, type CharacterCountOptions } from '@tiptap/extensions'
 import { markdownStorage, markdownToDocNodes } from './markdownIO'
 
@@ -19,6 +20,12 @@ import { markdownStorage, markdownToDocNodes } from './markdownIO'
  * 부작용은 의도된 것이다: 리스트·표·토글 **안**을 선택하면 depth 1 조상이 그 리스트·표·토글
  * 이라서 **통째로** 잡힌다. 사용자에게는 하이라이트 데코(`aiTargetHighlight`)가 잡힌 범위를
  * 그대로 보여 주므로, "생각보다 넓게 잡혔다" 가 눈에 보인 상태에서 요청하게 된다.
+ *
+ * ## 🔴 「AI 는 글자에만 동작한다」 (study-note-media, 2026-08-21)
+ *
+ * 이미지가 낀 범위는 **대상이 되지 않는다** (`rangeHasImage`). 판정을 여기 두는 이유는
+ * 선택 해석이 여기 하나뿐이기 때문이다 — 버블·툴바·패널이 각자 재구현하면 한쪽만 뚫린다
+ * (모바일은 툴바가 버블 자리를 대신한다). 직렬화도 이미지를 걷어내고 굽는다(2중 방어).
  */
 
 export interface BlockRange {
@@ -26,16 +33,57 @@ export interface BlockRange {
   to: number
 }
 
+/** 문서 밖 좌표 방어 — 패널이 들고 있던 좌표는 그 사이 본문이 줄면 문서 밖을 가리킨다 */
+function clampRange(doc: ProseMirrorNode, range: BlockRange): BlockRange {
+  const from = Math.max(0, Math.min(range.from, doc.content.size))
+  return { from, to: Math.max(from, Math.min(range.to, doc.content.size)) }
+}
+
 /**
- * 현재 선택을 **최상위 블록 경계로 확장**한 범위. 빈 선택(커서만)이면 `null`.
+ * 범위 안에 image 노드가 하나라도 있나 — **AI 대상 제외** 판정의 단일 소스.
+ *
+ * 🔴 AI 는 그림을 못 본다. 요청 규격이 글자 3필드뿐이고(`llm-provider.interface.ts`) 모델도
+ * 텍스트 전용이라, 이미지는 `![](R2주소)` 문자열이 되어 그대로 전송된다 — ① 모델이 못 본
+ * 그림을 본 척 지어낼 여지 ② 우리 R2 주소는 **로그인 없이 열리는 공개 URL** 이라 외부
+ * 전달이 곧 공유다.
+ *
+ * 🔴 그리고 그 범위를 [교체] 하면 결과 텍스트가 그림을 덮어써 **사진이 사라지고**, 이어지는
+ * 저장의 reconcile 이 그 첨부를 미참조로 판정해 R2 객체까지 지운다 (복구 불가).
+ *
+ * 이미지가 꺼진 소비처(준비·활동·메모)는 스키마에 image 노드가 아예 없어 늘 false 다.
+ */
+export function rangeHasImage(editor: Editor, range: BlockRange): boolean {
+  const { doc } = editor.state
+  const { from, to } = clampRange(doc, range)
+
+  let found = false
+  doc.nodesBetween(from, to, (node) => {
+    if (node.type.name === 'image') found = true
+    return !found // 하나 찾으면 더 내려가지 않는다
+  })
+  return found
+}
+
+/**
+ * 현재 선택을 **최상위 블록 경계로 확장**한 범위. AI 대상이 될 수 없으면 `null`.
  *
  * - 문단 일부만 잡아도 그 문단 전체
  * - 두 문단에 걸치면 두 문단 전체
  * - 리스트·표·토글 **내부**면 그 리스트·표·토글 전체 (depth 1 조상이 그것들이라서)
  * - 끝점이 다음 블록의 첫 칸에 걸치면 그 블록까지 포함된다 — 브라우저가 그 지점을 이미
  *   선택으로 칠하고 있어서, 화면에 보이는 것과 어긋나지 않는 쪽을 택했다
+ * - 🔴 글자가 없거나 이미지가 낀 범위는 `null` (= 무선택 생성 모드) — `isAiTargetable`
  */
 export function expandToBlockRange(editor: Editor): BlockRange | null {
+  const range = blockRangeOf(editor)
+  return range && isAiTargetable(editor, range) ? range : null
+}
+
+/**
+ * 자격 판정 **전**의 확장 범위. 「왜 대상이 아닌가」를 알아야 하는 쪽(패널 안내 문구)이
+ * 같이 쓴다 — 이미지 때문에 빠진 것과 애초에 선택이 없는 것은 사용자에게 다른 상황이다.
+ */
+function blockRangeOf(editor: Editor): BlockRange | null {
   const { doc, selection } = editor.state
   const { from, to, empty } = selection
 
@@ -47,10 +95,8 @@ export function expandToBlockRange(editor: Editor): BlockRange | null {
    */
   if (empty) {
     const $pos = doc.resolve(from)
-    if ($pos.depth === 0) return null // 블록 사이 경계 (갈 곳 없음)
-    const range = { from: $pos.before(1), to: $pos.after(1) }
-    const text = doc.textBetween(range.from, range.to, ' ', ' ').trim()
-    return text ? range : null
+    if ($pos.depth === 0) return null // 블록 사이 경계 (이미지 옆 갭 커서 등 — 갈 곳이 없다)
+    return { from: $pos.before(1), to: $pos.after(1) }
   }
 
   const $from = doc.resolve(from)
@@ -64,6 +110,44 @@ export function expandToBlockRange(editor: Editor): BlockRange | null {
 }
 
 /**
+ * AI 가 다룰 수 있는 범위인가 — 「AI 는 글자에만 동작한다」가 걸리는 한 자리.
+ *
+ * - 글자가 없으면(이미지만·구분선만) AI 가 할 일이 없다. 빈 커서 블록을 생성 모드로
+ *   보내던 기존 규칙을 **선택에도** 그대로 적용한 것이다
+ * - 이미지가 끼면 뺀다 (`rangeHasImage` — 못 읽고, 교체하면 사진이 지워진다)
+ */
+function isAiTargetable(editor: Editor, range: BlockRange): boolean {
+  const text = editor.state.doc.textBetween(range.from, range.to, ' ', ' ').trim()
+  return text !== '' && !rangeHasImage(editor, range)
+}
+
+/**
+ * 지금 **선택**이 AI 대상이 될 수 있나 — 진입 어포던스(버블 메뉴)가 보는 값.
+ *
+ * 빈 선택은 여기서 false 다. 커서만 둔 블록도 패널의 대상은 되지만(위 주석), 드래그
+ * 없이 뜨는 버블은 타이핑 위를 덮는다 — 버블은 「드래그했다」는 신호에만 뜬다.
+ */
+export function canAiTargetSelection(editor: Editor): boolean {
+  return !editor.state.selection.empty && expandToBlockRange(editor) !== null
+}
+
+/**
+ * 이미지 노드만 뺀 사본. 나머지 구조(문단·표·마크)는 손대지 않는다.
+ *
+ * 🔴 **문자열 정규식이 아니라 노드 단위**다. `!\[.*\]\(.*\)` 로 지우면 사용자가 코드 블록
+ * 안에 적어 둔 마크다운 예시까지 지워져, 모델이 보는 글이 사용자가 쓴 글과 달라진다.
+ */
+function withoutImages(fragment: Fragment): Fragment {
+  const kept: ProseMirrorNode[] = []
+  fragment.forEach((node) => {
+    if (node.type.name === 'image') return
+    // 텍스트 노드는 content 가 없다 — copy() 에 Fragment 를 넘기면 글자가 깨진다
+    kept.push(node.isText ? node : node.copy(withoutImages(node.content)))
+  })
+  return Fragment.fromArray(kept)
+}
+
+/**
  * 범위 → 마크다운. 서버로 보내는 `selectionMd` 가 이 값이다.
  *
  * 블록 경계 범위라 조각이 열려 있지 않아(openStart/openEnd = 0) 표·체크리스트·코드 언어·
@@ -72,16 +156,26 @@ export function expandToBlockRange(editor: Editor): BlockRange | null {
  *
  * 범위는 문서 크기로 한 번 조인다. 패널이 들고 있던 좌표는 사용자가 그 사이 본문을 지우면
  * 문서 밖을 가리키는데, `doc.slice` 는 그때 예외를 던진다(렌더 중이면 화면이 죽는다).
+ *
+ * 🔴 **이미지는 걷어내고 굽는다 — LLM 으로 가는 경로의 2중 방어.** 진입 게이트
+ * (`expandToBlockRange`)가 이미 이미지 낀 범위를 막지만, 대상을 잡아 둔 뒤 그 자리에
+ * 그림이 들어오는 경로가 남는다. 여기까지 새면 공개 R2 주소가 그대로 모델에 실린다.
+ *
+ * 자리표시 문구로 **치환하지 않고 제거**한다: `[이미지]` 같은 표시는 ① 못 본 그림을
+ * 언급하도록 모델을 자극하고 ② 결과에 되울려 나와 [교체] 순간 본문에 평문으로 박힌다.
+ *
+ * 본문·저장·md 내보내기는 이 함수를 타지 않는다 (`editorToMarkdown` 이 따로다) — 사용자
+ * 문서에서는 이미지가 그대로 남는다.
  */
 export function serializeRange(editor: Editor, range: BlockRange): string {
   const { doc } = editor.state
-  const from = Math.max(0, Math.min(range.from, doc.content.size))
-  const to = Math.max(from, Math.min(range.to, doc.content.size))
+  const { from, to } = clampRange(doc, range)
 
   const storage = markdownStorage(editor)
+  // 평문 fallback 은 textBetween 이라 애초에 이미지가 안 실린다
   if (!storage) return doc.textBetween(from, to, '\n\n').trim()
 
-  return storage.serializer.serialize(doc.slice(from, to).content).trim()
+  return storage.serializer.serialize(withoutImages(doc.slice(from, to).content)).trim()
 }
 
 export interface MarkdownApplyResult {
@@ -191,25 +285,52 @@ export interface EditorSelectionState {
    * 최종 판정은 서버 문구가 한다.
    */
   charCount: number
+  /**
+   * 잡힌 블록에 이미지가 있어 **대상에서 빠졌나** — 패널 안내 문구가 이걸로 갈린다.
+   *
+   * 🔴 이게 없으면 이미지를 고른 사용자에게 "본문을 다듬으려면 드래그하세요" 가 뜬다.
+   * 방금 드래그한 사람에게는 기능이 고장 난 것으로 읽힌다.
+   */
+  hasImage: boolean
 }
 
-const NO_SELECTION: EditorSelectionState = { empty: true, from: 0, to: 0, charCount: 0 }
+const NO_SELECTION: EditorSelectionState = {
+  empty: true,
+  from: 0,
+  to: 0,
+  charCount: 0,
+  hasImage: false,
+}
 
 function readSelection(editor: Editor): EditorSelectionState {
-  const range = expandToBlockRange(editor)
+  const expanded = blockRangeOf(editor)
+  const range = expanded && isAiTargetable(editor, expanded) ? expanded : null
   if (!range) {
     const { from } = editor.state.selection
-    return { empty: true, from, to: from, charCount: 0 }
+    return {
+      empty: true,
+      from,
+      to: from,
+      charCount: 0,
+      hasImage: expanded ? rangeHasImage(editor, expanded) : false,
+    }
   }
   return {
     empty: false,
     ...range,
     charCount: editor.state.doc.textBetween(range.from, range.to, '\n', '\n').length,
+    hasImage: false, // 자격을 통과했다 = 이미지가 없다
   }
 }
 
 function sameSelection(a: EditorSelectionState, b: EditorSelectionState): boolean {
-  return a.empty === b.empty && a.from === b.from && a.to === b.to && a.charCount === b.charCount
+  return (
+    a.empty === b.empty &&
+    a.from === b.from &&
+    a.to === b.to &&
+    a.charCount === b.charCount &&
+    a.hasImage === b.hasImage
+  )
 }
 
 /**

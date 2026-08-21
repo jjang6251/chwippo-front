@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import { EditorToolbar } from './EditorToolbar'
 import {
@@ -7,6 +15,11 @@ import {
   type EditorFeatures,
 } from './editorExtensions'
 import { editorToMarkdown, handleMarkdownPaste, looksLikeCodeEditorHtml } from './markdownIO'
+import {
+  hideImagePlaceholder,
+  replacePlaceholderWithImage,
+  showImagePlaceholder,
+} from './noteImage'
 import type { StudyNoteMentionOptions } from './StudyNoteMention'
 import { docToMemoValue, memoCounterColor, type TiptapDoc } from '@/utils/memoSections'
 
@@ -82,11 +95,30 @@ interface Props {
    * 미지정이면 버튼이 없다 — 회사 메모 등 다른 소비처는 무변경으로 남는다.
    */
   onAiOpen?: () => void
+  /**
+   * 지정 시 이미지 진입 3종(툴바 📷 · 붙여넣기 · 끌어다 놓기)이 켜진다.
+   *
+   * 업로드 주체는 **소비 측**이다 — 첨부는 노트 id 에 매달리는데 공용 에디터는 자기가
+   * 어느 문서인지 모른다. 실패 안내도 소비 측(`uploadNoteImage`)이 하고, 여기서는
+   * 성공하면 노드 확정 / 실패하면 자리 표시 회수, 두 갈래만 본다.
+   *
+   * 🔴 스키마의 image 노드는 `features.image` 가 따로 켠다. 읽기 모드에는 업로더를
+   * 주지 않고도 **저장된 이미지를 그려야** 해서 둘이 분리돼 있다.
+   */
+  onUploadImage?: (file: File) => Promise<{ src: string; attachmentId: string }>
 }
 
 /** 붙여넣기가 글자 제한에 걸렸을 때 뜨는 안내 — 조용히 사라지면 사용자는 소실을 모른다 */
 const TRUNCATED_NOTICE =
   '글자수 제한 때문에 붙여넣은 내용이 다 들어가지 못했어요. 나눠서 붙여넣어 주세요.'
+
+/**
+ * 붙여넣기·드롭에 실려 온 것 중 이미지만.
+ * HEIC(`image/heic`)도 통과시킨다 — 열 수 있는지는 압축 단계가 실제로 열어 보고 판정한다.
+ */
+function imageFilesOf(files: FileList | null | undefined): File[] {
+  return Array.from(files ?? []).filter((f) => f.type.startsWith('image/'))
+}
 
 export function RichTextEditor({
   initialContent,
@@ -104,10 +136,12 @@ export function RichTextEditor({
   stickyToolbar,
   onAiOpen,
   aiEntryMobileOnly,
+  onUploadImage,
 }: Props) {
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [truncated, setTruncated] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   // 카운터·헤더(칩 ✓) 라이브 갱신 보장 (transaction 마다 재렌더)
   const [, forceRender] = useReducer((x: number) => x + 1, 0)
 
@@ -128,6 +162,35 @@ export function RichTextEditor({
 
   // handlePaste 는 editor 가 만들어지기 전에 정의돼야 해서 ref 로 뒤늦게 잡는다
   const editorRef = useRef<Editor | null>(null)
+  // 같은 이유로 업로더도 ref 로 — editorProps 는 생성 시점 값으로 굳는다
+  const uploadRef = useRef(onUploadImage)
+  useEffect(() => {
+    uploadRef.current = onUploadImage
+  })
+
+  /**
+   * 진입 3종이 모두 여기로 모인다.
+   *
+   * 🔴 `await` 뒤에는 에디터가 이미 죽어 있을 수 있다 (업로드 중 뒤로가기).
+   * 죽은 view 에 dispatch 하면 예외가 나므로 두 갈래 모두 살아 있는지 먼저 본다.
+   */
+  const runImageUploads = useCallback((files: File[], pos?: number) => {
+    const ed = editorRef.current
+    const upload = uploadRef.current
+    if (!ed || !upload) return
+    for (const file of files) {
+      const id = crypto.randomUUID()
+      showImagePlaceholder(ed.view, id, pos ?? ed.state.selection.from)
+      void upload(file)
+        .then((image) => {
+          if (!ed.isDestroyed) replacePlaceholderWithImage(ed.view, id, image)
+        })
+        .catch(() => {
+          // 안내는 업로더가 이미 띄웠다 — 여기선 자리만 걷는다
+          if (!ed.isDestroyed) hideImagePlaceholder(ed.view, id)
+        })
+    }
+  }, [])
 
   const editor = useEditor({
     extensions,
@@ -137,8 +200,15 @@ export function RichTextEditor({
       attributes: {
         class: `chw-prose ${minHeightClass} focus:outline-none px-4 py-3 text-text-primary leading-relaxed`,
       },
-      handlePaste: (_view, event) => {
+      handlePaste: (view, event) => {
         const current = editorRef.current
+        // 🔴 이미지 검사가 **먼저**다 — 스크린샷 붙여넣기는 text/plain 이 비어 있어서
+        //    아래 텍스트 분기에 걸리면 그대로 false 로 흘러 브라우저 기본 동작에 넘어간다
+        const images = imageFilesOf(event.clipboardData?.files)
+        if (images.length > 0 && uploadRef.current && current) {
+          runImageUploads(images, view.state.selection.from)
+          return true
+        }
         const text = event.clipboardData?.getData('text/plain')
         if (!text || !current) return false
         // HTML 이 함께 왔으면 원칙적으로 tiptap 기본 경로가 서식을 더 잘 살린다(웹페이지·노션).
@@ -151,6 +221,19 @@ export function RichTextEditor({
         const result = handleMarkdownPaste(current, text, characterLimit)
         if (!result.handled) return false
         setTruncated(result.truncated)
+        return true
+      },
+      /**
+       * 끌어다 놓기. `moved` 는 **문서 안에서 옮기는 중**이라는 뜻이라 손대지 않는다
+       * (이미지 노드를 문단 사이로 끄는 동작이 업로드로 오인되면 안 된다).
+       */
+      handleDrop: (view, event, _slice, moved) => {
+        if (moved || !uploadRef.current) return false
+        const images = imageFilesOf(event.dataTransfer?.files)
+        if (images.length === 0) return false
+        event.preventDefault()
+        const at = view.posAtCoords({ left: event.clientX, top: event.clientY })
+        runImageUploads(images, at?.pos ?? view.state.selection.from)
         return true
       },
     },
@@ -215,6 +298,29 @@ export function RichTextEditor({
           onExportMarkdown={
             onExportMarkdown ? () => onExportMarkdown(editorToMarkdown(editor)) : undefined
           }
+          /* 업로더와 스키마 노드가 **둘 다** 있어야 누를 수 있는 버튼이 된다 */
+          onInsertImage={
+            onUploadImage && editor.schema.nodes.image
+              ? () => fileInputRef.current?.click()
+              : undefined
+          }
+        />
+      )}
+
+      {onUploadImage && (
+        /* 화면에 없는 파일 선택창 — 툴바 📷 가 이걸 대신 누른다.
+           고른 뒤 value 를 비워야 **같은 파일을 연달아** 고를 수 있다 (값이 같으면 change 가 안 온다) */
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          data-testid="note-image-input"
+          onChange={(e) => {
+            runImageUploads(imageFilesOf(e.target.files))
+            e.target.value = ''
+          }}
         />
       )}
 

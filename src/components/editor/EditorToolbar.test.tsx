@@ -30,13 +30,18 @@ function makeEditor(withMention = false) {
   }) as unknown as ReactEditor
 }
 
-function setup(opts?: { mention?: boolean; onExport?: () => void }) {
+function setup(opts?: {
+  mention?: boolean
+  onExport?: () => void
+  onInsertImage?: () => void
+}) {
   const editor = makeEditor(opts?.mention)
   const utils = render(
     <EditorToolbar
       editor={editor}
       hasMention={opts?.mention}
       onExportMarkdown={opts?.onExport}
+      onInsertImage={opts?.onInsertImage}
     />,
   )
   const order = () =>
@@ -134,6 +139,31 @@ describe('툴바 — 조건부 노출', () => {
     const { container } = setup({ onExport })
     fireEvent.mouseDown(container.querySelector('[data-tool="export"]')!)
     expect(onExport).toHaveBeenCalledTimes(1)
+  })
+
+  /* study-note-media PR-A — 📷 는 공부 노트에만 붙는다 (준비·활동·메모는 콜백이 없다) */
+  it('🔴 이미지 콜백이 없으면 버튼도 없다 (공부 노트 외 소비처 무변경)', () => {
+    const { order } = setup()
+    expect(order()).not.toContain('image')
+  })
+
+  it('이미지 버튼은 1군 토글 뒤에 온다', () => {
+    const { order } = setup({ onInsertImage: vi.fn() })
+    expect(order().slice(0, 6)).toEqual([
+      'bold',
+      'h2',
+      'bulletList',
+      'taskList',
+      'details',
+      'image',
+    ])
+  })
+
+  it('이미지 버튼은 콜백을 부른다 (파일 선택창 열기)', () => {
+    const onInsertImage = vi.fn()
+    const { container } = setup({ onInsertImage })
+    fireEvent.mouseDown(container.querySelector('[data-tool="image"]')!)
+    expect(onInsertImage).toHaveBeenCalledTimes(1)
   })
 })
 
