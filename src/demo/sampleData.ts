@@ -864,12 +864,23 @@ export const DEMO_TIMELINE: TimelinePage = {
   nextCursor: null,
 }
 
+/*
+  증빙 파일 2MB + 공부 노트 이미지 1.2MB. 🔴 두 값을 **더해서** usedBytes 를 만든다 —
+  서버 불변식(`usedBytes === myinfoBytes + noteImageBytes`)이 데모에서도 깨지지 않게.
+*/
+const DEMO_MYINFO_BYTES = 2 * 1024 * 1024
+const DEMO_NOTE_IMAGE_BYTES = Math.round(1.2 * 1024 * 1024)
+
 export const DEMO_STORAGE_USAGE: StorageUsage = {
-  usedBytes: Math.round(3.2 * 1024 * 1024),
+  usedBytes: DEMO_MYINFO_BYTES + DEMO_NOTE_IMAGE_BYTES,
   limitBytes: 100 * 1024 * 1024,
   usedMB: 3.2,
   limitMB: 100,
   percentage: 3,
+  breakdown: {
+    myinfoBytes: DEMO_MYINFO_BYTES,
+    noteImageBytes: DEMO_NOTE_IMAGE_BYTES,
+  },
 }
 
 // ── 자소서 탭 회사 조사 배너 ─────────────────────────────────

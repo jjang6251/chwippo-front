@@ -21,7 +21,9 @@ test('로딩 자리가 실제 카드와 같은 높이다', async ({ page }) => {
     if (u.includes('streak')) return r.fulfill(json({ streak: { current: 5 } }))
     if (u.includes('unread-count')) return r.fulfill(json({ count: 0 }))
     if (u.includes('announcement')) return r.fulfill(json(null))
-    if (u.includes('storage-usage')) return new Promise((res) => setTimeout(() => res(r.fulfill(json({ usedMB: 12.3, limitMB: 100, percentage: 12 }))), 600))
+    // 🔴 분해값까지 실린 **실제 계약**이어야 한다 — 빼 놓으면 카드가 한 줄 짧아져
+    //    스켈레톤(3줄)과 어긋나고, 그 어긋남을 여기서 못 잡는다 (2026-08-21 노트 이미지 합류)
+    if (u.includes('storage-usage')) return new Promise((res) => setTimeout(() => res(r.fulfill(json({ usedBytes: 12_897_484, limitBytes: 104_857_600, usedMB: 12.3, limitMB: 100, percentage: 12, breakdown: { myinfoBytes: 9_437_184, noteImageBytes: 3_460_300 } }))), 600))
     return new Promise((res) => setTimeout(() => res(r.fulfill(json([]))), 600))
   })
   await mockAuth(page)

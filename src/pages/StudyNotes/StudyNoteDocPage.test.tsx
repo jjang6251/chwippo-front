@@ -17,6 +17,7 @@
  *   저장  13  제목을 고치면 debounce 뒤 PATCH (title 만)
  *        13b 🔴 그 저장이 허브 캐시의 백링크 수를 지우지 않는다 (단건 응답엔 집계가 없다)
  *   정리  14  🔴 제목·본문이 **둘 다 빈 채로** 떠나면 지운다 (오터치 쓰레기 방지)
+ *        14b 🔴 이미지만 있고 제목이 빈 노트는 **안 지운다** (글자 0자 ≠ 빈 노트)
  *         15  내용이 있으면 떠나도 안 지운다
  *         16  🔴 StrictMode 재마운트는 그 삭제를 **취소**한다
  *   삭제  17  ⋯ → 삭제 = ConfirmModal(영구 삭제 명시) → DELETE + 허브로 이동
@@ -31,6 +32,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { StrictMode, type ReactNode } from 'react'
 import * as api from '@/api/studyNotes'
+import { uploadNoteImage } from '@/components/editor/noteImageUpload'
+import { storageUsageKey } from '@/hooks/useStorageUsage'
 import { studyNotesKey } from '@/hooks/useStudyNotes'
 import { StudyNoteDocPage } from './StudyNoteDocPage'
 
@@ -48,6 +51,12 @@ vi.mock('@/api/studyNotes', () => ({
   deleteStudyNoteFolder: vi.fn(),
 }))
 
+/** 업로드 파이프라인은 자기 spec 이 따로 있다 — 여기선 **호출부 배선**만 본다 */
+vi.mock('@/components/editor/noteImageUpload', () => ({
+  uploadNoteImage: vi.fn(),
+  STUDY_NOTE_IMAGE_SCOPE: 'study-note/image',
+}))
+
 const navigateMock = vi.fn()
 vi.mock('react-router-dom', async () => ({
   ...(await vi.importActual<typeof import('react-router-dom')>('react-router-dom')),
@@ -55,6 +64,7 @@ vi.mock('react-router-dom', async () => ({
 }))
 
 const mocked = vi.mocked(api)
+const mockedUpload = vi.mocked(uploadNoteImage)
 
 const FOLDER: api.StudyNoteFolder = {
   id: 'f-cs',
@@ -313,6 +323,29 @@ describe('문서 — 저장·정리', () => {
     })
   })
 
+  /*
+    🔴 study-note-media PR-A — 「비었다」는 글자 수가 아니다.
+    이미지만 올려 둔 노트는 제목·텍스트가 0자라, 판정이 글자만 보면 떠나는 순간 지워진다.
+    (본문 판정은 `editor.isEmpty`, 저장 값은 `isEmptyDoc` — 둘 다 미디어 노드를 내용으로
+     센다. 그 단위 계약은 noteImage.test·memoSections.test 가 잠근다.)
+  */
+  it('14b 🔴 제목이 비어도 이미지가 있으면 안 지운다', async () => {
+    mocked.getStudyNote.mockResolvedValue({
+      ...NOTE,
+      title: '',
+      content: JSON.stringify({
+        type: 'doc',
+        content: [{ type: 'image', attrs: { src: 'https://cdn.example/x.png' } }],
+      }),
+    })
+    const { unmount } = renderDoc()
+    await screen.findByLabelText('노트 제목')
+    unmount()
+
+    await new Promise((r) => setTimeout(r, 600))
+    expect(mocked.deleteStudyNote).not.toHaveBeenCalled()
+  })
+
   it('15 내용이 있으면 떠나도 안 지운다', async () => {
     const { unmount } = await renderLoaded()
     unmount()
@@ -479,5 +512,85 @@ describe('문서 — 빈 문서 템플릿 제안', () => {
     const patch = mocked.updateStudyNote.mock.calls.at(-1)?.[1] as Record<string, unknown>
     expect(patch).not.toHaveProperty('title')
     expect(screen.getByLabelText('노트 제목')).toHaveValue('내가 정한 제목')
+  })
+})
+
+/**
+ * 저장 용량 갱신 (2026-08-21 — 노트 이미지가 내정보 증빙과 같은 100MB 통에 합류).
+ *
+ * 시나리오:
+ *  22 🔴 업로드 성공 → storage-usage 캐시 무효화 (숫자가 즉시 따라온다)
+ *  23 🔴 업로드 실패 → 무효화 없음 (쓴 바이트가 없는데 재조회하면 헛 호출이다)
+ *  25 🔴 노트 삭제 → 서버가 안의 이미지도 지운다 → 역시 무효화
+ *  24 무효화를 **기다리지 않는다** — 노드 확정이 재조회에 발목 잡히지 않는다
+ */
+describe('문서 — 저장 용량 갱신', () => {
+  const pngFile = () => new File(['x'], 'diagram.png', { type: 'image/png' })
+
+  async function pickImage() {
+    fireEvent.change(screen.getByTestId('note-image-input'), {
+      target: { files: [pngFile()] },
+    })
+  }
+
+  it('22 🔴 업로드가 성공하면 storage-usage 를 무효화한다', async () => {
+    mockedUpload.mockResolvedValue({ src: 'https://r2.example/n.png', attachmentId: 'att-1' })
+    await renderLoaded()
+    const spy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await pickImage()
+
+    await waitFor(() => expect(mockedUpload).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(spy).toHaveBeenCalledWith({ queryKey: storageUsageKey }),
+    )
+    expect(mockedUpload.mock.calls[0][0]).toBe('n1')
+  })
+
+  it('23 🔴 업로드가 실패하면 무효화하지 않는다', async () => {
+    mockedUpload.mockRejectedValue(new Error('cap'))
+    await renderLoaded()
+    const spy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await pickImage()
+
+    await waitFor(() => expect(mockedUpload).toHaveBeenCalledTimes(1))
+    // 실패 경로가 다 돌 시간을 준 뒤에도 없다
+    await waitFor(() =>
+      expect(
+        spy.mock.calls.filter(
+          ([arg]) => JSON.stringify(arg) === JSON.stringify({ queryKey: storageUsageKey }),
+        ),
+      ).toHaveLength(0),
+    )
+  })
+
+  it('25 🔴 노트를 지우면 그 안의 이미지도 사라진다 → 용량도 다시 받는다', async () => {
+    await renderLoaded()
+    const spy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    fireEvent.click(screen.getByRole('button', { name: '노트 메뉴' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '노트 삭제' }))
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: '노트 삭제' })).getByRole('button', {
+        name: '삭제',
+      }),
+    )
+
+    await waitFor(() => expect(mocked.deleteStudyNote).toHaveBeenCalledWith('n1'))
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: storageUsageKey }))
+  })
+
+  it('24 🔴 무효화를 기다리지 않는다 — 재조회가 안 끝나도 이미지 노드가 먼저 확정된다', async () => {
+    mockedUpload.mockResolvedValue({ src: 'https://r2.example/n.png', attachmentId: 'att-1' })
+    await renderLoaded()
+    // 영원히 안 끝나는 재조회 — await 로 물려 있으면 자리 표시가 영영 이미지가 안 된다
+    vi.spyOn(queryClient, 'invalidateQueries').mockReturnValue(new Promise<void>(() => {}))
+
+    await pickImage()
+
+    await waitFor(() =>
+      expect(document.querySelector('img[src="https://r2.example/n.png"]')).not.toBeNull(),
+    )
   })
 })

@@ -127,6 +127,7 @@ beforeEach(() => {
     from: 0,
     to: 0,
     charCount: 0,
+    hasImage: false,
   })
   bridge.applyReplace.mockImplementation((ed, range, markdown) => {
     ed.chain().deleteRange(range).insertContent(markdown).run()
@@ -381,6 +382,24 @@ describe('AiNotePanel — 생성 모드 (선택 없음)', () => {
     expect(chip).toBeDisabled()
     expect(chip.getAttribute('title')).toContain('드래그')
     expect(screen.getByText(/새로 만들기 모드/)).toBeInTheDocument()
+  })
+
+  /**
+   * 🔴 이미지가 낀 선택은 대상이 될 수 없다 (study-note-media). 같은 「생성 모드」라도
+   * **드래그를 한 사람**에게는 이유를 줘야 한다 — 안 그러면 드래그가 씹힌 것으로 읽힌다.
+   */
+  it('이미지가 낀 선택으로 열면 안내 문구가 이유로 바뀐다', () => {
+    bridge.useEditorSelection.mockReturnValue({
+      empty: true,
+      from: 0,
+      to: 0,
+      charCount: 0,
+      hasImage: true,
+    })
+    renderPanel()
+
+    expect(screen.getByText(/사진이 들어간 선택은 대상이 되지 않아요/)).toBeInTheDocument()
+    expect(screen.queryByText(/새로 만들기 모드/)).not.toBeInTheDocument()
   })
 
   it('자유 지시 결과에는 「AI 생성 내용」 라벨과 [커서에 삽입] 이 붙는다', async () => {

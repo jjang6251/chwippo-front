@@ -832,3 +832,42 @@ input[type='time']::-webkit-calendar-picker-indicator {
   color: rgb(var(--brand));
   font-size: 0.93em;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   study-note-media PR-A — 본문 이미지 + 업로드 자리 표시
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* 🔴 폭은 본문에 갇힌다 — 원본이 4000px 이어도 가로 스크롤을 만들면 안 된다.
+   `height: auto` 가 없으면 축소된 폭에 원본 높이가 남아 그림이 늘어난다. */
+.chw-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  /* 코드 블록·표와 같은 문단 리듬 (0.6em) — 그림만 다른 간격을 쓰면 문서가 덜컹거린다 */
+  margin: 0.6em 0;
+}
+/* 선택 표시 — 클릭한 이미지가 어느 것인지 보여야 지우거나 옮길 수 있다 */
+.chw-prose img.ProseMirror-selectednode {
+  outline: 2px solid rgb(var(--brand));
+  outline-offset: 2px;
+}
+
+/* 업로드 중 스켈레톤. 🔴 **문서가 아니라 데코레이션**이라 저장·내보내기에 안 실린다
+   (`noteImage.ts` 주석). 톤은 기존 스켈레톤 관례 그대로 — surface-2 + line. */
+.chw-image-uploading {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: 140px;
+  margin: 0.6em 0;
+  border-radius: 10px;
+  background: rgb(var(--surface-2));
+  border: 1px solid var(--line);
+  animation: chw-image-uploading 1.6s ease-in-out infinite;
+}
+@keyframes chw-image-uploading {
+  50% {
+    opacity: 0.5;
+  }
+}

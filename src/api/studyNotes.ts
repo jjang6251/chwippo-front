@@ -126,3 +126,26 @@ export const getStudyNoteBacklinks = (id: string) =>
   apiClient
     .get<{ data: StudyNoteBacklink[] }>(`${BASE}/${id}/backlinks`)
     .then((r) => r.data.data)
+
+// ── 본문 첨부 (이미지) ────────────────────────────────────────
+
+/** R2 PUT 이 끝난 뒤 등록하는 첨부 한 건 (study-note-media PR-A) */
+export interface NoteAttachment {
+  id: string
+  fileUrl: string
+}
+
+/**
+ * 업로드된 객체를 노트에 붙인다 — 저장 용량 cap 검증이 여기서 돈다.
+ *
+ * 🔴 body 의 `fileUrl` 은 인터셉터의 **보상 삭제 추적 키**이기도 하다 (`client.ts`).
+ * 4xx/5xx 로 떨어지면 인터셉터가 `DELETE /files` 로 R2 객체를 지우고 서버 문구를
+ * 토스트한다 — 호출부가 같은 일을 또 하면 안 된다 (`noteImageUpload.ts` 주석).
+ */
+export const createNoteAttachment = (
+  noteId: string,
+  body: { fileUrl: string; fileSizeBytes: number },
+) =>
+  apiClient
+    .post<{ data: NoteAttachment }>(`${BASE}/${noteId}/attachments`, body)
+    .then((r) => r.data.data)

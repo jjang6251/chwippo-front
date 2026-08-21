@@ -81,6 +81,31 @@ describe('붙여넣기 게이트 — 평문 오탐 방지', () => {
   it('AI 답변 덩어리는 당연히 통과', () => {
     expect(looksLikeMarkdown(AI_MARKDOWN)).toBe(true)
   })
+
+  /*
+    🔴 study-note-media PR-A — `![alt](url)` 안에는 `[alt](url)` 이 그대로 들어 있어서
+    이미지 한 줄이 image·link 두 신호를 켠다. task/bullet 과 같은 겹침이라 한 줄이
+    게이트를 통과시키면 안 된다. 다만 **진짜 링크가 따로 있으면** 그건 별개로 센다.
+  */
+  it('이미지 한 줄만 붙여넣으면 통과하지 못한다 (image 가 link 를 겸치지 않음)', () => {
+    const onlyImage = '![도식](https://cdn.example/x.png)'
+    expect(countMarkdownSignals(onlyImage)).toBe(1)
+    expect(looksLikeMarkdown(onlyImage)).toBe(false)
+  })
+
+  it('alt 없는 내보내기 형태도 1종', () => {
+    expect(countMarkdownSignals('![](https://cdn.example/x.png)')).toBe(1)
+  })
+
+  it('이미지 + 진짜 링크는 2종 — 둘은 별개 신호다', () => {
+    const both = '![도식](https://cdn.example/x.png)\n[참고 자료](https://example.com/doc)'
+    expect(countMarkdownSignals(both)).toBe(2)
+    expect(looksLikeMarkdown(both)).toBe(true)
+  })
+
+  it('이미지 + 제목은 2종 — 문서로 붙여넣으면 파싱', () => {
+    expect(looksLikeMarkdown('## 회로 정리\n\n![](https://cdn.example/x.png)')).toBe(true)
+  })
 })
 
 describe('마크다운 파싱 — 서식 보존', () => {

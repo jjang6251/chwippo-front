@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { StudyNoteFolder, StudyNoteListItem } from '@/api/studyNotes'
 import { Modal } from '@/components/common/Modal'
+import { StorageUsageBar } from '@/components/myinfo/StorageUsageBar'
 import { STUDY_NOTE_TEMPLATES, templateContent, type StudyNoteTemplate } from '@/data/studyNoteTemplates'
 import {
   useCreateStudyNote,
@@ -164,23 +165,35 @@ export function StudyNotesHub() {
             공부 자료와 회사별 준비 노트를 한 곳에서
           </p>
         </div>
-        <div className="hidden lg:flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setCreatingFolder(true)}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-card border border-line text-text-secondary hover:border-line-strong hover:text-text-primary text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
-          >
-            <FolderPlusIcon />
-            새 폴더
-          </button>
-          <button
-            type="button"
-            onClick={() => void openNewNote()}
-            disabled={createNote.isPending}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-brand hover:bg-accent text-bg text-xs font-medium transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
-          >
-            <PlusIcon />새 노트
-          </button>
+        {/*
+          🔴 **데스크탑 우측 열 — 위계 순서대로 위에서 아래로.**
+          1순위는 여전히 CTA 다 (위치·크기 무변경). 용량은 그 아래, 하는 일이 아니라
+          **읽는 정보**라 버튼과 같은 줄에 세우지 않는다.
+
+          모바일에는 이 열이 통째로 없다 (`hidden lg:flex`) — 좁은 화면에서는 CTA 조차
+          FAB·아이콘 버튼으로 빠져 있고, 220px 를 얹으면 부제와 충돌한다.
+          용량은 아래쪽 `lg:hidden` 블록이 받는다. **둘은 절대 같이 보이지 않는다.**
+        */}
+        <div className="hidden lg:flex flex-col items-end gap-2 shrink-0">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCreatingFolder(true)}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-card border border-line text-text-secondary hover:border-line-strong hover:text-text-primary text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+            >
+              <FolderPlusIcon />
+              새 폴더
+            </button>
+            <button
+              type="button"
+              onClick={() => void openNewNote()}
+              disabled={createNote.isPending}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-brand hover:bg-accent text-bg text-xs font-medium transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+            >
+              <PlusIcon />새 노트
+            </button>
+          </div>
+          <StorageUsageBar variant="compact" />
         </div>
       </div>
 
@@ -385,6 +398,27 @@ export function StudyNotesHub() {
           )}
         </>
       )}
+
+      {/*
+        ── 저장 용량 (모바일 전용 자리) ──
+        🔴 **데스크탑에서는 헤더 우측으로 올라갔다** (2026-08-21). 목록 끝까지 스크롤해야
+        보이는 정보라 "쓰다가 막히기 전에 한 번 스친다"가 성립하지 않았다. 대신 CTA **아래**
+        라 위계는 그대로 2순위다.
+
+        🔴 모바일은 여기 그대로 둔다 — 헤더 우측에 자리가 없다 (CTA 조차 FAB 로 빠졌고,
+        320px 에서 220px 블록은 부제와 겹친다). `lg:hidden` ↔ 헤더의 `hidden lg:flex` 가
+        정확히 반대라 **두 인스턴스가 동시에 보이는 폭은 없다**. 쿼리는 같은 키라 React Query
+        가 합쳐 준다 — 인스턴스가 둘이어도 요청은 한 번이다.
+
+        🔴 목록 로딩과 **엮지 않는다** — 자기 스켈레톤을 들고 따로 뜬다. 목록 뒤에 숨겼다
+        나중에 나타나면 그 순간 아래가 밀린다.
+
+        🔴 `mb-12` 는 모바일 FAB 회피다. 페이지 pb 가 88px 이고 FAB 도 bottom-[88px] 라
+        끝까지 스크롤하면 FAB(88~136px 띠)이 마지막 블록 위에 겹친다.
+      */}
+      <div className="mt-8 mb-12 pt-4 border-t border-line lg:hidden">
+        <StorageUsageBar variant="quiet" />
+      </div>
 
       {/* 모바일 새 노트 FAB — 하단 탭 위 */}
       <button

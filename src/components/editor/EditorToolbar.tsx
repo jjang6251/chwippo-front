@@ -30,6 +30,11 @@ interface Props {
   /** 지정 시 「내보내기」 버튼 노출 (md 내보내기는 공부 노트 전용 — plan §2) */
   onExportMarkdown?: () => void
   /**
+   * 지정 시 📷 버튼 노출 — 파일 선택창을 여는 손잡이. 업로드 자체는 소비 측이 한다.
+   * 붙여넣기·드롭이 같은 일을 하지만 **눌러서 넣는 길**이 없으면 기능이 있는 줄 모른다.
+   */
+  onInsertImage?: () => void
+  /**
    * 지정 시 1군 **맨 앞**에 AI 버튼 노출 — 노트 AI 패널을 여는 손잡이.
    *
    * 모바일에는 드래그 팝오버(BubbleMenu)를 두지 않으므로 **이 버튼이 유일한 진입점**이다.
@@ -143,6 +148,7 @@ export function EditorToolbar({
   editor,
   hasMention,
   onExportMarkdown,
+  onInsertImage,
   sticky,
   onAiOpen,
   aiEntryMobileOnly,
@@ -225,6 +231,18 @@ export function EditorToolbar({
             render: () => <Icon d="m9 6 6 6-6 6" />,
             action: () => editor.chain().focus().setDetails().run(),
             active: () => editor.isActive('details'),
+          },
+        ]
+      : []),
+    // 필기 사진·도식 캡처가 공부 노트의 주 재료라 1군에 둔다 (스크롤 뒤로 밀면 안 쓰인다)
+    ...(onInsertImage
+      ? [
+          {
+            key: 'image',
+            title: '이미지',
+            desc: '붙여넣기·끌어다 놓기로도 들어가요',
+            render: () => <Icon d="M3 5h18v14H3zM3 16l4.5-4.5 4 4 3.5-3.5L21 16M8.5 9.5h.01" />,
+            action: onInsertImage,
           },
         ]
       : []),
