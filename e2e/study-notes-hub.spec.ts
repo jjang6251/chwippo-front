@@ -278,3 +278,43 @@ test('노트 삭제 — ⋯ 메뉴 → 확인 모달 → 목록에서 사라진�
 
   await expect(noteRow(page, '면접 기출 모음')).toHaveCount(0)
 })
+
+/**
+ * 🔴 **용량 표시는 폭에 따라 자리가 다르다 — 그리고 절대 둘이 같이 보이면 안 된다.**
+ *
+ * 데스크탑은 헤더 우측(CTA 아래), 모바일은 목록 하단. 두 인스턴스가 각각
+ * `hidden lg:flex` / `lg:hidden` 으로 갈리는데, **jsdom 은 미디어 쿼리를 풀지 않아**
+ * 클래스 문자열까지만 볼 수 있다 — 클래스가 잘못 바뀌어 둘 다 보이거나 둘 다 사라져도
+ * 유닛 테스트는 통과한다. 그래서 이 계약은 실브라우저에서만 잠긴다.
+ */
+test('용량 표시 — 폭마다 한 곳에만 뜨고 요청은 1회', async ({ page }) => {
+  /* 🔴 세는 건 `route` 가 아니라 `request` 이벤트다 — 목이 나중에 등록돼 **먼저** 잡으므로
+     여기서 route 를 걸면 영영 0 이 된다 (mock 이 fulfill 하면 fallback 이 안 온다). */
+  let usageRequests = 0
+  page.on('request', (req) => {
+    if (new URL(req.url()).pathname === '/myinfo/storage-usage') usageRequests += 1
+  })
+
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await gotoHub(page)
+
+  /* 🔴 `getByText` 는 **숨은 요소도 센다** (DOM 기준) — 두 인스턴스가 늘 2로 잡혀 계약을
+     검증하지 못한다. role 조회는 `display:none` 을 a11y 트리에서 빼므로 **눈에 보이는
+     것만** 남는다 = 스크린리더가 읽는 것과 같은 기준. */
+  const bars = page.getByRole('progressbar', { name: /파일 저장 용량/ })
+  await expect(bars).toHaveCount(1)
+  // 데스크탑 = 헤더 안 (목록보다 위)
+  const headerBar = (await bars.boundingBox())!
+  const title = (await page.getByRole('heading', { name: '공부 노트', level: 1 }).boundingBox())!
+  expect(headerBar.y).toBeGreaterThan(title.y)
+  expect(headerBar.y).toBeLessThan(300)
+
+  // 모바일 = 헤더에서 사라지고 하단으로 내려간다
+  await page.setViewportSize({ width: 320, height: 720 })
+  await expect(bars).toHaveCount(1)
+  const mobileBar = (await bars.boundingBox())!
+  expect(mobileBar.y).toBeGreaterThan(400)
+
+  // 인스턴스가 둘이어도 서버 요청은 하나 (React Query dedupe)
+  expect(usageRequests).toBe(1)
+})

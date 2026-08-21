@@ -22,6 +22,8 @@
  *   노트 15  ⋯ → 폴더 이동 (folderId PATCH)
  *        16  ⋯ → 삭제 = ConfirmModal (영구 삭제 명시) → 삭제 호출
  *   생성 17  「새 노트」 → 즉시 생성 후 문서로 이동
+ *   키보드 20~22 ⋯ 메뉴 ↓↑ 순환·Home/End·ESC 후 트리거 복귀 (세 메뉴 **공용 계약**)
+ *              🔴 항목 수가 가변(폴더 2 · 노트 2+N)이라 두 크기로 잰다
  *   빈   18  노트·폴더 0 → 템플릿 카드 **7종** + 「빈 문서로 시작」 (2026-08-18 확장)
  *        19  템플릿 카드 = 그 템플릿 본문으로 생성
  */
@@ -31,7 +33,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import * as api from '@/api/studyNotes'
+import type { StorageUsage } from '@/api/myinfo'
 import { STUDY_NOTE_TEMPLATES } from '@/data/studyNoteTemplates'
+import { useStorageUsage } from '@/hooks/useStorageUsage'
+import { assertMenuKeyboardContract } from '@/test/menuKeyboardContract'
 import { StudyNotesHub } from './StudyNotesHub'
 
 /** 템플릿 제목에 정규식 메타문자(`·` 는 아니지만 `.` 등)가 섞여도 안전하게 */
@@ -51,6 +56,13 @@ vi.mock('@/api/studyNotes', () => ({
   deleteStudyNoteFolder: vi.fn(),
 }))
 
+/** 허브 하단 저장 용량 바 — 네트워크를 태우지 않고 상태만 갈아 끼운다 */
+vi.mock('@/hooks/useStorageUsage', () => ({
+  useStorageUsage: vi.fn(),
+  useInvalidateStorageUsage: () => vi.fn(),
+  storageUsageKey: ['myinfo', 'storage-usage'],
+}))
+
 const navigateMock = vi.fn()
 vi.mock('react-router-dom', async () => ({
   ...(await vi.importActual<typeof import('react-router-dom')>('react-router-dom')),
@@ -58,6 +70,17 @@ vi.mock('react-router-dom', async () => ({
 }))
 
 const mocked = vi.mocked(api)
+const mockedStorage = vi.mocked(useStorageUsage)
+
+const MB = 1024 * 1024
+const STORAGE: StorageUsage = {
+  usedBytes: 9 * MB,
+  limitBytes: 100 * MB,
+  usedMB: 9,
+  limitMB: 100,
+  percentage: 9,
+  breakdown: { myinfoBytes: 5 * MB, noteImageBytes: 4 * MB },
+}
 
 const FOLDERS: api.StudyNoteFolder[] = [
   {
@@ -147,6 +170,11 @@ beforeEach(() => {
   mocked.getStudyNotes.mockResolvedValue(NOTES)
   mocked.getStudyNoteFolders.mockResolvedValue(FOLDERS)
   mocked.getPrepHubGroups.mockResolvedValue(PREPS)
+  mockedStorage.mockReturnValue({
+    data: STORAGE,
+    isLoading: false,
+    error: null,
+  } as ReturnType<typeof useStorageUsage>)
 })
 
 describe('허브 — 로딩·목록', () => {
@@ -385,6 +413,65 @@ describe('허브 — 노트 관리·생성', () => {
   })
 })
 
+/**
+ * ⋯ 메뉴 키보드 탐색 — `role="menu"` 를 선언한 이상 화살표 이동이 표준 기대다.
+ *
+ * 🔴 허브 ⋯ 는 **항목 수가 고정이 아니다** — 폴더 메뉴는 2개, 노트 메뉴는 「폴더 이동」
+ * 목록이 폴더 수만큼 늘어난다(미분류 + 폴더 N + 삭제). 열 때 목록을 담아두면 순환이
+ * 어긋나므로 `useMenuKeyboard` 는 매번 다시 질의한다 — 그걸 여기서 두 크기로 잰다.
+ *
+ * 계약 본문은 `src/test/menuKeyboardContract.ts` 한 벌 — 툴바 「내보내기」·노트 메뉴 spec 도
+ * **같은 함수**를 부른다. 세 메뉴가 정말 같은 동작인지의 증거가 그것이다.
+ *
+ *  20  폴더 ⋯ (항목 2개) 계약 전부
+ *  21  노트 ⋯ (항목 4개 = 미분류 + 폴더 2 + 삭제) 계약 전부 — 순환이 항목 수를 따라간다
+ *  22  마우스로 열면 첫 항목에 포커스를 주지 않는다
+ */
+describe('허브 — ⋯ 메뉴 키보드 탐색', () => {
+  const harnessFor = (name: string) => {
+    const trigger = () => screen.getByRole('button', { name })
+    return {
+      trigger,
+      openByMouse: () => fireEvent.click(trigger(), { detail: 1 }),
+      openByKeyboard: () => fireEvent.click(trigger(), { detail: 0 }),
+    }
+  }
+
+  it('20 폴더 ⋯ — 항목 2개로 계약 전부 통과', async () => {
+    await renderLoaded()
+    const h = harnessFor("'CS 기초' 폴더 메뉴")
+    h.openByMouse()
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      '이름 바꾸기',
+      '삭제',
+    ])
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    assertMenuKeyboardContract(h)
+  })
+
+  it('21 노트 ⋯ — 항목 4개(폴더 수만큼 늘어난 목록)로도 순환이 맞는다', async () => {
+    await renderLoaded()
+    const h = harnessFor("'운영체제 정리' 노트 메뉴")
+    h.openByMouse()
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      '미분류',
+      '📁 CS 기초',
+      '📁 알고리즘',
+      '삭제',
+    ])
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    assertMenuKeyboardContract(h)
+  })
+
+  it('22 마우스로 열면 첫 항목에 포커스를 주지 않는다', async () => {
+    await renderLoaded()
+    harnessFor("'CS 기초' 폴더 메뉴").openByMouse()
+    expect(screen.getAllByRole('menuitem')).not.toContain(document.activeElement)
+  })
+})
+
 describe('허브 — 첫 방문 빈 상태', () => {
   beforeEach(() => {
     mocked.getStudyNotes.mockResolvedValue([])
@@ -454,5 +541,115 @@ describe('폴더에 바로 새 노트 (2026-08-19 실사용 — 만들고 옮기
   it('목록 끝 ghost 「폴더 만들기」 버튼은 없다 — 새 폴더 진입은 우상단 하나', async () => {
     await renderLoaded()
     expect(screen.queryByRole('button', { name: '폴더 만들기' })).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * 저장 용량 노출 (2026-08-21 — 노트 이미지가 100MB 통에 합류).
+ *
+ * 자리는 폭에 따라 갈린다 (같은 날 오후 이동):
+ *  - 데스크탑(lg+) = **헤더 우측**, CTA 아래 — 목록 끝까지 스크롤해야 보이던 걸 올렸다
+ *  - 모바일(<lg)   = 하단 그대로 — 헤더 우측에 220px 를 얹을 자리가 없다
+ *
+ * 🔴 jsdom 은 미디어 쿼리를 안 푼다 — **두 인스턴스가 다 DOM 에 있다.** 여기서는
+ * 「자리·순서·클래스 계약」만 잡고, 실제로 한 번에 하나만 보이는지는 Playwright 몫이다.
+ *
+ * 시나리오:
+ *  20  두 자리에 각각 뜨고 **출처 분해까지** 읽힌다 (업로드가 실패해야 아는 상태 해소)
+ *  20b 🔴 `hidden lg:flex` ↔ `lg:hidden` 이 정확히 반대 — 동시에 보이는 폭이 없다
+ *  20c 🔴 헤더 분해 줄은 짧은 라벨, 하단은 긴 라벨 (같은 값, 자리에 맞는 이름)
+ *  21  🔴 위계 — 헤더에서는 CTA(「새 노트」)가 먼저, 용량이 뒤
+ *  21b 🔴 모바일 자리는 여전히 노트 목록 **뒤** (주인공은 목록)
+ *  22  목록 로딩과 엮이지 않는다 — 자기 스켈레톤으로 따로 자리를 잡는다
+ *  23  용량 조회가 실패해도 목록은 멀쩡하다 (허브가 통째로 죽지 않는다)
+ */
+describe('허브 — 저장 용량', () => {
+  /** compact(헤더) 인스턴스 — 폭 고정 클래스가 유일한 표식이다 */
+  const compactShell = (container: HTMLElement) =>
+    container.querySelector<HTMLElement>('[class*="w-[220px]"]')
+
+  it('20 헤더·하단 두 자리에 용량 + 출처 분해가 뜬다', async () => {
+    await renderLoaded()
+    // 같은 값을 두 자리가 든다 (보이는 건 폭에 따라 하나뿐)
+    expect(screen.getAllByText('9.0 / 100MB')).toHaveLength(2)
+    expect(screen.getByText(/증빙 파일 5\.0MB/)).toBeInTheDocument()
+    expect(screen.getByText(/공부 노트 이미지 4\.0MB/)).toBeInTheDocument()
+  })
+
+  it('20b 🔴 헤더는 lg 이상에서만, 하단은 lg 미만에서만 — 겹치는 폭이 없다', async () => {
+    const { container } = await renderLoaded()
+    const compact = compactShell(container)
+    expect(compact).not.toBeNull()
+
+    // 헤더 인스턴스를 감싼 우측 열
+    const headerColumn = compact!.parentElement!
+    expect(headerColumn.className).toContain('hidden')
+    expect(headerColumn.className).toContain('lg:flex')
+
+    // 하단 인스턴스 (compact 가 아닌 쪽)
+    const bars = Array.from(container.querySelectorAll('[role="progressbar"]'))
+    expect(bars).toHaveLength(2)
+    const bottomBar = bars.find((b) => !compact!.contains(b))!
+    const bottomBlock = bottomBar.closest('.border-t') as HTMLElement
+    expect(bottomBlock.className).toContain('lg:hidden')
+    // 🔴 데스크탑 전용 잔재(lg:max-w)가 남으면 「안 보이는데 자리는 잡는」 블록이 된다
+    expect(bottomBlock.className).not.toContain('lg:max-w')
+  })
+
+  it('20c 🔴 헤더는 짧은 라벨 · 하단은 긴 라벨 — 값은 같다', async () => {
+    const { container } = await renderLoaded()
+    const compact = compactShell(container)!
+    const line = Array.from(compact.querySelectorAll('p')).find((p) =>
+      p.textContent?.includes('증빙'),
+    )
+    expect(line?.textContent).toContain('증빙 5.0MB')
+    expect(line?.textContent).toContain('노트 4.0MB')
+    expect(line?.textContent).not.toContain('증빙 파일')
+  })
+
+  it('21 🔴 헤더 위계 — 1순위 「새 노트」가 먼저, 용량이 그 아래', async () => {
+    const { container } = await renderLoaded()
+    const compact = compactShell(container)!
+    const newNote = screen.getAllByRole('button', { name: '새 노트' })[0]
+    // DOCUMENT_POSITION_FOLLOWING = CTA 가 먼저, 용량이 뒤
+    expect(newNote.compareDocumentPosition(compact) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('21b 🔴 모바일 자리는 여전히 목록 뒤 — 주인공은 노트 목록', async () => {
+    const { container } = await renderLoaded()
+    const compact = compactShell(container)!
+    const bottomBar = Array.from(container.querySelectorAll('[role="progressbar"]')).find(
+      (b) => !compact.contains(b),
+    )!
+    const firstNote = screen.getByRole('link', { name: /운영체제 정리/ })
+    expect(
+      firstNote.compareDocumentPosition(bottomBar) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('22 목록이 로딩 중이어도 용량은 자기 스켈레톤으로 자리를 잡는다', () => {
+    mocked.getStudyNotes.mockReturnValue(new Promise(() => {}))
+    mocked.getStudyNoteFolders.mockReturnValue(new Promise(() => {}))
+    mockedStorage.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as ReturnType<typeof useStorageUsage>)
+
+    const { container } = renderHub()
+    // 목록 스켈레톤(1) + 용량 스켈레톤(2: 헤더·하단) 이 각자 aria-busy 를 든다
+    expect(container.querySelectorAll('[aria-busy="true"]').length).toBe(3)
+  })
+
+  it('23 용량 조회 실패해도 목록은 멀쩡하다', async () => {
+    mockedStorage.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('500'),
+    } as unknown as ReturnType<typeof useStorageUsage>)
+
+    await renderLoaded()
+    expect(screen.getAllByText('사용량 조회 실패')).toHaveLength(2)
+    expect(noteRow('네트워크 정리')).not.toBeNull()
   })
 })

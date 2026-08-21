@@ -112,6 +112,31 @@ describe('isEmptyDoc / docToMemoValue — 껍데기 JSON 저장 방지', () => {
   it('H3 만 있어도 (텍스트 있음) false', () => {
     expect(isEmptyDoc(DOC([H3('왜 이 회사?')]))).toBe(false)
   })
+
+  /*
+    🔴 study-note-media PR-A — 이미지는 **글자가 0자인 내용**이다.
+    글자 수로만 세면 이미지 한 장짜리 노트가 「빈 문서」로 판정돼 저장 값이 '' 로 나가고
+    (= 방금 올린 이미지 소실), 공부 노트의 「빈 노트 자동 삭제」까지 같이 발동한다.
+  */
+  const IMAGE = { type: 'image', attrs: { src: 'https://cdn.example/x.png' } }
+
+  it('🔴 이미지만 있는 문서는 비어있지 않다 → 저장 값도 "" 가 아니다', () => {
+    const doc = DOC([IMAGE])
+    expect(isEmptyDoc(doc)).toBe(false)
+    expect(docToMemoValue(doc)).toBe(JSON.stringify(doc))
+  })
+
+  it('🔴 빈 문단에 둘러싸인 이미지도 비어있지 않다', () => {
+    expect(isEmptyDoc(DOC([P(), IMAGE, P()]))).toBe(false)
+  })
+
+  it('🔴 중첩된 이미지(인용·목록 안)도 찾아낸다', () => {
+    expect(isEmptyDoc(DOC([{ type: 'blockquote', content: [IMAGE] }]))).toBe(false)
+  })
+
+  it('이미지가 없으면 기존 판정 그대로 (회귀)', () => {
+    expect(isEmptyDoc(DOC([{ type: 'blockquote', content: [P()] }]))).toBe(true)
+  })
 })
 
 describe('memoCounterColor — 90% warning · 100% danger', () => {

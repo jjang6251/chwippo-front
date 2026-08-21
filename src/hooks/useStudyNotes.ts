@@ -17,6 +17,7 @@ import {
   type UpdateStudyNoteBody,
 } from '@/api/studyNotes'
 import { serverMessage } from '@/hooks/useStepDetail'
+import { storageUsageKey } from '@/hooks/useStorageUsage'
 import { toast } from '@/stores/toastStore'
 
 /**
@@ -175,6 +176,12 @@ export function useDeleteStudyNote() {
         (prev ?? []).filter((n) => n.id !== id),
       )
       qc.removeQueries({ queryKey: studyNotesKey.detail(id) })
+      /*
+        🔴 노트가 지워지면 서버가 그 안의 이미지도 지운다 — 100MB 통이 그만큼 빈다.
+        허브 하단에 그 숫자가 **같은 화면에** 떠 있으므로, 안 밀면 방금 지운 노트의 용량이
+        그대로 남아 "안 지워졌나" 로 읽힌다. 삭제는 자동 저장과 달리 드물어 비용도 없다.
+      */
+      qc.invalidateQueries({ queryKey: storageUsageKey })
     },
     onError: (err) => toast.error(serverMessage(err, '노트를 삭제하지 못했어요.')),
   })

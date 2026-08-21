@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/react'
 import {
+  canAiTargetSelection,
   expandToBlockRange,
   applyNodes,
   insertMarkdownAt,
@@ -20,6 +21,12 @@ import {
  */
 
 export { useEditorSelection }
+
+/**
+ * 선택이 AI 대상이 될 수 있나 — 버블 메뉴 노출 판정.
+ * 판정 자체는 기반부가 갖고 있다(호출부마다 재구현하면 진입마다 규칙이 갈린다).
+ */
+export { canAiTargetSelection }
 
 export type AiRange = { from: number; to: number }
 

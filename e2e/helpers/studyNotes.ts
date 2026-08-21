@@ -220,6 +220,18 @@ export async function mockStudyNotesApi(
         }),
       )
     if (path.includes('streak')) return route.fulfill(json({ streak: { current: 3 } }))
+    // 허브 하단 저장 용량 바 — 안 주면 fallback `[]` 이 흘러들어 「undefined / undefinedMB」가 뜬다
+    if (path === '/myinfo/storage-usage')
+      return route.fulfill(
+        json({
+          usedBytes: 3_355_443,
+          limitBytes: 104_857_600,
+          usedMB: 3.2,
+          limitMB: 100,
+          percentage: 3,
+          breakdown: { myinfoBytes: 2_097_152, noteImageBytes: 1_258_291 },
+        }),
+      )
 
     return route.fulfill(json([]))
   })

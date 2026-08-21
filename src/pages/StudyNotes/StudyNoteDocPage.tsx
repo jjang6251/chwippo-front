@@ -5,10 +5,13 @@ import type { StudyNoteBacklink, StudyNoteListItem } from '@/api/studyNotes'
 import { Modal } from '@/components/common/Modal'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
 import { editorToMarkdown } from '@/components/editor/markdownIO'
+import { uploadNoteImage } from '@/components/editor/noteImageUpload'
 import type { StudyNoteMentionOptions } from '@/components/editor/StudyNoteMention'
 import { AiNoteBubbleMenu } from '@/components/ai-note/AiNoteBubbleMenu'
 import { AiNotePanel } from '@/components/ai-note/AiNotePanel'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
+import { useMenuKeyboard } from '@/hooks/useMenuKeyboard'
+import { useInvalidateStorageUsage } from '@/hooks/useStorageUsage'
 import { useUnloadGuard } from '@/hooks/useUnloadGuard'
 import {
   useDeleteStudyNote,
@@ -25,6 +28,7 @@ import {
 } from '@/data/studyNoteTemplates'
 import { toast } from '@/stores/toastStore'
 import { docToMemoValue, type TiptapDoc } from '@/utils/memoSections'
+import { isInNativeApp } from '@/utils/nativeBridge'
 import {
   countDetails,
   extractToc,
@@ -66,6 +70,25 @@ import {
  * 쌓인다. 제목·본문이 **둘 다** 빈 채로 떠나면 지운다.
  * StrictMode 는 마운트 직후 한 번 언마운트했다가 다시 붙이므로, 지우기는 조금 미뤄 두고
  * **다시 마운트되면 취소**한다 — 안 그러면 방금 만든 노트가 개발 모드에서 즉시 증발한다.
+ *
+ * 🔴 **「비었다」는 글자 수가 아니다.** 이미지 한 장만 올려 둔 노트는 텍스트가 0자다 —
+ * 판정이 글자만 보면 그 노트는 떠나는 순간 삭제되고, 저장 값도 `''` 로 나가 이미지가
+ * 먼저 날아간다. 두 갈래 모두 미디어 노드를 「내용 있음」으로 세는 한 곳에 걸려 있다:
+ * 본문 판정은 `editor.isEmpty`(atom 노드를 내용으로 센다), 저장 값은
+ * `docToMemoValue` → `isEmptyDoc`(`utils/memoSections.ts` 의 `MEDIA_NODE_TYPES`).
+ *
+ * ## PDF 는 브라우저 인쇄다 (study-note-media PR-B)
+ *
+ * 「PDF로 저장」은 인쇄 다이얼로그의 목적지 하나일 뿐이라 PDF 라이브러리가 없다. 대신
+ * **화면을 종이로 바꿔 놓는 일**을 셋으로 나눠서 한다 —
+ *   ① 파일명: 브라우저가 `document.title` 을 PDF 이름으로 쓴다 (md 내보내기와 같은 정제 규칙)
+ *   ② 색: 다크로 보던 사람이 그냥 인쇄하면 검은 종이가 나온다 → `data-theme='light'` 강제
+ *   ③ 크롬: 사이드바·툴바·목차 등은 각 요소의 `print:hidden` 이 지운다 (선택자 추측 금지)
+ * 접힌 토글 펼치기·여백·페이지 넘김은 `index.css` 의 `@media print` 절이 맡는다.
+ *
+ * 🔴 ①②는 **되돌려 놓는 것까지가 한 벌**이다. 복원을 놓치면 탭 제목과 테마가 영영 바뀐
+ * 채로 남는다 — 그래서 되돌릴 값을 한 번만 잡고 `afterprint`·예외·언마운트 세 경로에서
+ * 모두 되돌린다.
  */
 
 const PAGE = 'w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9'
@@ -80,6 +103,17 @@ const TITLE_SAVE_DEBOUNCE_MS = 1000
 /** 떠난 뒤 지워야 할 빈 노트 — StrictMode 재마운트가 취소할 수 있게 모듈 단위로 둔다 */
 const pendingBlankDelete = new Map<string, ReturnType<typeof setTimeout>>()
 const BLANK_DELETE_DELAY_MS = 400
+
+/** 이미지는 공부 노트 전용 (plan §1 PR-A) — 매 렌더 새 객체를 만들지 않게 모듈 상수로 */
+const IMAGE_ON = { image: true } as const
+
+/**
+ * 파일 이름으로 쓸 노트 제목 — 마크다운 내보내기와 PDF 저장이 **같은 규칙**을 쓴다
+ * (확장자만 다르다). 파일 시스템이 못 받는 문자는 `_`, 빈 제목은 폴백.
+ */
+function noteFileBase(title: string): string {
+  return (title.trim() || '공부 노트').replace(/[\\/:*?"<>|]/g, '_')
+}
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -161,6 +195,28 @@ export function StudyNoteDocPage() {
     // 본문은 즉시 저장 (실패 시 pendingBodyRef 가 이미 차 있어 떠날 때 flush 가 재시도)
     void persist({ content }).catch(() => {})
   }
+
+  /**
+   * 본문 이미지 업로드 — 압축·발급·PUT·첨부 등록·실패 안내는 전부 `uploadNoteImage` 안이다.
+   * 여기서 하는 일은 둘: **이 노트 id 를 묶어 주고**(공용 에디터는 자기가 어느 문서인지
+   * 모른다), 성공하면 **저장 용량 캐시를 무효화**한다.
+   *
+   * 🔴 무효화가 **여기** 있는 이유 — `uploadNoteImage` 는 훅을 쓸 수 없는 순수 함수다
+   * (붙여넣기·드롭·툴바 세 진입이 공유하고, spec 도 react-query 없이 돈다). 캐시를 아는
+   * 층은 화면이라 호출부가 진다. 실패하면 쓴 바이트도 없으니 성공 경로에서만 민다.
+   *
+   * 🔴 무효화를 **기다리지 않는다** — 여기서 await 하면 자리 표시가 이미지로 바뀌는 게
+   * 용량 재조회만큼 늦어진다. 숫자는 조금 뒤에 따라오면 된다.
+   */
+  const invalidateStorageUsage = useInvalidateStorageUsage()
+  const uploadImage = useCallback(
+    async (file: File) => {
+      const image = await uploadNoteImage(id, file)
+      void invalidateStorageUsage()
+      return image
+    },
+    [id, invalidateStorageUsage],
+  )
 
   // ── 멘션 소스 (목록 1회 로드 후 클라 필터) ─────────────────
   const notesRef = useRef<{ loaded: boolean; items: StudyNoteListItem[] }>({
@@ -281,12 +337,14 @@ export function StudyNoteDocPage() {
     })
   }, [update])
 
-  /* 언마운트 정리(flush·빈 노트 삭제)가 **마지막 값**을 보게 — 쓰기는 렌더 밖에서 한다 */
+  /* 언마운트 정리(flush·빈 노트 삭제)와 인쇄 리스너가 **마지막 값**을 보게 — 쓰기는 렌더 밖에서 한다 */
   const removeRef = useRef(remove)
   const flushRef = useRef(flush)
+  const titleRef = useRef(title)
   useEffect(() => {
     removeRef.current = remove
     flushRef.current = flush
+    titleRef.current = title
   })
 
   // StrictMode 가 붙였다 뗐다 하는 사이 예약된 삭제를 취소한다
@@ -322,6 +380,48 @@ export function StudyNoteDocPage() {
 
   // 새로고침·탭 닫기 — 미저장분이 있으면 브라우저가 되묻는다
   useUnloadGuard(dirty)
+
+  // ── 인쇄(PDF로 저장) 준비·복원 ─────────────────────────────
+  /** 인쇄 동안 바꿔 둔 값의 원본. `null` = 지금 인쇄 중이 아니다 */
+  const printRestoreRef = useRef<{ theme: string | null; title: string } | null>(null)
+
+  const applyPrintChrome = useCallback(() => {
+    /*
+      🔴 이미 걸려 있으면 **원본을 다시 잡지 않는다.** 메뉴에서 직접 한 번 걸고 곧이어
+      `beforeprint` 가 또 오는데(브라우저가 print() 안에서 발화), 그때 다시 잡으면
+      「이전 값」이 light·노트 제목으로 굳어 복원이 복원이 아니게 된다.
+    */
+    if (printRestoreRef.current) return
+    const root = document.documentElement
+    printRestoreRef.current = { theme: root.getAttribute('data-theme'), title: document.title }
+    // 새 색을 정의하지 않는다 — `:root[data-theme='light']` 팔레트가 통째로 그대로 걸린다
+    root.setAttribute('data-theme', 'light')
+    // 브라우저는 PDF 파일명을 여기서 가져간다 (확장자는 브라우저가 붙인다)
+    document.title = noteFileBase(titleRef.current)
+  }, [])
+
+  const restorePrintChrome = useCallback(() => {
+    const prev = printRestoreRef.current
+    if (!prev) return
+    printRestoreRef.current = null
+    const root = document.documentElement
+    // 🔴 속성이 **없던** 상태와 `'dark'` 는 다르다 (미지정 = 다크 fallback · tailwind darkMode 배선)
+    if (prev.theme === null) root.removeAttribute('data-theme')
+    else root.setAttribute('data-theme', prev.theme)
+    document.title = prev.title
+  }, [])
+
+  useEffect(() => {
+    /* 메뉴뿐 아니라 Ctrl/⌘+P 로 들어와도 같은 종이가 나오게 — 발화원을 가리지 않는다 */
+    window.addEventListener('beforeprint', applyPrintChrome)
+    window.addEventListener('afterprint', restorePrintChrome)
+    return () => {
+      window.removeEventListener('beforeprint', applyPrintChrome)
+      window.removeEventListener('afterprint', restorePrintChrome)
+      // 인쇄 중 이탈 — 안 되돌리면 다른 화면에서 탭 제목이 노트 제목인 채로 굳는다
+      restorePrintChrome()
+    }
+  }, [applyPrintChrome, restorePrintChrome])
 
   // ── TOC · 토글 일괄 ───────────────────────────────────────
   const [toc, setToc] = useState<TocItem[]>([])
@@ -403,8 +503,39 @@ export function StudyNoteDocPage() {
     setAllDetailsOpen(editor, details.open === 0)
   }
 
+  /**
+   * 인쇄 실행 — 준비(제목·테마)를 걸고 다이얼로그를 연다.
+   *
+   * 정상 경로의 복원은 `afterprint` 가 맡는다 (Chrome 은 `print()` 가 반환하기 전에 발화,
+   * Safari 는 다이얼로그가 닫힌 뒤 발화). 여기서 되돌리는 건 **인쇄 창 자체를 못 연**
+   * 경우뿐이다 — 그냥 두면 탭 제목·테마가 바뀐 채로 남는다.
+   */
+  function runPrint() {
+    applyPrintChrome()
+    try {
+      window.print()
+    } catch {
+      restorePrintChrome()
+    }
+  }
+
+  function handlePrint() {
+    setMenuOpen(false)
+    /*
+      🔴 편집 모드 그대로 인쇄하면 제목이 **입력 필드**로 찍히고 본문 폭도 읽기와 다르다.
+      `switchMode('read')` 가 미저장분 flush·AI 패널 닫기까지 이미 해 주므로 그대로 쓴다.
+    */
+    switchMode('read')
+    /*
+      전환 렌더가 끝난 뒤에 인쇄한다. 클릭 핸들러 안의 setState 는 이벤트 끝에 동기 커밋되니
+      첫 rAF 시점엔 DOM 이 이미 읽기 모드고, 한 프레임 더 양보하는 건 그 DOM 의 레이아웃이
+      잡힌 뒤에 인쇄 스냅샷이 뜨게 하는 여유다 (편집 툴바가 사라지며 본문이 위로 올라온다).
+    */
+    requestAnimationFrame(() => requestAnimationFrame(runPrint))
+  }
+
   function handleExport(markdown: string) {
-    const filename = `${(title.trim() || '공부 노트').replace(/[\\/:*?"<>|]/g, '_')}.md`
+    const filename = `${noteFileBase(title)}.md`
     const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }))
     const a = document.createElement('a')
     a.href = url
@@ -470,7 +601,8 @@ export function StudyNoteDocPage() {
           <SaveChip state={saveState} />
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* 모드 탭·토글 일괄·⋯ 메뉴 — 종이에서는 누를 수 없는 것들이라 통째로 뺀다 */}
+        <div className="flex items-center gap-2 shrink-0 print:hidden">
           <div
             role="tablist"
             aria-label="보기 모드"
@@ -518,6 +650,12 @@ export function StudyNoteDocPage() {
           <DocMenu
             open={menuOpen}
             onOpenChange={setMenuOpen}
+            /*
+              🔴 앱(WebView)에서는 항목 자체가 없다 — WKWebView 는 `window.print()` 가
+              무동작이라 띄워 두면 눌러도 아무 일이 없는 거짓 어포던스가 된다.
+              네이티브 print 브리지는 후속 PR (plan §2 Out of Scope).
+            */
+            onPrint={isInNativeApp() ? undefined : handlePrint}
             onExport={() => {
               setMenuOpen(false)
               // 툴바의 「내보내기」와 **같은 직렬화**를 탄다 (열화 명세: markdownIO.ts)
@@ -534,8 +672,10 @@ export function StudyNoteDocPage() {
 
       <div className="flex gap-8">
         <div className="flex-1 min-w-0">
-          {/* 읽기 모드 = 65자 가독 폭 (편집은 현행 유지) */}
-          <div className={readOnly ? 'max-w-[720px] mx-auto' : ''}>
+          {/* 읽기 모드 = 65자 가독 폭 (편집은 현행 유지).
+              🔴 종이에서는 푼다 — 65자 폭은 화면에서 눈이 줄을 잃지 않게 하는 값이고,
+              지면은 이미 `@page` 여백이 그 역할을 한다. 남겨 두면 오른쪽이 통째로 빈다. */}
+          <div className={readOnly ? 'max-w-[720px] mx-auto print:max-w-none print:mx-0' : ''}>
             {readOnly ? (
               <h1
                 className={`text-[28px] leading-[1.25] font-bold mb-4 break-words ${
@@ -556,7 +696,7 @@ export function StudyNoteDocPage() {
             )}
 
             {showTemplateChips && (
-              <div className="mb-4" data-testid="template-chips">
+              <div className="mb-4 print:hidden" data-testid="template-chips">
                 <p className="text-[11px] text-text-quaternary mb-2">
                   템플릿으로 시작하기 — 서식 사용법이 본문에 들어 있어요
                 </p>
@@ -588,9 +728,19 @@ export function StudyNoteDocPage() {
               readOnly={readOnly}
               mention={mention}
               onExportMarkdown={handleExport}
+              /*
+                🔴 앱(WebView)에서는 PDF 를 안 준다 — 위 DocMenu 의 `onPrint` 와 **같은 근거·
+                같은 조건**(WKWebView 는 window.print() 가 무동작 = 거짓 어포던스).
+                그러면 툴바 「내보내기」는 형식이 하나뿐이라 메뉴 없이 곧장 마크다운이 된다.
+                인쇄 준비(읽기 전환·탭 제목·테마)는 `handlePrint` 를 그대로 재사용한다.
+              */
+              onExportPdf={isInNativeApp() ? undefined : handlePrint}
               onAiOpen={aiEnabled && !readOnly ? () => setAiOpen(true) : undefined}
               aiEntryMobileOnly
               header={editorSlot}
+              /* 이미지는 공부 노트에서만 — 준비·활동·회사 메모는 기본 off 그대로다 */
+              features={IMAGE_ON}
+              onUploadImage={uploadImage}
             />
 
             {/* 드래그 → 「AI」 (데스크탑). 모바일은 툴바 버튼이 같은 자리를 대신한다 */}
@@ -618,7 +768,7 @@ export function StudyNoteDocPage() {
                 : readOnly
                   ? 'hidden min-[1120px]:block'
                   : 'hidden xl:block'
-            } w-[180px] shrink-0`}
+            } w-[180px] shrink-0 print:hidden`}
           >
             {/* 🔴 top-[72px] = 고정 헤더(48px) + 여유 — top-6(24px) 이던 시절엔 스크롤하면
                 목차 상단이 헤더 밑으로 미끄러져 들어가 "안 따라오는" 것처럼 보였다 (2026-08-18 실기).
@@ -741,7 +891,7 @@ function SaveChip({ state }: { state: SaveState }) {
   return (
     <span
       aria-live="polite"
-      className={`ml-3 inline-flex items-center gap-1 text-[11px] shrink-0 transition-opacity ${
+      className={`ml-3 inline-flex items-center gap-1 text-[11px] shrink-0 transition-opacity print:hidden ${
         state === 'idle' ? 'opacity-0' : 'opacity-100'
       } ${state === 'error' ? 'text-danger' : 'text-text-quaternary'}`}
     >
@@ -767,42 +917,53 @@ function SaveChip({ state }: { state: SaveState }) {
 function DocMenu({
   open,
   onOpenChange,
+  onPrint,
   onExport,
   onDelete,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
+  /** 없으면 「PDF로 저장」 항목을 아예 그리지 않는다 (앱 웹뷰) */
+  onPrint?: () => void
   onExport: () => void
   onDelete: () => void
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null)
+  const menuBoxRef = useRef<HTMLDivElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
 
+  /* ESC · 화살표 이동 · 닫힘 포커스 복귀는 `useMenuKeyboard` 가 진다 (세 메뉴 공용) */
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => {
       if (!wrapRef.current?.contains(e.target as globalThis.Node)) onOpenChange(false)
     }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.stopPropagation()
-      onOpenChange(false)
-    }
     document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
     }
   }, [open, onOpenChange])
+
+  const { markOpenedByKeyboard } = useMenuKeyboard({
+    open,
+    menuRef: menuBoxRef,
+    triggerRef,
+    onClose: () => onOpenChange(false),
+  })
 
   return (
     <div ref={wrapRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         aria-label="노트 메뉴"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => onOpenChange(!open)}
+        onClick={(e) => {
+          // detail===0 = 키보드로 발생한 click → 첫 항목 포커스 (마우스면 안 준다)
+          markOpenedByKeyboard(e.detail === 0)
+          onOpenChange(!open)
+        }}
         className="w-8 h-8 rounded-lg hover:bg-card-hover text-text-quaternary flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -813,10 +974,21 @@ function DocMenu({
       </button>
       {open && (
         <div
+          ref={menuBoxRef}
           role="menu"
           aria-label="노트 메뉴"
           className="absolute right-0 top-9 z-20 w-48 rounded-lg bg-surface-2 border border-line-strong shadow-xl py-1 text-[13px]"
         >
+          {onPrint && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={onPrint}
+              className="w-full px-3 py-2 text-left text-text-secondary hover:bg-card-hover transition-colors"
+            >
+              PDF로 저장
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

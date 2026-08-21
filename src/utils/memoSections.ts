@@ -45,12 +45,29 @@ export function sectionNodes(title: string): TiptapNode[] {
 }
 
 /**
+ * 글자가 0자여도 **그 자체가 내용인** 노드 (study-note-media PR-A).
+ * 필기 블록(`drawing`)이 들어오면 여기에 한 줄 늘린다.
+ */
+const MEDIA_NODE_TYPES = new Set(['image'])
+
+function hasMediaNode(nodes: TiptapNode[]): boolean {
+  return nodes.some((n) => MEDIA_NODE_TYPES.has(n.type) || hasMediaNode(n.content ?? []))
+}
+
+/**
  * doc 이 실질적으로 비어있는지 — 텍스트 없는 빈 문단 껍데기 JSON 판정.
  * 빈 tiptap 문서 `{"type":"doc","content":[{"type":"paragraph"}]}` 가 "메모 있음" 으로
  * 오판되는 회귀 방지 (이때 저장 값은 '' 여야 함).
+ *
+ * 🔴 **글자 수로만 세면 이미지가 사라진다.** 이미지 한 장만 넣은 노트는 텍스트가 0자라
+ * 여기서 「빈 문서」로 판정되고, 그러면 `docToMemoValue` 가 저장 값으로 `''` 를 내보내
+ * **방금 올린 이미지가 저장 순간 날아간다.** 같은 판정이 공부 노트의 「빈 노트는 떠날 때
+ * 스스로 지운다」로도 흘러가 노트째 삭제된다 (`StudyNoteDocPage.tsx`).
  */
 export function isEmptyDoc(doc: TiptapDoc): boolean {
-  return (doc.content ?? []).map(nodeText).join('').trim().length === 0
+  const content = doc.content ?? []
+  if (hasMediaNode(content)) return false
+  return content.map(nodeText).join('').trim().length === 0
 }
 
 /**

@@ -30,6 +30,7 @@ import type { MarkdownSerializerState } from 'prosemirror-markdown'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { StudyNoteMention, type StudyNoteMentionOptions } from './StudyNoteMention'
 import { AiTargetHighlight } from './aiTargetHighlight'
+import { NoteImage } from './noteImage'
 
 /**
  * study-notes Phase 2a — **공용** 에디터 확장 세트.
@@ -332,15 +333,25 @@ export interface EditorFeatures {
   table?: boolean
   /** 마크다운 붙여넣기 파싱·내보내기 */
   markdown?: boolean
+  /**
+   * 본문 이미지 (NoteImage) — **공부 노트 전용**.
+   *
+   * 🔴 이 항목만 기본이 off 다. 나머지는 서식이라 어느 노트에 들어가도 무해하지만,
+   * 이미지는 **저장 용량 풀(100MB)을 먹고 서버 첨부 행을 만든다** — 준비·활동·회사
+   * 메모까지 한 번에 열면 되돌릴 때 이미 올라간 파일이 남는다. 반응을 보고 여는
+   * 순서가 CEO 결정 ② 다 (plan §2 Out of Scope).
+   */
+  image?: boolean
 }
 
-/** 미지정 = 전부 on (plan §2 "공용" 세트) */
+/** 미지정 = 이미지 빼고 전부 on (plan §2 "공용" 세트 — image 만 소비처가 명시로 켠다) */
 const DEFAULT_FEATURES: Required<EditorFeatures> = {
   taskList: true,
   details: true,
   codeBlock: true,
   table: true,
   markdown: true,
+  image: false,
 }
 
 export interface BuildExtensionsOptions {
@@ -370,6 +381,13 @@ export function buildEditorExtensions({
     ...(f.taskList ? [TaskList, TaskItem.configure({ nested: true })] : []),
     ...(f.details ? [StudyDetails, DetailsSummary, DetailsContent] : []),
     ...(f.codeBlock ? [CodeBlockWithHeader.configure({ lowlight })] : []),
+    /*
+      🔴 스키마 게이트다 — 꺼진 소비처에서는 image 노드가 **아예 없어서**, 마크다운
+      `![](…)` 를 붙여도 노드가 안 생기고 남의 노트 JSON 에 실려 와도 조용히 떨어진다.
+      켠 쪽(공부 노트)은 읽기 모드에서도 켜 둬야 한다 — 저장된 이미지를 그리려면
+      편집 여부와 무관하게 스키마에 노드가 있어야 한다.
+    */
+    ...(f.image ? [NoteImage] : []),
     /*
       resizable 컬럼은 모바일에서 잡을 수 없는 핸들이 생긴다 — 폭은 CSS 가 잡는다.
 

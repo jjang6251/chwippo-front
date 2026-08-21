@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { PrepHubGroup, StudyNoteFolder, StudyNoteListItem } from '@/api/studyNotes'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
+import { useMenuKeyboard } from '@/hooks/useMenuKeyboard'
 import {
   companyInitial,
   formatRelativeTime,
@@ -121,28 +122,32 @@ export function DotsMenu({
 }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement | null>(null)
+  const menuBoxRef = useRef<HTMLDivElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
 
+  /* ESC · 화살표 이동 · 닫힘 포커스 복귀는 `useMenuKeyboard` 가 진다 (세 메뉴 공용) */
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => {
       if (!wrapRef.current?.contains(e.target as globalThis.Node)) setOpen(false)
     }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.stopPropagation()
-      setOpen(false)
-    }
     document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
     }
   }, [open])
+
+  const { markOpenedByKeyboard } = useMenuKeyboard({
+    open,
+    menuRef: menuBoxRef,
+    triggerRef,
+    onClose: () => setOpen(false),
+  })
 
   return (
     <div ref={wrapRef} className="relative shrink-0">
       <button
+        ref={triggerRef}
         type="button"
         aria-label={label}
         aria-haspopup="menu"
@@ -150,6 +155,8 @@ export function DotsMenu({
         onClick={(e) => {
           e.preventDefault()
           e.stopPropagation()
+          // detail===0 = 키보드로 발생한 click → 첫 항목 포커스 (마우스면 안 준다)
+          markOpenedByKeyboard(e.detail === 0)
           setOpen((v) => !v)
         }}
         className={`${HOVER_ACTION} ${open ? 'opacity-100 bg-card-hover text-text-secondary' : ''}`}
@@ -158,6 +165,7 @@ export function DotsMenu({
       </button>
       {open && (
         <div
+          ref={menuBoxRef}
           role="menu"
           aria-label={label}
           className="absolute right-0 top-8 z-20 w-44 rounded-lg bg-surface-2 border border-line-strong shadow-xl py-1 text-[13px]"

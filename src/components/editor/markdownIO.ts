@@ -19,6 +19,11 @@ import { DOMParser as PMDOMParser, type Fragment, type Node as PMNode } from '@t
  * 기울임으로 먹힌다. 그래서 그 옵션은 끄고, 여기 신호 판정을 통과할 때만 파싱한다.
  */
 
+const LINK_RE = /\[[^\]\n]+\]\([^)\s]+\)/
+/** 이미지 `![alt](url)` — alt 는 비어도 된다 (`![](url)` 이 우리 내보내기 형태다) */
+const IMAGE_RE = /!\[[^\]\n]*\]\([^)\s]+\)/
+const IMAGE_RE_GLOBAL = new RegExp(IMAGE_RE.source, 'g')
+
 /** 마크다운 신호 — **서로 다른 종류가 2개 이상**일 때만 파싱한다 (같은 종류 반복은 1로 센다) */
 const SIGNALS: ReadonlyArray<{ kind: string; re: RegExp }> = [
   { kind: 'heading', re: /^#{1,6}[ \t]+\S/m },
@@ -30,8 +35,9 @@ const SIGNALS: ReadonlyArray<{ kind: string; re: RegExp }> = [
   { kind: 'table', re: /^\|.*\|[ \t]*$/m },
   { kind: 'hr', re: /^(?:-{3,}|\*{3,}|_{3,})[ \t]*$/m },
   { kind: 'bold', re: /\*\*[^\s*][^*]*\*\*/ },
-  { kind: 'link', re: /\[[^\]\n]+\]\([^)\s]+\)/ },
+  { kind: 'link', re: LINK_RE },
   { kind: 'inlineCode', re: /`[^`\n]+`/ },
+  { kind: 'image', re: IMAGE_RE },
 ]
 
 /**
@@ -39,6 +45,10 @@ const SIGNALS: ReadonlyArray<{ kind: string; re: RegExp }> = [
  *
  * `task` 가 걸리면 `bullet` 도 같이 걸리는데(둘 다 `- ` 로 시작), 그건 한 줄이 만든
  * 신호 하나라 2종으로 세면 안 된다 — 체크리스트만 붙여넣어도 게이트를 통과해버린다.
+ *
+ * `image` ↔ `link` 도 같은 겹침이다 — `![alt](url)` 안에 `[alt](url)` 이 그대로 들어 있다.
+ * 다만 이미지 문법을 **걷어낸 뒤에도** 링크가 남으면 그건 진짜 별개 신호라 그대로 센다
+ * (task/bullet 처럼 무조건 지우면 「이미지 + 링크」 문서가 게이트에서 막힌다).
  */
 export function countMarkdownSignals(text: string): number {
   const kinds = new Set<string>()
@@ -46,6 +56,9 @@ export function countMarkdownSignals(text: string): number {
     if (re.test(text)) kinds.add(kind)
   }
   if (kinds.has('task')) kinds.delete('bullet')
+  if (kinds.has('image') && !LINK_RE.test(text.replace(IMAGE_RE_GLOBAL, ''))) {
+    kinds.delete('link')
+  }
   return kinds.size
 }
 
@@ -88,6 +101,8 @@ export function markdownStorage(editor: Editor): MarkdownStorage | null {
  * - 형광펜(highlight) → 색이 사라지고 글자만 남는다
  * - 멘션 칩 → `[제목](/study-notes/:id)` 링크 (칩 시각·끊긴 링크 표시 소실)
  * - 표·체크리스트·코드 언어·인용·구분선은 보존된다
+ * - 이미지 → `![](url)` 로 보존. 단 **URL 을 들고 나가는 것**이라, 노트를 지우면
+ *   그 파일도 정리돼 내보낸 마크다운의 이미지가 깨진다
  */
 export function editorToMarkdown(editor: Editor): string {
   return markdownStorage(editor)?.getMarkdown() ?? editor.getText({ blockSeparator: '\n\n' })
