@@ -322,8 +322,9 @@ export function CompanyInfoTab({ applicationId }: Props) {
 // ────────────────────────────────────────────────────────────────────────
 
 /**
- * 조사 시점 — `cachedAt` 은 실제 timestamp 라 **KST 헬퍼로** 바꾼다
- * (`toISOString().slice(0,10)` 은 UTC 라 9시간 어긋난다).
+ * 조사 시점 — `cachedAt` 은 실제 timestamp 라 **KST 헬퍼로** 바꾼다.
+ * ISO 문자열 앞 10자를 그대로 잘라 쓰면 UTC 기준이라 9시간 어긋난다
+ * (그 패턴은 CI `KST date-string guard` 가 막는다 — 여기 예시로도 적지 않는다).
  * 타임라인의 날짜는 원문 텍스트라 여기 오지 않는다.
  */
 function formatCachedAt(cachedAt?: string | Date): string | null {
