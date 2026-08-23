@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DesktopOnlyNotice } from './DesktopOnlyNotice'
 
 /**
- * 앱(WebView)·모바일 웹에서 자소서가 보기 전용일 때 뜨는 안내.
+ * 앱(WebView)·모바일 웹에서 자소서 **AI 가 막혀 있을 때** 뜨는 안내.
+ *
+ * 🔴 2026-08-23 — 모바일에서 문항·답변 편집이 열렸다. 그래서 이 안내가 말할 수 있는 건
+ * **AI(초안 채팅·검사)가 PC 전용**이라는 것뿐이다. 「보기 전용」·「작성은 PC에서」 로
+ * 남으면 **있는 길을 감춘다.**
  *
  * 기존 문구는 "PC에서 작성할 수 있어요" 로 끝나 **어디로 가야 하는지가 없었다.**
  * 앱 사용자는 자기가 웹을 보고 있다는 것도 모르고 주소를 옮겨적을 수도 없어
@@ -88,6 +92,22 @@ describe('DesktopOnlyNotice', () => {
 
   it('variant=inline 이면 카드 안 보조 문구 톤으로 바뀐다', () => {
     render(<DesktopOnlyNotice variant="inline" />)
-    expect(screen.getByText(/자소서 작성은 PC에서/)).toBeInTheDocument()
+    expect(screen.getByText(/AI 초안·검사는 PC에서/)).toBeInTheDocument()
+  })
+
+  /**
+   * 🔴 **못 하는 것만 PC 전용이라고 말한다** (2026-08-23 모바일 편집 개방).
+   * 문항·답변은 모바일에서 쓸 수 있으므로 「보기 전용」·「작성은 PC에서」 는 거짓이 됐다.
+   * 두 variant 모두 잠근다 — 한쪽만 고치면 화면마다 다른 말을 한다.
+   */
+  it('🔴 작성 자체가 PC 전용인 것처럼 말하지 않는다', () => {
+    for (const variant of ['banner', 'inline'] as const) {
+      const { container, unmount } = render(<DesktopOnlyNotice variant={variant} />)
+      const text = container.textContent ?? ''
+      expect(text, variant).not.toMatch(/보기 전용/)
+      expect(text, variant).not.toMatch(/작성.{0,3}은 PC에서/)
+      expect(text, variant).toMatch(/AI/)
+      unmount()
+    }
   })
 })

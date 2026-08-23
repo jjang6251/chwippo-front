@@ -37,7 +37,7 @@ import { CompanyAvatar } from '@/components/board/CompanyAvatar'
 import { CompanyInfoSection } from '@/components/board/CompanyInfoSection'
 import { CompanyMemoCard } from '@/components/board/CompanyMemoCard'
 import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
-import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
+import { useCoverletterAiBlocked } from '@/hooks/useCoverletterAiBlocked'
 import { loadCollapseExpanded, saveCollapseExpanded, JOB_POSTING_EXPANDED_STORAGE_KEY } from '@/utils/collapsePref'
 import { toast } from '@/stores/toastStore'
 import { celebrate } from '@/stores/celebrationStore'
@@ -227,8 +227,8 @@ export function BoardDetail() {
    */
   const { data: researchProbe } = useCompanyResearchCache(id!, true, { countHit: false })
 
-  // 공고 요건 — 자소서와 동일 정책(모바일·RN 보기 전용) + DART 처럼 접힘 localStorage 기억
-  const jpReadOnly = useCoverletterReadOnly()
+  // 공고 요건 — 파싱이 AI 호출이라 모바일·RN 에선 액션 미노출 + DART 처럼 접힘 localStorage 기억
+  const jpReadOnly = useCoverletterAiBlocked()
   const [jpExpanded, setJpExpanded] = useState(() => loadCollapseExpanded(JOB_POSTING_EXPANDED_STORAGE_KEY))
   const toggleJp = () =>
     setJpExpanded((prev) => {

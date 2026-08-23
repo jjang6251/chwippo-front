@@ -1,11 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
-import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
+import { useCoverletterAiBlocked } from '@/hooks/useCoverletterAiBlocked'
 import { useNavigate, useParams } from 'react-router-dom'
 import { JobTitleField } from '@/components/common/JobTitleField'
 import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPanel'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
 import { CompanyResearchBanner } from '@/components/coverletter/CompanyResearchBanner'
+import {
+  loadCollapseExpanded, saveCollapseExpanded, loadExpandedIds, saveExpandedIds,
+  JOB_POSTING_EXPANDED_STORAGE_KEY, COMPANY_RESEARCH_EXPANDED_STORAGE_KEY,
+  coverletterExpandedKey,
+} from '@/utils/collapsePref'
 import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { useApplication } from '@/hooks/useApplications'
 import { useAiFeedbackUnloadGuard } from '@/hooks/useAiFeedbackUnloadGuard'
@@ -32,7 +37,12 @@ import { DesktopOnlyNotice } from '@/components/coverletter/DesktopOnlyNotice'
 export function CoverletterDocPage() {
   const aiEnabled = useAiEnabled()
   const interviewAiEnabled = useInterviewAiEnabled()
-  const readOnly = useCoverletterReadOnly()
+  /**
+   * 🔴 **AI 만 막는다 — 이 게이트가 IAP 방어선이다 (완화 금지).**
+   * 모바일·RN 에서 문항·답변 편집은 열려 있고(2026-08-23 CEO), 코인을 쓰는 진입점만
+   * 닫힌다: 채팅 패널·FAB·바텀시트·카드의 「AI 에게 묻기」·「자소서 검사」·공고 파싱.
+   */
+  const aiBlocked = useCoverletterAiBlocked()
   const { applicationId } = useParams<{ applicationId: string }>()
   const navigate = useNavigate()
   const { data: app, isLoading: appLoading } = useApplication(applicationId ?? '')
@@ -50,7 +60,12 @@ export function CoverletterDocPage() {
   useAiFeedbackUnloadGuard()
 
   // 펼침 카드 set — 자유 다중 펴기. 첫 카드는 default 펼침
-  const [expandedClIds, setExpandedClIds] = useState<Set<string>>(new Set())
+  /**
+   * 펼침 상태 — **사용자가 건드리기 전까지는 파생값**이다 (`null` = 아직 안 건드림).
+   * effect 로 초기값을 세팅하면 `react-hooks/set-state-in-effect` 에 걸리고,
+   * 실제로도 렌더 한 번을 낭비한다. 저장값·기본값 모두 렌더 시점에 계산 가능하다.
+   */
+  const [userExpanded, setUserExpanded] = useState<Set<string> | null>(null)
   // AI 적용 시 해당 카드로 스크롤 + 플래시. ref 맵 (펼친 카드 루트 div)
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const [flashClId, setFlashClId] = useState<string | null>(null)
@@ -61,14 +76,27 @@ export function CoverletterDocPage() {
     },
     [],
   )
-  // cls 첫 로드 시 첫 카드 자동 펼침
-  const firstExpandRef = useRef(false)
-  useEffect(() => {
-    if (!firstExpandRef.current && cls.length > 0) {
-      firstExpandRef.current = true
-      setExpandedClIds(new Set([cls[0].id]))
+  /**
+   * 🔴 예전엔 무조건 첫 카드를 펼쳤다. 사용자가 접어도 새로고침·재진입하면 **매번 다시
+   * 펼쳐졌다** (2026-08-23 CEO 실사용 지적). 자동 펼침의 목적은 **처음 온 사람을 돕는 것**
+   * 이지 매번 강제하는 게 아니다 — 명시적으로 접었으면 그 판단이 이긴다.
+   *
+   * 「기록 없음(`null`)」과 「전부 접음(`[]`)」을 가르는 게 핵심이다. **전자만** 자동 펼침.
+   * 저장은 **지원 카드별** — 회사마다 자소서가 다르다.
+   */
+  const savedExpanded = useMemo(
+    () => (applicationId ? loadExpandedIds(coverletterExpandedKey(applicationId)) : null),
+    [applicationId],
+  )
+  const expandedClIds = useMemo<Set<string>>(() => {
+    if (userExpanded) return userExpanded
+    if (savedExpanded) {
+      // 지워진 문항 id 가 남아 있어도 무해하지만, 목록에 없는 건 걸러 둔다
+      const live = new Set(cls.map((c) => c.id))
+      return new Set(savedExpanded.filter((id) => live.has(id)))
     }
-  }, [cls])
+    return cls.length > 0 ? new Set([cls[0].id]) : new Set<string>()
+  }, [userExpanded, savedExpanded, cls])
 
   // 문항 점프 칩 — 해당 카드로 스크롤 + 플래시 (flash 메커니즘 재사용)
   const handleJump = useCallback((clId: string) => {
@@ -80,14 +108,25 @@ export function CoverletterDocPage() {
     flashTimerRef.current = setTimeout(() => setFlashClId(null), 1200)
   }, [])
 
-  const handleToggle = useCallback((clId: string) => {
-    setExpandedClIds((prev) => {
-      const next = new Set(prev)
+  /**
+   * 저장은 **여기 한 곳에서만** 한다 — 펼침을 바꾸는 곳이 셋(토글·삭제·AI 적용)이라
+   * 각각에 붙이면 언젠가 하나를 빠뜨린다. 상태가 바뀌면 무조건 따라 저장한다.
+   * 🔴 복원(`firstExpandRef`) 전에는 저장하지 않는다 — 빈 초기값이 저장을 덮어쓴다.
+   */
+  useEffect(() => {
+    if (!userExpanded || !applicationId) return
+    saveExpandedIds(coverletterExpandedKey(applicationId), [...userExpanded])
+  }, [userExpanded, applicationId])
+
+  const handleToggle = useCallback(
+    (clId: string) => {
+      const next = new Set<string>(expandedClIds)
       if (next.has(clId)) next.delete(clId)
       else next.add(clId)
-      return next
-    })
-  }, [])
+      setUserExpanded(next)
+    },
+    [expandedClIds],
+  )
 
   const handleUpdate = useCallback(
     (clId: string, dto: UpdateCoverletterDto) => {
@@ -100,15 +139,13 @@ export function CoverletterDocPage() {
     (clId: string) => {
       removeCl(clId, {
         onSuccess: () => {
-          setExpandedClIds((prev) => {
-            const next = new Set(prev)
-            next.delete(clId)
-            return next
-          })
+          const next = new Set<string>(expandedClIds)
+          next.delete(clId)
+          setUserExpanded(next)
         },
       })
     },
-    [removeCl],
+    [removeCl, expandedClIds],
   )
 
   // suggestedUpdate 적용 — ChatPanel 안 CoverletterDiffModal 이 사용자 명시 확인 후 호출.
@@ -118,11 +155,9 @@ export function CoverletterDocPage() {
       const cl = cls.find((c) => c.id === update.clId)
       if (!cl) return
       updateCl({ clId: update.clId, dto: { answer: update.newAnswer } })
-      setExpandedClIds((prev) => {
-        const next = new Set(prev)
-        next.add(update.clId)
-        return next
-      })
+      const nextExpanded = new Set<string>(expandedClIds)
+      nextExpanded.add(update.clId)
+      setUserExpanded(nextExpanded)
       // 적용된 카드로 스크롤 + 플래시 (연속 적용이면 마지막 문항 기준 1회)
       const reduced =
         typeof window !== 'undefined' &&
@@ -137,7 +172,7 @@ export function CoverletterDocPage() {
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
       flashTimerRef.current = setTimeout(() => setFlashClId(null), 1200)
     },
-    [cls, updateCl],
+    [cls, updateCl, expandedClIds],
   )
 
   // 회사 조사: cache 우선 → null 이면 자동 fetch (1회만)
@@ -146,8 +181,14 @@ export function CoverletterDocPage() {
     isLoading: researchLoading,
   } = useCompanyResearchCache(applicationId ?? '', !!applicationId)
 
-  const [bannerExpanded, setBannerExpanded] = useState(false)
-  const [jpExpanded, setJpExpanded] = useState(false)
+  /* 배너 접힘도 기억한다 — 카드 상세의 공고 요건은 이미 기억하는데 여기만 안 해서
+     같은 배너가 화면마다 다르게 동작했다 (2026-08-23). 키를 공유해 선호가 따라다닌다. */
+  const [bannerExpanded, setBannerExpanded] = useState(() =>
+    loadCollapseExpanded(COMPANY_RESEARCH_EXPANDED_STORAGE_KEY),
+  )
+  const [jpExpanded, setJpExpanded] = useState(() =>
+    loadCollapseExpanded(JOB_POSTING_EXPANDED_STORAGE_KEY),
+  )
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
   // 카드의 "✨ AI 에게 묻기" prefill — nonce 로 매번 새 이벤트 처리
   const [chatPrefill, setChatPrefill] = useState<
@@ -226,7 +267,7 @@ export function CoverletterDocPage() {
           {interviewAiEnabled && applicationId && (
             <GoToInterviewButton
               applicationId={applicationId}
-              navigateOnly={readOnly}
+              navigateOnly={aiBlocked}
             />
           )}
         </div>
@@ -236,19 +277,19 @@ export function CoverletterDocPage() {
           있어서, 비었거나 잘못 적힌 걸 발견해도 카드 상세로 돌아가야 했다.
           표시 규칙도 `resolveJobText` 로 통일 — 프롬프트가 보는 값과 같은 걸 보여준다.
         */}
-        {!readOnly && applicationId && (
+        {!aiBlocked && applicationId && (
           <div className="max-w-md">
             <JobTitleField applicationId={applicationId} />
           </div>
         )}
-        {readOnly && (app.jobTitle || app.jobCategory) && (
+        {aiBlocked && (app.jobTitle || app.jobCategory) && (
           <p className="text-text-tertiary text-xs">
             {app.jobTitle ?? app.jobCategory}
           </p>
         )}
       </header>
 
-      {readOnly && <DesktopOnlyNotice className="mb-5" />}
+      {aiBlocked && <DesktopOnlyNotice className="mb-5" />}
 
       {/* Phase B — 회사 조사 banner.
         * PR UI: default collapse (outdated 우선 표시 — 사용자 인지 부하 ↓).
@@ -258,7 +299,12 @@ export function CoverletterDocPage() {
         research={research}
         loading={researchLoading}
         expanded={bannerExpanded}
-        onToggle={() => setBannerExpanded((v) => !v)}
+        onToggle={() =>
+          setBannerExpanded((v) => {
+            saveCollapseExpanded(COMPANY_RESEARCH_EXPANDED_STORAGE_KEY, !v)
+            return !v
+          })
+        }
       />
 
       {/* 공고 요건 배너 — 회사 조사 아래. app.jobPosting (상세 whitelist) 사용 */}
@@ -266,31 +312,36 @@ export function CoverletterDocPage() {
         applicationId={applicationId ?? ''}
         jobPosting={app.jobPosting}
         jobPostingStatus={app.jobPostingStatus}
-        readOnly={readOnly}
+        /* 공고 파싱은 AI 호출이다 — 모바일·RN 에선 계속 닫는다 */
+        readOnly={aiBlocked}
         expanded={jpExpanded}
-        onToggle={() => setJpExpanded((v) => !v)}
+        onToggle={() =>
+          setJpExpanded((v) => {
+            saveCollapseExpanded(JOB_POSTING_EXPANDED_STORAGE_KEY, !v)
+            return !v
+          })
+        }
       />
 
       {/* write-shell: 2-pane (Phase D 에서 채움) */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-[18px] lg:gap-[22px]">
         <div className="space-y-3">
           {cls.length === 0 ? (
-            readOnly ? (
-              <div className="bg-surface-2 border border-dashed border-line rounded-xl p-8 text-center">
-                <div className="text-2xl mb-2">📝</div>
-                <p className="text-text-secondary text-sm font-medium">
-                  아직 작성된 문항이 없어요. PC에서 문항을 추가해 시작하세요.
-                </p>
-              </div>
-            ) : (
+            /*
+              모바일 전용 「PC에서 추가하세요」 분기를 없앤다 (2026-08-23) — 이제 여기서
+              바로 추가·작성할 수 있으므로 그 안내는 거짓이고, 시작점 없이 빈 화면만 남는다.
+              달라지는 건 **설명 문구뿐** — AI 도움은 여전히 PC 전용이라 그렇게 약속하지 않는다.
+            */
             <div className="bg-surface-2 border border-dashed border-line rounded-xl p-8 text-center">
               <div className="text-2xl mb-2">📝</div>
               <p className="text-text-secondary text-sm font-medium mb-1">
                 자소서 문항을 추가해 시작하세요
               </p>
               <p className="text-text-quaternary text-xs leading-relaxed mb-5">
-                문항을 추가하면 AI 가 활동일지·회사 정보를 활용해 답변 작성을
-                도와줍니다.
+                {/* AI·PC 안내는 위 배너가 이미 한다 — 여기서 되풀이하지 않는다 */}
+                {aiBlocked
+                  ? '문항을 추가하고 바로 작성할 수 있어요.'
+                  : '문항을 추가하면 AI 가 활동일지·회사 정보를 활용해 답변 작성을 도와줍니다.'}
               </p>
               <button
                 onClick={() => createCl({ question: '' })}
@@ -300,7 +351,6 @@ export function CoverletterDocPage() {
                 + 첫 문항 추가하기
               </button>
             </div>
-            )
           ) : (
             <>
               {cls.length >= 2 && (
@@ -317,7 +367,7 @@ export function CoverletterDocPage() {
                         aria-label={
                           unwritten ? `Q${idx + 1} (미작성)` : `Q${idx + 1}`
                         }
-                        className="text-[11px] font-mono px-2.5 py-1 rounded-md transition-colors inline-flex items-center gap-1.5 bg-surface-2 border border-line text-text-secondary hover:border-brand/40 hover:text-text-primary"
+                        className="text-[11px] font-mono px-2.5 min-h-[32px] rounded-md transition-colors inline-flex items-center gap-1.5 bg-surface-2 border border-line text-text-secondary hover:border-brand/40 hover:text-text-primary"
                       >
                         Q{idx + 1}
                         {unwritten && (
@@ -342,7 +392,15 @@ export function CoverletterDocPage() {
                   onUpdate={(dto) => handleUpdate(cl.id, dto)}
                   onDelete={() => handleDelete(cl.id)}
                   onAskAI={() => handleAskAI(cl.id, cl.question)}
-                  readOnly={readOnly}
+                  /*
+                    🔴 **`readOnly` 가 아니라 `simpleEdit`** (2026-08-23 CEO — 모바일 편집 개방).
+                    `simpleEdit` 이 감추는 것과 여기서 감춰야 할 것이 정확히 같다:
+                    유형 · 글자수 제한 · 삭제 · 답변 가져오기 · AI 에게 묻기 · 자소서 검사.
+                    문항 편집만 예외라 `allowQuestionEdit` 로 따로 연다.
+                    데스크탑(aiBlocked=false)은 `simpleEdit=false` 라 기존 동작 그대로다.
+                  */
+                  simpleEdit={aiBlocked}
+                  allowQuestionEdit
                   flash={flashClId === cl.id}
                   containerRef={(el) => {
                     if (el) cardRefs.current.set(cl.id, el)
@@ -350,15 +408,14 @@ export function CoverletterDocPage() {
                   }}
                 />
               ))}
-              {!readOnly && (
-                <button
-                  onClick={() => createCl({ question: '' })}
-                  disabled={creating}
-                  className="w-full py-2.5 text-xs font-medium text-text-secondary border border-dashed border-line rounded-lg hover:border-brand/40 hover:text-text-primary transition-colors disabled:opacity-40"
-                >
-                  + 문항 추가
-                </button>
-              )}
+              {/* 추가는 모바일에서도 연다 — 문항을 쓸 수 있는데 만들 수 없으면 막다른 길이다 */}
+              <button
+                onClick={() => createCl({ question: '' })}
+                disabled={creating}
+                className="w-full py-2.5 text-xs font-medium text-text-secondary border border-dashed border-line rounded-lg hover:border-brand/40 hover:text-text-primary transition-colors disabled:opacity-40"
+              >
+                + 문항 추가
+              </button>
             </>
           )}
         </div>
@@ -368,7 +425,8 @@ export function CoverletterDocPage() {
          * h: viewport - top(88) - 아래 여백(72) = calc(100vh - 160px). 약 vh 85%.
          */}
         <aside className="hidden lg:flex flex-col bg-card border border-line rounded-[14px] p-3.5 shadow-md self-start sticky top-[88px] h-[calc(100vh-160px)] overflow-hidden">
-          {aiEnabled && !readOnly && <CoverletterChatPanel
+          {/* 🔴 AI 채팅 = 코인 소비 — IAP 방어선. `aiBlocked` 를 지우지 말 것 */}
+          {aiEnabled && !aiBlocked && <CoverletterChatPanel
             applicationId={applicationId ?? ''}
             onApplyUpdate={handleApplyUpdate}
             prefill={chatPrefill}
@@ -377,8 +435,8 @@ export function CoverletterDocPage() {
         </aside>
       </div>
 
-      {/* 모바일 FAB — readOnly(모바일·네이티브)에선 AI 미노출 */}
-      {aiEnabled && !readOnly && (
+      {/* 🔴 모바일 FAB — 모바일·네이티브에선 AI 미노출 (IAP 방어선) */}
+      {aiEnabled && !aiBlocked && (
         <button
           onClick={() => setMobileChatOpen(true)}
           className="lg:hidden fixed bottom-[100px] right-4 z-40 px-4 py-3 bg-brand text-bg text-sm font-semibold rounded-full shadow-lg hover:bg-accent active:scale-95 transition-all"
@@ -401,7 +459,7 @@ export function CoverletterDocPage() {
             aria-modal="true"
             aria-label="AI 채팅 패널"
           >
-            {aiEnabled && !readOnly && <CoverletterChatPanel
+            {aiEnabled && !aiBlocked && <CoverletterChatPanel
               applicationId={applicationId ?? ''}
               onApplyUpdate={(u) => {
                 handleApplyUpdate(u)

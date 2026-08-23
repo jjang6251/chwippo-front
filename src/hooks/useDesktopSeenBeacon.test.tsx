@@ -13,14 +13,14 @@ vi.mock('@/api/users', () => ({
   markDesktopWebSeen: (...args: unknown[]) => markDesktopWebSeen(...args),
 }))
 
-const readOnly = vi.fn()
-vi.mock('@/hooks/useCoverletterReadOnly', () => ({
-  useCoverletterReadOnly: () => readOnly(),
+const aiBlocked = vi.fn()
+vi.mock('@/hooks/useCoverletterAiBlocked', () => ({
+  useCoverletterAiBlocked: () => aiBlocked(),
 }))
 
 beforeEach(() => {
   markDesktopWebSeen.mockReset().mockResolvedValue(undefined)
-  readOnly.mockReset().mockReturnValue(false) // 기본 = 데스크탑 웹
+  aiBlocked.mockReset().mockReturnValue(false) // 기본 = 데스크탑 웹
   localStorage.clear()
 })
 
@@ -35,8 +35,8 @@ describe('useDesktopSeenBeacon', () => {
   })
 
   // 게이트가 닫힌 환경 = 모바일 뷰포트 또는 네이티브. 여기서 쏘면 지표가 오염된다
-  it('보기 전용 환경(모바일·네이티브) → 발사하지 않는다', () => {
-    readOnly.mockReturnValue(true)
+  it('AI 차단 환경(모바일·네이티브) → 발사하지 않는다', () => {
+    aiBlocked.mockReturnValue(true)
     renderHook(() => useDesktopSeenBeacon(true))
     expect(markDesktopWebSeen).not.toHaveBeenCalled()
   })
@@ -74,12 +74,12 @@ describe('useDesktopSeenBeacon', () => {
   })
 
   // 모바일로 들어왔다가 창을 넓힌 경우 — 훅이 resize 에 반응하므로 그 시점에 잡혀야 한다
-  it('보기 전용 → 데스크탑으로 바뀌면 그때 발사한다', async () => {
-    readOnly.mockReturnValue(true)
+  it('AI 차단 → 데스크탑으로 바뀌면 그때 발사한다', async () => {
+    aiBlocked.mockReturnValue(true)
     const { rerender } = renderHook(() => useDesktopSeenBeacon(true))
     expect(markDesktopWebSeen).not.toHaveBeenCalled()
 
-    readOnly.mockReturnValue(false)
+    aiBlocked.mockReturnValue(false)
     rerender()
     await waitFor(() => expect(markDesktopWebSeen).toHaveBeenCalledTimes(1))
   })

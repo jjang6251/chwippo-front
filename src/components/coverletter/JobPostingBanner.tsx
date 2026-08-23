@@ -8,7 +8,7 @@ import {
   JobPostingModal,
   type JobPostingModalMode,
 } from '@/components/coverletter/JobPostingModal'
-import { hasJobPostingData, countJobPostingItems, type JobPosting } from '@/api/jobPosting'
+import { hasJobPostingData, countJobPostingItems, normalizeJobPosting, type JobPosting } from '@/api/jobPosting'
 
 /**
  * 📋 공고 요건 UI — 두 표면 공용 (자소서 페이지 · 카드 상세). 단일 구현.
@@ -44,6 +44,8 @@ export function JobPostingBanner({
   onToggle,
   variant = 'banner',
 }: Props) {
+  /* 기술 스택·자격증·키워드 펼침 — 배너 펼침과 같은 **세션성**(회사 조사 배너와 같은 규칙) */
+  const [showMoreReq, setShowMoreReq] = useState(false)
   const [modalMode, setModalMode] = useState<JobPostingModalMode | null>(null)
   const [confirm, setConfirm] = useState<'delete' | 'reparse' | null>(null)
   const { mutate: remove, isPending: removing } =
@@ -63,8 +65,13 @@ export function JobPostingBanner({
     />
   )
 
-  // 요건 섹션 표시 (배너·섹션 공용) — 중복 구현 방지
-  const renderRequirements = (data: JobPosting) => (
+  /**
+   * 요건 — **자소서 문항이 묻는 것**(core)과 **지원 자격 확인용**(more)으로 가른다.
+   * 담당업무·자격요건·우대사항은 지원동기·직무역량 문항의 직접 재료지만,
+   * 기술 스택은 이미 자격요건에 녹아 있고 자격증·어학·키워드는 "내가 지원할 수 있나"를
+   * 볼 때 쓴다. 자소서를 쓰는 중에는 앞의 셋이면 된다.
+   */
+  const renderCore = (data: JobPosting) => (
     <>
       {data.responsibilities?.trim() && (
         <TextItem title="담당업무" content={data.responsibilities} />
@@ -75,6 +82,10 @@ export function JobPostingBanner({
       {data.preferred.length > 0 && (
         <ListItem title="우대사항 ⭐" items={data.preferred} />
       )}
+    </>
+  )
+  const renderMore = (data: JobPosting) => (
+    <>
       {data.techStack.length > 0 && (
         <ChipItem title="기술 스택" chips={data.techStack} />
       )}
@@ -84,6 +95,17 @@ export function JobPostingBanner({
       {data.keywords.length > 0 && (
         <ChipItem title="키워드" chips={data.keywords} />
       )}
+    </>
+  )
+  const hasMoreReq = (data: JobPosting) =>
+    data.techStack.length > 0 ||
+    data.qualifications.length > 0 ||
+    data.keywords.length > 0
+  // 섹션 모드(카드 상세·면접 사이드바)는 전부 — 거기선 자소서 본문과 자리를 다투지 않는다
+  const renderRequirements = (data: JobPosting) => (
+    <>
+      {renderCore(data)}
+      {renderMore(data)}
     </>
   )
 
@@ -150,7 +172,8 @@ export function JobPostingBanner({
     if (!hasData && readOnly && jobPostingStatus !== 'parsing') return null
 
     const parsing = jobPostingStatus === 'parsing'
-    const data = hasData ? (jobPosting as JobPosting) : null
+    /* `as` 대신 정규화 — 배열이 비어 와도 화면이 안 죽는다 (읽기 경계 방어) */
+    const data = hasData ? normalizeJobPosting(jobPosting) : null
     const hint = parsing
       ? '정리 중…'
       : data
@@ -288,7 +311,8 @@ export function JobPostingBanner({
     )
   }
 
-  const data = jobPosting as JobPosting
+  /* 위 `hasData` 게이트를 통과한 값 — `as` 대신 정규화로 타입을 참으로 만든다 */
+  const data = normalizeJobPosting(jobPosting)!
 
   return (
     <>
@@ -315,8 +339,25 @@ export function JobPostingBanner({
           <CollapsibleChevron open={expanded} />
         </button>
         {expanded && (
-          <div className="px-3 pb-2 text-xs">
-            {renderRequirements(data)}
+          /* 회사 조사 배너와 같은 14px — 세로로 나란히 있는 형제라 크기가 다르면
+             한쪽이 덜 중요해 보인다. 접힘이 이미 위계를 만들고 있어서 크기로 또
+             낮추지 않는다 (섹션 제목 11px 과 3px 차이로 위계는 선명하다). */
+          <div className="px-3 pb-2 text-sm">
+            {renderCore(data)}
+            {hasMoreReq(data) && (
+              <>
+                {showMoreReq && renderMore(data)}
+                <button
+                  type="button"
+                  onClick={() => setShowMoreReq((v) => !v)}
+                  aria-expanded={showMoreReq}
+                  className="flex items-center gap-1 min-h-[32px] text-[11px] font-semibold text-text-tertiary hover:text-text-secondary transition-colors"
+                >
+                  <CollapsibleChevron open={showMoreReq} />
+                  {showMoreReq ? '접기' : '더보기'}
+                </button>
+              </>
+            )}
 
             {/*
               🔴 `flex-wrap` 필수 — 이 섹션은 카드 상세(넓음)뿐 아니라 **면접 세션
@@ -415,7 +456,7 @@ function ActionBtn({
   return (
     <button
       onClick={onClick}
-      className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+      className={`text-[10px] px-2 min-h-[32px] inline-flex items-center rounded transition-colors ${
         danger
           ? 'text-text-quaternary hover:text-danger'
           : 'text-text-tertiary hover:text-text-primary'

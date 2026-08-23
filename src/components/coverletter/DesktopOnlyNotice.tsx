@@ -11,7 +11,11 @@ interface Props {
 }
 
 /**
- * 자소서 보기 전용(모바일 웹·앱) 안내.
+ * 자소서 **AI 는 PC 전용**(모바일 웹·앱) 안내.
+ *
+ * 🔴 2026-08-23 부터 모바일에서도 **문항·답변을 쓸 수 있다.** 그 전 문구("작성·수정은
+ * PC에서")는 그대로 두면 **거짓말이 되고, 있는 길을 막는다** — 쓸 수 있는데 못 쓰는 줄 안다.
+ * PC 전용으로 남는 것은 코인을 쓰는 AI 뿐이다 (초안 채팅·자소서 검사).
  *
  * 기존 문구는 "PC에서 작성할 수 있어요" 로 끝나 **어디로 가야 하는지가 없었다.**
  * 앱은 WebView 라 사용자는 자기가 웹을 보고 있다는 사실조차 모르고, 주소를 손으로
@@ -40,12 +44,15 @@ export function DesktopOnlyNotice({ variant = 'banner', className = '' }: Props)
     <div
       className={`bg-card border border-line rounded-lg px-3 py-2.5 ${className}`}
     >
-      <p className="flex items-start gap-1.5 text-xs text-text-tertiary leading-relaxed">
+      {/* 🔴 14px — **모바일 사용자가 「여기서 뭘 할 수 있나」를 아는 유일한 문장**이다.
+          편집을 막 열어 놓고 그 사실을 알리는 문장이 12px 이면 안 읽힌다
+          (DESIGN.md 규칙 7-b · 2026-08-23 /uiux 1-c 실측에서 걸림). */}
+      <p className="flex items-start gap-1.5 text-sm text-text-secondary leading-relaxed break-keep">
         <Monitor size={14} strokeWidth={1.75} className="shrink-0 mt-0.5" aria-hidden="true" />
         <span>
           {variant === 'banner'
-            ? '지금은 보기 전용이에요. 작성·수정은 PC에서 할 수 있어요.'
-            : '자소서 작성은 PC에서 할 수 있어요. 쓴 내용은 여기서 볼 수 있어요.'}
+            ? '문항과 답변은 여기서 바로 쓸 수 있어요. AI 초안·검사는 PC에서 할 수 있어요.'
+            : 'AI 초안·검사는 PC에서 할 수 있어요. 문항과 답변은 여기서 쓸 수 있어요.'}
         </span>
       </p>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 pl-[22px]">
