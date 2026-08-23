@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { coverletterDocApi } from '@/api/coverletterDoc'
 import { clearChatPending, setChatPending } from '@/utils/chatPendingMarker'
 import type {
@@ -20,15 +20,46 @@ const researchKey = (applicationId: string) =>
   ['coverletter-doc-research', applicationId] as const
 
 /**
+ * 🔴 **조회수 미집계 경로는 캐시 키를 분리한다.**
+ * 같은 키를 쓰면 카드 추가 노출이 채운 응답을 자소서 페이지가 staleTime(1시간) 동안
+ * 재사용해버려서, **정작 사람이 읽은 조회가 집계되지 않는다.** 요청 한 번이 더 나가는
+ * 대신 `hit_count` 의 의미(=실제 열람 수요)를 지킨다.
+ */
+const researchNoHitKey = (applicationId: string) =>
+  ['coverletter-doc-research', applicationId, 'no-hit'] as const
+
+const RESEARCH_STALE_MS = 60 * 60 * 1000 // 1시간 — 캐시 자체가 90일 TTL 이라 충분
+
+/**
  * 캐시 조회 (LLM 호출 X). 페이지 mount 시 자동 호출.
  * null 응답 = cache miss → 사용자 또는 자동 fetch 트리거.
+ *
+ * @param opts.countHit `false` = 조회수 미집계 (카드 추가 직후 자동 노출 전용).
+ *   근거는 `coverletterDocApi.getResearch` 주석.
  */
-export function useCompanyResearchCache(applicationId: string, enabled = true) {
+export function useCompanyResearchCache(
+  applicationId: string,
+  enabled = true,
+  opts?: { countHit?: boolean },
+) {
+  const countHit = opts?.countHit !== false
   return useQuery({
-    queryKey: researchKey(applicationId),
-    queryFn: () => coverletterDocApi.getResearch(applicationId),
+    queryKey: countHit ? researchKey(applicationId) : researchNoHitKey(applicationId),
+    queryFn: () => coverletterDocApi.getResearch(applicationId, { countHit }),
     enabled: enabled && !!applicationId,
-    staleTime: 60 * 60 * 1000, // 1시간 — 캐시 자체가 90일 TTL 이라 충분
+    staleTime: RESEARCH_STALE_MS,
+  })
+}
+
+/**
+ * 카드 생성 성공 직후 미집계 조사를 미리 받아둔다 — 펼침이 뜰 때 이미 와 있게.
+ * 실패해도 조용히 넘어간다(prefetchQuery 는 reject 하지 않는다). 부탁하지 않은 일이다.
+ */
+export function prefetchCompanyResearchNoHit(qc: QueryClient, applicationId: string) {
+  return qc.prefetchQuery({
+    queryKey: researchNoHitKey(applicationId),
+    queryFn: () => coverletterDocApi.getResearch(applicationId, { countHit: false }),
+    staleTime: RESEARCH_STALE_MS,
   })
 }
 

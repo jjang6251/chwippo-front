@@ -76,9 +76,20 @@ const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 
 export const coverletterDocApi = {
   // ── research ──
-  getResearch: (applicationId: string) =>
+  /**
+   * @param opts.countHit `false` 면 서버가 `hit_count` 를 올리지 않는다.
+   *
+   * 🔴 **카드 추가 직후 자동 노출 전용 옵션이다.** `hit_count` 는 "사용자가 조사를
+   * 실제로 읽은 횟수" = 조사 수요 신호이고, ops 커버리지 우선순위가 이 수치로 정해진다.
+   * 부탁하지 않아도 뜨는 노출까지 섞이면 의미가 바뀌고 과거 수치와 비교가 안 된다.
+   * 자소서·면접 기존 호출은 옵션 없이(= 집계) 그대로 둔다.
+   */
+  getResearch: (applicationId: string, opts?: { countHit?: boolean }) =>
     apiClient
-      .get(`/applications/${applicationId}/coverletter/research`)
+      .get(
+        `/applications/${applicationId}/coverletter/research`,
+        opts?.countHit === false ? { params: { countHit: false } } : undefined,
+      )
       .then(unwrap<CompanyResearchResult | null>),
 
   // ── chat ──

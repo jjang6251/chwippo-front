@@ -15,6 +15,8 @@ import { postToNative } from '@/utils/nativeBridge'
 import { toast } from '@/stores/toastStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { showFirstCardCelebration } from '@/stores/celebrationStore'
+import { revealCardResearch } from '@/stores/researchRevealStore'
+import { prefetchCompanyResearchNoHit } from '@/hooks/useCoverletterDoc'
 import { shouldCelebrateFirstCard } from '@/utils/firstCardCelebration'
 import type { Application } from '@/types/application'
 
@@ -102,6 +104,9 @@ export function AddCardModal({
           toast.success(`${companyName} 카드가 추가됐어요.`)
           // ⑦ 마감일 포함 카드 생성 = 가치 순간 → native soft-ask 트리거 (WebView 밖 no-op)
           if (deadline) postToNative({ type: 'deadline-saved' })
+          // 회사 조사를 미리 받아둔다 — 펼침·축하 어느 쪽이든 뜰 때 이미 와 있게.
+          // 조사 없으면(대부분) 아무 일도 안 일어난다.
+          prefetchCompanyResearchNoHit(qc, data.id)
           // A5 — 첫 실 카드면 보상 연출 (계정당 1회 · 투어 중 생략은 판정 함수가 처리)
           if (
             shouldCelebrateFirstCard({
@@ -117,6 +122,10 @@ export function AddCardModal({
               deadline: !isPlanned && deadline ? deadline : null,
               planned: isPlanned,
             })
+          } else {
+            // 🔴 축하 오버레이와 **배타적**이다. 첫 카드는 조사 3요소가 오버레이 안에
+            // 이미 들어가므로, 닫자마자 카드에서 같은 걸 또 보여주면 연출이 두 번이 된다.
+            revealCardResearch(data.id)
           }
           handleClose()
         },

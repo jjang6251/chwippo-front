@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
+import { useDemoMode } from '@/contexts/demoMode'
 import { goBack } from '@/utils/navigation'
 import { needsResult as isAwaitingResult } from '@/utils/boardViewGroups'
 import type { DragEndEvent } from '@dnd-kit/core'
@@ -23,6 +24,9 @@ import { useChecklist } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
 import { CoverLetterTab } from '@/components/card/CoverLetterTab'
 import { InterviewPrepTab } from '@/components/card/InterviewPrepTab'
+import { CompanyInfoTab } from '@/components/card/CompanyInfoTab'
+import { useCompanyResearchCache } from '@/hooks/useCoverletterDoc'
+import { hasResearchContent } from '@/utils/companyResearch'
 import { DdayBadge } from '@/components/card/DdayBadge'
 import { StarToggle } from '@/components/card/StarToggle'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -37,6 +41,9 @@ import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import { loadCollapseExpanded, saveCollapseExpanded, JOB_POSTING_EXPANDED_STORAGE_KEY } from '@/utils/collapsePref'
 import { toast } from '@/stores/toastStore'
 import { celebrate } from '@/stores/celebrationStore'
+import { useAuthStore } from '@/stores/authStore'
+import { trackClarityEvent } from '@/lib/clarity'
+import { hasSeenResearch, markResearchSeen } from '@/utils/researchSeen'
 import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
 import { getStepType, STEP_TYPE_CONFIG } from '@/utils/stepTemplates'
 import { formatStepSchedule } from '@/utils/datetime'
@@ -167,6 +174,8 @@ function CurrentStepCard({
   )
 }
 
+type TabKey = 'steps' | 'company' | 'coverletter' | 'interview'
+
 // --- 메인 페이지 ---
 export function BoardDetail() {
   const { id } = useParams<{ id: string }>()
@@ -177,7 +186,8 @@ export function BoardDetail() {
     들어와도 1보다 클 수 있어, 그 상태로 뒤로 가면 앱 밖으로 나간다 (2026-07-30 수정).
     react-router 는 앱 안에서 이동해 생긴 항목에만 고유 key 를 주고, 첫 진입은 'default' 다.
   */
-  const canGoBack = useLocation().key !== 'default'
+  const location = useLocation()
+  const canGoBack = location.key !== 'default'
   const { data: app, isLoading, isError } = useApplication(id!)
   const { mutate: update } = useUpdateApplication(id!)
   const { mutate: updateStep } = useUpdateCurrentStep()
@@ -200,14 +210,22 @@ export function BoardDetail() {
    * 쌓으면 뒤로가기가 탭 왕복이 돼 카드에서 빠져나가지 못한다.
    */
   const [searchParams] = useSearchParams()
-  const [activeTab, setActiveTab] = useState<
-    'steps' | 'coverletter' | 'interview'
-  >(() => {
+  const [activeTab, setActiveTab] = useState<TabKey>(() => {
     const t = searchParams.get('tab')
-    return t === 'coverletter' || t === 'interview' ? t : 'steps'
+    return t === 'coverletter' || t === 'interview' || t === 'company' ? t : 'steps'
   })
   const aiEnabled = useAiEnabled()
   const interviewAiEnabled = useInterviewAiEnabled()
+
+  /**
+   * 「회사 알아보기」 탭 노출 판정 — 🔴 **조사가 있을 때만 탭이 뜬다.**
+   * 없는데 탭만 있으면 빈 화면을 여는 셈이라 안 만든 것보다 나쁘다.
+   *
+   * 🔴 여기는 `countHit: false` 다. 카드 상세를 열기만 해도 조회수가 오르면
+   * `hit_count`(= 실제 열람 수요)의 뜻이 바뀐다. 집계는 탭을 실제로 연 뒤
+   * `CompanyInfoTab` 이 기본 경로로 한다 — 훅이 두 경로의 캐시 키를 나눠 둔 이유가 이것이다.
+   */
+  const { data: researchProbe } = useCompanyResearchCache(id!, true, { countHit: false })
 
   // 공고 요건 — 자소서와 동일 정책(모바일·RN 보기 전용) + DART 처럼 접힘 localStorage 기억
   const jpReadOnly = useCoverletterReadOnly()
@@ -225,6 +243,74 @@ export function BoardDetail() {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
+
+  /*
+    🔴 탭 목록·유효 탭 계산이 **로딩·에러 early return 보다 위**에 있는 이유 —
+    아래 effect(미열람 점 소진 · 탭 열림 계측)가 훅이라 return 아래에 둘 수 없다.
+    계산 자체는 `app` 을 안 쓰므로(조사 유무·flag 만 본다) 올려도 값이 달라지지 않는다.
+  */
+  const tabs: { v: TabKey; label: string }[] = [
+    { v: 'steps', label: '전형 단계' },
+    ...(hasResearchContent(researchProbe)
+      ? [{ v: 'company' as const, label: '회사 알아보기' }]
+      : []),
+    ...(aiEnabled ? [{ v: 'coverletter' as const, label: '자소서' }] : []),
+    ...(interviewAiEnabled ? [{ v: 'interview' as const, label: '면접 준비' }] : []),
+  ]
+  /**
+   * 🔴 **없는 탭이면 기본 탭으로 안전 폴백.** `?tab=` 은 주소창·알림·다른 화면에서 그대로
+   * 들어오는데, 그 탭이 지금 없을 수 있다 — 조사 없는 카드의 `tab=company`,
+   * flag 가 꺼진 환경의 `tab=coverletter`. 폴백이 없으면 탭 줄에 아무것도 선택되지 않은 채
+   * 본문만 빈 화면이 된다.
+   * 상태(`activeTab`)는 건드리지 않는다 — 조사 응답이 늦게 도착해 탭이 생기면 그때 열린다.
+   */
+  const effectiveTab: TabKey = tabs.some((t) => t.v === activeTab) ? activeTab : 'steps'
+  const companyTabOpen = effectiveTab === 'company'
+
+  /**
+   * 「회사 알아보기」 **미열람 점** — 조사가 있는데 이 카드에선 아직 안 열어본 상태.
+   *
+   * 🔴 별표(★)가 아니라 **점**이다. 이 화면 헤더의 별은 **카드 즐겨찾기**(`isStarred`)라
+   * 같은 화면에 두 의미의 별이 생기면 "이 회사를 즐겨찾기 했나" 로 읽힌다.
+   * 조사가 없으면 탭 자체가 없으므로 점이 거짓말할 일도 없다.
+   *
+   * 🔴 **state 로 들고 있지 않고 렌더에서 매번 읽는다.** 기억을 state 에 복사해 두면
+   * `id`(다른 카드)·`userId`(계정 전환)가 바뀌었을 때 앞의 값이 남아 「카드별 독립」이라는
+   * 전제가 깨지고, 되살리려면 effect 안에서 setState 를 해야 해 렌더가 한 번 더 돈다.
+   * `localStorage.getItem` 은 동기 읽기라 그럴 값어치가 없다.
+   * 탭이 열려 있는 동안은 읽지도 않는다 — **지금 보고 있는 것**이 곧 「봤음」이다.
+   */
+  const userId = useAuthStore((s) => s.user?.id)
+  const showResearchDot =
+    !companyTabOpen &&
+    tabs.some((t) => t.v === 'company') &&
+    !hasSeenResearch(userId, id!)
+
+  /**
+   * 탭 열림 계측 — 🔴 **어디서 왔는지를 가른다.** 안 그러면 「점이 효과가 있었나」를 영영
+   * 판정하지 못한다. 점은 탭 줄에 있으므로 **점의 성과 = 탭 줄 클릭(`_tab`)** 이고,
+   * 스트립(`CardResearchReveal`)을 눌러 온 것은 자동 노출의 성과(`_strip`)다.
+   *
+   * 출처 표식은 URL 쿼리가 아니라 **router state** 로 받는다 — `?from=strip` 을 붙이면
+   * 사용자가 복사·공유한 주소에도 따라다녀 남의 클릭이 스트립 성과로 잡힌다.
+   * state 는 그 이동에만 실려 오므로 표식이 없는 주소 진입은 `_url` 로 남는다.
+   */
+  const cameFromStrip =
+    (location.state as { from?: string } | null)?.from === 'strip'
+  const isDemo = useDemoMode()
+  const tabRowClickedRef = useRef(false)
+  const tabOpenSentRef = useRef(false)
+  useEffect(() => {
+    if (!companyTabOpen) return
+    // ① 점 소진 — 한 번 열면 이 카드에선 다시 뜨지 않는다 (스트립·URL 진입도 「봤음」이다).
+    //    localStorage 갱신뿐이라 렌더를 다시 돌리지 않는다 — 화면상 점은 이미 숨어 있다
+    markResearchSeen(userId, id!)
+    // ② 계측은 **화면 진입당 1회.** 리렌더·탭 왕복마다 쏘면 수치가 무의미해진다
+    if (tabOpenSentRef.current || isDemo) return
+    tabOpenSentRef.current = true
+    const source = tabRowClickedRef.current ? 'tab' : cameFromStrip ? 'strip' : 'url'
+    trackClarityEvent(`research_tab_open_${source}`)
+  }, [companyTabOpen, userId, id, isDemo, cameFromStrip])
 
   if (isLoading) return <DetailSkeleton />
   /*
@@ -475,29 +561,53 @@ export function BoardDetail() {
         <FailedTakeawayBox application={app} />
       </div>
 
-      {/* 탭: 전형 단계 / 자소서 / 면접 준비 — 기능별 flag 로 노출 (useAiEnabled.ts) */}
+      {/* 탭: 전형 단계 / 회사 알아보기 / 자소서 / 면접 준비 — 조건부 노출 (flag · 조사 유무).
+          「회사 알아보기」가 두 번째인 이유: 회사를 알고 → 자소서를 쓰고 → 면접을 본다.
+          🔴 DART 접힘 섹션(「회사 정보」)과 이름을 겹치지 않게 했다 — 같은 카드 안에서
+          같은 이름이 두 개면 어디를 눌러야 할지 알 수 없다. 이쪽은 AI 조사, 저쪽은 공시다. */}
       <div className="flex gap-1 p-1 bg-surface-2 border border-line rounded-lg mb-4">
-        {[
-          { v: 'steps' as const, label: '전형 단계' },
-          ...(aiEnabled
-            ? [{ v: 'coverletter' as const, label: '자소서' }]
-            : []),
-          ...(interviewAiEnabled
-            ? [{ v: 'interview' as const, label: '면접 준비' }]
-            : []),
-        ].map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.v}
-            onClick={() => setActiveTab(t.v)}
-            className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors
-              ${activeTab === t.v ? 'bg-surface-3 text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
+            onClick={() => {
+              // 출처 구분용 — 탭 줄에서 직접 연 것과 스트립에서 온 것을 가른다 (위 effect 주석)
+              if (t.v === 'company') tabRowClickedRef.current = true
+              setActiveTab(t.v)
+            }}
+            /* 🔴 열려 있는 탭이 **배경색에만** 실려 있었다 — 스크린리더는 네 개를 전부
+               「이름, 버튼」으로 똑같이 읽어서 지금 어디인지 알 수 없다. 바로 아래 미열람 점에는
+               `aria-label` 을 붙여 놓고 정작 그 점이 달린 버튼의 상태가 안 나가던 상태다.
+               `role="tab"` 정식 패턴을 안 쓴 이유: `tablist`/`tabpanel` + 화살표 키 이동이 딸려와
+               **키보드 동작 자체가 바뀐다**(Tab 이 탭 묶음을 통째로 건너뛴다). 상태만 내보내면 된다. */
+            aria-pressed={effectiveTab === t.v}
+            /* break-keep — 320px 에서 탭이 4개가 되며 「회사 알아보 / 기」 로 잘렸다.
+               한국어는 어절 단위로 끊어야 한 글자가 혼자 떨어지지 않는다 (랜딩과 같은 관례) */
+            className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors break-keep
+              ${effectiveTab === t.v ? 'bg-surface-3 text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
           >
             {t.label}
+            {t.v === 'company' && showResearchDot && (
+              /* 🔴 점만 있으면 스크린리더는 아무것도 못 읽는다 — `aria-label` 로 뜻을 싣고,
+                 그 라벨이 버튼 이름 뒤에 이어 붙어 「회사 알아보기 아직 안 봤어요」가 된다.
+                 🔴 `role="img"` 를 함께 준 이유: ARIA 는 **role=generic 요소에 이름 붙이는 것을
+                 금지**해서, 이름 없는 `<span>` 의 `aria-label` 은 브라우저 접근성 트리에서
+                 무시될 수 있다 (테스트용 accname 구현은 관대해서 이 차이를 못 잡는다 —
+                 사이드바 회고 점이 같은 형태인데, 그래서 거기는 지금도 확실하지 않다).
+                 텍스트 노드 대신 라벨로 넣어 라벨의 `textContent` 는 그대로 둔다.
+                 색은 브랜드(sage) — danger·accent 는 「처리해야 할 일」로 읽혀 조사를 안 본 게
+                 잘못처럼 보인다. 크기 6px 은 사이드바 점과 같은 값. */
+              <span
+                role="img"
+                className="ml-1 inline-block align-middle w-1.5 h-1.5 rounded-full bg-brand"
+                aria-label="아직 안 봤어요"
+                title="아직 열어보지 않은 회사 조사예요"
+              />
+            )}
           </button>
         ))}
       </div>
 
-      {activeTab === 'steps' && (
+      {effectiveTab === 'steps' && (
         <>
           {/* 진행 상황 — 스텝바 + 현재 스텝 카드 */}
           {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
@@ -561,8 +671,12 @@ export function BoardDetail() {
         </>
       )}
 
-      {aiEnabled && activeTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
-      {interviewAiEnabled && activeTab === 'interview' && (
+      {/* 🔴 `companyName`·`domain` 을 넘기지 않는다 — 탭 안 명함에서 아바타·회사명을 뺐다.
+          같은 아바타 + 회사명이 바로 위 페이지 헤더에 이미 있어 세로로 두 번 쌓였다 */}
+      {effectiveTab === 'company' && <CompanyInfoTab applicationId={app.id} />}
+
+      {aiEnabled && effectiveTab === 'coverletter' && <CoverLetterTab applicationId={app.id} active />}
+      {interviewAiEnabled && effectiveTab === 'interview' && (
         <InterviewPrepTab
           applicationId={app.id}
           active
