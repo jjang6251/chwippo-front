@@ -527,7 +527,8 @@ export function CoverletterChatPanel({
         {selectedLogIds.size === 0 &&
           selectedMyinfoKeys.size === 0 &&
           selectedAwardIds.size === 0 && (
-            <p className="text-[10px] text-text-quaternary mb-2 leading-relaxed">
+            /* 🔴 40자 넘는 **문장**이다 — 10px 이면 안 읽힌다 (DESIGN.md 7-b · /uiux 1-c) */
+            <p className="text-sm text-text-tertiary mb-2 leading-relaxed break-keep">
               💡 아래 활동 일지 · 자소서 소재 · 수상을 체크하면 AI 가 그 자료를 참고해서 답변합니다.
             </p>
           )}

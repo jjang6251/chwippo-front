@@ -5,6 +5,7 @@ import { useAutoResize } from '@/hooks/useAutoResize'
 import { CoverLetterCleanupModal } from '@/components/card/CoverLetterCleanupModal'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
 import { Modal } from '@/components/common/Modal'
+import { toast } from '@/stores/toastStore'
 import { useCoverletterSourceRefs } from '@/hooks/useCoverletterSourceRefs'
 import { countChars } from '@/utils/charCount'
 import { countFillPlaceholders } from '@/utils/coverletterPlaceholder'
@@ -52,6 +53,18 @@ interface Props {
    * 그 기능들이 어디 있는지는 부모(자소서 열 헤더)가 링크로 알려 준다.
    */
   simpleEdit?: boolean
+  /**
+   * 🔴 **문항도 고칠 수 있게 한다** — `simpleEdit` 의 예외 하나 (2026-08-23 CEO).
+   *
+   * 자소서 풀페이지의 모바일이 이걸 쓴다. 거기서는 코인을 쓰는 **AI 진입점만** 막으면 되고
+   * (`useCoverletterAiBlocked`), 문항·답변은 사용자가 자기 자소서를 쓰는 본 작업이다.
+   * `simpleEdit` 이 문항을 잠그는 이유는 **면접 화면의 맥락**(회사가 준 문항을 보며 답을 쓴다)
+   * 이지 IAP 가 아니므로, 그 화면(`allowQuestionEdit` 미지정)의 동작은 그대로 둔다.
+   *
+   * 이 플래그는 **유형·글자수 제한·삭제·가져오기를 열지 않는다** — 되돌리기 어렵거나
+   * 구조를 바꾸는 조작이라 작은 화면에서 오조작 위험이 크다.
+   */
+  allowQuestionEdit?: boolean
   /** AI 적용 직후 강조 플래시 (부모가 1.2s 후 해제) */
   flash?: boolean
   /** 펼친 카드 루트 ref — 부모가 적용 시 scrollIntoView 대상 등록 */
@@ -80,6 +93,7 @@ export function CoverletterQuestionCard({
   onAskAI,
   readOnly = false,
   simpleEdit = false,
+  allowQuestionEdit = false,
   preview = false,
   flash = false,
   containerRef,
@@ -90,6 +104,8 @@ export function CoverletterQuestionCard({
    * `readOnly` 는 답변까지 못 고치고, `simpleEdit` 은 **답변만** 고친다.
    */
   const chromeless = readOnly || simpleEdit
+  /** 문항 편집 개방 — `allowQuestionEdit` 만 `chromeless` 를 뚫는다 (다른 조작은 그대로 감춘다) */
+  const questionEditable = !chromeless || allowQuestionEdit
   const [question, setQuestion] = useState(cl.question)
   // 문항 인라인 편집 — 새 문항(비어 있음)은 바로 편집 모드, 기존 문항은 읽기 뷰(클릭 시 편집)
   const [editingQuestion, setEditingQuestion] = useState(!cl.question)
@@ -104,18 +120,46 @@ export function CoverletterQuestionCard({
     const id = requestAnimationFrame(autoResizeAnswer)
     return () => cancelAnimationFrame(id)
   }, [expanded, readOnly, autoResizeAnswer])
-  // 편집 재진입 시에도 동일 — textarea 재마운트인데 값은 그대로라 훅 effect 가 안 잡음
+  // 편집 재진입 시에도 동일 — textarea 재마운트인데 값은 그대로라 훅 effect 가 안 잡음.
+  // 조건은 **textarea 가 실제로 있는가**(questionEditable) — `readOnly` 로 물으면
+  // 모바일 편집 개방 경로(readOnly=false·simpleEdit=true)에서 없는 요소를 재려 한다.
   useEffect(() => {
-    if (!editingQuestion || readOnly) return
+    if (!editingQuestion || !questionEditable) return
     const id = requestAnimationFrame(autoResizeQuestion)
     return () => cancelAnimationFrame(id)
-  }, [editingQuestion, readOnly, autoResizeQuestion])
+  }, [editingQuestion, questionEditable, autoResizeQuestion])
   const [limitInput, setLimitInput] = useState(
     cl.charLimit != null ? String(cl.charLimit) : '',
   )
   const [showImport, setShowImport] = useState(false)
   const [showCleanup, setShowCleanup] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  /**
+   * 🔴 **문항 + 답변을 한 번에** 복사한다 (2026-08-23 CEO — "각각 복사해야 해서 불편").
+   *
+   * 답변만 복사하면 옮긴 곳에서 **무슨 질문에 답한 건지 사라진다.** 자소서를 다른 데로
+   * 옮기는 경우(메모·문서·다른 도구)가 지원 폼에 직접 붙여넣는 경우보다 잦고, 폼에
+   * 넣을 땐 편집 화면 textarea 에서 전체 선택이 이미 된다.
+   * 그래서 **버튼 하나 = 문항 + 답변**으로 둔다 — 둘로 나누면 매번 고르게 만든다.
+   *
+   * 자리는 카드 헤더(접기 옆) — `chromeless`(읽기 전용·간단 편집)에서도 **같은 위치**다.
+   * 읽기 모드는 모바일이라 긴 답변을 손으로 드래그하는 게 특히 고통스럽다.
+   */
+  const [copied, setCopied] = useState(false)
+  const copyQnA = async () => {
+    if (copied) return
+    const text = `${cl.question ?? ''}\n\n${answer}`.trim()
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1200)
+    } catch {
+      // 권한 거부·비보안 컨텍스트 — 방어가 없으면 rejection 이 unhandled 로 새어
+      // Sentry 에 크래시로 잡힌다 (CHWIPPO-FRONT-6 · CopyButton 과 같은 처리)
+      toast.error('복사에 실패했어요. 직접 선택해 복사해 주세요.')
+    }
+  }
 
   const initialized = useRef(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -215,13 +259,21 @@ export function CoverletterQuestionCard({
   // source_refs (답변 있을 때만)
   const { data: sourceRefs = [] } = useCoverletterSourceRefs(cl.id, hasAnswer && !preview)
 
-  // 접힘 모드
+  /**
+   * 접힘 모드 — 🔴 **카드 전체를 `<button>` 으로 두지 않는다** (2026-08-23 수리).
+   *
+   * 예전엔 전체가 토글 버튼이라 **복사 버튼을 넣을 자리가 없었다**(button 안 button 은
+   * 마크업 위반이고, 스트립 × 에서 겪었듯 「치우려다 이동」이 난다). 그런데 접힌 카드는
+   * 답변을 **전문으로** 보여준다 — 읽고 있는데 복사는 못 하는 상태였다.
+   *
+   * 그래서 **헤더(뱃지 줄)를 토글 밖으로** 빼고 거기에 복사·펼치기를 형제로 둔다.
+   * 본문(문항+답변)은 그대로 눌러서 펼친다 — 큰 표적은 유지된다.
+   */
   if (!expanded) {
     return (
-      <button
-        onClick={onToggle}
+      <div
         id={`cl-${cl.id}`}
-        className="block w-full text-left bg-card border border-line rounded-[14px] p-4 hover:border-brand/40 transition-colors shadow-sm"
+        className="bg-card border border-line rounded-[14px] p-4 hover:border-brand/40 transition-colors shadow-sm"
       >
         <div className="flex items-center gap-2 mb-2">
           <span
@@ -246,28 +298,43 @@ export function CoverletterQuestionCard({
             </span>
           )}
           <div className="flex-1" />
-          <CollapsibleChevron open={false} />
+          {hasAnswer && <CopyQnAButton copied={copied} onCopy={copyQnA} />}
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label="문항 펼치기"
+            className="flex items-center justify-center w-8 h-8 -mr-1 rounded-md text-text-quaternary hover:text-text-primary hover:bg-card-strong transition-colors"
+          >
+            <CollapsibleChevron open={false} />
+          </button>
         </div>
-        <p className="font-serif text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words mb-1.5">
-          {cl.question || (
-            <span className="text-text-quaternary font-medium font-sans">
-              (문항 미입력 — 클릭해서 작성)
-            </span>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="block w-full text-left"
+          aria-label={`${cl.question || `${number}번 문항`} 펼치기`}
+        >
+          <p className="text-[15px] lg:text-base font-semibold text-text-primary leading-relaxed whitespace-pre-wrap break-words mb-1.5">
+            {cl.question || (
+              <span className="text-text-quaternary font-medium font-sans">
+                (문항 미입력 — 클릭해서 작성)
+              </span>
+            )}
+          </p>
+          {hasAnswer && (
+            <div className="mt-2 pl-2.5 border-l-2 border-line">
+              <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {answer}
+              </p>
+              <p
+                className={`mt-1.5 font-mono text-xs ${overLimit ? 'text-danger font-semibold' : 'text-text-quaternary'}`}
+              >
+                {charCount} / {cl.charLimit ?? '∞'}
+              </p>
+            </div>
           )}
-        </p>
-        {hasAnswer && (
-          <div className="mt-2 pl-2.5 border-l-2 border-line">
-            <p className="text-text-secondary text-xs leading-relaxed whitespace-pre-wrap break-words">
-              {answer}
-            </p>
-            <p
-              className={`mt-1.5 font-mono text-[10px] ${overLimit ? 'text-danger' : 'text-text-quaternary'}`}
-            >
-              {charCount} / {cl.charLimit ?? '∞'}
-            </p>
-          </div>
-        )}
-      </button>
+        </button>
+      </div>
     )
   }
 
@@ -358,9 +425,10 @@ export function CoverletterQuestionCard({
           </label>
         )}
         <div className="flex-1" />
+        {hasAnswer && <CopyQnAButton copied={copied} onCopy={copyQnA} />}
         <button
           onClick={onToggle}
-          className="flex items-center gap-1 text-text-quaternary hover:text-text-primary text-xs"
+          className="flex items-center gap-1 min-h-[32px] px-1.5 -mr-1.5 rounded-md text-text-quaternary hover:text-text-primary hover:bg-card-strong text-xs transition-colors"
           aria-label="카드 접기"
         >
           <CollapsibleChevron open={true} />
@@ -368,9 +436,14 @@ export function CoverletterQuestionCard({
         </button>
       </div>
 
-      {/* question — simpleEdit 은 읽기. 회사가 준 문항이라 답을 쓰다 고칠 대상이 아니다 */}
-      {chromeless ? (
-        <p className="w-full font-serif text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words mb-4">
+      {/*
+        question — 기본은 읽기(`chromeless`). 면접 「나란히 보기」에서는 회사가 준 문항이
+        답을 쓰다 고칠 대상이 아니기 때문이다.
+        `allowQuestionEdit`(자소서 풀페이지 모바일)만 이 잠금을 뚫는다 — 거기선 문항을 쓰는 게
+        본 작업이고, 막아야 하는 건 코인을 쓰는 AI 뿐이다.
+      */}
+      {!questionEditable ? (
+        <p className="w-full text-[15px] lg:text-base font-semibold text-text-primary leading-relaxed whitespace-pre-wrap break-words mb-4">
           {cl.question || (
             <span className="text-text-quaternary font-sans text-sm">
               (문항 미입력)
@@ -384,7 +457,7 @@ export function CoverletterQuestionCard({
           aria-label="문항 편집"
           className="group w-full text-left flex items-start gap-1.5 px-3 py-2 rounded-lg hover:bg-surface-2 transition-colors mb-4"
         >
-          <span className="flex-1 font-serif text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+          <span className="flex-1 text-[15px] lg:text-base font-semibold text-text-primary leading-relaxed whitespace-pre-wrap break-words">
             {cl.question || (
               <span className="text-text-quaternary font-sans text-sm">
                 (문항 미입력 — 클릭해 입력)
@@ -429,7 +502,7 @@ export function CoverletterQuestionCard({
           autoFocus
           maxLength={500}
           placeholder="예: 우리 회사에 지원한 동기를 작성해 주세요."
-          className="w-full resize-none bg-surface-2 border border-line rounded-lg px-3 py-2 font-serif text-base text-text-primary leading-relaxed placeholder:text-text-tertiary placeholder:font-sans focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors mb-4"
+          className="w-full resize-none bg-surface-2 border border-line rounded-lg px-3 py-2 text-[15px] lg:text-base font-semibold text-text-primary leading-relaxed placeholder:text-text-tertiary focus:outline-none focus:bg-surface-3 focus:border-brand/60 transition-colors mb-4"
         />
       )}
 
@@ -461,7 +534,7 @@ export function CoverletterQuestionCard({
             : '여기에 답변을 작성하세요. (자동 저장)'
         }
         style={{ minHeight: 80, lineHeight: 1.65 }}
-        className="w-full bg-input border border-line rounded-[11px] px-3.5 py-3 text-sm text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+        className="w-full bg-input border border-line rounded-[11px] px-3.5 py-3 text-sm leading-relaxed text-text-primary resize-y focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
       />
       )}
       <div className="flex items-center justify-between gap-2 mt-2 text-xs flex-wrap">
@@ -484,13 +557,13 @@ export function CoverletterQuestionCard({
         <div className="flex items-center gap-2 text-text-tertiary">
           <button
             onClick={() => setIncludeSpaces((v) => !v)}
-            className="text-[10px] text-text-quaternary hover:text-text-secondary border border-line hover:border-line-strong px-1.5 py-0.5 rounded transition-colors"
+            className="text-[10px] text-text-quaternary hover:text-text-secondary border border-line hover:border-line-strong px-2 min-h-[32px] rounded transition-colors"
             title="공백 포함/제외 토글"
           >
             {includeSpaces ? '공백포함' : '공백제외'}
           </button>
           <span
-            className={`font-mono ${overLimit ? 'text-danger' : nearLimit ? 'text-warning' : 'text-text-tertiary'}`}
+            className={`font-mono ${overLimit ? 'text-danger font-semibold' : nearLimit ? 'text-warning' : 'text-text-tertiary'}`}
           >
             {charCount.toLocaleString()} / {cl.charLimit?.toLocaleString() ?? '∞'}자
           </span>
@@ -634,5 +707,39 @@ export function CoverletterQuestionCard({
         </div>
       </Modal>
     </div>
+  )
+}
+
+/**
+ * 문항+답변 복사 버튼 — **접힘·펼침 양쪽이 같은 것을 쓴다.**
+ * 두 벌로 두면 한쪽만 고치는 순간 같은 동작이 화면마다 다르게 보인다
+ * (`ResearchSourceChip` 을 공용으로 뺀 것과 같은 판단).
+ */
+function CopyQnAButton({ copied, onCopy }: { copied: boolean; onCopy: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      aria-label="문항과 답변 복사"
+      title="문항과 답변을 함께 복사해요"
+      className="flex items-center gap-1 min-h-[32px] px-1.5 rounded-md text-xs text-text-quaternary hover:text-text-primary hover:bg-card-strong transition-colors"
+    >
+      {copied ? (
+        <>
+          <svg width="12" height="12" viewBox="0 0 13 13" fill="none" className="text-success" aria-hidden="true">
+            <path d="M2 6.5l3 3 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="text-success">복사됨</span>
+        </>
+      ) : (
+        <>
+          <svg width="12" height="12" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+            <rect x="4.5" y="1" width="7.5" height="9" rx="1.2" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M1 4.5h3M1 4.5v7.5h7.5V12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+          복사
+        </>
+      )}
+    </button>
   )
 }

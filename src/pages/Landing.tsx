@@ -206,8 +206,8 @@ export function Landing() {
             h1 은 "왜" 를 말하고(다음 전형까지 뭘 준비하지?), 여기서 "무엇" 을 말한다.
             아래로 스크롤해야 기능을 아는 구조였다.
 
-            🔴 **AI 두 개는 PC 전용이라 그대로 못 박는다.** 자소서 작성·편집은 데스크탑 웹
-            전용이고(`useCoverletterReadOnly`), 면접 질문 생성도 같다. 표시 없이 나열하면
+            🔴 **AI 두 개는 PC 전용이라 그대로 못 박는다.** 자소서 AI(초안 채팅·검사)는
+            데스크탑 웹 전용이고(`useCoverletterAiBlocked`), 면접 질문 생성도 같다. 표시 없이 나열하면
             모바일 방문자에게 막다른 길을 약속하는 셈이 된다 — 섹션3 에서 이미 한 번 고친 자리다.
             `PC` 마커는 본문성 정보이므로 11px 하한을 지킨다(DESIGN.md 규칙 7).
           */}
@@ -412,7 +412,7 @@ export function Landing() {
               </h2>
               {/*
                 🔴 **모바일에서 못 하는 걸 약속하지 않는다.** 자소서 작성·편집은 데스크탑 웹 전용이다
-                (`useCoverletterReadOnly`: lg 미만 또는 네이티브면 보기 전용). 유입 대부분이 모바일이라
+                (`useCoverletterAiBlocked`: lg 미만 또는 네이티브면 AI 차단). 유입 대부분이 모바일이라
                 "관리하고 · 실시간 확인하세요" 는 그대로 막다른 길이 된다.
               */}
               <p className="text-text-tertiary text-sm leading-relaxed mb-6 break-keep">
@@ -482,7 +482,9 @@ export function Landing() {
                       preview
                       /*
                         🔴 **모바일은 보기 전용이다** (2026-08-09 검수). 제품의 모바일 자소서는
-                        `useCoverletterReadOnly`(lg 미만) 로 **편집·AI 요소가 아예 없다.**
+                        `useCoverletterAiBlocked`(lg 미만) 로 **AI 요소가 아예 없다.**
+                        (2026-08-23 부터 모바일 편집은 열렸다 — 이 미리보기는 아직 보기 전용
+                        형태라 실제보다 좁게 보여준다. 랜딩 문구와 함께 갱신할 후속 과제.)
                         그런데 여기선 유형 select·글자수 input·편집 textarea·「AI 에게 묻기」가
                         그대로 그려져, 바로 위 문구(`"PC에서 작성하고, 모바일로 다시 볼 수 있어요"`)와
                         **한 화면 안에서 정반대**를 말하고 있었다.

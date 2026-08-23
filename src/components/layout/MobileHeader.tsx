@@ -35,7 +35,10 @@ export function MobileHeader() {
       <Link to={isDemo ? '/demo/dashboard' : '/dashboard'} className="text-brand font-bold text-base tracking-tight mr-3">
         치뽀{isDemo && <span className="ml-1 text-[9px] font-medium text-text-quaternary align-middle">데모</span>}
       </Link>
-      <span className="text-text-faint text-sm mr-3">|</span>
+      {/* 🔴 텍스트 「|」 였다 — `text-faint` 라 2.7:1 로 대비 미달로 잡혔다(2026-08-23 /uiux).
+          이건 읽는 글자가 아니라 **구분선**이므로, 색을 올려 눈에 띄게 만드는 대신
+          진짜 divider 로 바꾼다. 장식은 대비 기준의 대상이 아니고 의도에도 맞다. */}
+      <span aria-hidden className="w-px h-3.5 bg-line-strong mx-3 shrink-0" />
       <span className="text-text-secondary text-sm font-medium flex-1 truncate">{title}</span>
       {!isDemo && (
         <>

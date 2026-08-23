@@ -71,20 +71,52 @@ export function isNotPosting(
 }
 
 /** 표시할 만한 공고 요건 데이터가 있는지 (한 섹션이라도 채워짐) */
+/**
+ * 🔴 **서버 응답을 화면이 믿을 수 있는 모양으로** — 배열 필드가 비어 와도 `[]` 로 채운다.
+ *
+ * `JobPosting` 은 배열 필드를 **non-optional 로 선언**하지만, 실제 값은 LLM 파싱 결과를
+ * 담은 `job_posting` JSONB 다. 지금 백엔드는 두 쓰기 경로(`cleanArray`·PATCH 병합) 모두
+ * 정규화하지만, **타입이 「항상 있다」고 말하는데 런타임에 없을 수 있는 상태**는
+ * 2026-08-01 자소서 점검 크래시의 **근본 원인** 그 자체였다(`CoverletterFeedback.strengths`).
+ * `as` 단언은 컴파일러만 통과시키고 아무것도 보증하지 않는다.
+ *
+ * 방어를 `?? []` 로 흩뿌리지 않고 **읽기 경계에서 한 번** 정규화한다 — 소비처가 늘어날 때마다
+ * 빠뜨릴 자리가 생기지 않게. 이걸 통과한 뒤에는 타입이 참이다.
+ */
+export function normalizeJobPosting(
+  jp: JobPosting | null | undefined,
+): JobPosting | null {
+  if (!jp) return null
+  const arr = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+  return {
+    responsibilities: typeof jp.responsibilities === 'string' ? jp.responsibilities : null,
+    requirements: arr(jp.requirements),
+    preferred: arr(jp.preferred),
+    techStack: arr(jp.techStack),
+    qualifications: arr(jp.qualifications),
+    keywords: arr(jp.keywords),
+    parsedAt: typeof jp.parsedAt === 'string' ? jp.parsedAt : '',
+  }
+}
+
 export function hasJobPostingData(jp: JobPosting | null | undefined): boolean {
+  const n = normalizeJobPosting(jp)
   return (
-    !!jp &&
-    (!!jp.responsibilities?.trim() ||
-      jp.requirements.length > 0 ||
-      jp.preferred.length > 0 ||
-      jp.techStack.length > 0 ||
-      jp.qualifications.length > 0 ||
-      jp.keywords.length > 0)
+    !!n &&
+    (!!n.responsibilities?.trim() ||
+      n.requirements.length > 0 ||
+      n.preferred.length > 0 ||
+      n.techStack.length > 0 ||
+      n.qualifications.length > 0 ||
+      n.keywords.length > 0)
   )
 }
 
 /** 정리된 요건 항목 총개수 (담당업무 1 + 각 리스트/칩 길이 합) — 접힘 힌트용 */
-export function countJobPostingItems(jp: JobPosting): number {
+export function countJobPostingItems(input: JobPosting): number {
+  const jp = normalizeJobPosting(input)
+  if (!jp) return 0
   return (
     (jp.responsibilities?.trim() ? 1 : 0) +
     jp.requirements.length +

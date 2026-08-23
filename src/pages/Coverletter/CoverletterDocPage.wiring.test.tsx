@@ -7,7 +7,7 @@
  *
  *   ① `interviewAiEnabled &&` 를 지우면 → 면접 기능을 꺼도 **이 버튼만 남아**
  *      숨긴 기능으로 안내한다 (사이드바·카드 상세는 둘 다 flag 를 본다).
- *   ② `navigateOnly={readOnly}` 를 지우면 → 모바일에서 **생성 모달이 열리고**
+ *   ② `navigateOnly={aiBlocked}` 를 지우면 → 모바일에서 **생성 모달이 열리고**
  *      거기서 만들면 AI 질문 생성으로 **코인이 나간다.**
  *
  * 컴포넌트가 아무리 옳게 동작해도 **잘못 불리면 소용이 없다.** 그 층을 여기서 잠근다.
@@ -18,7 +18,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CoverletterDocPage } from './CoverletterDocPage'
 
-const flags = vi.hoisted(() => ({ interviewAi: true, readOnly: false }))
+const flags = vi.hoisted(() => ({ interviewAi: true, aiBlocked: false }))
 const sess = vi.hoisted(() => ({
   list: [{ id: 's-1', round: '1차 실무 면접' }] as unknown[],
 }))
@@ -27,8 +27,8 @@ vi.mock('@/hooks/useAiEnabled', () => ({
   useAiEnabled: () => true,
   useInterviewAiEnabled: () => flags.interviewAi,
 }))
-vi.mock('@/hooks/useCoverletterReadOnly', () => ({
-  useCoverletterReadOnly: () => flags.readOnly,
+vi.mock('@/hooks/useCoverletterAiBlocked', () => ({
+  useCoverletterAiBlocked: () => flags.aiBlocked,
 }))
 vi.mock('@/hooks/useInterviewPrep', () => ({
   useInterviewPrepSessions: () => ({
@@ -113,7 +113,7 @@ const goBtn = () => screen.queryByRole('button', { name: /면접 준비/ })
 describe('면접 버튼 배선', () => {
   beforeEach(() => {
     flags.interviewAi = true
-    flags.readOnly = false
+    flags.aiBlocked = false
     sess.list = [{ id: 's-1', round: '1차 실무 면접' }]
   })
 
@@ -134,7 +134,7 @@ describe('면접 버튼 배선', () => {
    * 거기서 만들면 AI 질문 생성으로 코인이 나간다.
    */
   it('🔴 모바일에서 세션이 없으면 버튼 자체가 없다 (생성으로 새지 않는다)', () => {
-    flags.readOnly = true
+    flags.aiBlocked = true
     sess.list = []
     draw()
     expect(goBtn()).toBeNull()
@@ -142,7 +142,7 @@ describe('면접 버튼 배선', () => {
   })
 
   it('🔴 모바일에서도 세션이 있으면 건너갈 수 있다', () => {
-    flags.readOnly = true
+    flags.aiBlocked = true
     draw()
     expect(goBtn()).toBeTruthy()
     expect(goBtn()!.textContent).not.toContain('만들기') // 이동 전용

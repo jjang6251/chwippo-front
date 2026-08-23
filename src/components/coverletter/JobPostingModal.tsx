@@ -6,7 +6,7 @@ import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { useAiConsentStore } from '@/stores/aiConsentStore'
 import { useParseJobPosting, useUpdateJobPosting } from '@/hooks/useJobPosting'
-import { isNotPosting, isParseBlocked, type JobPosting } from '@/api/jobPosting'
+import { isNotPosting, isParseBlocked, type JobPosting, normalizeJobPosting } from '@/api/jobPosting'
 
 /**
  * 공고 요건 입력·결과 확인/수정 모달 (feature-jobposting-parse).
@@ -61,10 +61,10 @@ export function JobPostingModal({
   const [step, setStep] = useState<Step>(editEntry ? 'review' : 'input')
   const [rawText, setRawText] = useState('')
   const [draft, setDraft] = useState<JobPosting>(
-    editEntry ? (initial as JobPosting) : emptyDraft,
+    editEntry ? normalizeJobPosting(initial)! : emptyDraft,
   )
   const [reviewBaseline, setReviewBaseline] = useState<string>(
-    editEntry ? serializeDraft(initial as JobPosting) : '',
+    editEntry ? serializeDraft(normalizeJobPosting(initial)!) : '',
   )
   const [notPosting, setNotPosting] = useState(false)
   const [closeConfirm, setCloseConfirm] = useState(false)
@@ -224,7 +224,7 @@ export function JobPostingModal({
             }}
             disabled={parsing || soldOut}
             maxLength={RAW_MAX}
-            placeholder="예: 우대사항, 자격요건, 담당업무"
+            placeholder="채용 공고 내용을 그대로 붙여넣으세요 — 담당업무·자격요건·우대사항이 있으면 더 정확해요"
             className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none overscroll-contain disabled:opacity-50"
           />
           <div className="flex items-center justify-between mt-1.5 mb-1">

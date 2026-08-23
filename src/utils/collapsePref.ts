@@ -22,8 +22,47 @@ export function saveCollapseExpanded(key: string, expanded: boolean): void {
   }
 }
 
-/** BoardDetail 공고 요건 접힘 상태 키 */
+/**
+ * 펼친 항목 id 목록 복원 — **저장값이 없으면 `null`**.
+ *
+ * 🔴 `loadCollapseExpanded` 로는 못 하는 구분이 필요해서 따로 둔다:
+ * 「아직 아무것도 안 건드림」(null)과 「전부 접어 둠」(`[]`)은 다르다.
+ * 전자는 기본 동작(첫 문항 자동 펼침)을 돌려도 되지만, 후자에 그러면
+ * **사용자가 접은 걸 매번 다시 펼치는 것**이 된다.
+ */
+export function loadExpandedIds(key: string): string[] | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw === null) return null
+    const parsed: unknown = JSON.parse(raw)
+    // 손상된 값(수동 편집·구버전)은 「없음」으로 취급 — 던지면 페이지가 죽는다
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : null
+  } catch {
+    return null
+  }
+}
+
+export function saveExpandedIds(key: string, ids: string[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(ids))
+  } catch {
+    /* 저장 실패는 조용히 무시 (세션 내 상태는 유지) */
+  }
+}
+
+/**
+ * 공고 요건 접힘 상태 키 — **카드 상세와 자소서 풀페이지가 공유한다.**
+ * 같은 배너·같은 데이터라, "공고 요건은 접어두고 싶다" 는 화면과 무관한 선호다.
+ * 화면마다 따로 두면 "여긴 기억하는데 저긴 왜 안 하지" 가 생긴다 (2026-08-23 실사용 지적).
+ */
 export const JOB_POSTING_EXPANDED_STORAGE_KEY = 'board:jobposting-expanded:v1'
+
+/** 회사 조사 배너 접힘 상태 키 — 위와 같은 이유로 소비처(자소서·카드 상세 탭) 공유 */
+export const COMPANY_RESEARCH_EXPANDED_STORAGE_KEY = 'coverletter:research-expanded:v1'
+
+/** 자소서 문항 카드 펼침 목록 키 — **지원 카드별**(회사마다 자소서가 다르다) */
+export const coverletterExpandedKey = (applicationId: string) =>
+  `coverletter:expanded:${applicationId}`
 
 /**
  * 면접 세션 좌측 자료 사이드바 펼침 상태 키.
