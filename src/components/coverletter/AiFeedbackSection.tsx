@@ -131,8 +131,11 @@ export function AiFeedbackSection({
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-text-primary text-xs font-semibold">✨ AI 심층 점검</p>
+            {/* 🔴 코인이 나가는 사실은 회색에 묻히면 안 된다 — 나중에 「몰랐다」가 된다.
+                크기는 그대로(버튼 부제라 라벨 성격) 두고 **비용만** 한 단 올린다. */}
             <p className="text-[11px] text-text-quaternary mt-0.5">
-              AI 티 나는 문장 · 문항 부합 · 구조 · 글자수까지 짚어드려요 (약 10코인)
+              AI 티 나는 문장 · 문항 부합 · 구조 · 글자수까지 짚어드려요{' '}
+              <span className="text-text-tertiary font-medium">(약 10코인)</span>
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -211,7 +214,8 @@ export function AiFeedbackSection({
           {strengths.length > 0 && (
             <div className="bg-success/5 border border-success/20 rounded-lg px-3 py-2">
               {strengths.map((st, i) => (
-                <p key={i} className="text-[11px] text-text-secondary leading-relaxed">
+                /* 강점도 점검 결과물이다 — 조언(13px)과 같은 층으로 (11px 은 혼자 작았다) */
+                <p key={i} className="text-[13px] text-text-secondary leading-relaxed break-keep">
                   👍 {st}
                 </p>
               ))}
@@ -228,7 +232,8 @@ export function AiFeedbackSection({
               <p className="text-[11px] text-text-quaternary italic leading-relaxed">
                 “{issue.quote}”
               </p>
-              <p className="text-[11px] text-text-secondary leading-relaxed">{issue.advice}</p>
+              {/* 조언은 「무엇을 어떻게 고치라」는 지시다 — 참조가 아니라 읽는 문장 */}
+              <p className="text-[13px] text-text-secondary leading-relaxed">{issue.advice}</p>
             </div>
           ))}
 
@@ -237,10 +242,18 @@ export function AiFeedbackSection({
               <p className="text-[10px] text-text-quaternary font-medium">예시 방향 (참고용)</p>
               {suggestions.map((sg, i) => (
                 <div key={i} className="flex items-start gap-2">
-                  <p className="flex-1 min-w-0 text-[11px] leading-relaxed">
-                    <span className="text-text-quaternary line-through">{sg.target}</span>
-                    <span className="text-text-tertiary mx-1">→</span>
-                    <span className="text-text-secondary">{sg.improved}</span>
+                  {/*
+                    🔴 **적용 여부를 정하는 문장이다** — 옆에 「이 문장 적용」 버튼이 붙어 있고,
+                    누르면 내 자소서가 바뀐다. 결정 근거가 화면에서 가장 작으면 안 된다 (11 → 14px).
+                    원문은 **취소선 대신 배경 틴트** — 취소선이 획을 가로질러 작은 글씨의 판독을
+                    떨어뜨린다. 「무엇을 대체하는가」는 색으로도 충분히 전달된다.
+                  */}
+                  {/* break-keep — 한국어는 어절 단위로 끊어야 「4시 / 간」 처럼 갈라지지 않는다
+                      (탭 줄·랜딩과 같은 관례). 14px 로 키우면서 드러났다 */}
+                  <p className="flex-1 min-w-0 text-sm leading-relaxed break-keep">
+                    <span className="text-text-quaternary bg-surface-3 rounded px-1 py-0.5">{sg.target}</span>
+                    <span className="text-text-tertiary mx-1.5">→</span>
+                    <span className="text-text-primary font-medium">{sg.improved}</span>
                     {notFoundIdx.has(i) && (
                       <span className="block text-[10px] text-warning mt-0.5">
                         원문을 찾을 수 없어요 — 이미 수정된 문장이에요
@@ -268,8 +281,9 @@ export function AiFeedbackSection({
             </div>
           )}
 
+          {/* 총평은 이 점검의 결론이다 — 10코인을 낸 결과물의 요지가 가장 작으면 안 된다 */}
           {summary && (
-            <p className="text-[11px] text-text-tertiary leading-relaxed">💬 {summary}</p>
+            <p className="text-sm text-text-secondary leading-relaxed">💬 {summary}</p>
           )}
 
           {/* 결과가 보이는 동안엔 "점검 받기" 대신 재검사 */}

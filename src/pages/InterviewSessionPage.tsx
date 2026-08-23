@@ -150,8 +150,8 @@ export function InterviewSessionPage() {
    * `AI 도움`·`꼬리질문 추가` 를 잘못 누르면 **코인이 나간다.** 읽기 모드는 그 버튼을
    * 전부 감추고, 꼬리질문까지 펼쳐 **훑어보기**에 맞춘다.
    *
-   * 🔴 자소서의 `useCoverletterReadOnly` 처럼 **강제하지 않는다** — 그건 뷰포트·네이티브로
-   * 편집을 막는 제약(IAP 심사)이라, 면접에 적용하면 모바일에서 질문 생성 자체를 못 한다.
+   * 🔴 자소서의 `useCoverletterAiBlocked` 처럼 **강제하지 않는다** — 그건 뷰포트·네이티브에서
+   * 코인 소비 AI 를 막는 제약(IAP 심사)이라, 면접에 적용하면 모바일에서 질문 생성 자체를 못 한다.
    * 여기선 사용자가 고르는 토글이다.
    */
   const [readMode, setReadMode] = useState(false)

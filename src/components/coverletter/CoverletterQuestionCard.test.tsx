@@ -10,7 +10,7 @@
  * 2. [핵심 회귀] 편집 → 자동저장 발화 → 외부 변경 → 동기화 + 옛 값 재저장 없음
  * 3. 편집 중(debounce 미발화) 외부 변경 → 사용자 입력 유지 (의도된 우선순위)
  */
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CoverletterQuestionCard } from './CoverletterQuestionCard'
 import type { ApplicationCoverletter } from '@/types/coverletter'
@@ -187,6 +187,84 @@ describe('CoverletterQuestionCard — 보기 전용(readOnly)', () => {
  * `readOnly`(모바일)에서도 보여야 한다.** 거기에 게이트를 걸면 모바일 동작이 조용히 바뀐다.
  * 그래서 별도 플래그를 뒀고, **`readOnly` 만으로는 안 꺼지는 것**까지 확인한다.
  */
+/**
+ * 🔴 **문항 + 답변을 한 번에** — 답변만 복사하면 옮긴 곳에서 무슨 질문에 답한 건지 사라진다.
+ * 붙는 자리(카드 헤더)가 **편집·읽기 양쪽에서 같아야** 하고, 답변이 없으면 버튼 자체가 없어야
+ * 한다(빈 문자열이 클립보드에 들어가면 사용자는 복사가 된 줄 안다). 2026-08-23 CEO 실사용 지적.
+ */
+describe('CoverletterQuestionCard — 문항+답변 복사', () => {
+  const withAnswer = makeCl({ question: '지원 동기를 작성해 주세요.', answer: '저는 수치로 좁혀 풉니다.' })
+
+  it('편집 모드 — 문항과 답변이 빈 줄로 이어져 한 번에 복사된다', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+    renderCard(withAnswer)
+    fireEvent.click(screen.getByRole('button', { name: '문항과 답변 복사' }))
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith('지원 동기를 작성해 주세요.\n\n저는 수치로 좁혀 풉니다.'),
+    )
+  })
+
+  it('🔴 읽기 모드에도 같은 자리에 있다 (모바일에서 드래그 선택이 가장 고통스럽다)', () => {
+    renderReadOnly(withAnswer)
+    expect(screen.getByRole('button', { name: '문항과 답변 복사' })).toBeInTheDocument()
+  })
+
+  /**
+   * 🔴 **접힌 카드에도 있어야 한다** — 여기서 한 번 놓쳤다 (2026-08-23).
+   * 처음엔 펼침 헤더에만 넣고 `expanded` 를 강제한 spec 으로 "된다" 고 봤는데,
+   * 실제 모바일은 **대부분의 카드가 접혀 있고** 접힌 카드도 답변을 **전문으로** 보여준다.
+   * 읽고 있는데 복사는 못 하는 상태였다. **spec 이 실제 조건을 재현하지 못하면
+   * 통과가 아무것도 보증하지 않는다.**
+   */
+  it('🔴 접힌 카드에도 있다 (모바일은 대부분 접혀 있다)', () => {
+    render(
+      <CoverletterQuestionCard
+        cl={withAnswer}
+        number={2}
+        applicationId="app-1"
+        expanded={false}
+        onToggle={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onAskAI={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: '문항과 답변 복사' })).toBeInTheDocument()
+  })
+
+  it('🔴 접힌 카드가 button 중첩을 만들지 않는다 (치우려다 펼쳐지면 안 된다)', () => {
+    const { container } = render(
+      <CoverletterQuestionCard
+        cl={withAnswer}
+        number={2}
+        applicationId="app-1"
+        expanded={false}
+        onToggle={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onAskAI={vi.fn()}
+      />,
+    )
+    expect(container.querySelectorAll('button button')).toHaveLength(0)
+  })
+
+  it('🔴 답변이 없으면 버튼이 없다 (빈 복사는 「됐다」고 오해시킨다)', () => {
+    renderCard(makeCl({ question: '지원 동기를 작성해 주세요.', answer: '' }))
+    expect(screen.queryByRole('button', { name: '문항과 답변 복사' })).toBeNull()
+  })
+
+  it('🔴 클립보드가 거부해도 크래시하지 않는다 (비보안 컨텍스트·권한 거부)', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.assign(navigator, { clipboard: { writeText } })
+    renderCard(withAnswer)
+    fireEvent.click(screen.getByRole('button', { name: '문항과 답변 복사' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalled())
+    // 실패해도 「복사됨」으로 바뀌지 않는다 — 안 된 걸 됐다고 하면 안 된다
+    expect(screen.queryByText('복사됨')).toBeNull()
+  })
+})
+
 describe('CoverletterQuestionCard — preview 네트워크 차단', () => {
   const refsMock = vi.mocked(useCoverletterSourceRefs)
   const withAnswer = () => makeCl({ answer: '작성한 답변입니다.' })

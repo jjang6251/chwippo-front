@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDemoLink } from '@/hooks/useDemoLink'
 import { useApplication, useApplications } from '@/hooks/useApplications'
-import { useCoverletterReadOnly } from '@/hooks/useCoverletterReadOnly'
 import {
   COVERLETTER_CATEGORY_EMOJI,
   COVERLETTER_CATEGORY_STYLE,
@@ -298,7 +297,6 @@ function ApplicationGroup({
   jobTitle: string | null
   jobCategory: string | null
 }) {
-  const readOnly = useCoverletterReadOnly()
   const link = useDemoLink()
   const { data: items = [], isLoading } = useCoverletters(applicationId, true)
   // PR_B1c — application 의 coverletterGenerationStatus 별 UI 분기 (polling 자동)
@@ -419,7 +417,8 @@ function ApplicationGroup({
             to={link(`/board/${applicationId}/coverletter`)}
             className="block text-center text-xs font-semibold text-brand bg-brand/8 border border-brand/25 hover:bg-brand/15 px-3 py-2 rounded-md transition-colors"
           >
-            {readOnly ? '자소서 보기 →' : '✍️ 바로 쓰기 — 문항 추가하고 작성 →'}
+            {/* 모바일도 문항·답변을 쓸 수 있다 (2026-08-23) — 「보기」로 안내하면 있는 길을 감춘다 */}
+            ✍️ 바로 쓰기 — 문항 추가하고 작성 →
           </Link>
         </div>
       </div>

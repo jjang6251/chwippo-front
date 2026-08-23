@@ -40,7 +40,13 @@ const cl = {
 
 const onUpdateSpy = vi.fn()
 
-function draw(props: { readOnly?: boolean; simpleEdit?: boolean } = {}) {
+function draw(
+  props: {
+    readOnly?: boolean
+    simpleEdit?: boolean
+    allowQuestionEdit?: boolean
+  } = {},
+) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
@@ -84,6 +90,40 @@ describe('simpleEdit — 답변만 고친다', () => {
     expect(screen.queryByLabelText('유형')).toBeNull()
     expect(screen.queryByLabelText('글자수 제한')).toBeNull()
     expect(screen.getByText(/제한 800자/)).toBeTruthy()
+  })
+})
+
+/**
+ * 🔴 **`allowQuestionEdit` — 문항 하나만 여는 예외** (2026-08-23 자소서 모바일 편집 개방).
+ *
+ * 자소서 풀페이지의 모바일이 `simpleEdit` 을 재사용한다 — 감춰야 할 목록이 정확히 같기
+ * 때문이다. 다만 거기선 **문항을 쓰는 게 본 작업**이라 그것만 연다.
+ *
+ * 🔴 이 spec 의 요점은 **면접 「나란히 보기」가 안 딸려 열리는 것**이다. 거기서 문항을
+ * 잠근 이유는 IAP 가 아니라 맥락(회사가 준 문항을 보며 답을 쓴다)이라, 플래그 없이는
+ * 예전 그대로여야 한다.
+ */
+describe('allowQuestionEdit — 문항만 여는 예외', () => {
+  it('🔴 simpleEdit 단독이면 문항은 여전히 못 고친다 (면접 나란히 보기 계약)', () => {
+    draw({ simpleEdit: true })
+    expect(screen.queryByRole('button', { name: '문항 편집' })).toBeNull()
+    expect(screen.getByText('지원하게 된 동기를 작성해 주세요.')).toBeTruthy()
+  })
+
+  it('allowQuestionEdit → 문항 편집 textarea 로 들어간다', () => {
+    draw({ simpleEdit: true, allowQuestionEdit: true })
+    fireEvent.click(screen.getByRole('button', { name: '문항 편집' }))
+    expect(screen.getByPlaceholderText(/우리 회사에 지원한 동기/)).toBeTruthy()
+  })
+
+  /** 🔴 **문항만** 연다 — 삭제·유형·글자수 제한·가져오기까지 따라 열리면 범위를 넘는다 */
+  it('🔴 유형·글자수 제한·삭제·가져오기·AI 는 그대로 감춘다', () => {
+    const { container } = draw({ simpleEdit: true, allowQuestionEdit: true })
+    expect(container.querySelector('select')).toBeNull() // 유형
+    expect(screen.queryByPlaceholderText('없음')).toBeNull() // 글자수 제한
+    expect(screen.queryByRole('button', { name: '삭제' })).toBeNull()
+    expect(screen.queryByText(/답변 가져오기/)).toBeNull()
+    expect(screen.queryByText(/AI 에게 묻기/)).toBeNull()
   })
 })
 
