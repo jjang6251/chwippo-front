@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Target, Lightbulb } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { CardResearchReveal } from '@/components/card/CardResearchReveal'
 import { useCelebrationStore } from '@/stores/celebrationStore'
 import { calcDday, getDdayLabel } from '@/utils/dday'
 
@@ -143,6 +144,15 @@ export function FirstCardCelebration() {
             </div>
           ))}
         </div>
+
+        {/* 첫 카드는 **축하 안에 통합**한다 — 오버레이를 닫자마자 같은 3요소가 카드에서
+            또 뜨는 이중 연출을 만들지 않는다(트리거가 배타적: AddCardModal 참고).
+            조사가 없으면 null 이라 기존 축하 그대로다. */}
+        <CardResearchReveal
+          applicationId={data.appId}
+          variant="celebration"
+          startDelayMs={ctaDelayMs}
+        />
 
         <div
           style={{ animationDelay: `${ctaDelayMs}ms` }}

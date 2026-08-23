@@ -9,11 +9,13 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { CollapsibleChevron } from '@/components/common/CollapsibleChevron'
+import { ResearchSourceChip } from '@/components/card/ResearchSourceChip'
 import {
   useCompanyResearch,
   useUpdateUserResearchNotes,
 } from '@/hooks/useInterviewPrep'
 import { toast } from '@/stores/toastStore'
+import { keywordChip } from '@/utils/researchKeywords'
 import type { InterviewKeyword, ResearchSource } from '@/types/interviewPrep'
 
 interface Props {
@@ -299,7 +301,7 @@ export function CompanyResearchCard({
                         {research.sources.map((s, i) => {
                           // PR 보강 — ResearchSource (객체) / string 양쪽 호환
                           const url = typeof s === 'string' ? s : s.url
-                          return <SourceChip key={`${url}-${i}`} url={url} />
+                          return <ResearchSourceChip key={`${url}-${i}`} url={url} />
                         })}
                       </div>
                     )}
@@ -561,22 +563,6 @@ function ResearchProductsAndTech({
   )
 }
 
-/**
- * PR 보강 — interviewKeywords 카테고리별 색상 매핑.
- * - tech: 기술·아키텍처 (파랑)
- * - talent: 인재상·문화 (초록)
- * - business: 사업·전략 (보라)
- * - role: 직무 특화 (주황)
- * - issue: 회사 이슈 (빨강)
- */
-const KEYWORD_CATEGORY_STYLE: Record<string, string> = {
-  tech: 'bg-info/10 text-info border-info/30',
-  talent: 'bg-success/10 text-success border-success/30',
-  business: 'bg-violet/10 text-violet border-violet/30',
-  role: 'bg-warning/10 text-warning border-warning/30',
-  issue: 'bg-danger/10 text-danger border-danger/30',
-}
-
 function ResearchKeywords({
   keywords,
 }: {
@@ -590,13 +576,8 @@ function ResearchKeywords({
       </p>
       <div className="flex flex-wrap gap-1">
         {keywords.map((kw, i) => {
-          // PR 보강 — InterviewKeyword (객체) 와 기존 string 양쪽 호환
-          const isObj = typeof kw === 'object' && kw !== null
-          const keyword = isObj ? kw.keyword : kw
-          const category = isObj ? kw.category : null
-          const style = category
-            ? KEYWORD_CATEGORY_STYLE[category]
-            : 'bg-info/10 text-info border-info/30'
+          // PR 보강 — InterviewKeyword (객체) 와 기존 string 양쪽 호환 (utils 공용)
+          const { keyword, style } = keywordChip(kw)
           return (
             <span
               key={`${keyword}-${i}`}
@@ -608,39 +589,5 @@ function ResearchKeywords({
         })}
       </div>
     </div>
-  )
-}
-
-/** Perplexity 식 출처 chip — favicon + domain only */
-function SourceChip({ url }: { url: string }) {
-  let domain: string
-  try {
-    domain = new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    domain = url
-  }
-  const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      // min-w-0 없이는 안쪽 truncate 가 동작하지 않는다 — 긴 도메인이 칩 밖으로 나간다
-      className="inline-flex items-center gap-1 min-w-0 bg-surface border border-line hover:border-brand/40 hover:bg-surface-3 text-text-tertiary hover:text-text-primary text-[10px] px-2 py-1 rounded-md transition-colors max-w-full"
-      title={url}
-    >
-      <img
-        src={favicon}
-        alt=""
-        width={12}
-        height={12}
-        className="shrink-0"
-        loading="lazy"
-        onError={(e) => {
-          ;(e.target as HTMLImageElement).style.display = 'none'
-        }}
-      />
-      <span className="truncate">{domain}</span>
-    </a>
   )
 }

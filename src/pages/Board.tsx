@@ -7,7 +7,9 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
 import { BETA_FEATURES } from '@/config/betaFeatures'
 import { useAuthStore } from '@/stores/authStore'
+import { useResearchRevealStore } from '@/stores/researchRevealStore'
 import { CompanyCard } from '@/components/card/CompanyCard'
+import { CardResearchReveal } from '@/components/card/CardResearchReveal'
 import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -18,7 +20,8 @@ import { EmptyBoardState } from '@/components/board/EmptyBoardState'
 import { BoardViewToggle } from '@/components/board/BoardViewToggle'
 import { BoardListRow } from '@/components/board/BoardListRow'
 import { BoardGroupedView } from '@/components/board/BoardGroupedView'
-import type { ApplicationStatus } from '@/types/application'
+import type { Application, ApplicationStatus } from '@/types/application'
+import { hasSeenResearchReveal } from '@/utils/researchIntro'
 import { sortApplications } from '@/utils/sortApplications'
 import { loadBoardView, saveBoardView, type BoardView } from '@/utils/boardViewGroups'
 import type { LucideIcon } from 'lucide-react'
@@ -104,6 +107,45 @@ export function Board() {
   const user = useAuthStore((s) => s.user)
   const showDismissBar =
     !user?.sampleCardsDismissedAt && allSampleCount > 0 && filter !== 'PLANNED' && filter !== 'PASSED' && filter !== 'FAILED'
+
+  // 회사 조사 스트립 — 대상은 스토어가, 회사명·도메인은 목록이 준다
+  const revealAppId = useResearchRevealStore((s) => s.appId)
+  const revealOrigin = useResearchRevealStore((s) => s.origin)
+  const reveal = useResearchRevealStore((s) => s.reveal)
+  const dismissReveal = useResearchRevealStore((s) => s.dismiss)
+  const revealApp = applications.find((a) => a.id === revealAppId)
+
+  /**
+   * 🔴 **기존 사용자를 위한 보드 진입 1회 노출.** 스트립은 카드를 만드는 순간에만 뜨는데,
+   * 이미 카드를 만들어 둔 사람은 그 순간을 영영 못 만난다. 공지로 말하는 대신 **그 사람 회사의
+   * 실제 키워드를 보여준다.**
+   *
+   * - **대상은 가장 최근에 만든 카드 하나.** 조사가 없어도 다음 카드로 내려가지 않는다 —
+   *   카드 추가 때와 같은 결이다(그때도 방금 만든 그 회사만 본다). 목록을 훑어 "조사 있는 카드"
+   *   를 찾아 띄우면 **아무 맥락 없는 회사**가 튀어나온다.
+   * - **샘플 카드는 제외** — 내가 만든 회사가 아니다 (`shouldCelebrateFirstCard` 와 같은 기준).
+   * - 🔴 **여기서 소진하지 않는다.** 기회는 스트립이 **실제로 렌더될 때** 소진된다
+   *   (`CardResearchReveal`). 조사가 없어 안 떴으면 다음 방문에 다시 시도한다 — 커버리지가
+   *   낮은 지금 배포해도 기회가 낭비되지 않는다. 여기 `ref` 는 이번 mount 에서 두 번 던지지
+   *   않기 위한 것뿐이다.
+   * - **카드 추가 노출이 이미 자리를 잡았으면 건드리지 않는다**(`revealAppId`) — 방금 한 일이
+   *   3주 전 카드보다 언제나 우선이다.
+   */
+  const introTriedRef = useRef(false)
+  useEffect(() => {
+    if (introTriedRef.current || isLoading || revealAppId) return
+    if (hasSeenResearchReveal(user?.id)) return
+    const latest = applications
+      .filter((a) => !a.isSample)
+      .reduce<Application | null>(
+        (best, a) =>
+          !best || new Date(a.createdAt).getTime() > new Date(best.createdAt).getTime() ? a : best,
+        null,
+      )
+    if (!latest) return
+    introTriedRef.current = true
+    reveal(latest.id, 'intro')
+  }, [isLoading, applications, revealAppId, user?.id, reveal])
 
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
@@ -225,6 +267,20 @@ export function Board() {
 
       {/* W1 — 샘플 dismiss 바 (sticky, 진짜+샘플 둘 다 있을 때만) */}
       {showDismissBar && <SampleCardDismissBar count={allSampleCount} />}
+
+      {/* 회사 조사 스트립 — 방금 추가한 카드(항상) 또는 보드 진입 1회(기존 사용자).
+          🔴 **그리드 밖·위**에 둔다 — 카드 안에 넣으면 `[grid-auto-rows:1fr]` 때문에
+          관계없는 카드까지 전부 커지고(+112px 실측), 새 카드가 정렬상 화면 밖이면 아예
+          못 본다. 조사가 없으면(대부분) 컴포넌트가 null 이라 이 자리엔 아무것도 안 생긴다.
+          필터에 걸려 카드가 안 보이는 상황에도 뜨도록 **전체 목록**에서 찾는다. */}
+      {revealApp && (
+        <CardResearchReveal
+          applicationId={revealApp.id}
+          company={{ name: revealApp.companyName, domain: revealApp.domain }}
+          intro={revealOrigin === 'intro'}
+          onDismiss={dismissReveal}
+        />
+      )}
 
       {/* 카드 목록 */}
       {isLoading ? (

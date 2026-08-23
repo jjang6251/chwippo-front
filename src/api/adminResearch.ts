@@ -59,6 +59,10 @@ export interface ResearchRow {
   /** inferredFields jsonb 배열 길이 (품질 낮음 지표). 조사 없으면 null */
   inferredCount: number | null
   optOut: boolean
+  /** companies.json(DART) 목록에 이 이름이 있는가 — 오타·가상 회사 판별 */
+  knownCompany: boolean
+  /** 실존 목록에 없을 때만 계산된 가장 가까운 이름 1개. 멀면 null */
+  similarTo: string | null
 }
 
 export interface ResearchListParams {
@@ -69,6 +73,28 @@ export interface ResearchListParams {
   page?: number
   limit?: number
 }
+
+// ─── 전체 내보내기 ────────────────────────────────────────────────────────────
+
+/** 내보내기 행 — 회사명 + 우선순위 판단용 수요 수치만 (조사 메타 없음) */
+export interface ResearchExportRow {
+  companyName: string
+  applicants: number
+  cards: number
+}
+
+export interface ResearchExportResult {
+  items: ResearchExportRow[]
+  /** 필터 적용 후 **전체** 행 수 — items 보다 클 수 있다 (상한 절단) */
+  total: number
+  /** 서버 상한 */
+  limit: number
+  /** true 면 정렬 순 상위만 담겼다 — 화면·파일 양쪽에 반드시 표기 */
+  truncated: boolean
+}
+
+/** 내보내기는 전 범위라 page·limit 이 없다 (서버가 상한을 건다) */
+export type ResearchExportParams = Omit<ResearchListParams, 'page' | 'limit'>
 
 const unwrap = <T>(r: { data: { data: T } }) => r.data.data
 
@@ -84,5 +110,13 @@ export const adminResearchApi = {
         '/admin/company-research/unified',
         { params },
       )
+      .then(unwrap),
+
+  /** 같은 필터·정렬의 전 범위 (현재 페이지가 아니라 전체) */
+  exportAll: (params: ResearchExportParams) =>
+    apiClient
+      .get<{ data: ResearchExportResult }>('/admin/company-research/export', {
+        params,
+      })
       .then(unwrap),
 }

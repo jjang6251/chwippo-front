@@ -7,18 +7,38 @@
  * 5. CTA → navigate(/board/:id) + dismiss
  * 6. 배경 클릭 → dismiss
  * 7. 🔴 회귀: KST 날짜 경계(UTC 15:00 이후)에도 D-day 가 밀리지 않음
+ * 8. 회사 조사 있음 → 체크 행 뒤에 3요소가 이어 붙는다 (별도 연출 겹치지 않음)
+ * 9. 회사 조사 없음 → 기존 축하 그대로 (체크 + CTA 만)
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FirstCardCelebration } from './FirstCardCelebration'
 import {
   useCelebrationStore,
   type FirstCardCelebrationData,
 } from '@/stores/celebrationStore'
+import { coverletterDocApi } from '@/api/coverletterDoc'
 import { addDays, todayLocal } from '@/utils/datetime'
 
 const navigateMock = vi.fn()
 vi.mock('react-router-dom', () => ({ useNavigate: () => navigateMock }))
+
+// 축하 오버레이 안에 회사 조사 3요소가 들어간다 (CardResearchReveal) — 기본은 조사 없음
+vi.mock('@/api/coverletterDoc', () => ({
+  coverletterDocApi: { getResearch: vi.fn() },
+}))
+const mockedResearch = vi.mocked(coverletterDocApi.getResearch)
+
+/** 오버레이는 React Query 를 쓰는 조사 블록을 품는다 */
+const renderOverlay = () => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={qc}>
+      <FirstCardCelebration />
+    </QueryClientProvider>,
+  )
+}
 
 const show = (over: Partial<FirstCardCelebrationData> = {}) =>
   useCelebrationStore.getState().showFirstCard({
@@ -36,6 +56,7 @@ const show = (over: Partial<FirstCardCelebrationData> = {}) =>
 describe('FirstCardCelebration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockedResearch.mockResolvedValue(null)
     useCelebrationStore.getState().dismissFirstCard()
   })
 
@@ -44,13 +65,13 @@ describe('FirstCardCelebration', () => {
   })
 
   it('1) store 비면 렌더 없음', () => {
-    const { container } = render(<FirstCardCelebration />)
+    const { container } = renderOverlay()
     expect(container.firstChild).toBeNull()
   })
 
   it('2) full — 체크 3개 + D-day 뱃지, 유도 문구 없음', () => {
     show()
-    render(<FirstCardCelebration />)
+    renderOverlay()
     expect(screen.getByText('첫 카드 완성')).toBeInTheDocument()
     expect(screen.getByText('카카오')).toBeInTheDocument()
     expect(screen.getByText('전형 단계 템플릿 적용')).toBeInTheDocument()
@@ -62,7 +83,7 @@ describe('FirstCardCelebration', () => {
 
   it('3) 마감일 없음 — 유도 문구, D-day·캘린더 체크 없음', () => {
     show({ deadline: null })
-    render(<FirstCardCelebration />)
+    renderOverlay()
     expect(screen.getByText('전형 단계 템플릿 적용')).toBeInTheDocument()
     expect(screen.getByText(/마감일을 넣으면 D-day·캘린더가 자동/)).toBeInTheDocument()
     expect(screen.queryByText('마감 D-day 계산 완료')).toBeNull()
@@ -71,7 +92,7 @@ describe('FirstCardCelebration', () => {
 
   it('4) planned — 등록 체크 + 유도, 템플릿 체크 없음', () => {
     show({ planned: true, hadTemplate: false, deadline: null })
-    render(<FirstCardCelebration />)
+    renderOverlay()
     expect(screen.getByText('지원 예정 보드에 등록 완료')).toBeInTheDocument()
     expect(screen.getByText(/지원을 시작하면 전형 단계·D-day·캘린더가 자동/)).toBeInTheDocument()
     expect(screen.queryByText('전형 단계 템플릿 적용')).toBeNull()
@@ -79,7 +100,7 @@ describe('FirstCardCelebration', () => {
 
   it('5) CTA → navigate + dismiss', () => {
     show()
-    render(<FirstCardCelebration />)
+    renderOverlay()
     fireEvent.click(screen.getByRole('button', { name: '카드 보러가기 →' }))
     expect(navigateMock).toHaveBeenCalledWith('/board/app-1')
     expect(useCelebrationStore.getState().firstCard).toBeNull()
@@ -87,7 +108,7 @@ describe('FirstCardCelebration', () => {
 
   it('6) 배경 클릭 → dismiss', () => {
     show()
-    render(<FirstCardCelebration />)
+    renderOverlay()
     fireEvent.click(screen.getByRole('dialog'))
     expect(useCelebrationStore.getState().firstCard).toBeNull()
   })
@@ -111,7 +132,41 @@ describe('FirstCardCelebration', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.setSystemTime(new Date('2026-08-04T15:48:00.000Z')) // KST 2026-08-05 00:48
     show()
-    render(<FirstCardCelebration />)
+    renderOverlay()
     expect(screen.getByText('D-14')).toBeInTheDocument()
+  })
+
+  it('8) 조사 있음 — 체크 행 뒤에 3요소가 이어 붙는다 (조회수 미집계)', async () => {
+    mockedResearch.mockResolvedValue({
+      status: 'ok',
+      research: {
+        interviewKeywords: [{ keyword: '분산 시스템', category: 'tech' }],
+        talentProfile: ['도전', '협업'],
+        businessSummary: '국내 최대 메신저 기업이다. 두 번째 문장이다.',
+      },
+    })
+    show()
+    renderOverlay()
+
+    expect(await screen.findByText('어떤 회사일까요?')).toBeInTheDocument()
+    expect(screen.getByText('분산 시스템')).toBeInTheDocument()
+    expect(screen.getByText('도전 · 협업')).toBeInTheDocument()
+    /* 요약은 **전문 그대로** — 2026-08-22 CEO 실기로 첫 문장 자르기를 걷어냈다 */
+    expect(
+      screen.getByText('국내 최대 메신저 기업이다. 두 번째 문장이다.'),
+    ).toBeInTheDocument()
+    // 기존 축하 요소는 그대로 (덮어쓰지 않는다)
+    expect(screen.getByText('전형 단계 템플릿 적용')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '카드 보러가기 →' })).toBeInTheDocument()
+    expect(mockedResearch).toHaveBeenCalledWith('app-1', { countHit: false })
+  })
+
+  it('9) 조사 없음 — 기존 축하 그대로 (조사 블록 0)', async () => {
+    show()
+    renderOverlay()
+    await waitFor(() => expect(mockedResearch).toHaveBeenCalled())
+    expect(screen.queryByText('어떤 회사일까요?')).toBeNull()
+    expect(screen.getByText('전형 단계 템플릿 적용')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '카드 보러가기 →' })).toBeInTheDocument()
   })
 })

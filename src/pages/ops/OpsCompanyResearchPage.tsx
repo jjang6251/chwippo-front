@@ -10,8 +10,9 @@ import {
   type ResearchRow,
   type ResearchSummary,
 } from '@/api/adminResearch'
-import { toLocalDateString } from '@/utils/datetime'
+import { toLocalDateString, todayLocal } from '@/utils/datetime'
 import { toast } from '@/stores/toastStore'
+import { buildResearchCsv, downloadCsv } from './researchCsv'
 
 const LIMIT = 20
 
@@ -31,6 +32,7 @@ interface Column {
 }
 const COLUMNS: Column[] = [
   { label: '회사명', sort: 'name', align: 'left' },
+  { label: '실존', sort: null, align: 'left' },
   { label: '조사', sort: null, align: 'left' },
   { label: '지원자', sort: 'applicants', align: 'right' },
   { label: '카드', sort: 'cards', align: 'right' },
@@ -41,6 +43,11 @@ const COLUMNS: Column[] = [
   { label: 'opt-out', sort: null, align: 'left' },
 ]
 
+const ORDER_LABEL: Record<ResearchOrder, string> = {
+  desc: '내림차순',
+  asc: '오름차순',
+}
+
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 
 export function OpsCompanyResearchPage() {
@@ -50,6 +57,9 @@ export function OpsCompanyResearchPage() {
   const [sort, setSort] = useState<ResearchSort>('applicants')
   const [order, setOrder] = useState<ResearchOrder>('desc')
   const [page, setPage] = useState(1)
+  const [exporting, setExporting] = useState(false)
+  /** 상한에 걸려 잘렸을 때만 채워진다 — 조용한 절단 금지 */
+  const [exportNotice, setExportNotice] = useState<string | null>(null)
 
   // 300ms debounce — 검색 입력
   useEffect(() => {
@@ -110,14 +120,61 @@ export function OpsCompanyResearchPage() {
     setPage(1)
   }
 
-  /** 미조사 필터 — 현재 페이지 행 회사명 복사 (배치 조사 우선순위 참고). */
-  function handleCopyNames() {
-    if (rows.length === 0) return
-    const text = rows.map((r) => r.companyName).join(' · ')
-    navigator.clipboard
-      .writeText(text)
-      .then(() => toast.success('회사명을 복사했어요.'))
-      .catch(() => toast.error('복사에 실패했어요.'))
+  /**
+   * 전체 내보내기 — **현재 페이지가 아니라** 같은 필터·정렬의 전 범위.
+   * 미조사가 200개면 페이지를 넘겨가며 여러 번 복사해 이어붙여야 했던 걸 한 번에.
+   * 서버 상한에 걸리면 잘렸다는 사실을 토스트·화면·파일 세 곳에 전부 적는다.
+   */
+  async function runExport(mode: 'copy' | 'csv') {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const res = await adminResearchApi.exportAll({
+        search: debouncedSearch || undefined,
+        filter,
+        sort,
+        order,
+      })
+      if (res.items.length === 0) {
+        setExportNotice(null)
+        toast.error('내보낼 회사가 없어요.')
+        return
+      }
+
+      const range = res.truncated
+        ? `전체 ${res.total.toLocaleString()}개 중 상위 ${res.items.length.toLocaleString()}개`
+        : `${res.total.toLocaleString()}개 전체`
+      const sortLabel = COLUMNS.find((c) => c.sort === sort)?.label ?? sort
+      const filterLabel =
+        FILTERS.find((f) => f.value === filter)?.label ?? filter
+
+      if (mode === 'copy') {
+        // 조사 프롬프트에 그대로 붙여넣는 용도 — 회사명만, 머리말 없이.
+        await navigator.clipboard.writeText(
+          res.items.map((r) => r.companyName).join(' · '),
+        )
+        toast.success(`회사명 ${range} 복사했어요.`)
+      } else {
+        downloadCsv(
+          buildResearchCsv(
+            res.items,
+            `${range} · 필터 ${filterLabel} · 정렬 ${sortLabel} ${ORDER_LABEL[order]} · ${todayLocal()} KST`,
+          ),
+          `회사조사-${filterLabel}-${todayLocal()}.csv`,
+        )
+        toast.success(`CSV 내려받았어요 — ${range}.`)
+      }
+
+      setExportNotice(
+        res.truncated
+          ? `전체 ${res.total.toLocaleString()}개 중 ${sortLabel} ${ORDER_LABEL[order]} 상위 ${res.items.length.toLocaleString()}개만 내보냈어요. 나머지는 검색·필터로 좁혀 다시 내보내세요.`
+          : null,
+      )
+    } catch {
+      toast.error('내보내기에 실패했어요.')
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -187,16 +244,33 @@ export function OpsCompanyResearchPage() {
           ))}
         </div>
 
-        {/* 미조사 필터일 때만 — 회사명 복사 */}
-        {filter === 'unresearched' && rows.length > 0 && (
+        {/* 전체 내보내기 — 현재 페이지가 아니라 같은 필터·정렬의 전 범위 */}
+        <div className="ml-auto shrink-0 flex gap-1.5">
           <button
-            onClick={handleCopyNames}
-            className="ml-auto shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand/15 border border-brand/30 text-brand hover:bg-brand/25 transition-colors"
+            onClick={() => void runExport('copy')}
+            disabled={exporting || total === 0}
+            title="현재 필터·정렬의 전 범위 회사명을 복사해요 (현재 페이지가 아님)"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand/15 border border-brand/30 text-brand hover:bg-brand/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            회사명 복사
+            전체 복사
           </button>
-        )}
+          <button
+            onClick={() => void runExport('csv')}
+            disabled={exporting || total === 0}
+            title="회사명·지원자·카드 수를 CSV 로 내려받아요 (전 범위)"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-2 border border-line text-text-tertiary hover:border-line-strong disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            CSV
+          </button>
+        </div>
       </div>
+
+      {/* 상한 절단 알림 — 조용히 잘리면 조사 대상을 놓치고도 모른다 */}
+      {exportNotice && (
+        <p className="mb-4 -mt-1 text-xs text-warning" role="status">
+          {exportNotice}
+        </p>
+      )}
 
       {/* 통합 테이블 */}
       {listQ.isLoading && !listQ.data ? (
@@ -439,6 +513,31 @@ function ResearchTableRow({ row }: { row: ResearchRow }) {
           {row.companyName}
         </span>
       </td>
+      {/* 실존 — 「까까오」(오타)와 「한솔로지스틱스」(비상장 실존)를 가르는 칸 */}
+      <td className="px-4 py-3.5">
+        {row.knownCompany ? (
+          <span
+            className="text-[11px] text-text-quaternary"
+            title="companies.json(DART) 목록에 있는 이름"
+          >
+            DART
+          </span>
+        ) : (
+          <>
+            <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border text-info bg-info/15 border-info/30 tracking-wide">
+              목록 밖
+            </span>
+            {row.similarTo && (
+              <span
+                className="block mt-1 text-[10px] text-text-tertiary truncate max-w-[120px]"
+                title={`${row.similarTo} 와(과) 유사 — 오타일 수 있어요`}
+              >
+                {row.similarTo} 와 유사?
+              </span>
+            )}
+          </>
+        )}
+      </td>
       <td className="px-4 py-3.5">
         {row.researched ? (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success tabular-nums">
@@ -519,7 +618,7 @@ function TableSkeleton() {
         <tbody>
           {Array.from({ length: 8 }).map((_, i) => (
             <tr key={i} className="border-b border-line[0.06] last:border-0">
-              {[140, 70, 44, 44, 50, 90, 90, 50, 60].map((w, j) => (
+              {[140, 52, 70, 44, 44, 50, 90, 90, 50, 60].map((w, j) => (
                 <td key={j} className="px-4 py-3.5">
                   <div
                     className="h-3 rounded bg-card animate-pulse"
