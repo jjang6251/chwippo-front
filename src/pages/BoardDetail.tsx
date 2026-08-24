@@ -20,6 +20,7 @@ import { useInterviewNudgeFlow } from '@/hooks/useInterviewNudgeFlow'
 import { InterviewNudgeModal } from '@/components/card/InterviewNudgeModal'
 import { NewInterviewSessionModal } from '@/components/card/NewInterviewSessionModal'
 import type { UpdateApplicationDto, ApplicationStep } from '@/types/application'
+import { StepDateField } from '@/components/board/StepDateField'
 import { useChecklist } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
 import { CoverLetterTab } from '@/components/card/CoverLetterTab'
@@ -46,8 +47,7 @@ import { trackClarityEvent } from '@/lib/clarity'
 import { hasSeenResearch, markResearchSeen } from '@/utils/researchSeen'
 import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
 import { getStepType, STEP_TYPE_CONFIG } from '@/utils/stepTemplates'
-import { formatStepSchedule } from '@/utils/datetime'
-import { Calendar, MapPin, Pencil, GripVertical } from 'lucide-react'
+import { MapPin, Pencil, GripVertical } from 'lucide-react'
 
 // --- 드래그 가능한 스텝 아이템 ---
 interface SortableStepItem {
@@ -104,6 +104,23 @@ function SortableStepRow({
 
 
 // --- 현재 스텝 카드 (진행 상황 섹션 안) ---
+/**
+ * 현재 스텝 카드 — **이 단계에 대한 조작이 모이는 자리**.
+ *
+ * 스텝바(열)는 **단계 이동**만 하고, 이 카드가 **지금 단계의 나머지**를 맡는다 —
+ * 날짜 편집 · 스텝 상세 열기 · 결과 입력.
+ *
+ * ## 날짜를 여기서 고치는 이유
+ *
+ * 예전엔 「날짜 설정하기」가 **스텝 상세로 보내기만** 했다. 그래서 날짜 하나 넣으려고
+ * **보드 → 카드 상세 → 스텝 상세** 3단계를 갔고, 이미 있는 날짜는 아예 못 눌러
+ * 고치려면 같은 3단계를 다시 밟아야 했다 (CEO 2026-08-25 지적).
+ *
+ * 🔴 **`type="date"` 를 쓰면 안 된다.** 카드 상세 헤더에 있던 날짜 입력이 날짜 전용이라
+ * 저장할 때마다 시각을 `T00:00:00` 으로 덮어썼고, 그 탓에 **임박(2시간 전) 알림에서
+ * 이탈**하고 캘린더 시간도 사라졌다 (ADR-049 가 없앤 결함). 쓰기는 전부
+ * `useStepScheduleSave` 한 곳을 지나 시각이 보존된다.
+ */
 function CurrentStepCard({
   appId, step, needsResult, onOpen, onSetResult,
 }: {
@@ -117,7 +134,6 @@ function CurrentStepCard({
   const type = getStepType(step.name)
   const cfg = STEP_TYPE_CONFIG[type]
   const StepIcon = cfg.Icon
-  const { dateLabel, timeLabel } = formatStepSchedule(step.scheduledDate)
   const doneCount = checklist.filter((i) => i.isDone).length
   // U29 card-solid 구분감 — 저알파 틴트(bg-card·warning/5) 금지, 불투명 배경+유형색 스트라이프
   const accentCls = needsResult ? 'border-l-warning' : cfg.accentBorderCls
@@ -134,19 +150,7 @@ function CurrentStepCard({
             <p className="text-xs text-warning font-medium">결과 대기 중 — 합격·불합격을 입력해 주세요</p>
           ) : (
             <div className="flex items-center gap-x-3 gap-y-1 text-xs text-text-secondary flex-wrap">
-              {dateLabel ? (
-                <span className="inline-flex items-center gap-1">
-                  <Calendar size={13} strokeWidth={1.75} className={`${cfg.colorCls} shrink-0`} aria-hidden="true" /> {dateLabel}
-                  {timeLabel && <b className="ml-1 font-mono text-brand">{timeLabel}</b>}
-                </span>
-              ) : (
-                <button
-                  onClick={onOpen}
-                  className="inline-flex items-center gap-1 text-text-quaternary hover:text-text-secondary transition-colors"
-                >
-                  <Calendar size={13} strokeWidth={1.75} className="shrink-0" aria-hidden="true" /> 날짜 설정하기
-                </button>
-              )}
+              <StepDateField appId={appId} stepId={step.id} stepName={step.name} scheduledDate={step.scheduledDate} iconColorCls={cfg.colorCls} />
               {step.location && <span className="inline-flex items-center gap-1 max-w-[180px]"><MapPin size={13} strokeWidth={1.75} className={`${cfg.colorCls} shrink-0`} aria-hidden="true" /> <span className="truncate">{step.location}</span></span>}
               {checklist.length > 0 && (
                 <span className="text-text-quaternary">체크리스트 {doneCount}/{checklist.length}</span>
@@ -632,6 +636,11 @@ export function BoardDetail() {
                 steps={app.steps}
                 currentStepIndex={app.currentStepIndex}
                 status={app.status}
+                /*
+                  🔴 **열(노드+레이블)은 보드와 똑같이 「단계 이동」이다** (CEO 2026-08-25).
+                  스텝 상세는 아래 「현재: …」 줄과 현재 스텝 카드의 「스텝 열기」가 맡는다 —
+                  둘 다 열과 떨어져 있어 예전처럼 8px 사이에서 헷갈리지 않는다.
+                */
                 onStepClick={!isResolved ? handleStepClick : undefined}
                 onStepNameClick={openStep}
                 size="md"
@@ -813,12 +822,20 @@ export function BoardDetail() {
 
       {/* 면접 유도 모달 — 이 화면 안이라 이동 없이 탭만 바꾼다 */}
       <InterviewNudgeModal
+        /* 🔴 열릴 때마다 새로 마운트시킨다 — 모달 안 `askDate` 초기값이 그때의 날짜 유무로
+           잡혀야 한다 (`open` 이 false 여도 이 컴포넌트는 마운트된 채다). */
+        key={nudge.pending?.stepId ?? 'closed'}
         open={nudge.pending !== null}
         variant={nudge.pending?.variant ?? 'first'}
+        appId={nudge.pending?.appId ?? ''}
+        stepId={nudge.pending?.stepId ?? ''}
         stepName={nudge.pending?.stepName ?? ''}
         companyName={nudge.pending?.companyName ?? ''}
         domain={nudge.pending?.domain}
-        scheduledDate={nudge.pending?.scheduledDate ?? null}
+        /* 🔴 **`pending` 의 스냅샷이 아니라 목록의 살아 있는 값**을 준다 — 모달 안에서 날짜를
+           저장하면 캐시가 갱신되는데, 스냅샷을 쓰면 화면이 안 따라가 방금 넣은 날짜가
+           「날짜 설정하기」로 되돌아간 것처럼 보인다. */
+        scheduledDate={app.steps.find((st) => st.id === nudge.pending?.stepId)?.scheduledDate ?? null}
         onClose={nudge.close}
         onGo={(dismissForever) => {
           // 탭도 같이 바꿔 둔다 — 생성 모달을 닫으면 면접 탭이 보이는 게 자연스럽다

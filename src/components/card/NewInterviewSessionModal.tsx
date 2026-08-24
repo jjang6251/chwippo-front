@@ -169,7 +169,16 @@ export function NewInterviewSessionModal({
 
   return (
     <Modal open onClose={onClose} title="새 면접 세션" width="max-w-2xl">
-      <div className="space-y-5 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
+      {/*
+        🔴 **여기에 스크롤 컨테이너를 두지 않는다.** `Modal` 본문이 이미
+        `flex-1 overflow-y-auto overscroll-contain` 이라, 안에 하나 더 두면 **둘이 중첩**된다.
+
+        그러면 손가락이 닿는 면적은 전부 안쪽이고, 안쪽이 바닥에 닿는 순간
+        `overscroll-contain` 이 바깥으로 넘기는 걸 막는다. 그런데 아래 버튼 줄은 바깥에만
+        있어서 **「세션 만들기」에 영원히 못 닿는다** — 428×926 실측에서 버튼 줄이 모달
+        박스 밖 11px 에 있었고, 안쪽을 끝까지 내려도 1px 도 안 움직였다 (2026-08-24).
+      */}
+      <div className="space-y-5">
         {/* 1. 회사·직무 confirm */}
         <section>
           <div className="border border-line bg-surface rounded-lg p-3">

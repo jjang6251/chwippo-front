@@ -10,6 +10,8 @@ import {
   formatWeekLabel,
   formatDateTime,
   formatStepSchedule,
+  toDateTimeLocalValue,
+  fromDateTimeLocalValue,
   escapeHtml,
 } from './datetime'
 
@@ -277,4 +279,61 @@ describe('utils/datetime — KST-fixed 헬퍼', () => {
       expect(addYears('2024-02-29', 4)).toBe('2028-02-29')
     })
   })
+
+/**
+ * 🔴 **이 두 함수가 ADR-049 의 「시각 보존」을 지키는 자리다.**
+ *
+ * 카드 상세 헤더에 있던 날짜 입력이 `type="date"` 라 저장할 때마다 시각을 `T00:00:00`
+ * 으로 덮어썼고, 그래서 **임박(2시간 전) 알림 대상에서 이탈**하고 캘린더 시간도 사라졌다.
+ * ADR-049 는 편집 경로를 하나로 좁혀 막았는데, 경로가 둘이 된 지금(스텝 상세 · 카드 상세
+ * 인라인)은 **쓰기 구현이 하나인 것**이 그 자리를 대신한다.
+ */
+describe('datetime-local 왕복 — 스텝 일정 편집', () => {
+  describe('toDateTimeLocalValue', () => {
+    it('저장된 UTC ISO → KST 벽시각 (브라우저 TZ 무관)', () => {
+      // 05:00Z = 같은 날 14:00 KST
+      expect(toDateTimeLocalValue('2026-07-22T05:00:00Z')).toBe('2026-07-22T14:00')
+    })
+
+    it('🔴 KST 자정 경계 — UTC 로 읽으면 날짜가 하루 어긋난다', () => {
+      // 2026-07-21T15:00Z = 2026-07-22T00:00 KST
+      expect(toDateTimeLocalValue('2026-07-21T15:00:00Z')).toBe('2026-07-22T00:00')
+    })
+
+    it('offset 이 붙은 ISO 도 같은 값으로 돌아온다 (왕복 안정)', () => {
+      expect(toDateTimeLocalValue('2026-07-22T14:00:00+09:00')).toBe('2026-07-22T14:00')
+    })
+
+    it('없음·손상된 값 → 빈 문자열 (렌더 중 호출이라 던지면 안 된다)', () => {
+      expect(toDateTimeLocalValue(null)).toBe('')
+      expect(toDateTimeLocalValue(undefined)).toBe('')
+      expect(toDateTimeLocalValue('날짜아님')).toBe('')
+    })
+
+    it('tz override — 확장 친화 시그니처', () => {
+      expect(toDateTimeLocalValue('2026-07-22T05:00:00Z', 'UTC')).toBe('2026-07-22T05:00')
+    })
+  })
+
+  describe('fromDateTimeLocalValue', () => {
+    it('🔴 KST offset 을 붙여 저장한다 — 시각이 보존되는 지점', () => {
+      expect(fromDateTimeLocalValue('2026-07-22T14:00')).toBe('2026-07-22T14:00:00+09:00')
+    })
+
+    it('빈 값 → null (날짜 삭제)', () => {
+      expect(fromDateTimeLocalValue('')).toBeNull()
+    })
+
+    it('🔴 왕복해도 시각이 안 밀린다 — 저장 → 다시 열기 → 다시 저장', () => {
+      const first = fromDateTimeLocalValue('2026-07-22T14:00')
+      const reopened = toDateTimeLocalValue(first)
+      expect(reopened).toBe('2026-07-22T14:00')
+      expect(fromDateTimeLocalValue(reopened)).toBe(first)
+    })
+
+    it('🔴 자정도 그대로 자정 — 「시간 미정」과 「자정에 덮임」은 다른 것이다', () => {
+      expect(fromDateTimeLocalValue('2026-07-22T00:00')).toBe('2026-07-22T00:00:00+09:00')
+    })
+  })
+})
 })

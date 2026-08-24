@@ -187,6 +187,42 @@ const DOW_KO = ['일', '월', '화', '수', '목', '금', '토'] as const
  * - 시간이 자정(00:00) → `timeLabel: null` ("시간 미정" 으로 간주, 표기 생략).
  *   StepPage 의 표시 관례(hour>0 || minute>0)와 동일.
  */
+/**
+ * 저장된 ISO → `<input type="datetime-local">` 의 `value` ('YYYY-MM-DDTHH:mm', 기본 KST).
+ *
+ * 🔴 **브라우저 TZ 를 타면 안 된다.** 예전엔 `dayjs(iso).format('YYYY-MM-DDTHH:mm')` 였는데
+ * dayjs 의 무-플러그인 `format` 은 **기기 로컬 시각**이라, 해외 체류·기기 TZ 오설정에서
+ * 「저장된 시각과 다른 값이 입력칸에 뜨고, 그대로 저장하면 시각이 밀린다.」
+ * `calcDday` 가 같은 이유로 고쳐진 적이 있다 (프 #215).
+ */
+export function toDateTimeLocalValue(
+  iso: string | null | undefined,
+  tz: Tz = APP_TIMEZONE,
+): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  // 'YYYY-MM-DD HH:mm:ss' → 'YYYY-MM-DDTHH:mm'
+  return formatDateTime(date, tz).slice(0, 16).replace(' ', 'T')
+}
+
+/**
+ * `<input type="datetime-local">` 의 `value` → 저장용 ISO (KST offset 부착). 빈 값이면 `null`.
+ *
+ * 🔴 **이 함수가 ADR-049 의 「시간 보존」을 구조로 보장하는 자리다.**
+ * 카드 상세 헤더에 있던 날짜 입력이 `type="date"`(날짜 전용)라 저장할 때마다 시각을
+ * `T00:00:00` 으로 덮어썼고, 그래서 **임박(2시간 전) 알림 대상에서 이탈**하고 캘린더에서도
+ * 시간이 사라졌다. ADR-049 는 그걸 「편집 경로를 스텝 풀페이지 하나로」 좁혀 막았다.
+ *
+ * 경로가 둘 이상이 되어도(카드 상세 인라인 편집) **쓰기 구현이 여기 하나면 보장은 유지된다** —
+ * 오히려 `fromDateTimeLocalValue` 를 grep 하면 모든 쓰기 경로가 한 번에 나온다.
+ * ⚠️ 새 날짜 입력을 만들 때 `type="date"` 를 쓰지 말 것. 초 단위가 없는 값을 여기 넣으면
+ * 그 순간 같은 결함이 되살아난다.
+ */
+export function fromDateTimeLocalValue(value: string): string | null {
+  return value ? `${value}:00+09:00` : null
+}
+
 export function formatStepSchedule(
   iso: string | null | undefined,
   tz: Tz = APP_TIMEZONE,
