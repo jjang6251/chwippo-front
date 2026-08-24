@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { InterviewNudgeModal } from './InterviewNudgeModal'
 import { todayLocal } from '@/utils/datetime'
 
+/** 날짜 저장은 정책 훅 한 곳(`useStepScheduleSave`)만 지난다 — 여기선 호출됐는지만 본다 */
+const h = vi.hoisted(() => ({ save: vi.fn() }))
+vi.mock('@/hooks/useStepScheduleSave', () => ({ useStepScheduleSave: () => h.save }))
+
 /**
  * 면접 유도 모달 — **체크박스가 「닫기의 종류」를 정한다.**
  *
@@ -13,7 +17,7 @@ describe('InterviewNudgeModal', () => {
   const onClose = vi.fn()
   const onGo = vi.fn()
 
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => { vi.clearAllMocks(); h.save.mockClear() })
 
   function draw(
     variant: 'first' | 'again' | 'noCoverletter' = 'first',
@@ -23,6 +27,8 @@ describe('InterviewNudgeModal', () => {
       <InterviewNudgeModal
         open
         variant={variant}
+        appId="app-1"
+        stepId="s2"
         stepName="2차 면접"
         companyName="카카오"
         scheduledDate={scheduledDate}
@@ -255,5 +261,71 @@ describe('InterviewNudgeModal', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     const label = screen.getByRole('checkbox', { name: /다시 보지 않기/ }).closest('label')
     expect(label?.className).toContain('min-h-[44px]')
+  })
+
+  /**
+   * 🔴 **날짜를 아는 순간에 묻는다.** 이 모달은 단계를 면접으로 옮기는 순간 뜨는데,
+   * 예전엔 날짜가 없으면 헤더 아래 줄이 **통째로 비어 있었다** — 물어볼 최적의 자리에서
+   * 아무것도 안 물었다. (HubSpot 이 딜 단계 이동 시 그 단계가 요구하는 값을 묻는 것과 같은 자리.)
+   */
+  describe('🔴 날짜 입력 — 한 자리, 두 상태', () => {
+    it('날짜가 없으면 그 자리에 「날짜 설정하기」 칸이 뜬다', () => {
+      draw('first', null)
+      expect(screen.getByRole('button', { name: /날짜 설정하기/ })).toBeInTheDocument()
+    })
+
+    it('🔴 날짜가 있으면 입력 칸이 아니라 D-day — 색으로 전하는 급박함을 죽이지 않는다', () => {
+      draw('first', `${todayLocal()}T10:00:00+09:00`)
+      expect(screen.queryByRole('button', { name: /날짜 설정하기/ })).not.toBeInTheDocument()
+    })
+
+    it('🔴 지난 날짜여도 입력 칸은 안 뜬다 — 날짜는 이미 있다', () => {
+      draw('first', '2020-01-01T10:00:00+09:00')
+      expect(screen.queryByRole('button', { name: /날짜 설정하기/ })).not.toBeInTheDocument()
+      expect(screen.queryByText(/^D-/)).not.toBeInTheDocument()
+    })
+
+    it('입력하면 정책 훅으로 저장된다 (datetime-local — 시각 보존)', () => {
+      draw('first', null)
+      fireEvent.click(screen.getByRole('button', { name: /날짜 설정하기/ }))
+      const input = screen.getByLabelText('일정 날짜 및 시간')
+      expect(input).toHaveAttribute('type', 'datetime-local')
+      fireEvent.change(input, { target: { value: '2026-08-28T14:00' } })
+      expect(h.save).toHaveBeenCalledWith('2026-08-28T14:00')
+    })
+
+    /**
+     * 🔴 **저장됐다고 칸이 사라지면 안 된다.** 날짜를 넣으면 `scheduledDate` 가 채워지는데,
+     * 그때 D-day 분기로 넘어가면 **잘못 고른 사람이 이 모달 안에서 고칠 방법이 없다**
+     * (CEO 2026-08-25). 날짜 피커는 한 번에 맞게 고르기 어려운 컨트롤이다.
+     */
+    it('🔴 여기서 넣은 날짜는 칸으로 남는다 — 잘못 골라도 되돌릴 자리가 있다', () => {
+      const { rerender } = render(
+        <InterviewNudgeModal
+          open variant="first" appId="app-1" stepId="s2"
+          stepName="2차 면접" companyName="카카오" scheduledDate={null}
+          onClose={onClose} onGo={onGo}
+        />,
+      )
+      expect(screen.getByRole('button', { name: /날짜 설정하기/ })).toBeInTheDocument()
+      // 저장 → 부모가 살아 있는 값으로 다시 그린다
+      rerender(
+        <InterviewNudgeModal
+          open variant="first" appId="app-1" stepId="s2"
+          stepName="2차 면접" companyName="카카오"
+          scheduledDate={`${todayLocal()}T10:00:00+09:00`}
+          onClose={onClose} onGo={onGo}
+        />,
+      )
+      expect(screen.getByRole('button', { name: /일정 수정/ })).toBeInTheDocument()
+      expect(screen.queryByText(/^D-/)).not.toBeInTheDocument()
+    })
+
+    it('🔴 날짜 칸을 눌러도 모달이 닫히지 않는다 — CTA 로 가는 길을 막으면 안 된다', () => {
+      draw('first', null)
+      fireEvent.click(screen.getByRole('button', { name: /날짜 설정하기/ }))
+      expect(onClose).not.toHaveBeenCalled()
+      expect(onGo).not.toHaveBeenCalled()
+    })
   })
 })

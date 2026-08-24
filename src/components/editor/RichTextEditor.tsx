@@ -245,8 +245,22 @@ export function RichTextEditor({
         return true
       },
     },
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
+      // 툴바 활성 상태는 **선택 위치**에 따라 바뀐다 — 문서가 안 바뀌어도 다시 그린다
       forceRender()
+      /**
+       * 🔴 **문서가 안 바뀐 트랜잭션에서는 저장하지 않는다.**
+       *
+       * `onUpdate` 는 이름과 달리 **본문이 그대로인 트랜잭션에도 불린다**
+       * (실측: `docChanged:false` · `steps:[]` 로 마운트 직후 2회).
+       * 그걸 안 거르면 **화면을 열기만 해도 1.5초 뒤 저장이 나가고**,
+       * 카드 상세에 들어갈 때마다 「저장됐어요」 토스트가 뜬다 (CEO 2026-08-25 신고).
+       *
+       * 눈에 보이는 토스트보다 **조용한 쪽이 더 나쁘다**: 안 건드린 메모가 매 방문마다
+       * 다시 쓰이고(빈 메모는 `null` → `''`), `updated_at` 이 갱신되며,
+       * 서버·DB 에 쓸모없는 쓰기가 방문 수만큼 쌓인다.
+       */
+      if (!transaction.docChanged) return
       // 다음 편집이 시작되면 안내를 내린다. 붙여넣기 경로에서는 이 onUpdate 가 **먼저**
       // 돌고(insertContent 가 동기라) 그 뒤에 setTruncated(true) 가 오므로 새 안내는 안 지워진다
       setTruncated(false)

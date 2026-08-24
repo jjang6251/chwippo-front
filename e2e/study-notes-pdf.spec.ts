@@ -145,12 +145,17 @@ test('인쇄 미디어 — 접힌 토글이 펼쳐지고 셰브론은 사라진�
   await expect(chevron).toBeVisible()
 
   /*
-    🔴 기준선을 **여기서** 잡는다 — 문서를 열면 tiptap 이 스키마 기본값을 채워 넣고
-    (표 셀 attrs·끝 빈 문단) 그게 자동 저장 debounce(1.5s)를 타고 한 번 나간다.
-    인쇄와 무관한 그 저장을 「토글이 저장됐다」로 오해하면 안 된다.
+    기준선을 여기서 잡는다.
+
+    🔴 **예전엔 여는 것만으로 저장이 한 번 나갔다** — `onUpdate` 가 본문이 그대로인
+    트랜잭션에도 불려 debounce(1.5s)를 태웠기 때문이다. 이 주석은 그걸 「tiptap 이
+    스키마 기본값을 채워 넣어 생기는 정상 저장」으로 설명하고 있었는데, **버그를
+    정상으로 기록한 것**이었다 (2026-08-25 — 카드 상세에 들어갈 때마다 「저장됐어요」
+    토스트가 뜬다는 신고에서 드러남). 지금은 0 이 기준선이다.
   */
   await page.waitForTimeout(2000)
   const before = contentPatches()
+  expect(before).toBe(0)
 
   await page.emulateMedia({ media: 'print' })
 
@@ -158,16 +163,10 @@ test('인쇄 미디어 — 접힌 토글이 펼쳐지고 셰브론은 사라진�
   await expect(answer).toBeVisible()
   await expect(chevron).toBeHidden()
 
-  // 🔴 debounce 를 넘겨도 **새 본문 저장이 없다** — CSS 로만 펼쳤다는 증거
+  // 🔴 debounce 를 넘겨도 **본문 저장이 아예 없다** — CSS 로만 펼쳤다는 증거
   await page.waitForTimeout(2000)
   expect(contentPatches()).toBe(before)
-  // 저장돼 있는 문서에서도 토글은 여전히 접혀 있다
-  const saved = handle.lastSavedDoc()
-  const details = saved?.content?.find(
-    (n): n is { type: string; attrs: { open: boolean } } =>
-      typeof n === 'object' && n !== null && (n as { type?: string }).type === 'details',
-  )
-  expect(details?.attrs.open).toBe(false)
+  expect(handle.lastSavedDoc()).toBeNull()
 
   // 화면으로 돌아오면 다시 접혀 있다 (문서 상태를 만진 적이 없으니 당연해야 한다)
   await page.emulateMedia({ media: 'screen' })

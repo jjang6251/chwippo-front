@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CompanyAvatar } from '@/components/board/CompanyAvatar'
 import { calcDday, getDdayLabel, getDdayVariant, type DdayVariant } from '@/utils/dday'
 import { Modal } from '@/components/common/Modal'
+import { StepDateField } from '@/components/board/StepDateField'
 import type { InterviewNudge } from '@/types/application'
 
 /**
@@ -41,6 +42,8 @@ import type { InterviewNudge } from '@/types/application'
 export function InterviewNudgeModal({
   open,
   variant,
+  appId,
+  stepId,
   stepName,
   companyName,
   domain,
@@ -50,6 +53,9 @@ export function InterviewNudgeModal({
 }: {
   open: boolean
   variant: InterviewNudge['variant']
+  /** 날짜를 그 자리에서 저장하기 위한 대상 (`useStepScheduleSave`) */
+  appId: string
+  stepId: string
   /** 제목에 들어간다. 사용자가 직접 지은 이름이라 길 수 있어 truncate 필요 */
   stepName: string
   /** 제목 개인화 — 「현대오토에버 2차 면접」 */
@@ -64,6 +70,17 @@ export function InterviewNudgeModal({
   onGo: (dismissForever: boolean) => void
 }) {
   const [dismissForever, setDismissForever] = useState(false)
+  /**
+   * 🔴 **열릴 때 날짜가 없었으면, 넣은 뒤에도 칸으로 남는다.**
+   *
+   * 안 그러면 저장되는 순간 `scheduledDate` 가 채워져 D-day 분기로 넘어가고 **입력 칸이
+   * 사라진다** — 잘못 고른 사람이 이 모달 안에서 고칠 방법이 없어진다 (CEO 2026-08-25).
+   * 날짜 피커는 한 번에 맞게 고르기 어려운 컨트롤이라 되돌릴 자리가 반드시 있어야 한다.
+   *
+   * ⚠️ **호출처가 `key` 로 remount 시켜야 이 초기값이 매번 새로 잡힌다** — 이 컴포넌트는
+   * `open` 이 false 여도 마운트된 채라, `useState` 초기화만으로는 첫 렌더 값에 굳는다.
+   */
+  const [askDate] = useState(() => !scheduledDate)
   const copy = COPY[variant]
 
   /**
@@ -110,12 +127,43 @@ export function InterviewNudgeModal({
           <p className="truncate text-text-primary text-sm font-semibold">
             {companyName} {stepName}
           </p>
-          {showDday && (
-            <p
-              className={`mt-0.5 text-[11px] font-semibold ${DDAY_TEXT[getDdayVariant(dday)]}`}
-            >
-              {getDdayLabel(dday)}
-            </p>
+          {/*
+            🔴 **한 자리, 두 상태.** 날짜가 있으면 D-day, 없으면 **그 자리에서 넣는 칸**이다.
+
+            날짜를 아는 순간은 거의 언제나 「합격 통보를 받았다」이고, 이 모달은 정확히
+            그때 뜬다 — 단계를 면접으로 옮기는 순간. 그런데 예전엔 날짜가 없으면 이 줄이
+            **통째로 비어 있었다**: 물어볼 최적의 자리에서 아무것도 안 물었다.
+            (같은 패턴 — HubSpot 은 딜을 단계로 옮길 때 그 단계가 요구하는 값을 묻는다.)
+
+            🔴 **열릴 때 이미 날짜가 있었으면 입력 칸으로 바꾸지 않는다.** D-day 는
+            `D-2 이하 danger` 로 **긴박함을 색으로** 전하는데 칩으로 바꾸면 그 신호가 죽고,
+            무엇보다 이미 넣은 사람은 여기서 할 일이 없다 — CTA 로 보내는 게 맞다.
+
+            🔴 반대로 **여기서 넣은 날짜는 칸으로 남는다**(`askDate`) — 저장됐다고 D-day 로
+            바뀌면 잘못 고른 사람이 되돌릴 자리가 사라진다.
+
+            ⚠️ 본문 문구는 **늘리지 않는다.** 이 모달의 목적은 하나(면접 준비 시작)이고,
+            안내를 한 줄 더 붙이면 목적이 둘이 되어 CTA 가 약해진다. 점선 칸에 적힌
+            「날짜 설정하기」가 이미 자기 설명적이라 문구가 필요 없다.
+          */}
+          {!askDate ? (
+            showDday && (
+              <p
+                className={`mt-0.5 text-[11px] font-semibold ${DDAY_TEXT[getDdayVariant(dday)]}`}
+              >
+                {getDdayLabel(dday)}
+              </p>
+            )
+          ) : (
+            <div className="mt-1">
+              <StepDateField
+                appId={appId}
+                stepId={stepId}
+                stepName={stepName}
+                scheduledDate={scheduledDate}
+                dense
+              />
+            </div>
           )}
         </div>
       </div>

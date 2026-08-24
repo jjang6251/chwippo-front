@@ -22,6 +22,8 @@ const h = vi.hoisted(() => ({
   updateCurrentStep: vi.fn(),
   updateSteps: vi.fn(),
   checklist: [] as Array<{ id: string; isDone: boolean }>,
+  /** 현재 스텝 카드의 날짜 인라인 저장 (useStepScheduleSave → useUpdateStep) */
+  updateStepDetail: vi.fn(),
 }))
 
 vi.mock('@/hooks/useApplications', () => ({
@@ -32,6 +34,8 @@ vi.mock('@/hooks/useApplications', () => ({
 }))
 vi.mock('@/hooks/useStepDetail', () => ({
   useChecklist: () => ({ data: h.checklist }),
+  // 현재 스텝 카드가 날짜를 인라인 저장한다 (useStepScheduleSave → useUpdateStep)
+  useUpdateStep: () => ({ mutate: h.updateStepDetail }),
 }))
 vi.mock('@/hooks/useDemoNavigate', () => ({
   useDemoNavigate: () => h.navigate,
@@ -191,15 +195,49 @@ describe('BoardDetail — 진행 상황 + 현재 스텝 카드', () => {
     expect(h.navigate).toHaveBeenCalledWith('/board/app-1/steps/s2')
   })
 
-  it('날짜 없는 현재 스텝 → "날짜 설정하기" 유도 + 클릭 시 스텝 페이지', () => {
+  /**
+   * 🔴 **날짜를 여기서 바로 고친다** — 예전엔 스텝 상세로 보내기만 해서
+   * 날짜 하나에 보드 → 카드 상세 → 스텝 상세 3단계를 갔다 (CEO 2026-08-25 지적).
+   * 화면 이동이 **없어야** 하는 게 이 테스트의 요점이다.
+   */
+  it('날짜 없는 현재 스텝 → "날짜 설정하기" → 그 자리에서 입력이 열린다 (이동 없음)', () => {
     h.app = makeApp({
       currentStepIndex: 0,
       steps: [step(0, '서류 제출'), step(1, '1차 면접')],
     })
     renderDetail()
-    const setDate = screen.getByRole('button', { name: /날짜 설정하기/ })
-    fireEvent.click(setDate)
-    expect(h.navigate).toHaveBeenCalledWith('/board/app-1/steps/s0')
+    fireEvent.click(screen.getByRole('button', { name: /날짜 설정하기/ }))
+    expect(screen.getByLabelText('일정 날짜 및 시간')).toBeInTheDocument()
+    expect(h.navigate).not.toHaveBeenCalled()
+  })
+
+  /**
+   * 🔴 **`datetime-local` 이어야 한다.** `date` 전용 입력이면 저장할 때마다 시각이
+   * `T00:00:00` 으로 덮여 **임박(2시간 전) 알림에서 이탈**한다 — ADR-049 가 없앤 결함이다.
+   * 저장 값에 KST offset 이 붙는 것까지 여기서 못 박는다.
+   */
+  it('🔴 날짜 입력은 datetime-local · 저장 값에 KST offset 이 붙는다', () => {
+    h.app = makeApp({
+      currentStepIndex: 0,
+      steps: [step(0, '서류 제출'), step(1, '1차 면접')],
+    })
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /날짜 설정하기/ }))
+    const input = screen.getByLabelText('일정 날짜 및 시간')
+    expect(input).toHaveAttribute('type', 'datetime-local')
+    fireEvent.change(input, { target: { value: '2026-07-22T14:00' } })
+    expect(h.updateStepDetail).toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: 's0', scheduledDate: '2026-07-22T14:00:00+09:00' }),
+      expect.anything(),
+    )
+  })
+
+  /** 이미 있는 날짜도 눌러서 고칠 수 있어야 한다 — 예전엔 그냥 텍스트라 못 눌렀다 */
+  it('날짜가 이미 있으면 그 날짜를 눌러 수정 (이동 없음)', () => {
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /일정 수정/ }))
+    expect(screen.getByLabelText('일정 날짜 및 시간')).toBeInTheDocument()
+    expect(h.navigate).not.toHaveBeenCalled()
   })
 
   it('체크리스트 0개 → 체크리스트 칩 미노출', () => {
