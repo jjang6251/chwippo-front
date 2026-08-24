@@ -36,6 +36,34 @@ function setup(props?: Partial<Parameters<typeof RichTextEditor>[0]>) {
 afterEach(cleanup)
 
 describe('RichTextEditor — 자동 저장 계약', () => {
+  /**
+   * 🔴 **열기만 해서는 저장되지 않는다.**
+   *
+   * `onUpdate` 는 이름과 달리 **본문이 그대로인 트랜잭션에도 불린다**(실측: 마운트 직후
+   * `docChanged:false` 2회). 그걸 안 거르면 화면을 열기만 해도 1.5초 뒤 저장이 나가,
+   * 카드 상세에 들어갈 때마다 「저장됐어요」 토스트가 떴다 (CEO 2026-08-25 신고).
+   *
+   * 토스트보다 조용한 쪽이 더 나빴다 — 안 건드린 메모가 매 방문마다 다시 쓰이고
+   * (빈 메모는 `null` → `''`), `updated_at` 이 갱신되고, 쓸모없는 쓰기가 방문 수만큼 쌓였다.
+   * 이 에디터는 **6곳**이 쓴다(회사 메모·준비 노트·시트 노트·공부 노트·면접 세션·AI 미리보기).
+   */
+  it('🔴 열기만 하면 저장되지 않는다 — 빈 문서', async () => {
+    const { onSave } = setup()
+    await wait(1800)
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('🔴 열기만 하면 저장되지 않는다 — 기존 내용이 있어도', async () => {
+    const { onSave } = setup({
+      initialContent: JSON.stringify({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: '이미 적어둔 메모' }] }],
+      }),
+    })
+    await wait(1800)
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
   it('내용 입력 → 1.5s 후 tiptap JSON 저장', async () => {
     const { onSave, editor } = setup()
     act(() => { editor.commands.insertContent('회사 문화 좋음') })

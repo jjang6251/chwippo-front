@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useDemoNavigate } from '@/hooks/useDemoNavigate'
-import { useDemoMode } from '@/contexts/demoMode'
 import { useNativeMode } from '@/hooks/useNativeMode'
 import { goBack } from '@/utils/navigation'
 import dayjs from 'dayjs'
@@ -17,7 +16,8 @@ import { Modal } from '@/components/common/Modal'
 import { GoToInterviewButton } from '@/components/card/GoToInterviewButton'
 import { getStepType, STEP_TYPE_CONFIG, CHECKLIST_PRESETS } from '@/utils/stepTemplates'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
-import { postToNative } from '@/utils/nativeBridge'
+import { toDateTimeLocalValue } from '@/utils/datetime'
+import { useStepScheduleSave } from '@/hooks/useStepScheduleSave'
 import { mergePinnedIntoNotes, notesToPlainText } from '@/utils/stepNotes'
 import { PREP_NOTES_ANCHOR } from '@/pages/StudyNotes/studyNotesModel'
 import { Calendar, Check, MapPin, PartyPopper } from 'lucide-react'
@@ -28,7 +28,6 @@ export function StepPage() {
   /* 아래에 면접 장소용 `location` state 가 따로 있다 — 라우터 쪽은 필요한 조각만 꺼내 쓴다 */
   const { hash } = useLocation()
   const navigate = useDemoNavigate()
-  const isDemo = useDemoMode()
   const isNative = useNativeMode()
 
   const { data: app, isLoading } = useApplication(appId!)
@@ -91,7 +90,8 @@ export function StepPage() {
   }, [hash, step?.id])
 
   if (step && !initialized) {
-    setScheduledDate(step.scheduledDate ? dayjs(step.scheduledDate).format('YYYY-MM-DDTHH:mm') : '')
+    // 🔴 KST 고정 — dayjs 무-플러그인 format 은 기기 로컬 시각이라 해외에서 값이 밀린다
+    setScheduledDate(toDateTimeLocalValue(step.scheduledDate))
     setLocation(step.location ?? '')
     setInitialized(true)
   }
@@ -122,15 +122,9 @@ export function StepPage() {
   function handleDateBlur() {
     setEditingField(null)
   }
-  function saveScheduledDate(value: string) {
-    // card-detail-remodel — 헤더 날짜 입력 삭제로 soft-ask 트리거를 스텝 날짜 저장으로 이전.
-    // 정책 = 현행 유지: 날짜 저장 시 발신 / 날짜 삭제(null) 시 미발신 / WebView 밖 no-op.
-    // 데모(비로그인)에선 발신 금지 — native soft-ask(푸시 권한)는 로그인 사용자 전용.
-    updateStep(
-      { stepId: stepId!, scheduledDate: value ? `${value}:00+09:00` : null },
-      { onSuccess: () => { if (value && !isDemo) postToNative({ type: 'deadline-saved' }) } },
-    )
-  }
+  // 저장 정책(KST offset 부착 · soft-ask 발신 · 데모 미발신)은 `useStepScheduleSave` 가 갖는다 —
+  // 카드 상세 인라인 편집과 **같은 구현**을 쓰려고 뺐다 (2026-08-25).
+  const saveScheduledDate = useStepScheduleSave(appId!, stepId!)
   function handleLocationBlur() {
     setEditingField(null)
     updateStep({ stepId: stepId!, location: location || null })

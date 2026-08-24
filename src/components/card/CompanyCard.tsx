@@ -21,7 +21,6 @@ interface CompanyCardProps {
   application: Application
   onStartApplication?: (id: string) => void
   onSetResult?: (id: string) => void
-  onCurrentStepClick?: (appId: string, stepId: string) => void
 }
 
 const STATUS_ACCENT: Record<string, string> = {
@@ -36,7 +35,7 @@ function formatRegisteredDate(dateStr: string): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 등록`
 }
 
-export function CompanyCard({ application, onStartApplication, onSetResult, onCurrentStepClick }: CompanyCardProps) {
+export function CompanyCard({ application, onStartApplication, onSetResult }: CompanyCardProps) {
   const navigate = useDemoNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -116,7 +115,17 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
   }
 
   const handleCardClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return
+    const el = e.target as HTMLElement
+    if (el.closest('button')) return
+    /**
+     * 🔴 스텝바 노드 행은 **빗나가도 아무 일도 안 일어나야 한다.**
+     *
+     * 노드 히트 영역을 셀 폭 × 32px 로 키웠지만 위아래로는 여전히 빗나갈 수 있다.
+     * 예전엔 그 순간 이 핸들러가 받아 **카드 상세로 튀었다** — 단계를 옮기려던 사람이
+     * 갑자기 다른 화면에 있게 된다 (2026-08-24 실사용 보고). 노드를 키우는 것보다
+     * **빗나갔을 때의 대가를 없애는 쪽**이 체감을 바꾼다.
+     */
+    if (el.closest('[data-no-card-nav]')) return
     navigate(`/board/${application.id}`)
   }
 
@@ -293,10 +302,19 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
             steps={application.steps}
             currentStepIndex={application.currentStepIndex}
             status={application.status}
+            /*
+              🔴 **`onStepNameClick` 을 주지 않는다** — 그래야 `StepBar` 가 노드와 레이블을
+              한 타깃으로 묶는다 (셀 폭 × 49px, 44×44 기준 충족).
+
+              예전엔 8px 사이로 붙은 두 타깃이 **서로 다른 일**을 했다: 위는 단계 이동,
+              아래(15px 높이)는 스텝 상세로 화면 전환. 그 애매함이 「노드를 누르다 카드
+              상세로 넘어간다」의 절반이었다.
+
+              보드에서 스텝 상세로 가는 직행은 사라진다 — 카드 상세의 「스텝 열기」·레이블,
+              일정 있으면 캘린더, 노트 있으면 공부 노트 허브가 받는다. 보드는 훑고 옮기는
+              화면이라는 판단(CEO 2026-08-25).
+            */
             onStepClick={!isPassed && !isFailed ? handleStepClick : undefined}
-            onStepNameClick={onCurrentStepClick && !isPassed
-              ? (stepId) => onCurrentStepClick(application.id, stepId)
-              : undefined}
             size="sm"
           />
         </div>
@@ -489,12 +507,20 @@ export function CompanyCard({ application, onStartApplication, onSetResult, onCu
 
       {/* 면접 유도 모달 — 닫기 4경로(X·오버레이·ESC·CTA)가 전부 close() 로 온다 */}
       <InterviewNudgeModal
+        /* 🔴 열릴 때마다 새로 마운트시킨다 — 모달 안 `askDate` 초기값이 그때의 날짜 유무로
+           잡혀야 한다 (`open` 이 false 여도 이 컴포넌트는 마운트된 채다). */
+        key={nudge.pending?.stepId ?? 'closed'}
         open={nudge.pending !== null}
         variant={nudge.pending?.variant ?? 'first'}
+        appId={nudge.pending?.appId ?? ''}
+        stepId={nudge.pending?.stepId ?? ''}
         stepName={nudge.pending?.stepName ?? ''}
         companyName={nudge.pending?.companyName ?? ''}
         domain={nudge.pending?.domain}
-        scheduledDate={nudge.pending?.scheduledDate ?? null}
+        /* 🔴 **`pending` 의 스냅샷이 아니라 목록의 살아 있는 값**을 준다 — 모달 안에서 날짜를
+           저장하면 캐시가 갱신되는데, 스냅샷을 쓰면 화면이 안 따라가 방금 넣은 날짜가
+           「날짜 설정하기」로 되돌아간 것처럼 보인다. */
+        scheduledDate={application.steps.find((st) => st.id === nudge.pending?.stepId)?.scheduledDate ?? null}
         onClose={nudge.close}
         onGo={nudge.go}
       />

@@ -142,7 +142,9 @@ export function EditInterviewSessionModal({
 
   return (
     <Modal open onClose={onClose} title="세션 자료" width="max-w-2xl">
-      <div className="space-y-5 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
+      {/* 🔴 중첩 스크롤 금지 — 이유는 `NewInterviewSessionModal` 같은 자리 주석 참조.
+          여기서는 「저장」 버튼이 같은 이유로 모바일에서 도달 불가였다. */}
+      <div className="space-y-5">
         <p className="text-text-tertiary text-xs leading-relaxed bg-info/5 border border-info/20 rounded-lg p-3">
           <span className="inline-flex items-center gap-1">
             <Lightbulb size={14} strokeWidth={1.75} aria-hidden="true" />

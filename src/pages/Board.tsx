@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useApplications } from '@/hooks/useApplications'
-import { useDemoNavigate } from '@/hooks/useDemoNavigate'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/common/PullToRefreshIndicator'
 import { BETA_FEATURES } from '@/config/betaFeatures'
@@ -10,6 +9,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useResearchRevealStore } from '@/stores/researchRevealStore'
 import { CompanyCard } from '@/components/card/CompanyCard'
 import { CardResearchReveal } from '@/components/card/CardResearchReveal'
+import { StepNodeHint } from '@/components/board/StepNodeHint'
+import { hasSeenStepNodeHint } from '@/utils/stepNodeHint'
 import { AddCardModal } from '@/components/card/AddCardModal'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
@@ -68,7 +69,6 @@ export function Board() {
   const [startAppId, setStartAppId] = useState<string | null>(null)
   const [resultAppId, setResultAppId] = useState<string | null>(null)
   const addMenuRef = useRef<HTMLDivElement>(null)
-  const navigate = useDemoNavigate()
 
   const { data: applications = [], isLoading } = useApplications()
   const qc = useQueryClient()
@@ -147,10 +147,19 @@ export function Board() {
     reveal(latest.id, 'intro')
   }, [isLoading, applications, revealAppId, user?.id, reveal])
 
+  /**
+   * 스텝바 노드 조작법 1회 안내 — **카드 뷰에 진짜 카드가 있을 때만.**
+   * 리스트·그룹 뷰에는 노드가 없고, 카드가 0건이면 가리킬 대상이 없다.
+   * `useState` 초기화로 한 번만 판정한다 — 안내가 뜬 직후 `hasSeen` 이 `true` 로 바뀌는데,
+   * 매 렌더 재판정하면 그 순간 스스로 사라진다.
+   */
+  const [hintDismissed, setHintDismissed] = useState(false)
+  const [hintEligible] = useState(() => !hasSeenStepNodeHint(user?.id))
+  const showStepNodeHint =
+    hintEligible && !hintDismissed && !isLoading && view === 'card' && realCards.length > 0
+
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
-
-  const openStep = (appId: string, stepId: string) => navigate(`/board/${appId}/steps/${stepId}`)
 
   const countByStatus = (status: ApplicationStatus) => applications.filter((a) => a.status === status).length
   const failedCount = countByStatus('FAILED')
@@ -282,6 +291,11 @@ export function Board() {
         />
       )}
 
+      {/* 노드 조작법 1회 안내 (모바일) — 조사 스트립과 같은 이유로 그리드 밖·위 */}
+      {showStepNodeHint && (
+        <StepNodeHint userId={user?.id} onDismiss={() => setHintDismissed(true)} />
+      )}
+
       {/* 카드 목록 */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -312,7 +326,6 @@ export function Board() {
               application={app}
               onStartApplication={setStartAppId}
               onSetResult={setResultAppId}
-              onCurrentStepClick={openStep}
             />
           ))}
           {sampleCards.map((app, i) => (
@@ -321,8 +334,7 @@ export function Board() {
                 application={app}
                 onStartApplication={setStartAppId}
                 onSetResult={setResultAppId}
-                onCurrentStepClick={openStep}
-              />
+                />
             </SampleCardWrap>
           ))}
         </div>

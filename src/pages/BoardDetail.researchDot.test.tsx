@@ -58,7 +58,11 @@ vi.mock('@/hooks/useApplications', () => ({
   useUpdateCurrentStep: () => ({ mutate: vi.fn() }),
   useUpdateSteps: () => ({ mutate: vi.fn(), isPending: false }),
 }))
-vi.mock('@/hooks/useStepDetail', () => ({ useChecklist: () => ({ data: [] }) }))
+vi.mock('@/hooks/useStepDetail', () => ({
+  useChecklist: () => ({ data: [] }),
+  // 현재 스텝 카드가 날짜를 인라인 저장한다 (useStepScheduleSave → useUpdateStep)
+  useUpdateStep: () => ({ mutate: vi.fn() }),
+}))
 vi.mock('@/hooks/useDemoNavigate', () => ({ useDemoNavigate: () => vi.fn() }))
 vi.mock('@/hooks/useAiEnabled', () => ({
   useAiEnabled: () => true,

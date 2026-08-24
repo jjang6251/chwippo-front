@@ -161,4 +161,51 @@ describe('StepBar', () => {
       ).not.toThrow()
     })
   })
+
+  /**
+   * 🔴 **터치에는 hover 가 없다.** `hover:scale-125` 만 있던 시절, 모바일에서 노드를 눌러도
+   * 아무 신호가 없어 「눌러도 단계가 움직인다」는 걸 아무도 몰랐다 (2026-08-24 실사용 보고).
+   * 눌린 순간을 눈에 보이게 만드는 게 `pressedIndex` 이고, CSS `active:` 로는 못 건다 —
+   * 누르는 오버레이 버튼이 점의 **형제가 아니라 조상 셀의 자식**이라 선택자가 닿지 않는다.
+   */
+  describe('누름·hover 피드백', () => {
+    const dot = (i: number) =>
+      screen.getAllByRole('button').filter((b) => b.hasAttribute('aria-label'))[i]
+        .parentElement?.querySelector('div[aria-hidden="true"]')
+
+    it('🔴 누르면 점이 커지고 헤일로가 붙는다 (터치의 유일한 신호)', () => {
+      render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={0} onStepClick={vi.fn()} />)
+      const btn = screen.getAllByRole('button').filter((b) => b.hasAttribute('aria-label'))[3]
+      expect(dot(3)?.className).not.toContain('scale-125')
+      fireEvent.pointerDown(btn)
+      expect(dot(3)?.className).toContain('scale-125')
+      fireEvent.pointerUp(btn)
+      expect(dot(3)?.className).not.toContain('scale-125')
+    })
+
+    it('취소(스크롤로 전환)돼도 눌림이 풀린다 — 눌린 채로 굳으면 안 된다', () => {
+      render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={0} onStepClick={vi.fn()} />)
+      const btn = screen.getAllByRole('button').filter((b) => b.hasAttribute('aria-label'))[2]
+      fireEvent.pointerDown(btn)
+      fireEvent.pointerCancel(btn)
+      expect(dot(2)?.className).not.toContain('scale-125')
+    })
+
+    it('hover → 스텝 이름 툴팁 · 벗어나면 사라진다', () => {
+      render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={0} onStepClick={vi.fn()} />)
+      const btn = screen.getAllByRole('button').filter((b) => b.hasAttribute('aria-label'))[1]
+      fireEvent.mouseEnter(btn)
+      // 레이블(span)과 툴팁 둘 다 같은 이름을 그린다 — 늘어난 쪽이 툴팁이다
+      expect(screen.getAllByText(DEFAULT_STEPS[1].name).length).toBeGreaterThan(1)
+      fireEvent.mouseLeave(btn)
+      expect(screen.getAllByText(DEFAULT_STEPS[1].name).length).toBe(1)
+    })
+
+    it('🔴 이동할 수 없으면(onStepClick 없음) 눌러도 커지지 않는다', () => {
+      render(<StepBar steps={DEFAULT_STEPS} currentStepIndex={0} />)
+      const btn = screen.getAllByRole('button').filter((b) => b.hasAttribute('aria-label'))[1]
+      fireEvent.pointerDown(btn)
+      expect(dot(1)?.className).not.toContain('scale-125')
+    })
+  })
 })
