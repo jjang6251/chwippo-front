@@ -48,10 +48,20 @@ export interface ResearchRow {
   /** ai_research 조사 반영 여부 */
   researched: boolean
   seedVersion: string | null
-  /** 지원자 수 (DISTINCT user_id) */
+  /** 지원자 수 (DISTINCT user_id) — **지원 예정 포함 합산** */
   applicants: number
-  /** 지원 카드 수 (진행중·합격·불합격) */
+  /** 지원 카드 수 — **지원 예정 포함 합산** (예정·진행중·합격·불합격) */
   cards: number
+  /** 위 `applicants` 중 지원 예정(PLANNED)만인 사람 */
+  plannedApplicants: number
+  /** 위 `cards` 중 지원 예정(PLANNED) 카드 */
+  plannedCards: number
+  /**
+   * 수요 단계 — `'planned'` 는 **「지원 예정만 있다」**이지 「예정이 하나라도 있다」가 아니다.
+   * 진행 중 카드가 섞여 있으면 이미 지원이 시작된 회사라 `'applied'` 다.
+   * `null` = 카드 0장(조사 캐시에만 있는 행) — 「예정」이 아니라 판정 대상이 아니다.
+   */
+  demandStage: 'applied' | 'planned' | null
   /** 조사 캐시 조회수 */
   hitCount: number
   updatedAt: string | null

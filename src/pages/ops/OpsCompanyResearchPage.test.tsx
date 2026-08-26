@@ -53,6 +53,10 @@ const row = (over: Partial<ResearchRow> = {}): ResearchRow => ({
   seedVersion: '2026-08.1',
   applicants: 3,
   cards: 5,
+  // 기본값은 「예정 없음 = 전부 진행 중」. 예정 케이스는 개별 테스트가 덮어쓴다.
+  plannedApplicants: 0,
+  plannedCards: 0,
+  demandStage: 'applied',
   hitCount: 12,
   updatedAt: '2026-08-01T00:00:00Z',
   expiresAt: '2027-01-01T00:00:00Z',
@@ -130,6 +134,73 @@ describe('OpsCompanyResearchPage', () => {
 
     expect(await screen.findByText('목록 밖')).toBeInTheDocument()
     expect(container.textContent).not.toContain('와 유사?')
+  })
+
+  // ── 지원 예정 포함 (2026-08-26) ──
+
+  it('🔴 예정만 있는 회사 → 「지원 예정」 배지', async () => {
+    api.unified.mockResolvedValue({
+      items: [
+        row({
+          companyName: '한빛식품',
+          applicants: 2,
+          cards: 3,
+          plannedApplicants: 2,
+          plannedCards: 3,
+          demandStage: 'planned',
+        }),
+      ],
+      total: 1,
+    })
+    wrap(<OpsCompanyResearchPage />)
+    expect(await screen.findByText('지원 예정')).toBeInTheDocument()
+  })
+
+  it('🔴 진행 중이 섞여 있으면 배지 없이 내역만 — 등급을 내리지 않는다', async () => {
+    api.unified.mockResolvedValue({
+      items: [
+        row({
+          companyName: '토스',
+          applicants: 5,
+          cards: 7,
+          plannedApplicants: 2,
+          plannedCards: 2,
+          demandStage: 'applied',
+        }),
+      ],
+      total: 1,
+    })
+    const { container } = wrap(<OpsCompanyResearchPage />)
+    await screen.findByText('토스')
+
+    expect(screen.queryByText('지원 예정')).not.toBeInTheDocument()
+    // 합산 숫자가 왜 늘었는지 알 수 있게 내역을 남긴다
+    expect(container.textContent).toContain('예정 2')
+  })
+
+  it('예정이 0이면 내역을 만들지 않는다 (없는 정보를 적지 않는다)', async () => {
+    const { container } = wrap(<OpsCompanyResearchPage />)
+    await screen.findByText('카카오')
+    expect(container.textContent).not.toContain('예정')
+  })
+
+  it('🔴 예정만 있는 회사는 내역을 중복해서 적지 않는다 (배지가 이미 말한다)', async () => {
+    api.unified.mockResolvedValue({
+      items: [
+        row({
+          companyName: '한빛식품',
+          applicants: 2,
+          cards: 3,
+          plannedApplicants: 2,
+          plannedCards: 3,
+          demandStage: 'planned',
+        }),
+      ],
+      total: 1,
+    })
+    const { container } = wrap(<OpsCompanyResearchPage />)
+    await screen.findByText('지원 예정')
+    expect(container.textContent).not.toContain('예정 2')
   })
 
   it('헤더와 셀의 열 개수가 맞는다 (실존 열 추가로 밀리면 숫자가 딴 열에 붙는다)', async () => {
