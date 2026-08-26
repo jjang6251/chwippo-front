@@ -98,6 +98,9 @@ export function AddCardModal({
         deadline: deadline || undefined,
         needsDetail: !isPlanned && !jobTitle.trim(),
         templateId: !isPlanned ? effectiveTemplateId : undefined,
+        // 관측 전용 — 이 모달이 현재 유일한 사용자 생성 경로다. 카드 추가를 재설계해
+        // 진입점이 갈리면 그때 경로마다 다른 값을 보내야 신·구 비교가 성립한다.
+        createdVia: 'add_modal',
       },
       {
         onSuccess: (data) => {

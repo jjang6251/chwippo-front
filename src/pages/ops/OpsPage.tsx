@@ -142,6 +142,16 @@ export function OpsPage() {
           <span className="text-text-tertiary">›</span>
         </Link>
         <Link
+          to="/ops/card-fields"
+          className="flex items-center justify-between bg-surface-2 border border-line rounded-xl px-5 py-4 hover:border-line-strong transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold">카드 입력 실태</p>
+            <p className="text-xs text-text-tertiary mt-0.5">무엇을 채우나 — 채움률·직군 어휘·표기 흔들림</p>
+          </div>
+          <span className="text-text-tertiary">›</span>
+        </Link>
+        <Link
           to="/ops/reach"
           className="flex items-center justify-between bg-surface-2 border border-line rounded-xl px-5 py-4 hover:border-line-strong transition-colors"
         >
