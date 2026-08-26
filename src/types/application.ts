@@ -89,6 +89,17 @@ export interface CreateApplicationDto {
   needsDetail?: boolean
   /** 전형 템플릿 id — IN_PROGRESS 생성 시 초기 스텝 결정 (미지정 시 'general') */
   templateId?: string
+  /**
+   * 어느 화면에서 만들었는가 — **관측 전용**이라 동작에 영향을 주지 않는다.
+   *
+   * 🔴 서버가 `IsIn` 으로 검증하므로 **아무 문자열이나 보내면 400 이 난다.** 새 생성 경로를
+   * 만들 때는 백엔드 `ApplicationCreatedVia` 유니온에 값을 먼저 추가해야 한다 —
+   * 관측값이라도 조용히 통과시키면 오탐이 데이터에 섞이기 때문에 일부러 막아둔 것이다.
+   *
+   * 안 보내면 `null` 로 남는다. 소급이 불가능한 값이라 새 경로에서 빠뜨리면 그 경로는
+   * 영영 관측 밖에 있게 된다.
+   */
+  createdVia?: 'add_modal'
 }
 
 export interface UpdateApplicationDto {

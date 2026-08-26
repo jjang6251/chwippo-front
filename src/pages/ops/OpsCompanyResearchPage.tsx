@@ -512,6 +512,21 @@ function ResearchTableRow({ row }: { row: ResearchRow }) {
         <span className="font-medium text-text-primary truncate max-w-[200px] block">
           {row.companyName}
         </span>
+        {/*
+          🔴 「지원 예정」 = **예정 카드만 있는 회사**다 (예정이 하나라도 있으면이 아니다).
+          진행 중이 섞여 있으면 이미 지원이 시작된 회사라 등급을 내리지 않는다.
+
+          색은 상태가 아니라 **분류**다 — 예정이 나쁜 게 아니라 아직 확정 전일 뿐이다.
+          미조사(warning)·목록 밖(info) 과 겹치지 않게 중립 회색을 쓴다.
+        */}
+        {row.demandStage === 'planned' && (
+          <span
+            className="inline-flex items-center mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md border text-text-tertiary bg-card border-line tracking-wide"
+            title="아직 지원을 시작하지 않았어요 — 「지원 예정」 카드만 있는 회사"
+          >
+            지원 예정
+          </span>
+        )}
       </td>
       {/* 실존 — 「까까오」(오타)와 「한솔로지스틱스」(비상장 실존)를 가르는 칸 */}
       <td className="px-4 py-3.5">
@@ -552,9 +567,30 @@ function ResearchTableRow({ row }: { row: ResearchRow }) {
       </td>
       <td className="px-4 py-3.5 text-right text-text-secondary text-xs font-mono tabular-nums">
         {row.applicants.toLocaleString()}
+        {/*
+          🔴 예정분을 **내역으로 같이 적는다.** 2026-08-26 부터 이 숫자는 지원 예정을
+          합산한 값이라, 내역이 없으면 왜 늘었는지 알 수 없는 채로 커진 숫자만 남는다.
+          예정만 있는 회사는 아래 뱃지가 대신 말하므로 여기선 중복해서 적지 않는다.
+        */}
+        {row.plannedApplicants > 0 && row.demandStage === 'applied' && (
+          <span
+            className="block text-[10px] text-text-quaternary"
+            title="지원자 수에 포함된 「지원 예정」 인원"
+          >
+            예정 {row.plannedApplicants.toLocaleString()}
+          </span>
+        )}
       </td>
       <td className="px-4 py-3.5 text-right text-text-secondary text-xs font-mono tabular-nums">
         {row.cards.toLocaleString()}
+        {row.plannedCards > 0 && row.demandStage === 'applied' && (
+          <span
+            className="block text-[10px] text-text-quaternary"
+            title="카드 수에 포함된 「지원 예정」 카드"
+          >
+            예정 {row.plannedCards.toLocaleString()}
+          </span>
+        )}
       </td>
       <td className="px-4 py-3.5 text-right text-text-secondary text-xs font-mono tabular-nums">
         {row.hitCount.toLocaleString()}

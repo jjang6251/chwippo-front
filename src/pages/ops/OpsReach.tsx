@@ -171,7 +171,7 @@ function StageFunnel({ data }: { data: { stageCounts: Record<ReachStage, number>
           )
         })}
       </div>
-      <p className="text-[11px] text-text-quaternary mt-3">
+      <p className="text-sm text-text-quaternary mt-3">
         각 단계는 <strong className="text-text-tertiary">독립 판정</strong>이다 — 활동일지는 별도 메뉴라
         카드 없이도 쓸 수 있어, 위 숫자는 위아래로 단조롭지 않을 수 있다.
       </p>
@@ -233,7 +233,7 @@ function DesktopAxis({
         </div>
       )}
 
-      <p className="text-[11px] text-text-quaternary mt-3">
+      <p className="text-sm text-text-quaternary mt-3">
         🔴 <strong className="text-text-tertiary">초기에는 이 분모가 작다.</strong> 스탬프는 소급이
         안 되고, 자소서를 쓴 이력이 있는 사용자만 과거로 채웠다 — 즉{' '}
         <strong className="text-text-tertiary">
@@ -366,7 +366,7 @@ function ReachTable({
         </table>
       </div>
       {truncated && (
-        <p className="text-[11px] text-text-quaternary mt-2">
+        <p className="text-sm text-text-quaternary mt-2">
           최근 가입 {rows.length.toLocaleString()}명만 표시했어요 (전체 {total.toLocaleString()}명).
           위의 단계별 인원은 <strong className="text-text-tertiary">전체 기준</strong>입니다.
         </p>
@@ -380,7 +380,7 @@ function ReadingNotes({ excludedAdmins }: { excludedAdmins: number }) {
   return (
     <div className="bg-card border border-line rounded-xl p-5">
       <p className="text-xs text-text-tertiary font-semibold mb-2.5">읽는 법</p>
-      <ul className="space-y-1.5 text-[11px] text-text-quaternary leading-relaxed">
+      <ul className="space-y-1.5 text-sm text-text-quaternary leading-relaxed">
         <li>
           <strong className="text-text-tertiary">Activation 섹션과 숫자가 다르다.</strong> 그쪽은
           "가입 직후 제대로 시작했나"(당일·3일·7일), 여기는 "지금까지 어디까지 갔나"(누적)를 본다.
