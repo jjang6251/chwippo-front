@@ -6,7 +6,12 @@ import { useCoverletters } from '@/hooks/useApplicationCoverletters'
 import { useActivities, useActivityLogs } from '@/hooks/useActivities'
 import { useApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { useCreateInterviewPrepSession } from '@/hooks/useInterviewPrep'
+import { JobTitleField } from '@/components/card/JobTitleField'
+import { PromoteJobTitleRow } from '@/components/card/PromoteJobTitleRow'
+import { JOB_SERIES } from '@/utils/jobRole'
+import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
+import type { JobTitleSource } from '@/types/application'
 import type { InterviewType } from '@/types/interviewPrep'
 import { INTERVIEW_TYPE_LABEL } from '@/types/interviewPrep'
 
@@ -72,6 +77,9 @@ export function NewInterviewSessionModal({
   const { mutateAsync: updateApp } = useUpdateApplication(applicationId)
   /** 카드에 직무가 없을 때 이 모달에서 받는 값. 저장되면 카드의 jobTitle 이 된다 */
   const [jobTitleDraft, setJobTitleDraft] = useState('')
+  const [jobSource, setJobSource] = useState<JobTitleSource>('typed')
+  const [jobSeriesId, setJobSeriesId] = useState<string | null>(null)
+  const profileJobTitle = useAuthStore((s) => s.user?.signupJobTitle ?? null)
 
   /**
    * 프롬프트가 실제로 쓰는 직무 — 백엔드 `resolveJobText` 와 **같은 규칙**이다.
@@ -124,7 +132,15 @@ export function NewInterviewSessionModal({
     //    직무 없이 생성되고, 서버 게이트에 걸려 세션 자체가 안 만들어진다.
     if (!resolvedJob && newJobTitle) {
       try {
-        await updateApp({ jobTitle: newJobTitle })
+        // 계열도 함께 — 못 잡으면 `null` 로 명시해 옛 라벨을 남기지 않는다 (카드 추가와 같은 규칙)
+        const seriesLabel = jobSeriesId
+          ? JOB_SERIES.find((s) => s.id === jobSeriesId)?.label
+          : undefined
+        await updateApp({
+          jobTitle: newJobTitle,
+          jobTitleSource: jobSource,
+          jobCategory: seriesLabel ?? null,
+        })
       } catch {
         toast.error('직무 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.')
         return
@@ -203,21 +219,27 @@ export function NewInterviewSessionModal({
             */}
             {app && !resolvedJob && (
               <div className="mt-2.5 border-t border-line pt-2.5">
-                <label
-                  htmlFor="interview-job-title"
-                  className="block text-xs text-text-tertiary mb-1.5"
-                >
-                  지원 직무 <span className="text-danger">*</span>
-                </label>
-                <input
+                {/* 직무가 들어오는 모든 입구가 같은 입력기를 쓴다 — 계열도 여기서 함께 잡힌다 */}
+                <JobTitleField
                   id="interview-job-title"
-                  type="text"
+                  labelText={
+                    <>
+                      지원 직무 <span className="text-danger">*</span>
+                    </>
+                  }
                   value={jobTitleDraft}
-                  onChange={(e) => setJobTitleDraft(e.target.value)}
-                  maxLength={100}
-                  placeholder="예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계"
-                  /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
-                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                  onChange={(v, src) => {
+                    setJobTitleDraft(v)
+                    setJobSource(src)
+                  }}
+                  seriesId={jobSeriesId}
+                  onSeriesChange={(id) => setJobSeriesId(id)}
+                />
+                {/* 이 카드 직무가 내 희망 직무와 다르면 맞추자고 제안한다 (탭해야만 반영) */}
+                <PromoteJobTitleRow
+                  profileTitle={profileJobTitle}
+                  jobTitle={jobTitleDraft}
+                  seriesId={jobSeriesId}
                 />
                 <p className="text-warning text-[11px] mt-1.5">
                   <span className="inline-flex items-start gap-1">

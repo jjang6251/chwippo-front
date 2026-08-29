@@ -7,6 +7,7 @@ import {
   serializeTags,
   getAvatarColor,
 } from './tags'
+import { JOB_SERIES } from './jobRole'
 
 describe('tags utils', () => {
   describe('JOB_CATEGORIES', () => {
@@ -36,6 +37,20 @@ describe('tags utils', () => {
     it('모든 JOB_CATEGORIES에 대한 컬러 클래스 정의', () => {
       JOB_CATEGORIES.forEach((cat) => {
         expect(JOB_CATEGORY_COLOR[cat]).toBeDefined()
+      })
+    })
+
+    /**
+     * 🔴 **드리프트 가드** — 카드의 `jobCategory` 는 이제 계열 라벨(`JOB_SERIES[].label`)이다.
+     * 여기 키가 없으면 그 태그는 조용히 「기타」 회색으로 렌더된다 (에러도 경고도 없다).
+     * 계열 라벨을 바꾸면 이 spec 이 먼저 깨진다.
+     */
+    it('🔴 14계열 라벨도 전부 아이콘·컬러가 있다 (없으면 「기타」로 조용히 떨어진다)', () => {
+      expect(JOB_SERIES).toHaveLength(14)
+      JOB_SERIES.forEach((s) => {
+        expect(JOB_CATEGORY_ICON[s.label]).toBeDefined()
+        expect(typeof JOB_CATEGORY_ICON[s.label]).not.toBe('string')
+        expect(JOB_CATEGORY_COLOR[s.label]).toBeDefined()
       })
     })
   })

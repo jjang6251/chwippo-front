@@ -11,6 +11,53 @@ export interface ApplicationStep {
   location: string | null
   notes: string | null
   pinnedContent: string | null
+  /**
+   * 공고에 **날짜 대신 적혀 있던 말** — 「9월 예정」·「추후 공지」·「11월 중」 (원문 ≤40자).
+   *
+   * 🔴 이게 있는 이유는 **추측 날짜를 만들지 않기 위해서**다. 「11월 중」을 11-01 로 바꾸면
+   * 캘린더에 뜨고 알림이 나가는데, 그건 공고가 한 말이 아니다. 확실한 날짜만 날짜 칸에,
+   * 애매한 건 글자로 남긴다 (계획서 규칙 2 「사람 말만 볼펜」).
+   *
+   * `scheduledDate` 가 세팅되면 서버가 이 값을 지운다 — 둘이 동시에 보이지 않는다.
+   */
+  dateHint?: string | null
+}
+
+/** 공고로 만든 카드가 캘린더에 대신 넣어 둔 일정 (발표·검진 등 — 스텝이 아닌 것) */
+export interface PostingExtraDate {
+  /** 「서류 합격 발표」 — daily note content 의 뒷부분 */
+  label: string
+  /** ISO. 시각이 있으면 시각까지 */
+  date: string
+  /** 되돌리기 시 서버가 함께 지우는 daily note id */
+  noteId: string
+}
+
+/**
+ * 공고 붙여넣기로 만든 카드의 **관측·검토 상태** (`applications.posting_meta` JSONB).
+ *
+ * `null` = 사람이 직접 만든 카드. 이 값의 유무가 곧 「공고 카드인가」 판정이라
+ * NEW pill 소거·검토 줄 노출이 전부 여기 달려 있다.
+ */
+export interface PostingMeta {
+  /** AI 가 실제로 채운 칸 이름들 (관측 전용) */
+  filled: string[]
+  /** 마감 유형 — 확정·상시·모름 */
+  deadlineKind: string | null
+  /** 직무를 어떻게 정했나 — 프로필 일치·후보 1개·사용자 선택·직접 입력 */
+  jobPicked: 'profile' | 'single' | 'chosen' | 'typed' | null
+  /** 회사명 출처 — 파서가 찾음 / 사용자가 적음 */
+  companySource: 'parsed' | 'typed' | null
+  /** 사용자가 고친 칸 (AI 값 수정률의 재료) */
+  editedFields: string[]
+  /** 「좋아요」·[확인]·첫 편집 시각. null 이면 아직 확인 전 → 검토 줄이 남아 있다 */
+  reviewedAt: string | null
+  /** 스텝이 아니라 캘린더로 보낸 일정들 */
+  extraDates: PostingExtraDate[]
+  /** 날짜 순서가 역전됐다 — 결과 시트가 「순서를 확인해 주세요」를 붙인다 */
+  orderConflict?: boolean
+  /** LLM 호출 횟수 (직무 보완이면 2) */
+  callCount: number
 }
 
 /**
@@ -51,7 +98,27 @@ export interface Application {
   failedTakeawayAt?: string | null
   /** W2 — 회사 도메인 (favicon 로딩 용). backend 가 companies.json lookup 후 inject. 매칭 X 시 undefined */
   domain?: string
+  /**
+   * 어느 화면에서 만들어졌는가 — **읽기 전용 관측값** (서버 `ApplicationCreatedVia`).
+   *
+   * 🔴 `CreateApplicationDto.createdVia`(쓰기)와 **다른 유니온**이다. 저쪽은 프론트가 보낼 수
+   * 있는 값(`add_modal`)만 좁게 두지만, 여기는 서버가 만든 값도 내려온다 — 온보딩 보상으로
+   * 담긴 카드(`onboarding_pick`)를 알아보는 유일한 손잡이라 투어 무대가 이 값을 본다.
+   * 도입 전 카드는 `null`(백필 안 함).
+   */
+  createdVia?:
+    | 'add_modal'
+    | 'onboarding_sample'
+    | 'onboarding_pick'
+    /** 공고 텍스트를 붙여 서버가 만든 카드 (`POST /applications/from-posting`) */
+    | 'paste_posting'
+    | null
   steps: ApplicationStep[]
+  /**
+   * 공고 카드의 검토·관측 상태. 사람이 만든 카드는 `null`.
+   * 🔴 **읽기 전용**이다 — 쓰기는 `PATCH /applications/:id/posting-meta` 하나뿐.
+   */
+  postingMeta?: PostingMeta | null
   /** PR_B1c — 자소서 생성 상태 (회사조사 trigger atomic) */
   coverletterGenerationStatus?: CoverletterGenerationStatus
   coverletterGenerationStartedAt?: string | null
@@ -100,12 +167,43 @@ export interface CreateApplicationDto {
    * 영영 관측 밖에 있게 된다.
    */
   createdVia?: 'add_modal'
+  /**
+   * 직무를 어떻게 입력했는가 — **관측 전용**. `createdVia` 와 같은 이유로 서버가 `IsIn` 으로
+   * 검증하므로 아무 문자열이나 보내면 400 이 난다.
+   *
+   * 「직접 쳐서 확정한 값」과 「추천을 수용한 값」은 신뢰도가 다르다 — 뭉치면 사전을 키울
+   * 근거가 사라진다. 직무가 비면 보내지 않는다.
+   *
+   * `prefill` = 온보딩에서 **사람이 타이핑한** 직무가 미리 채워진 걸 **그대로 두고** 저장.
+   * 셋 중 신뢰도가 가장 낮다 — 「맞다고 확인」인지 「폼을 통과시킴」인지 알 수 없다.
+   *
+   * 🔴 `posting` 은 **여기로 보내지 않는다.** 그건 서버가 파싱 결과에 스스로 붙이는 값이고
+   * (`POST /applications/from-posting`), 클라가 보내면 「AI 가 넣었다」를 손으로 사칭하는 셈이라
+   * 서버 `IsIn` 이 거절한다.
+   */
+  jobTitleSource?: JobTitleSource
 }
+
+/**
+ * 직무 입력 출처 — 백엔드 `JOB_TITLE_SOURCES` 와 같은 계약 (`parsed` 는 F0 예약값이라 프론트 미사용).
+ *
+ * `posting` = **서버가** 공고 파싱 결과로 채운 값. 프론트가 `create` DTO 로 보내는 값이 아니라
+ * `POST /applications/from-posting` 응답에만 실려 온다 — 「AI 가 넣은 직무」와 「사람이 친 직무」를
+ * 뭉치면 수정률 지표가 통째로 무의미해진다.
+ */
+export type JobTitleSource = 'typed' | 'suggestion' | 'prefill' | 'posting'
 
 export interface UpdateApplicationDto {
   companyName?: string
   jobTitle?: string
-  jobCategory?: string
+  /**
+   * 직군·계열 라벨. 🔴 **`null` = 「지워라」** (미전송 `undefined` = 「손대지 마」).
+   *
+   * 직무를 고치면 계열은 그 직무에서 다시 파생된다. 사전이 새 직무를 못 알아들어 보낼
+   * 라벨이 없을 때 필드를 빼면 **옛 계열이 그대로 남는다** — 「승무원」→「백엔드」로 고쳤는데
+   * 태그가 「영업·판매·서비스」이던 결함(2026-08-28 실기)이 그것이다.
+   */
+  jobCategory?: string | null
   status?: ApplicationStatus
   /** 서류 마감일 — 백엔드에서 첫 step.scheduled_date에 저장 (호환 입력 채널) */
   deadline?: string
@@ -116,6 +214,8 @@ export interface UpdateApplicationDto {
   isStarred?: boolean
   /** A9 — 탈락 회고 한 줄. 빈 문자열 = 삭제 */
   failedTakeaway?: string
+  /** 직무 입력 출처 — 관측 전용 (`CreateApplicationDto.jobTitleSource` 와 같은 계약) */
+  jobTitleSource?: JobTitleSource
 }
 
 export interface UpdateStepsDto {

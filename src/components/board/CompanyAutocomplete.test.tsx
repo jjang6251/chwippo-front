@@ -1,7 +1,8 @@
 /**
  * W2 — CompanyAutocomplete spec.
  *
- * 5축 — debounce 250ms / 키보드 ↑↓ enter / esc / 자유 입력 / dropdown sections (DART vs user_added vs 추천)
+ * 5축 — debounce 250ms / 키보드 ↑↓ enter / esc / 자유 입력 / dropdown sections
+ *        (DART·조사 시드 vs user_added — 「맞춤 추천」 섹션은 직무 기준 재설계로 제거됨)
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -37,15 +38,25 @@ describe('CompanyAutocomplete', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
-  it('input focus → dropdown 열림 + autocomplete API 호출 (debounce 250ms)', async () => {
+  it('🔴 빈 입력 포커스 → 패널이 열리지 않는다 (안내만 있는 빈 상자 금지 · 2026-08-28)', async () => {
+    // 예전엔 focus 만으로 listbox 가 떠서 「회사명을 입력해주세요」 빈 상자가 아래 칸을 가렸다.
+    // 보여줄 게 없으면 패널 자체를 안 연다 — 타이핑이 시작되면 그때 연다.
     const onChange = vi.fn()
     render(<CompanyAutocomplete value="" onChange={onChange} />, { wrapper })
 
     fireEvent.focus(screen.getByRole('combobox'))
-    expect(screen.getByRole('listbox')).toBeInTheDocument()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
 
-    // debounce 250ms 자연 통과 — waitFor 가 5s 안 polling
+    // 데이터 훅은 그대로 돈다 (debounce 250ms 자연 통과) — 패널 표시와 fetch 는 별개
     await waitFor(() => expect(apiMock).toHaveBeenCalled())
+  })
+
+  it('타이핑이 시작되면 패널이 열린다', async () => {
+    const onChange = vi.fn()
+    render(<CompanyAutocomplete value="네" onChange={onChange} />, { wrapper })
+
+    fireEvent.focus(screen.getByRole('combobox'))
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
   })
 
   it('typing → onChange 호출 + debounce 후 fetch', async () => {
@@ -140,19 +151,37 @@ describe('CompanyAutocomplete', () => {
     // value 는 props 기반 — 변경 X
   })
 
-  it('맞춤 추천 섹션 — boost > 0 인 dart 항목 별도', async () => {
+  /**
+   * 🔴 **「맞춤 추천 — 직군 기반」 섹션 제거** (직무 기준 재설계 · 묶음 5).
+   *
+   * signup 직군 `boost` 로 만들던 섹션인데 직군 자체가 사라져 근거가 없어졌다.
+   * 대신 조사 시드(`source: 'research'`)가 들어오는데, **별도 섹션을 만들지 않는다** —
+   * 사용자에겐 DART 든 조사 시드든 그냥 「아는 회사」다.
+   */
+  it('조사 시드 항목 — DART 와 같은 첫 섹션 + 「조사 있음」 배지', async () => {
     apiMock.mockResolvedValue([
-      { name: '네이버', domain: 'naver.com', source: 'dart', boost: 5 },
-      { name: '네이처바이오', source: 'dart', boost: 0 },
+      { name: '네이버', domain: 'naver.com', source: 'dart' },
+      { name: '대전성모병원', source: 'research' },
     ])
 
     render(<CompanyAutocomplete value="네" onChange={vi.fn()} />, { wrapper })
     fireEvent.focus(screen.getByRole('combobox'))
-    // debounce 250ms 자연 통과 — waitFor 가 5s 안 polling
     await waitFor(() => expect(screen.getByText('네이버')).toBeInTheDocument())
 
-    expect(screen.getByText(/맞춤 추천/)).toBeInTheDocument()
-    // DART 섹션 라벨 X — 평범한 결과는 무라벨
+    expect(screen.getByText('대전성모병원')).toBeInTheDocument()
+    expect(screen.getByText('조사 있음')).toBeInTheDocument()
+    // 두 항목 모두 「다른 사용자가 추가」 섹션 위 — 섹션 라벨이 하나도 안 붙는다
+    expect(screen.queryByText(/다른 사용자가 추가/)).not.toBeInTheDocument()
+  })
+
+  it('🔴 「맞춤 추천 — 직군 기반」 섹션은 더 이상 없다', async () => {
+    apiMock.mockResolvedValue([{ name: '네이버', domain: 'naver.com', source: 'dart' }])
+
+    render(<CompanyAutocomplete value="네" onChange={vi.fn()} />, { wrapper })
+    fireEvent.focus(screen.getByRole('combobox'))
+    await waitFor(() => expect(screen.getByText('네이버')).toBeInTheDocument())
+
+    expect(screen.queryByText(/맞춤 추천/)).not.toBeInTheDocument()
   })
 
   /**
@@ -228,6 +257,40 @@ describe('CompanyAutocomplete', () => {
   it('disabled prop → input 비활성', () => {
     render(<CompanyAutocomplete value="" onChange={vi.fn()} disabled />, { wrapper })
     expect(screen.getByRole('combobox')).toBeDisabled()
+  })
+
+  /**
+   * 입력 껍데기 variant (2026-08-28 카드 추가 모달 A안).
+   *
+   * 🔴 기본값이 `box` 인 게 핵심 — 이 컴포넌트를 쓰는 다른 화면이 모달 재스타일에
+   * 딸려 바뀌면 안 된다.
+   */
+  describe('입력 껍데기 variant', () => {
+    it('🔴 기본값 box — 현행 클래스 그대로 (회귀)', () => {
+      render(<CompanyAutocomplete value="" onChange={vi.fn()} />, { wrapper })
+      const input = screen.getByRole('combobox')
+
+      expect(input.className).toContain('bg-input')
+      expect(input.className).toContain('rounded-lg')
+      expect(input.className).not.toContain('border-b-[1.5px]')
+    })
+
+    it('underline → 밑줄 입력 (채움 박스 없음)', () => {
+      render(<CompanyAutocomplete value="" onChange={vi.fn()} variant="underline" />, { wrapper })
+      const input = screen.getByRole('combobox')
+
+      expect(input.className).toContain('border-b-[1.5px]')
+      expect(input.className).toContain('bg-transparent')
+      expect(input.className).not.toContain('bg-input')
+    })
+
+    it('underline 이어도 드롭다운 동작은 그대로', async () => {
+      apiMock.mockResolvedValue([{ name: '네이버', domain: 'naver.com', source: 'dart' }])
+      render(<CompanyAutocomplete value="네" onChange={vi.fn()} variant="underline" />, { wrapper })
+
+      fireEvent.focus(screen.getByRole('combobox'))
+      await waitFor(() => expect(screen.getByText('네이버')).toBeInTheDocument())
+    })
   })
 
   /**

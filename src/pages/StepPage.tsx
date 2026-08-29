@@ -310,6 +310,18 @@ export function StepPage() {
                     <span className={`text-[10px] font-semibold font-mono ml-auto ${ddayTextCls}`}>{ddayLabel}</span>
                   )}
                 </span>
+              ) : step.dateHint ? (
+                /*
+                  공고가 날짜 대신 **말로** 알려 준 경우 — 「9월 예정」·「추후 공지」.
+                  🔴 「날짜 설정」으로 덮으면 공고가 준 정보가 화면에서 사라진다. 날짜를 넣는
+                  순간 서버가 힌트를 지우므로 둘이 같이 서 있는 상태는 없다.
+                */
+                <span className="flex-1 flex flex-wrap items-center gap-x-2 min-w-0">
+                  <span className="text-sm text-text-secondary">{step.dateHint}</span>
+                  <span className="text-[11px] text-text-quaternary">
+                    공고에서 가져왔어요 · 날짜가 나오면 적어 주세요
+                  </span>
+                </span>
               ) : (
                 <span className="text-sm text-text-quaternary flex-1">날짜 설정</span>
               )}

@@ -43,6 +43,18 @@ const FIELD_META: { key: keyof CardFieldsData['fields']; label: string; bar: str
 ]
 
 /**
+ * `applications.created_via` 코드 → 사람 말. 값의 출처:
+ * `add_modal`(AddCardModal) · `paste_posting`(공고 카드 서비스) · `onboarding_pick`/`onboarding_sample`(users.service).
+ * 새 코드가 생기면 여기 한 줄 — 없으면 코드 그대로 보여서 「모르는 값」임이 드러난다.
+ */
+const CREATED_VIA_LABEL: Record<string, string> = {
+  add_modal: '직접 입력',
+  paste_posting: '공고로 만들기',
+  onboarding_pick: '온보딩 담기',
+  onboarding_sample: '샘플 카드',
+}
+
+/**
  * 어휘 갈래 색 — `freeform_repeated` 만 warning 이다.
  * 셋 중 **유일하게 조치가 따라붙는 갈래**라서다 (목록에 없는 직군을 여러 사람이 적고 있다면
  * 그건 목록의 구멍이고, 그 값이 곧 후보다). 나머지 둘은 중립 분류다.
@@ -369,6 +381,7 @@ function FieldFillBlock({ data }: { data: CardFieldsData }) {
 function JobTitleVarianceBlock({ data }: { data: CardFieldsData }) {
   const { usersWithJobTitle, usersWithVariants, groups } = data.jobTitleVariance
   const hasVariance = usersWithVariants > 0
+  const texts = data.jobTitleTexts
 
   return (
     <Block
@@ -420,9 +433,63 @@ function JobTitleVarianceBlock({ data }: { data: CardFieldsData }) {
           해결할 문제가 아니라는 뜻이므로, 이 근거로 세운 계획은 접는다.
         </p>
       )}
+
+      {/*
+        🔴 **위 흔들림 판정과 답하는 질문이 다르다.** 저건 「한 사람이 흔들리나」라 사용자별로
+        접지만, 여기는 **전체가 무슨 말을 쓰나**다 — 사전에 넣을 어휘를 고르는 자리라
+        `백엔드` 와 `백엔드 개발자` 를 접지 않고 둘 다 보여준다.
+
+        이게 없으면 직군 「기타」를 고른 카드의 실체를 영영 못 본다. 채움 수는
+        「적긴 적었다」까지고, **무엇을 적었는지는 이 목록으로만** 보인다.
+
+        `texts` 부재 = 백엔드가 아직 이 필드를 안 주는 배포 창 → 행 자체를 안 그린다.
+      */}
+      {texts && texts.distinct > 0 && (
+        <div className="mt-4 pt-3 border-t border-line">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <p className="text-[11px] text-text-quaternary">
+              직무 표기{' '}
+              <span className="tabular-nums text-text-secondary">
+                {texts.distinct.toLocaleString()}
+              </span>
+              종 · 많이 쓰인 순
+            </p>
+            {/*
+              🔴 판정 기준은 **그린 개수 vs 전수**다. `top.length` 로 재면 서버가 이미
+              50에서 자른 경우(top 15 · distinct 15)에 「안 잘렸다」로 보이는데
+              화면엔 10개뿐이라, 잘린 사실이 조용히 사라진다.
+            */}
+            {texts.distinct > JOB_TITLE_TEXT_SHOWN && (
+              <span className="text-[11px] text-text-quaternary">
+                상위 {JOB_TITLE_TEXT_SHOWN}개만 표시
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {texts.top.slice(0, JOB_TITLE_TEXT_SHOWN).map((t) => (
+              <span
+                key={t.value}
+                className="text-[11px] text-text-secondary bg-card border border-line px-2 py-0.5 rounded break-all"
+              >
+                {t.value}
+                {t.cards > 1 && (
+                  <span className="ml-1 tabular-nums text-text-quaternary">{t.cards}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </Block>
   )
 }
+
+/**
+ * 화면에 그리는 직무 원문 개수 — 서버 상한(50)보다 좁다.
+ * 이 블록은 「흔들리나」가 주인공이고 원문 목록은 그 아래 보조라, 50개를 깔면
+ * 칩이 화면을 덮어 주인공이 밀린다. 전수는 옆의 `distinct` 가 지킨다.
+ */
+const JOB_TITLE_TEXT_SHOWN = 10
 
 /** ③ 직군 어휘 — 한 컬럼에 몇 갈래가 섞여 있나 */
 function CategoryVocabBlock({ data }: { data: CardFieldsData }) {
@@ -609,6 +676,8 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
     recorded: number
     distribution: Record<string, number>
     hint: string
+    /** 분포 키를 사람 말로 — 없으면 키 그대로 (템플릿 id 는 그대로가 더 정확하다) */
+    labelOf?: (k: string) => string
   }[] = [
     {
       key: 'templateId',
@@ -623,9 +692,13 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
       recorded: data.createdVia.recorded,
       distribution: data.createdVia.distribution,
       hint: '어느 진입점이 잘 채워진 카드를 만드나',
+      // 🔴 코드(`add_modal`)를 그대로 찍으면 「공고 N장 · 직접 입력 M장」을 찾는 사람이
+      //    못 알아본다 (2026-08-30 실제로 「없는 것 같은데?」). 모르는 코드는 그대로 둔다
+      labelOf: (k: string) => CREATED_VIA_LABEL[k] ?? k,
     },
   ]
   const anyRecorded = rows.some((r) => r.recorded > 0)
+  const usage = data.templateUsage
 
   return (
     <Block
@@ -639,14 +712,13 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
         </>
       }
     >
-      {!anyRecorded ? (
-        <p className="text-xs text-text-tertiary">
-          아직 기록된 카드가 없어요.{' '}
-          <span className="text-text-quaternary">
-            도입 이후 새로 만든 카드부터 여기에 쌓입니다.
-          </span>
-        </p>
-      ) : (
+      {/*
+        🔴 기록이 0 이어도 **행 이름은 그린다.** 전에는 블록째 「아직 기록된 카드가 없어요」 한 줄로
+        접었는데, 그러면 「생성 경로」라는 행이 있다는 사실 자체가 안 보여서 어디를 봐야 하는지
+        알 수 없다 (2026-08-30 — 로컬은 관리자 카드가 제외돼 정확히 이 상태였다).
+        숫자·칩은 여전히 안 그린다 — 0 을 그리면 「아무도 안 쓴다」는 거짓 주장이 된다.
+      */}
+      {(
         <div className="space-y-4">
           {rows.map((r) => {
             const entries = Object.entries(r.distribution).sort((a, b) => b[1] - a[1])
@@ -678,7 +750,7 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
                             : 'text-text-quaternary bg-card border-line'
                         }`}
                       >
-                        {k}
+                        {r.labelOf ? r.labelOf(k) : k}
                         <span className="ml-1 tabular-nums">{v}</span>
                       </span>
                     ))}
@@ -689,7 +761,102 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
           })}
         </div>
       )}
+
+      {/*
+        🔴 **「무엇으로 시작했나」와 「그 뒤 손댔나」는 다른 질문이다.** 위 분포는 전자고
+        이 행은 후자다. 계열 14벌을 새로 만든 값어치가 여기서 갈린다 — 받은 대로 안 쓴다면
+        템플릿을 늘리는 건 헛수고다. 스텝 이름을 한 글자만 고쳐도 「고쳤다」로 센다.
+
+        `usage` 가 없는 경우 = 백엔드가 아직 이 필드를 안 주는 배포 창. 그때는 행 자체를
+        안 그린다 (0 으로 그리면 「아무도 안 쓴다」라는 **거짓 주장**이 된다).
+      */}
+      {usage && anyRecorded && (
+        <div className="mt-4 pt-3 border-t border-line">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <p className="text-xs text-text-secondary font-medium">전형 템플릿 그대로 쓴 카드</p>
+            <span className="text-[11px] text-text-quaternary">스텝을 안 건드렸나</span>
+            <span className="ml-auto text-[11px] tabular-nums text-text-secondary">
+              {formatShare(usage.keptAsIs, usage.withTemplate, { unit: '장' })}
+            </span>
+          </div>
+          {usage.withTemplate === 0 ? (
+            <p className="text-[11px] text-text-quaternary mt-1.5">
+              템플릿이 기록된 카드가 아직 없어요 — 도입 이후 카드부터 쌓입니다.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {usage.byTemplate.slice(0, 5).map((t) => (
+                <span
+                  key={t.templateId}
+                  className="text-[11px] text-text-secondary bg-card border border-line px-2 py-0.5 rounded break-all"
+                  title={`${t.templateId} — ${t.count}장 중 ${t.kept}장 그대로`}
+                >
+                  {t.templateId}
+                  <span className="ml-1 tabular-nums text-text-quaternary">
+                    {t.kept}/{t.count}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <PostingRates data={data} />
     </Block>
+  )
+}
+
+/**
+ * 공고 붙여넣기 3종 — **이 기능이 쓸모 있나 · 값이 맞나 · 얼마나 되묻나**.
+ *
+ * 판정 기준은 미리 정해져 있다: `paste_posting` 비율 20% 이상이면 성공, 5% 미만이면 진입점
+ * 재검토. 그 비율은 위 「생성 경로」 분포가 이미 보여주고, 여기 셋은 **품질** 쪽을 답한다 —
+ * 만들다 만 비율(전환), AI 값을 고친 비율(정확도), 되물은 비율(파서 커버리지).
+ *
+ * 🔴 값이 없으면 행을 **아예 안 그린다.** 0/0 을 그리면 「아무도 안 쓴다」로 읽히는데,
+ * 백엔드가 아직 이 필드를 안 주는 배포 창일 수도 있다.
+ */
+function PostingRates({ data }: { data: CardFieldsData }) {
+  const rows = [
+    {
+      key: 'pasteConversion',
+      label: '파싱 → 카드 전환율',
+      hint: '붙였는데 카드가 안 된 경우',
+      rate: data.pasteConversion,
+      unit: '건',
+    },
+    {
+      key: 'aiEditRate',
+      label: 'AI 값 수정률',
+      hint: '만든 뒤 고쳐야 했나',
+      rate: data.aiEditRate,
+      unit: '장',
+    },
+    {
+      key: 'needsRate',
+      label: '보완 질문 비율',
+      hint: '회사명·직무를 되물은 카드',
+      rate: data.needsRate,
+      unit: '장',
+    },
+  ].filter((r) => r.rate != null)
+
+  if (rows.length === 0) return null
+
+  return (
+    <div className="mt-4 pt-3 border-t border-line space-y-2">
+      <p className="text-xs text-text-secondary font-medium">공고 붙여넣기</p>
+      {rows.map((r) => (
+        <div key={r.key} className="flex items-baseline gap-2 flex-wrap">
+          <p className="text-xs text-text-secondary">{r.label}</p>
+          <span className="text-[11px] text-text-quaternary">{r.hint}</span>
+          <span className="ml-auto text-[11px] tabular-nums text-text-secondary">
+            {formatShare(r.rate!.count, r.rate!.total, { unit: r.unit })}
+          </span>
+        </div>
+      ))}
+    </div>
   )
 }
 

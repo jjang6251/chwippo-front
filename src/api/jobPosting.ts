@@ -1,4 +1,10 @@
 import { apiClient } from './client'
+import type {
+  Application,
+  ApplicationStep,
+  PostingExtraDate,
+  PostingMeta,
+} from '@/types/application'
 
 /**
  * 공고 요건 파싱 — 자소서 페이지 전용 (feature-jobposting-parse).
@@ -145,4 +151,271 @@ export const jobPostingApi = {
     apiClient
       .delete(`/applications/${applicationId}/job-posting`)
       .then(() => undefined),
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// 공고 붙여넣기 → 카드 자동 생성 (`plans/jobposting-card.md`)
+//
+// 위 `jobposting_parse` 와 **다른 기능**이다. 저건 카드가 이미 있을 때 요건만 정리하고,
+// 이건 카드 자체를 만든다 (회사·직무·전형·날짜·요건 한 번에 · feature `jobposting_card`).
+//
+// 🔴 원문(rawText) 은 여기서도 저장·응답 어디에도 남지 않는다.
+// ────────────────────────────────────────────────────────────────────────
+
+/** 붙여넣기 칸 길이 계약 — DTO 와 같은 값 (양쪽이 어긋나면 400 문구가 화면과 다르게 나온다) */
+export const POSTING_RAW_MIN = 30
+export const POSTING_RAW_MAX = 10000
+
+/** 서버가 카드를 못 만든 이유 — 각각 화면 문구가 다르다 (generic 뭉개기 금지) */
+export type FromPostingBlockCode =
+  | 'CONSENT_REQUIRED'
+  | 'QUOTA_EXCEEDED'
+  | 'TOO_MANY_PENDING'
+  | 'ERROR'
+
+/** 보완 질문 — 한 가지만 묻고 바로 만든다 */
+export type PostingNeeds = 'company' | 'job'
+
+/**
+ * `POST /applications/from-posting` 의 4갈래 봉투를 **판별 가능한 한 벌**로 접은 것.
+ *
+ * 🔴 서버 봉투(`{card}` / `{needs}` / `{notPosting}` / `{blocked}`)를 그대로 쓰면 소비처마다
+ * `'card' in res` 같은 판정을 다시 쓴다. 읽기 경계(`normalizeFromPosting`)에서 한 번만 갈라
+ * 그 뒤로는 `kind` 하나만 본다.
+ */
+export type FromPostingResult =
+  | { kind: 'card'; card: Application }
+  | { kind: 'needs'; needs: PostingNeeds; hash: string; candidates: string[] }
+  | { kind: 'notPosting' }
+  | { kind: 'blocked'; code: FromPostingBlockCode; reason: string | null }
+
+/** 보완 대기 중인 초안 — 새로고침 후 「생성 중」 카드를 되살리는 재료 (서버 Redis 10분) */
+export interface PendingPostingDraft {
+  hash: string
+  needs: PostingNeeds
+  candidates: string[]
+  /** 파서가 찾은 값 — 직무 보완 카드에 「회사는 이미 알아요」를 보여주려고 */
+  companyName: string | null
+  jobTitle: string | null
+  createdAt: string | null
+}
+
+// ── 읽기 경계 정규화 ─────────────────────────────────────────
+//
+// 🔴 `as` 로 타입을 거짓말시키지 않는다. LLM 파싱 결과가 그대로 실려 오는 응답이라
+// 「타입이 있다고 말하는데 런타임에 없는」 상태가 가장 비싼 실패다 (`normalizeJobPosting` 주석).
+
+const str = (v: unknown): string | null => (typeof v === 'string' ? v : null)
+const strArr = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+
+function normalizeExtraDates(v: unknown): PostingExtraDate[] {
+  if (!Array.isArray(v)) return []
+  const out: PostingExtraDate[] = []
+  for (const raw of v) {
+    if (!raw || typeof raw !== 'object') continue
+    const r = raw as Record<string, unknown>
+    const label = str(r.label)
+    const date = str(r.date)
+    const noteId = str(r.noteId)
+    // 셋 중 하나라도 없으면 화면에 그릴 수 없다 — 빈 줄을 만들지 않는다
+    if (!label || !date || !noteId) continue
+    out.push({ label, date, noteId })
+  }
+  return out
+}
+
+const JOB_PICKED = ['profile', 'single', 'chosen', 'typed'] as const
+const COMPANY_SOURCE = ['parsed', 'typed'] as const
+function oneOf<T extends string>(v: unknown, allowed: readonly T[]): T | null {
+  return typeof v === 'string' && (allowed as readonly string[]).includes(v)
+    ? (v as T)
+    : null
+}
+
+export function normalizePostingMeta(v: unknown): PostingMeta | null {
+  if (!v || typeof v !== 'object') return null
+  const r = v as Record<string, unknown>
+  return {
+    filled: strArr(r.filled),
+    deadlineKind: str(r.deadlineKind),
+    jobPicked: oneOf(r.jobPicked, JOB_PICKED),
+    companySource: oneOf(r.companySource, COMPANY_SOURCE),
+    editedFields: strArr(r.editedFields),
+    reviewedAt: str(r.reviewedAt),
+    extraDates: normalizeExtraDates(r.extraDates),
+    orderConflict: r.orderConflict === true,
+    callCount: typeof r.callCount === 'number' ? r.callCount : 1,
+  }
+}
+
+function normalizeStep(v: unknown, index: number): ApplicationStep | null {
+  if (!v || typeof v !== 'object') return null
+  const r = v as Record<string, unknown>
+  const id = str(r.id)
+  const name = str(r.name)
+  if (!id || name === null) return null
+  return {
+    id,
+    applicationId: str(r.applicationId) ?? '',
+    orderIndex: typeof r.orderIndex === 'number' ? r.orderIndex : index,
+    name,
+    scheduledDate: str(r.scheduledDate),
+    location: str(r.location),
+    notes: str(r.notes),
+    pinnedContent: str(r.pinnedContent),
+    dateHint: str(r.dateHint),
+  }
+}
+
+/**
+ * 응답의 `card` → 화면이 믿어도 되는 `Application`.
+ *
+ * 필수 셋(`id`·`companyName`·`steps` 배열)이 없으면 **카드로 치지 않는다** — 반쪽짜리를
+ * 보드에 얹느니 「잠시 후 다시」가 정직하다. 나머지는 목록 refetch 가 곧 덮어쓰므로
+ * 여기선 렌더가 죽지 않을 기본값을 채운다.
+ */
+export function normalizePostingCard(v: unknown): Application | null {
+  if (!v || typeof v !== 'object') return null
+  const r = v as Record<string, unknown>
+  const id = str(r.id)
+  const companyName = str(r.companyName)
+  if (!id || !companyName) return null
+  const steps = Array.isArray(r.steps)
+    ? r.steps
+        .map((s, i) => normalizeStep(s, i))
+        .filter((s): s is ApplicationStep => s !== null)
+    : []
+  const status = r.status
+  return {
+    id,
+    userId: str(r.userId) ?? '',
+    companyName,
+    jobTitle: str(r.jobTitle),
+    jobCategory: str(r.jobCategory),
+    status:
+      status === 'PLANNED' || status === 'PASSED' || status === 'FAILED'
+        ? status
+        : 'IN_PROGRESS',
+    jobUrl: str(r.jobUrl),
+    memo: str(r.memo),
+    currentStepIndex: typeof r.currentStepIndex === 'number' ? r.currentStepIndex : 0,
+    needsDetail: r.needsDetail === true,
+    isStarred: r.isStarred === true,
+    createdVia: 'paste_posting',
+    steps,
+    jobPosting: normalizeJobPosting(r.jobPosting as JobPosting | null | undefined),
+    postingMeta: normalizePostingMeta(r.postingMeta),
+    createdAt: str(r.createdAt) ?? '',
+    updatedAt: str(r.updatedAt) ?? '',
+  }
+}
+
+const BLOCK_CODES: readonly FromPostingBlockCode[] = [
+  'CONSENT_REQUIRED',
+  'QUOTA_EXCEEDED',
+  'TOO_MANY_PENDING',
+  'ERROR',
+]
+
+/**
+ * 🔴 **읽기 경계 1회 정규화.** 여기를 통과한 뒤로는 타입이 참이다.
+ *
+ * 알아볼 수 없는 모양이면 `blocked/ERROR` 로 떨어뜨린다 — 「모르는 응답」을 성공으로도
+ * 보완 질문으로도 볼 수 없고, 생성 중 카드가 영원히 도는 게 가장 나쁘다.
+ */
+export function normalizeFromPosting(raw: unknown): FromPostingResult {
+  if (!raw || typeof raw !== 'object') {
+    return { kind: 'blocked', code: 'ERROR', reason: null }
+  }
+  const r = raw as Record<string, unknown>
+
+  if (r.blocked === true) {
+    const code = BLOCK_CODES.find((c) => c === r.code) ?? 'ERROR'
+    return { kind: 'blocked', code, reason: str(r.reason) }
+  }
+  if (r.notPosting === true) return { kind: 'notPosting' }
+
+  const needs = r.needs
+  if (needs === 'company' || needs === 'job') {
+    const hash = str(r.hash)
+    // hash 없이는 commit 도 2차 파싱도 못 한다 — 물어볼 수 없는 질문은 띄우지 않는다
+    if (!hash) return { kind: 'blocked', code: 'ERROR', reason: null }
+    return { kind: 'needs', needs, hash, candidates: strArr(r.candidates) }
+  }
+
+  const card = normalizePostingCard(r.card)
+  if (card) return { kind: 'card', card }
+
+  return { kind: 'blocked', code: 'ERROR', reason: null }
+}
+
+/** `GET /applications/from-posting/pending` 응답 → 화면이 믿어도 되는 목록 */
+export function normalizePendingDrafts(raw: unknown): PendingPostingDraft[] {
+  if (!raw || typeof raw !== 'object') return []
+  const drafts = (raw as Record<string, unknown>).drafts
+  if (!Array.isArray(drafts)) return []
+  const out: PendingPostingDraft[] = []
+  for (const d of drafts) {
+    if (!d || typeof d !== 'object') continue
+    const r = d as Record<string, unknown>
+    const hash = str(r.hash)
+    const needs = r.needs
+    if (!hash || (needs !== 'company' && needs !== 'job')) continue
+    out.push({
+      hash,
+      needs,
+      candidates: strArr(r.candidates),
+      companyName: str(r.companyName),
+      jobTitle: str(r.jobTitle),
+      createdAt: str(r.createdAt),
+    })
+  }
+  return out
+}
+
+export interface ParseForCardBody {
+  rawText: string
+  /** 직무 보완 후 2차 파싱 — 그 부문 기준으로 요건을 다시 정리한다 */
+  jobContext?: string
+}
+
+export interface CommitCardBody {
+  /**
+   * 🔴 초안 **본문을 되돌려 보내지 않는다** — 서버 Redis 의 hash 참조만 보낸다.
+   * 클라가 초안을 들고 있다가 되보내면 조작된 초안으로 카드를 만들 수 있다.
+   */
+  hash: string
+  companyName?: string
+  jobContext?: string
+}
+
+export const jobPostingCardApi = {
+  parse: (body: ParseForCardBody) =>
+    apiClient
+      .post('/applications/from-posting', body)
+      .then(unwrap<unknown>)
+      .then(normalizeFromPosting),
+
+  commit: (body: CommitCardBody) =>
+    apiClient
+      .post('/applications/from-posting/commit', body)
+      .then(unwrap<unknown>)
+      .then(normalizeFromPosting),
+
+  pending: () =>
+    apiClient
+      .get('/applications/from-posting/pending')
+      .then(unwrap<unknown>)
+      .then(normalizePendingDrafts),
+
+  /** 「좋아요」·[확인]·인라인 수정 — 멱등 */
+  patchMeta: (
+    applicationId: string,
+    body: { reviewed?: boolean; editedFields?: string[] },
+  ) =>
+    apiClient
+      .patch(`/applications/${applicationId}/posting-meta`, body)
+      .then(unwrap<{ postingMeta: unknown }>)
+      .then((r) => normalizePostingMeta(r?.postingMeta)),
 }

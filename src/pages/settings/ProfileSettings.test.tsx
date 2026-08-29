@@ -86,6 +86,44 @@ afterEach(() => {
   delete (window as unknown as RNWindowMock).ReactNativeWebView
 })
 
+describe('ProfileSettings — 희망 직무·계열 길잡이 (묶음 3 ③)', () => {
+  it('6. 계정 정보에 「내 정보에서 바꾸기」 링크가 있고 /myinfo#profile 로 간다', () => {
+    renderProfile()
+
+    const link = screen.getByRole('link', { name: /내 정보에서 바꾸기/ })
+    expect(link).toHaveAttribute('href', '/myinfo#profile')
+    expect(screen.getByText('희망 직무·계열')).toBeInTheDocument()
+  })
+
+  it('7. 🔴 값 미리보기는 넣지 않는다 — 고치는 자리는 내 정보 하나뿐이다', () => {
+    useAuthStore.setState({
+      accessToken: 'test-token',
+      user: {
+        id: 'u1',
+        nickname: '테스터',
+        email: null,
+        role: 'user',
+        onboardedAt: null,
+        termsAgreedAt: null,
+        aiConsentAt: null,
+        aiConsentVersion: null,
+        onboardedCoinAt: null,
+        signupJobCategories: [],
+        signupOtherText: null,
+        signupSeriesId: 'health',
+        signupJobTitle: '간호사',
+        sampleCardsDismissedAt: null,
+        calendarHomeIntroDismissedAt: null,
+        alarmPromptedAt: null,
+      },
+    })
+    renderProfile()
+
+    expect(screen.queryByText('간호사')).toBeNull()
+    expect(screen.queryByText('의료·보건·복지')).toBeNull()
+  })
+})
+
 describe('ProfileSettings — 로그아웃 (앱/브라우저 분기)', () => {
   it('1. 브라우저: /auth/logout + clearAuth + navigate("/")', async () => {
     vi.mocked(apiClient.post).mockResolvedValueOnce({} as never)

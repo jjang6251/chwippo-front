@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { Briefcase } from 'lucide-react'
 import { Modal } from './Modal'
+import { JobTitleField } from '@/components/card/JobTitleField'
+import { PromoteJobTitleRow } from '@/components/card/PromoteJobTitleRow'
 import { useJobTitleGateStore } from '@/stores/jobTitleGateStore'
 import { useApplication, useUpdateApplication } from '@/hooks/useApplications'
+import { JOB_SERIES } from '@/utils/jobRole'
+import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
+import type { JobTitleSource } from '@/types/application'
 
 /** 카드 `jobTitle` 컬럼과 DTO `@MaxLength(100)` 에 맞춘다 */
 const MAX_LEN = 100
@@ -47,8 +52,11 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
 
   const { data: app } = useApplication(applicationId)
   const { mutateAsync: updateApp } = useUpdateApplication(applicationId)
+  const user = useAuthStore((s) => s.user)
 
   const [value, setValue] = useState('')
+  const [source, setSource] = useState<JobTitleSource>('typed')
+  const [seriesId, setSeriesId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const trimmed = value.trim()
@@ -57,7 +65,16 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
     if (submitting || !trimmed) return
     setSubmitting(true)
     try {
-      await updateApp({ jobTitle: trimmed })
+      // 🔴 계열은 **확정됐을 때만** 라벨로 나간다 — 카드 추가 모달과 같은 규칙
+      const seriesLabel = seriesId
+        ? JOB_SERIES.find((s) => s.id === seriesId)?.label
+        : undefined
+      await updateApp({
+        jobTitle: trimmed,
+        // 관측 전용 — 「직접 침」과 「추천 수용」을 통계에서 가른다
+        jobTitleSource: source,
+        jobCategory: seriesLabel,
+      })
       done()
     } catch {
       toast.error('직무 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.')
@@ -67,7 +84,23 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
   }
 
   return (
-    <div className="space-y-4 text-sm leading-relaxed">
+    <form
+      /*
+        Enter 로도 저장된다 — 한 칸짜리 폼이라 버튼까지 가는 게 손해다.
+        추천 목록에서 항목을 고르는 중(↑↓로 강조된 상태)이면 `JobTitleField` 가
+        preventDefault 하므로 제출이 아니라 선택으로 간다.
+      */
+      onSubmit={(e) => {
+        e.preventDefault()
+        void handleSave()
+      }}
+      className="space-y-4 text-sm leading-relaxed"
+    >
+        {/*
+          「직무를 알아야 그 직무에 맞는 자소서·면접 질문을 만들 수 있어요」는 뺐다 —
+          바로 아래 `JobTitleField` 의 helper 가 같은 말을 한다. 한 화면에서 같은 이유를
+          두 번 대면 설명이 아니라 소음이다. 이 자리는 **묻는 문장** 하나면 된다.
+        */}
         <p className="text-text-secondary">
           {app?.companyName ? (
             <>
@@ -76,33 +109,36 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
             </>
           ) : (
             '어떤 직무로 지원하시나요?'
-          )}{' '}
-          직무를 알아야 <b className="text-text-primary">그 직무에 맞는</b> 자소서·면접
-          질문을 만들 수 있어요.
+          )}
         </p>
 
         <div>
-          <label
-            htmlFor="job-title-gate-input"
-            className="block text-xs text-text-tertiary mb-1.5"
-          >
-            지원 직무 <span className="text-danger">*</span>
-          </label>
-          <input
+          {/*
+            🔴 직무가 들어오는 세 길(온보딩 · 카드 추가 · 이 게이트)이 **같은 입력기**를 쓴다.
+            여기만 맨 input 이면 이 자리에서만 사전 추천도, 계열 판정도 없다 — 그런데
+            게이트야말로 「필요한 순간에 묻는」 자리라 입력 품질이 제일 중요하다.
+          */}
+          <JobTitleField
             id="job-title-gate-input"
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value.slice(0, MAX_LEN))}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && trimmed) void handleSave()
-            }}
-            maxLength={MAX_LEN}
-            placeholder="예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계"
-            /* 지원 회사마다 다른 값 — 본인 직함 자동완성이 끼면 틀린 값이 들어간다 */
-            autoComplete="off"
+            labelText={
+              <>
+                지원 직무 <span className="text-danger">*</span>
+              </>
+            }
             autoFocus
-            /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 (text-base) */
-            className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+            value={value}
+            onChange={(v, src) => {
+              setValue(v.slice(0, MAX_LEN))
+              setSource(src)
+            }}
+            seriesId={seriesId}
+            onSeriesChange={(id) => setSeriesId(id)}
+          />
+          {/* 이 카드 직무가 내 희망 직무와 다르면 맞추자고 제안한다 (탭해야만 반영) */}
+          <PromoteJobTitleRow
+            profileTitle={user?.signupJobTitle ?? null}
+            jobTitle={value}
+            seriesId={seriesId}
           />
           <p className="text-text-faint text-[11px] mt-1.5 flex items-center gap-1">
             <Briefcase size={12} strokeWidth={1.75} aria-hidden="true" />
@@ -120,8 +156,7 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
             취소
           </button>
           <button
-            type="button"
-            onClick={() => void handleSave()}
+            type="submit"
             disabled={submitting || !trimmed}
             aria-live="polite"
             className="flex-[1.5] px-4 py-2.5 text-xs font-semibold text-bg bg-brand hover:bg-accent rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -129,6 +164,6 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
             {submitting ? '저장 중…' : '저장하고 계속'}
           </button>
       </div>
-    </div>
+    </form>
   )
 }

@@ -57,6 +57,14 @@ export default {
         'brand-hover': 'rgb(var(--brand-hover) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
         'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
+        /**
+         * 🔴 `accent` 를 **면으로 깔 때 쓰는 쌍** — 글자용 accent 와 다른 값이다.
+         * 라이트 accent 는 밝은 면 위 글자 대비를 맞추려 어둡게 내린 값이라, 배경으로 쓰면
+         * 강조가 아니라 갈색 얼룩이 된다. 채움(`accent-fill`) + 그 위 글자(`accent-fill-ink`)를
+         * 항상 같이 쓴다 (index.css 주석 참조).
+         */
+        'accent-fill': 'rgb(var(--accent-fill) / <alpha-value>)',
+        'accent-fill-ink': 'rgb(var(--accent-fill-ink) / <alpha-value>)',
 
         'text-primary': 'rgb(var(--text-primary) / <alpha-value>)',
         'text-secondary': 'rgb(var(--text-secondary) / <alpha-value>)',
@@ -133,6 +141,15 @@ export default {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' },
         },
+        /**
+         * 앱 소개 투어 상단 진행 바 — 현재 장면이 재생되는 동안 채워진다.
+         * `duration` 은 장면마다 다르므로 호출부가 인라인으로 준다(글자수에서 계산).
+         * 🔴 `width` 가 아니라 `scaleX` — 폭 애니메이션은 매 프레임 레이아웃을 다시 잡는다.
+         */
+        tourProgress: {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
       },
       animation: {
         fadeInUp: 'fadeInUp 0.2s ease-out',
@@ -140,6 +157,8 @@ export default {
         fadeIn: 'fadeIn 0.25s ease-out',
         celebrateUp: 'celebrateUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both',
         shimmer: 'shimmer 1.5s ease-in-out infinite',
+        // duration 은 호출부가 인라인으로 덮어쓴다 (장면 길이 = 연출 + 읽는 여유)
+        tourProgress: 'tourProgress 5s linear forwards',
       },
     },
   },

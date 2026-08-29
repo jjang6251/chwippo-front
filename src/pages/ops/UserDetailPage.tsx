@@ -37,6 +37,12 @@ interface UserDetail {
     suspendedAt: string | null
     suspendReason: string | null
     suspendExpiresAt: string | null
+    /**
+     * 계열 1탭 온보딩 답 — 🔴 **옵셔널이다** (백엔드가 늦게 뜨는 배포 창엔 없다).
+     * `signupJobTitle` 은 사람이 타이핑한 원문이라 사전 어휘 보강의 재료이기도 하다.
+     */
+    signupSeriesId?: string | null
+    signupJobTitle?: string | null
   }
   coinBalance: {
     balance: number
@@ -385,6 +391,21 @@ export function UserDetailPage() {
             <Row label="이메일" value={basic.email ?? '-'} />
             <Row label="권한" value={basic.role} />
             <Row label="Tier" value={basic.tier} />
+            {/*
+              온보딩 답 — 값이 있을 때만 한 줄. 없는 사용자(구 21칩·건너뛰기)에게
+              「-」 행을 하나 더 깔면 카드가 빈칸으로 길어지기만 한다.
+            */}
+            {(basic.signupSeriesId || basic.signupJobTitle) && (
+              <Row
+                label="온보딩"
+                value={[
+                  basic.signupSeriesId ? `계열 ${basic.signupSeriesId}` : null,
+                  basic.signupJobTitle ? `직무 ${basic.signupJobTitle}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              />
+            )}
           </div>
           <div className="bg-card border border-line rounded-xl p-5 space-y-2 text-sm">
             <h3 className="text-text-primary text-sm font-semibold pb-2 border-b border-line">

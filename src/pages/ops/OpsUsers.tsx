@@ -21,20 +21,41 @@ function RoleBadge({ role }: { role: string }) {
   )
 }
 
-/** W1 — admin OpsUsers 직군 셀. JSONB array → chip list + "기타: {입력값}" */
+/**
+ * W1 — admin OpsUsers 직군 셀. JSONB array → chip list + "기타: {입력값}".
+ *
+ * 계열 1탭 온보딩(2026-08-28) 이후 새 가입자는 `categories` 가 **빈 배열**이라
+ * 「건너뜀」으로 보인다 — 실제로는 계열을 답한 사람이다. 그래서 계열·직무를
+ * **한 줄 더** 작게 붙인다 (구·신 답이 나란히 보여야 전환을 관찰할 수 있다).
+ */
 function JobCategoryCell({
   categories,
   otherText,
+  seriesId,
+  seriesJobTitle,
 }: {
   categories: string[] | null
   otherText: string | null
+  seriesId?: string | null
+  seriesJobTitle?: string | null
 }) {
+  const seriesLine = <SeriesLine seriesId={seriesId} jobTitle={seriesJobTitle} />
+
   if (!categories) {
-    return <span className="text-text-quaternary text-xs">—</span>
+    return (
+      <div className="max-w-[220px]">
+        <span className="text-text-quaternary text-xs">—</span>
+        {seriesLine}
+      </div>
+    )
   }
   if (categories.length === 0) {
     return (
-      <span className="text-text-quaternary text-xs italic">건너뜀</span>
+      <div className="max-w-[220px]">
+        {/* 계열 답이 있으면 「건너뜀」이 아니다 — 그 경우 계열 줄만 남긴다 */}
+        {!seriesId && <span className="text-text-quaternary text-xs italic">건너뜀</span>}
+        {seriesLine}
+      </div>
     )
   }
   // 첫 2개만 표시 + 나머지 +N
@@ -67,7 +88,34 @@ function JobCategoryCell({
           ({otherText})
         </span>
       )}
+      <SeriesLine seriesId={seriesId} jobTitle={seriesJobTitle} />
     </div>
+  )
+}
+
+/**
+ * 계열 1탭 답 — **작은 한 줄**. 칩으로 그리면 21직군 칩과 무게가 같아져
+ * 「직군을 두 벌 고른 사람」처럼 보인다. 값이 없으면 아무것도 그리지 않는다.
+ */
+function SeriesLine({
+  seriesId,
+  jobTitle,
+}: {
+  seriesId?: string | null
+  jobTitle?: string | null
+}) {
+  if (!seriesId && !jobTitle) return null
+  const parts: string[] = []
+  if (seriesId) parts.push(`계열 ${seriesId}`)
+  if (jobTitle) parts.push(`직무 ${jobTitle}`)
+  const text = parts.join(' · ')
+  return (
+    <span
+      className="block basis-full text-[10px] text-text-quaternary truncate"
+      title={text}
+    >
+      {text}
+    </span>
   )
 }
 
@@ -339,6 +387,8 @@ function UserRow({ user, onSelect }: { user: AdminUser; onSelect: () => void }) 
         <JobCategoryCell
           categories={user.signupJobCategories}
           otherText={user.signupOtherText}
+          seriesId={user.signupSeriesId}
+          seriesJobTitle={user.signupJobTitle}
         />
       </td>
       <td className="px-4 py-3.5 text-text-tertiary text-xs hidden sm:table-cell tabular-nums">

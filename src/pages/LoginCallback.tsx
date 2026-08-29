@@ -53,6 +53,8 @@ export function LoginCallback() {
         onboardedCoinAt: null,
         signupJobCategories: null,
         signupOtherText: null,
+        signupSeriesId: null,
+        signupJobTitle: null,
         sampleCardsDismissedAt: null,
         calendarHomeIntroDismissedAt: null,
         alarmPromptedAt: null,

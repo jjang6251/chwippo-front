@@ -452,7 +452,7 @@ describe('CardResearchReveal — 노출 기회 소진', () => {
   const USER = {
     id: 'u1', nickname: 'tester', email: 'a@b.c', role: 'user' as const,
     onboardedAt: null, termsAgreedAt: null, aiConsentAt: null, aiConsentVersion: null,
-    onboardedCoinAt: null, signupJobCategories: null, signupOtherText: null,
+    onboardedCoinAt: null, signupJobCategories: null, signupOtherText: null, signupSeriesId: null, signupJobTitle: null,
     sampleCardsDismissedAt: null, calendarHomeIntroDismissedAt: null, alarmPromptedAt: null,
   }
 

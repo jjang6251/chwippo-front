@@ -10,6 +10,9 @@ import type { PlatformUsage } from '@/components/admin/PlatformBadges'
 
 export const REACH_STAGES = [
   'signup',
+  // 앱 소개 투어 — 가입과 첫 카드 **사이**다 (온보딩 → 투어 → 첫 카드 순서).
+  // 투어 도입 전 가입자는 여기서 빠진다 (소급 불가값이라 백필하지 않는다)
+  'tour_completed',
   'card',
   'activity',
   'coverletter_question',
@@ -21,11 +24,18 @@ export type ReachStage = (typeof REACH_STAGES)[number]
 
 export const STAGE_LABEL: Record<ReachStage, string> = {
   signup: '가입만',
+  tour_completed: '투어 완료',
   card: '카드',
   activity: '활동일지',
   coverletter_question: '자소서 문항',
   coverletter_answer: '자소서 답변',
   coverletter_ai: '자소서 AI',
+}
+
+/** 투어 이탈 장면 하나 — 「만났지만 안 끝낸」 사람의 마지막 장면과 인원 */
+export interface TourDropOff {
+  step: number
+  count: number
 }
 
 export interface ReachRow {
@@ -36,6 +46,10 @@ export interface ReachRow {
   platform: PlatformUsage
   /** `null` = **미확인** (스탬프 도입 전 가입 · 백필 근거 없음). "모바일" 이 아니다 */
   desktopSeenAt: string | null
+  /** 앱 소개 투어 마지막 장까지 갔는가 */
+  tourCompleted: boolean
+  /** 투어를 만났지만 안 끝낸 사람의 마지막 장면. 끝냈거나 만난 적 없으면 null */
+  tourDropOffStep: number | null
   cards: number
   sampleCards: number
   activityLogs: number
@@ -52,6 +66,12 @@ export interface ReachData {
   totalUsers: number
   excludedAdmins: number
   stageCounts: Record<ReachStage, number>
+  /**
+   * 투어 이탈 장면 분포 — 이탈이 없는 장면은 **행 자체가 없다**.
+   * 🔴 옵셔널이다 — 백엔드 배포가 프론트보다 늦는 창에서 필드가 없을 수 있다
+   * (`assertReachData` 가 필수로 요구하면 그 구간에 화면이 통째로 에러가 된다).
+   */
+  tourDropOff?: TourDropOff[]
   desktopAxis: {
     confirmed: number
     coverletterAnswer: number

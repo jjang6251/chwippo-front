@@ -1,28 +1,11 @@
 import { useEffect, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import { useCelebrationStore } from '@/stores/celebrationStore'
+import { confettiColors as tokenColors } from '@/utils/confettiColors'
 
 /**
- * 합격 축하 컨페티 — sage + coral + 보조색.
- *
- * 🔴 **hex 를 박아두지 않는다** (2026-08-17). 예전엔 `#6b9c7f` 처럼 그때의 다크 토큰값을
- * 복사해 뒀는데, 토큰이 바뀌자 **여기만 옛 색으로 남았다.** canvas-confetti 는 CSS 클래스를
- * 못 받으므로 **실행 시점에 토큰을 읽어** 넘긴다 — 테마가 바뀌면 컨페티 색도 따라간다.
+ * 합격 축하 컨페티 — sage + coral + 보조색 (색은 `utils/confettiColors` 가 토큰에서 읽는다).
  */
-function tokenColors(): string[] {
-  const cs = getComputedStyle(document.documentElement)
-  const rgb = (name: string, fallback: string) => {
-    const v = cs.getPropertyValue(name).trim()
-    return v ? `rgb(${v.replace(/\s+/g, ' ')})` : fallback
-  }
-  return [
-    rgb('--brand', '#82bb99'),
-    rgb('--accent', '#f79476'),
-    rgb('--success', '#84bb9a'),
-    rgb('--warning', '#d4b045'),
-    rgb('--text-primary', '#ebe9e3'),
-  ]
-}
 
 export function CelebrationOverlay() {
   const companyName = useCelebrationStore((s) => s.companyName)

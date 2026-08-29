@@ -5,7 +5,7 @@ import { autocompleteCompanies } from '@/api/companies'
 /**
  * W2 — debounce 250ms + React Query.
  *
- * 빈 input 도 fetch (signup 직군 boost 추천). 사용자가 모달 열자마자 추천 보임.
+ * 빈 input 도 fetch — 모달을 열자마자 목록 자리를 만들어 둔다 (결과는 서버가 정한다).
  */
 export function useCompanyAutocomplete(rawQuery: string) {
   const [debouncedQ, setDebouncedQ] = useState(rawQuery)

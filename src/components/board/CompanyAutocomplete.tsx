@@ -9,10 +9,13 @@ import type { AutocompleteCompany } from '@/types/company'
  *
  * 동작:
  *   - 입력 → debounce 250ms 후 GET /companies/autocomplete
- *   - dropdown = DART + 사용자 누적 통합 (source 별 섹션 라벨)
+ *   - dropdown = DART·조사 시드 + 사용자 누적 통합 (source 별 섹션 라벨)
  *   - 키보드 ↑↓ 선택, enter 추가, esc 닫기
  *   - 자유 입력 (검색 결과 X) 도 그대로 onChange/onSelect (사용자 직접 입력 OK)
- *   - 빈 input + signup 직군 = boost 추천 5개
+ *
+ * 🔴 **「맞춤 추천 — 직군 기반」 섹션은 없앴다** — signup 직군 `boost` 로 만들던 자리인데
+ * 직군 자체가 사라졌다. 조사 시드(`source: 'research'`) 항목은 별도 섹션을 만들지 않고
+ * DART 와 같은 첫 섹션에 섞는다 — 사용자에겐 둘 다 그냥 「아는 회사」다.
  *
  * ARIA: role=combobox + aria-expanded + aria-controls + aria-activedescendant
  */
@@ -24,7 +27,27 @@ interface Props {
   placeholder?: string
   autoFocus?: boolean
   disabled?: boolean
+  /**
+   * 붙여넣기 가로채기 — 카드 추가 모달이 **공고 통짜 붙여넣기**를 알아보려고 쓴다.
+   * 회사 칸에 3,000자를 붙이는 건 회사명 입력이 아니라 「이 공고로 만들어 줘」다.
+   * 기본 동작을 막을지는 호출부가 결정한다 (여기선 전달만 한다).
+   */
+  onPaste?: React.ClipboardEventHandler<HTMLInputElement>
+  /**
+   * 입력 껍데기. 🔴 기본값 `'box'` = **현행 그대로** — 이 컴포넌트를 쓰는 다른 화면은 영향 0.
+   *
+   * `'underline'` 은 카드 추가 모달 전용이다. 거기선 「라벨 + 채움 박스」가 5쌍 쌓여
+   * 상자 더미로 보였고(2026-08-28 실기 지적), 주인공 칸(회사·직무)만 밑줄로 세웠다.
+   */
+  variant?: 'box' | 'underline'
 }
+
+/** 채움 박스 — 폼 안에서 여러 칸이 나란히 설 때 (현행 기본) */
+const BOX_INPUT =
+  'w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base lg:text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all'
+/** 밑줄 — 이 칸이 주인공인 자리. 채움색·테두리를 빼고 글자를 키운다 (모바일 17px) */
+const UNDERLINE_INPUT =
+  'w-full bg-transparent border-0 border-b-[1.5px] border-line-strong rounded-none px-0.5 py-2.5 text-[17px] lg:text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand transition-colors'
 
 export function CompanyAutocomplete({
   value,
@@ -33,6 +56,8 @@ export function CompanyAutocomplete({
   placeholder = '회사명 입력... (예: 네이버, 토스)',
   autoFocus,
   disabled,
+  variant = 'box',
+  onPaste,
 }: Props) {
   const inputId = useId()
   const listId = useId()
@@ -93,9 +118,8 @@ export function CompanyAutocomplete({
     }
   }
 
-  // section 분리 (DART vs user_added). signup boost 가 있는 dart 항목은 별도 "추천" 섹션
-  const recommended = items.filter((c) => c.source === 'dart' && (c.boost ?? 0) > 0)
-  const dart = items.filter((c) => c.source === 'dart' && (c.boost ?? 0) === 0)
+  // section 분리 — 「우리가 아는 회사」(DART·조사 시드) vs 「다른 사용자가 추가」
+  const known = items.filter((c) => c.source === 'dart' || c.source === 'research')
   const userAdded = items.filter((c) => c.source === 'user_added')
 
   let runningIdx = -1
@@ -113,6 +137,7 @@ export function CompanyAutocomplete({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={handleKey}
+        onPaste={onPaste}
         maxLength={100}
         placeholder={placeholder}
         autoFocus={autoFocus}
@@ -123,10 +148,15 @@ export function CompanyAutocomplete({
         aria-controls={listId}
         aria-autocomplete="list"
         aria-activedescendant={activeIdx >= 0 ? `${listId}-item-${activeIdx}` : undefined}
-        className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+        className={variant === 'underline' ? UNDERLINE_INPUT : BOX_INPUT}
       />
 
-      {open && (
+      {/*
+        🔴 빈 입력엔 패널을 열지 않는다 — 예전엔 이 자리에 「맞춤 추천」이 뜨도록 설계됐지만 boost 가
+        한 번도 값을 낸 적 없어 운영에선 늘 **빈 상자**였고, 모달을 열자마자 그 상자가 아래 칸(직무)을
+        가렸다 (2026-08-28 실기). 안내만 있는 패널은 없애는 게 디자인이다.
+      */}
+      {open && value.trim().length > 0 && (
         <div
           id={listId}
           role="listbox"
@@ -136,35 +166,14 @@ export function CompanyAutocomplete({
             <Skeleton />
           ) : items.length === 0 ? (
             <div className="px-3 py-6 text-center text-xs text-text-tertiary">
-              {value.trim()
-                ? '검색 결과가 없어요 · 그대로 직접 추가하셔도 돼요'
-                : '회사명을 입력해주세요'}
+              검색 결과가 없어요 · 그대로 직접 추가하셔도 돼요
             </div>
           ) : (
             <>
-              {recommended.length > 0 && (
-                <>
-                  <SectionLabel>맞춤 추천 — 직군 기반</SectionLabel>
-                  {recommended.map((c) => {
-                    runningIdx++
-                    const i = runningIdx
-                    return (
-                      <Item
-                        key={`r-${c.name}`}
-                        id={`${listId}-item-${i}`}
-                        company={c}
-                        active={i === activeIdx}
-                        onPick={() => pick(c)}
-                        onHover={() => setActiveIdx(i)}
-                      />
-                    )
-                  })}
-                </>
-              )}
-              {dart.length > 0 && (
+              {known.length > 0 && (
                 <>
                   {/* "DART 상장사" 라벨 X — 평범한 검색 결과는 무라벨 (clean) */}
-                  {dart.map((c) => {
+                  {known.map((c) => {
                     runningIdx++
                     const i = runningIdx
                     return (
@@ -315,6 +324,10 @@ function Item({ id, company, active, onPick, onHover }: ItemProps) {
             accent(coral) 은 합격·pinned 전용이라 여기서 쓰지 않는다 — 오히려 의도와 반대
             신호(가장 눈에 띄는 색 = 가장 덜 검증된 항목)였다.
           */}
+          {/* 조사 시드에 이미 있는 회사 — 고르면 카드에서 바로 조사가 뜬다 */}
+          {company.source === 'research' && (
+            <span className="text-text-quaternary whitespace-nowrap">조사 있음</span>
+          )}
           {company.source === 'user_added' &&
             (company.userCount === 1 ? (
               <span className="text-text-quaternary whitespace-nowrap">한 명만 추가했어요</span>

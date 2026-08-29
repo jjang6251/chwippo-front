@@ -103,7 +103,8 @@ function resolveGet(url: string, params: Record<string, unknown>): unknown {
     case '/dashboard/growth-metrics': return S.DEMO_GROWTH_METRICS
     case '/calendar/daily-notes': return store.getDailyNotes()
     case '/users/me/dashboard-config': return null
-    case '/announcements/active': return null
+    // 공지는 0~2건 배열. 데모엔 띄울 공지가 없다 → 빈 목록
+    case '/announcements/active': return []
     case '/me/coin-balance': return S.DEMO_COIN_BALANCE
     // AI feature 별 사용량·한도 (AiQuotaChip) — 데모는 소비 없음 → 빈 목록
     case '/me/ai-quotas': return []

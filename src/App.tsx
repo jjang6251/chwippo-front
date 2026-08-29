@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastContainer } from '@/components/common/ToastContainer'
+import { PostingCardHost } from '@/components/board/PostingCardHost'
 import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
 import { FirstCardCelebration } from '@/components/common/FirstCardCelebration'
 import { FailedCareOverlay } from '@/components/card/FailedCareOverlay'
@@ -23,6 +24,7 @@ import { Landing } from '@/pages/Landing'
 import { Login } from '@/pages/Login'
 import { LoginCallback } from '@/pages/LoginCallback'
 import { SignupQuestion } from '@/pages/SignupQuestion'
+import { Tour } from '@/pages/Tour'
 import { Board } from '@/pages/Board'
 import { BoardDetail } from '@/pages/BoardDetail'
 import { Calendar } from '@/pages/Calendar'
@@ -208,6 +210,12 @@ export default function App() {
           <Route path="/terms-agreement" element={<TermsAgreement />} />
           {/* W1 — signup 1 질문 (관심 직군). onboardedAt null 시 LoginCallback 가 redirect */}
           <Route path="/signup/question" element={<SignupQuestion />} />
+          {/*
+            앱 소개 투어 — 온보딩 직후 자동 재생 7장 (`plans/app-tour.md`).
+            🔴 `AppShell` **밖**이다 (온보딩과 같은 자리). 안에 두면 사이드바·하단 탭과
+            코인 모달이 함께 떠서, 오버레이를 흡수하려고 만든 화면이 오버레이 위에 서게 된다.
+          */}
+          <Route path="/signup/tour" element={<Tour />} />
           <Route element={<RouteErrorBoundary><AppShell /></RouteErrorBoundary>}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/board" element={<Board />} />
@@ -291,6 +299,12 @@ export default function App() {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
+      {/*
+        공고 카드 뒤처리 — 모달·보드가 언마운트돼도 결과 시트·되돌리기 토스트는 뜬다.
+        🔴 이건 **실서비스 스코프** 전용이다 (main.tsx 의 앱 QueryClient). 데모는 자기
+        QueryClient 를 쓰므로 `DemoShell` 이 자기 호스트를 따로 마운트한다.
+      */}
+      <PostingCardHost />
       <ToastContainer />
       <CelebrationOverlay />
       <FirstCardCelebration />
