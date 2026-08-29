@@ -233,6 +233,7 @@ export function CoverletterChatPanel({
     requestAnimationFrame(() => {
       const el = inputRef.current
       if (!el) return
+      // eslint-disable-next-line chwippo/no-bare-autofocus -- 마운트가 아니라 카드에서 「✨ AI 에게 묻기」를 누른 뒤 오는 prefill trigger 로만 돈다 — 탭 뒤 포커스
       el.focus()
       el.setSelectionRange(el.value.length, el.value.length)
       // 데스크탑: 입력창이 viewport 안 보이면 scroll. 모바일은 bottom sheet 가 처리.

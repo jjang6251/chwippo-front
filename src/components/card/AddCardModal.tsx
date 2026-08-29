@@ -530,7 +530,7 @@ export function AddCardModal({
                 <input
                   id="add-card-deadline"
                   type="date"
-                  /* 칩을 눌러 연 칸이다 — 한 번 더 탭하게 하지 않는다 */
+                  // eslint-disable-next-line chwippo/no-bare-autofocus -- 「서류 마감일」 칩을 눌러야 열리는 칸 — 탭 뒤 등장이라 열자마자 덮는 경로가 없다. 한 번 더 탭하게 하지 않는다
                   autoFocus
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
@@ -560,6 +560,7 @@ export function AddCardModal({
                   id="add-card-job-url"
                   type="url"
                   inputMode="url"
+                  // eslint-disable-next-line chwippo/no-bare-autofocus -- 「공고 링크」 칩을 눌러야 열리는 칸 — 탭 뒤 등장이라 열자마자 덮는 경로가 없다
                   autoFocus
                   value={jobUrl}
                   onChange={(e) => setJobUrl(e.target.value)}

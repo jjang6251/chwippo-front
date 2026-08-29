@@ -288,6 +288,7 @@ export function StepPage() {
                   saveScheduledDate(v)
                 }}
                 onBlur={handleDateBlur}
+                // eslint-disable-next-line chwippo/no-bare-autofocus -- 날짜 줄을 눌러야(editingField==='date') 버튼이 이 칸으로 바뀐다 — 탭 뒤 등장
                 autoFocus
                 aria-label="일정 날짜 및 시간"
                 className="flex-1 bg-transparent text-base text-text-primary focus:outline-none"
@@ -343,6 +344,7 @@ export function StepPage() {
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 onBlur={handleLocationBlur}
+                // eslint-disable-next-line chwippo/no-bare-autofocus -- 장소 줄을 눌러야(editingField==='location') 버튼이 이 칸으로 바뀐다 — 탭 뒤 등장
                 autoFocus
                 placeholder="장소 입력"
                 aria-label="면접 장소"

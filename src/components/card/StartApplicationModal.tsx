@@ -4,6 +4,7 @@ import { Modal } from '@/components/common/Modal'
 import { JobTitleField } from '@/components/card/JobTitleField'
 import { PromoteJobTitleRow } from '@/components/card/PromoteJobTitleRow'
 import { useUpdateApplication } from '@/hooks/useApplications'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { useAuthStore } from '@/stores/authStore'
 import { showFirstCardCelebration } from '@/stores/celebrationStore'
 import { JOB_SERIES, classifyJob } from '@/utils/jobRole'
@@ -29,6 +30,7 @@ export function StartApplicationModal({
 }: StartApplicationModalProps) {
   const user = useAuthStore((s) => s.user)
   const qc = useQueryClient()
+  const isMobile = useIsMobile()
 
   /*
     🔴 **카드에 적힌 직무가 언제나 이긴다.** 온보딩 프리필은 그 칸이 **비어 있을 때만**
@@ -132,7 +134,8 @@ export function StartApplicationModal({
         <div>
           <JobTitleField
             variant="underline"
-            autoFocus
+            // 모바일은 열자마자 키보드가 모달을 덮는다 — 먼저 보고, 탭해서 입력 (2026-08-30 iPhone 실사고)
+            autoFocus={open && !isMobile}
             value={jobTitle}
             onChange={(v, source) => {
               setJobTitle(v)

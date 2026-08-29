@@ -62,6 +62,7 @@ export function AnnouncementModal({ title, body, kind, ctaLabel, ctaPath, onDism
 
   const dialogRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    // eslint-disable-next-line chwippo/no-bare-autofocus -- 입력 칸이 아니라 **대화상자 div** 에 주는 포커스다 (스크린리더 진입점) — 키보드가 안 올라온다
     dialogRef.current?.focus()
   }, [])
 

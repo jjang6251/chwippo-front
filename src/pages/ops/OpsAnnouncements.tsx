@@ -352,7 +352,13 @@ function AnnouncementFormModal({
     timeRangeError !== '시작 시간이 종료 시간보다 같거나 뒤에 있어요.'
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 px-4 pb-6 sm:pb-0">
+    <div
+      /*
+        🔴 컨테이너 하단 여백 금지 — 오버레이가 탭바를 이미 덮고 있어 `pb-6` 은 시트 아래
+        **검은 띠**로만 남는다 (2026-08-30 iPhone 실사고). 홈 인디케이터 여백은 아래 버튼 줄이 진다.
+      */
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 px-4"
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -548,7 +554,8 @@ function AnnouncementFormModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-line">
+        {/* 컨테이너에서 걷어낸 하단 여백을 여기로 — 홈 인디케이터에 버튼이 물리지 않게 */}
+        <div className="px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4 border-t border-line">
           {/* 🔴 서버가 거절한 문구를 **그대로** 보여준다 — 폼 검사와 규칙이 갈렸을 때
               「저장이 안 되는데 왜인지 모르는」 상태가 안 생기게 */}
           {serverError && (

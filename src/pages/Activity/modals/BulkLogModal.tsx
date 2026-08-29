@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { activityApi } from '@/api/activity'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { toast } from '@/stores/toastStore'
 import { todayLocal, toLocalDateString } from '@/utils/datetime'
 import type { Activity } from '@/types/activity'
@@ -18,6 +19,7 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
   const [dateMode, setDateMode] = useState<DateMode>('today')
   const [pending, setPending] = useState(false)
   const qc = useQueryClient()
+  const isMobile = useIsMobile()
   // 베타 피드백 — textarea auto-resize (min 200 / max 500)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const autoResize = () => {
@@ -158,7 +160,8 @@ export function BulkLogModal({ open, activity, onClose }: Props) {
                 resize: 'vertical',
                 lineHeight: 1.6,
               }}
-              autoFocus
+              // 모바일은 열자마자 키보드가 모달을 덮는다 — 먼저 보고, 탭해서 입력 (2026-08-30 iPhone 실사고)
+              autoFocus={open && !isMobile}
             />
             {content.split('\n').some((line) => line.length > 200) && (
               <p className="text-[10px] text-warning mt-1">
