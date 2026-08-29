@@ -26,6 +26,11 @@
  * 14. 회사 칸에 200자 이상 붙이면 묻지 않고 공고 모드로 옮긴다
  * 15. 200자 미만은 평소대로 회사명 입력이다
  *
+ * **딥링크 시작 모드 (`initialMode`)**
+ * 16b. 🔴 `initialMode='posting'` 은 **마지막 모드 기억을 이긴다**
+ * 16c. 안 주면 예전대로 마지막 모드 기억을 따른다
+ * 16d. 🔴 지원 예정은 initialMode 가 와도 직접 입력이다 (공고 모드가 없는 화면)
+ *
  * **데모**
  * 16. 데모에서만 「샘플 공고 넣어보기」 칩
  *
@@ -42,7 +47,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { AddCardModal } from './AddCardModal'
 import { useAuthStore } from '@/stores/authStore'
 import { usePendingCardStore, runPostingParse } from '@/stores/pendingCardStore'
-import { POSTING_NEW_UNTIL, POSTING_RELEASE_DATE } from '@/utils/postingNew'
+import { POSTING_NEW_UNTIL, POSTING_RELEASE_DATE, type AddCardMode } from '@/utils/postingNew'
 import { addDays } from '@/utils/datetime'
 import type { Application, PostingMeta } from '@/types/application'
 
@@ -121,14 +126,22 @@ function app(over: Partial<Application> = {}): Application {
 }
 
 const onClose = vi.fn()
-function renderModal(defaultStatus: 'PLANNED' | 'IN_PROGRESS' = 'IN_PROGRESS') {
+function renderModal(
+  defaultStatus: 'PLANNED' | 'IN_PROGRESS' = 'IN_PROGRESS',
+  initialMode?: AddCardMode,
+) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   return render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
-        <AddCardModal open onClose={onClose} defaultStatus={defaultStatus} />
+        <AddCardModal
+          open
+          onClose={onClose}
+          defaultStatus={defaultStatus}
+          initialMode={initialMode}
+        />
       </QueryClientProvider>
     </MemoryRouter>,
   )
@@ -345,6 +358,33 @@ describe('회사 칸 자동 전환', () => {
     renderModal()
     pasteIntoCompany('무신사')
     expect(manualTab()).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+describe('딥링크 시작 모드', () => {
+  it('16b) initialMode=posting 은 마지막 모드 기억을 이긴다', () => {
+    signIn()
+    localStorage.setItem('posting_last_mode_u1', 'manual')
+    renderModal('IN_PROGRESS', 'posting')
+    expect(postingTab()).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('16c) 안 주면 마지막 모드 기억을 따른다', () => {
+    signIn()
+    localStorage.setItem('posting_last_mode_u1', 'posting')
+    renderModal()
+    expect(postingTab()).toHaveAttribute('aria-pressed', 'true')
+
+    cleanup()
+    localStorage.setItem('posting_last_mode_u1', 'manual')
+    renderModal()
+    expect(manualTab()).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('16d) 지원 예정은 initialMode 가 와도 직접 입력', () => {
+    signIn()
+    renderModal('PLANNED', 'posting')
+    expect(screen.queryByRole('button', { name: /공고로 만들기/ })).toBeNull()
   })
 })
 

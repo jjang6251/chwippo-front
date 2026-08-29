@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { getActiveAnnouncement } from '@/api/announcements'
+import { getActiveAnnouncements } from '@/api/announcements'
 
-export function useActiveAnnouncement() {
+export function useActiveAnnouncements() {
   return useQuery({
     queryKey: ['announcements', 'active'],
-    queryFn: getActiveAnnouncement,
+    queryFn: getActiveAnnouncements,
     staleTime: 5 * 60 * 1000,
     retry: false,
   })

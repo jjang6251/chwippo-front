@@ -51,6 +51,11 @@ interface AddCardModalProps {
   open: boolean
   onClose: () => void
   defaultStatus?: 'PLANNED' | 'IN_PROGRESS'
+  /**
+   * 딥링크(`/board?add=posting`)로 열 때의 시작 모드 — **마지막 모드 기억보다 우선한다.**
+   * 「공고로 만들기 해보기」를 눌러 왔는데 직접 입력 폼이 열리면 약속을 어긴 게 된다.
+   */
+  initialMode?: AddCardMode
   prefill?: AddCardPrefill | null
 }
 
@@ -100,6 +105,7 @@ export function AddCardModal({
   open,
   onClose,
   defaultStatus = 'IN_PROGRESS',
+  initialMode,
   prefill = null,
 }: AddCardModalProps) {
   /*
@@ -178,7 +184,9 @@ export function AddCardModal({
    * 실패 폴백으로 돌아온 경우도 직접 입력으로 연다 (붙여넣기는 방금 실패한 길이다).
    */
   const [mode, setMode] = useState<AddCardMode>(() =>
-    defaultStatus === 'PLANNED' || prefill ? 'manual' : loadAddCardMode(user?.id),
+    defaultStatus === 'PLANNED' || prefill
+      ? 'manual'
+      : (initialMode ?? loadAddCardMode(user?.id)),
   )
   const [rawText, setRawText] = useState('')
   /** 시작 거절 문구 (중복·동시 상한) — 토스트가 아니라 버튼 옆에 남는다 */

@@ -12,6 +12,7 @@ import { CardResearchReveal } from '@/components/card/CardResearchReveal'
 import { StepNodeHint } from '@/components/board/StepNodeHint'
 import { hasSeenStepNodeHint } from '@/utils/stepNodeHint'
 import { AddCardModal, type AddCardPrefill } from '@/components/card/AddCardModal'
+import type { AddCardMode } from '@/utils/postingNew'
 import { PendingCard } from '@/components/board/PendingCard'
 import { usePendingCardStore } from '@/stores/pendingCardStore'
 import { jobPostingCardApi } from '@/api/jobPosting'
@@ -59,7 +60,7 @@ function CardSkeleton() {
 }
 
 export function Board() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const initialFilter = (searchParams.get('filter') as FilterTab) || 'all'
   const [filter, setFilter] = useState<FilterTab>(initialFilter)
   const [search, setSearch] = useState('')
@@ -69,7 +70,33 @@ export function Board() {
     saveBoardView(next)
   }
   const [addMenuOpen, setAddMenuOpen] = useState(false)
+  /**
+   * 딥링크로 열기 — 공지의 「지금 해보기」 같은 데서 `/board?add=posting` 으로 들어온다.
+   * `posting` = 공고 붙여넣기 · `1` = 직접 입력. 둘 다 「지원 중」으로 연다
+   * (지원 예정은 「일단 적어두기」 화면이라 남이 대신 열어 줄 자리가 아니다).
+   */
+  const addParam = searchParams.get('add')
+  const addFromUrl: AddCardMode | null =
+    addParam === 'posting' ? 'posting' : addParam === '1' ? 'manual' : null
   const [addModalStatus, setAddModalStatus] = useState<'PLANNED' | 'IN_PROGRESS' | null>(null)
+  /*
+    🔴 딥링크는 **상태로 복사하지 않고 URL 에서 파생**한다. 마운트 초기값으로만 읽던 첫 구현은
+    사용자가 이미 /board 에 있을 때(공지 CTA 가 눌리는 가장 흔한 자리) 같은 페이지 안 이동이라
+    마운트가 없어 모달이 안 열렸다(2026-08-30 실브라우저 실측). effect 로 setState 하는 길은
+    lint(react-hooks)가 막는다. 파생이면 파라미터가 바뀌는 순간 곧바로 열리고,
+    파라미터는 모달을 **닫을 때** 지운다 — 닫기 전 새로고침은 다시 열리는 게 맞다(아직 안 닫았으니).
+  */
+  const effectiveAddStatus = addModalStatus ?? (addFromUrl ? 'IN_PROGRESS' : null)
+  const effectiveInitialMode = addModalStatus ? undefined : (addFromUrl ?? undefined)
+  const closeAddModal = () => {
+    setAddModalStatus(null)
+    setAddPrefill(null)
+    if (searchParams.has('add')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('add')
+      setSearchParams(next, { replace: true })
+    }
+  }
   /** 공고 카드 실패 → 직접 입력으로 되돌아올 때 살려 오는 값 */
   const [addPrefill, setAddPrefill] = useState<AddCardPrefill | null>(null)
   const [startAppId, setStartAppId] = useState<string | null>(null)
@@ -396,11 +423,12 @@ export function Board() {
         「effect 로 state 를 되돌리는」 모양이 됐다. 마운트를 조건부로 두면 `useState` 초기화가
         그 일을 하고, 닫을 때 상태가 통째로 사라지는 것도 원래 의도(`handleClose` 의 리셋)와 같다.
       */}
-      {addModalStatus !== null && (
+      {effectiveAddStatus !== null && (
         <AddCardModal
           open
-          onClose={() => { setAddModalStatus(null); setAddPrefill(null) }}
-          defaultStatus={addModalStatus}
+          onClose={closeAddModal}
+          defaultStatus={effectiveAddStatus}
+          initialMode={effectiveInitialMode}
           prefill={addPrefill}
         />
       )}
