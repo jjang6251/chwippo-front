@@ -1675,6 +1675,7 @@ function GoalsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
         {adding ? (
           <div className="flex gap-2">
             <input
+              // eslint-disable-next-line chwippo/no-bare-autofocus -- 「목표 추가」를 눌러야(adding) 나타나는 칸 — 탭 뒤 등장
               autoFocus
               value={newGoal}
               onChange={(e) => setNewGoal(e.target.value)}
@@ -1779,6 +1780,7 @@ function CoverletterSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEle
               {addingLabel ? (
                 <div className="flex gap-2">
                   <input
+                    // eslint-disable-next-line chwippo/no-bare-autofocus -- 「항목 추가」를 눌러야(addingLabel) 나타나는 칸 — 탭 뒤 등장
                     autoFocus
                     value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
@@ -2113,6 +2115,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               <div>
                 <FieldLabel label="파일 제목" required />
                 <input
+                  // eslint-disable-next-line chwippo/no-bare-autofocus -- 「파일 추가」를 눌러야(showUpload) 열리는 업로드 폼의 첫 칸 — 탭 뒤 등장
                   autoFocus
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}

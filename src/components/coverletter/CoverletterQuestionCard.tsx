@@ -499,6 +499,7 @@ export function CoverletterQuestionCard({
               setEditingQuestion(false)
             }
           }}
+          // eslint-disable-next-line chwippo/no-bare-autofocus -- 문항 버튼을 눌러 편집 모드로 바꿔야 나타나는 칸 — 탭 뒤 등장
           autoFocus
           maxLength={500}
           placeholder="예: 우리 회사에 지원한 동기를 작성해 주세요."

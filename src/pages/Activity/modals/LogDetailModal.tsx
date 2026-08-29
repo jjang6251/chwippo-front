@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@/stores/toastStore'
 import { useCreateLog, useUpdateLog } from '@/hooks/useActivities'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import type {
   ActivityLog,
   CoverletterTag,
@@ -167,6 +168,7 @@ export function LogDetailModal({
 
   const create = useCreateLog(activityId)
   const update = useUpdateLog(editing?.activityId ?? activityId)
+  const isMobile = useIsMobile()
 
   // 베타 피드백 — textarea auto-resize (min 200 / max 500)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -317,7 +319,8 @@ export function LogDetailModal({
                 resize: 'vertical',
                 lineHeight: 1.6,
               }}
-              autoFocus
+              // 모바일은 열자마자 키보드가 모달을 덮는다 — 먼저 보고, 탭해서 입력 (2026-08-30 iPhone 실사고)
+              autoFocus={open && !isMobile}
             />
             <p className={`text-[10px] text-right mt-1 ${content.length >= 200 ? 'text-danger' : content.length >= 180 ? 'text-warning' : 'text-text-quaternary'}`}>
               {content.length} / 200

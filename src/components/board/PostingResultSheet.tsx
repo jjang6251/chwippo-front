@@ -368,6 +368,9 @@ function DesktopPanel({
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         ),
       ).filter((el) => !el.hasAttribute('disabled'))
+    /* eslint-disable chwippo/no-bare-autofocus -- 데스크탑 전용 패널(`DesktopPanel`)의 Tab 가둠이다.
+       모바일은 이 경로를 안 타고 vaul 시트가 대신 가둔다. 여기 `.focus()` 는 첫 요소 진입 + Tab 순환이라
+       칸이 아니라 버튼·링크로 가고, 순환 쪽은 사용자가 Tab 을 눌러야 돈다 */
     focusables()[0]?.focus()
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return
@@ -389,6 +392,7 @@ function DesktopPanel({
         last.focus()
       }
     }
+    /* eslint-enable chwippo/no-bare-autofocus */
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [])
