@@ -120,4 +120,18 @@ describe('Modal — ESC·aria 위생 (U14)', () => {
     expect(screen.getByRole('heading', { name: '테스트 모달' }).className).toContain('sr-only')
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-label', '테스트 모달')
   })
+
+  it('9) 🔴 모바일 바텀시트는 바닥에 붙는다 — 컨테이너에 하단 여백이 없고 탭바(z-50)보다 위다', () => {
+    // iPhone 실기(2026-08-30): 컨테이너 `pb-[safe-area+4rem]` 탓에 시트와 탭바 사이에 검은 띠가 남았다
+    render(
+      <Modal open onClose={vi.fn()} title="테스트 모달">
+        <p>본문</p>
+      </Modal>,
+    )
+    const overlay = screen.getByRole('dialog').parentElement!
+    const cls = overlay.className.split(/\s+/)
+    expect(cls).toContain('items-end')
+    expect(cls).toContain('z-[60]')
+    expect(cls.some((c) => c.startsWith('pb-'))).toBe(false)
+  })
 })
