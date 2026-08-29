@@ -7,6 +7,7 @@ import { PostingPasteField } from '@/components/card/PostingPasteField'
 import { useCreateApplication, useApplications } from '@/hooks/useApplications'
 import { useAuthStore } from '@/stores/authStore'
 import { useDemoMode } from '@/contexts/demoMode'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { POSTING_RAW_MAX, POSTING_RAW_MIN } from '@/api/jobPosting'
 import { usePendingCardStore, runPostingParse } from '@/stores/pendingCardStore'
@@ -166,6 +167,13 @@ export function AddCardModal({
   const qc = useQueryClient()
 
   const isPlanned = defaultStatus === 'PLANNED'
+
+  /*
+    🔴 모바일에선 첫 칸에 autoFocus 를 걸지 않는다 — 모달을 보기도 전에 키보드가 올라와 화면을 덮고
+    (iPhone 실기 2026-08-30: 지원 예정·지원 중·공지 CTA 셋 다), iOS 는 키보드가 닫힌 뒤 뷰포트가
+    늦게 돌아와 시트 위치까지 흔들린다. 「먼저 보고, 탭해서 입력」이 모바일 순서다. 데스크탑은 유지.
+  */
+  const isMobile = useIsMobile()
 
   // ── 공고로 만들기 ─────────────────────────────────────────
   const isDemo = useDemoMode()
@@ -409,7 +417,7 @@ export function AddCardModal({
           <PostingPasteField
             value={rawText}
             onChange={setRawText}
-            autoFocus={open}
+            autoFocus={open && !isMobile}
             onFillSample={isDemo ? fillDemoSample : undefined}
           />
         ) : (
@@ -428,7 +436,7 @@ export function AddCardModal({
             value={companyName}
             onChange={setCompanyName}
             placeholder="어느 회사에 지원하세요?"
-            autoFocus={open}
+            autoFocus={open && !isMobile}
             disabled={isPending}
             onPaste={handleCompanyPaste}
           />

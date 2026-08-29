@@ -40,7 +40,14 @@ export function Modal({ open, onClose, title, children, width = 'max-w-sm', titl
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:px-4 pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:pb-0"
+      /*
+        🔴 모바일(sm 미만)은 **바닥에 붙는 바텀시트**다. 예전엔 컨테이너에 `safe-area + 4rem` 하단 여백을 줘서
+        시트를 탭바 위에 띄웠는데, 오버레이가 탭바를 이미 어둡게 덮고 있어 시트와 탭바 사이에
+        **검은 띠**만 남았다 (2026-08-30 iPhone 실기 — 지원 예정·지원 중·공고 모드 전부). 여백을 없애고
+        z 를 탭바(z-50) 위로 올려 시트가 바닥까지 내려온다. 홈 인디케이터 여백은 본문의
+        `pb-[max(1.25rem,env(safe-area-inset-bottom))]` 이 진다.
+      */
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:px-4"
       onClick={onClose}
     >
       <div
