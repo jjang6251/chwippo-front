@@ -280,6 +280,57 @@ describe('BoardDetail — 상태 5종', () => {
     expect(screen.getByText('회사 메모')).toBeInTheDocument()
   })
 
+  /**
+   * 🔴 진행 상황이 빠지는 자리를 **비워 두지 않는다** (CEO 실기 2026-08-29 —
+   * 「투어 끝나고 지원 예정 카드에 들어가니 뭘 할지 모르겠다」). 그 자리에 안내 블록이 선다.
+   */
+  it('PLANNED — 안내 블록이 「전형 단계」 탭 맨 위에 선다', () => {
+    h.app = makeApp({ status: 'PLANNED', currentStepIndex: 0 })
+    const { container } = renderDetail()
+
+    const guide = container.querySelector('[data-planned-guide]')
+    expect(guide).not.toBeNull()
+    expect(screen.getByText('아직 지원 전이에요')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /지원 시작하기/ })).toBeInTheDocument()
+
+    // 메모 에디터 **위**에 있다 — 첫 화면이 빈 에디터면 안 된다
+    const memo = screen.getByTestId('memo-card')
+    expect(
+      guide!.compareDocumentPosition(memo) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('IN_PROGRESS — 안내 블록이 없다 (진행 상황이 그 자리를 쓴다)', () => {
+    h.app = makeApp({ currentStepIndex: 0 })
+    const { container } = renderDetail()
+    expect(container.querySelector('[data-planned-guide]')).toBeNull()
+    expect(screen.getByRole('heading', { name: /진행 상황/ })).toBeInTheDocument()
+  })
+
+  /** 보드 카드와 **같은 모달**이다 — 지원 시작 경로가 화면마다 다르면 안 된다 */
+  it('PLANNED — 「지원 시작하기」가 지원 시작 모달을 연다', () => {
+    h.app = makeApp({ status: 'PLANNED', currentStepIndex: 0 })
+    renderDetail()
+
+    fireEvent.click(screen.getByRole('button', { name: /지원 시작하기/ }))
+    expect(screen.getByRole('dialog', { name: '지원 시작' })).toBeInTheDocument()
+  })
+
+  it('PLANNED — 지원 시작 후 IN_PROGRESS 가 되면 블록이 사라진다', () => {
+    h.app = makeApp({ status: 'PLANNED', currentStepIndex: 0 })
+    const { container, rerender } = renderDetail()
+    expect(container.querySelector('[data-planned-guide]')).not.toBeNull()
+
+    // 모달 성공 → 캐시 갱신으로 status 가 바뀐 상태를 그대로 재현한다
+    h.app = makeApp({ status: 'IN_PROGRESS', currentStepIndex: 0 })
+    rerender(<div />)
+    const next = renderDetail()
+    expect(next.container.querySelector('[data-planned-guide]')).toBeNull()
+    expect(
+      within(next.container).getByRole('heading', { name: /진행 상황/ }),
+    ).toBeInTheDocument()
+  })
+
   it('결과 대기 (IN_PROGRESS·마지막·날짜 경과) — 카드 내 "결과 대기 중" + 결과 입력 버튼', () => {
     h.app = makeApp({
       currentStepIndex: 0,

@@ -2,10 +2,14 @@ import { useState } from 'react'
 import { Briefcase, Lightbulb } from 'lucide-react'
 import { useApplication, useUpdateApplication } from '@/hooks/useApplications'
 import { resolveJobText } from '@/hooks/useRequireJobTitle'
+/* 같은 이름이라 별칭 — 이쪽은 「표시 + 그 자리 수정」 껍데기고, 저건 입력기 자체다 */
+import { JobTitleField as JobTitleInput } from '@/components/card/JobTitleField'
+import { PromoteJobTitleRow } from '@/components/card/PromoteJobTitleRow'
+import { JOB_SERIES, classifyJob } from '@/utils/jobRole'
+import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
+import type { JobTitleSource } from '@/types/application'
 
-/** 카드 `jobTitle` 컬럼과 DTO `@MaxLength(100)` 에 맞춘다 */
-const MAX_LEN = 100
 const PLACEHOLDER = '예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계'
 
 interface Props {
@@ -33,18 +37,29 @@ interface Props {
 export function JobTitleField({ applicationId, variant = 'inline' }: Props) {
   const { data: app } = useApplication(applicationId)
   const { mutateAsync: updateApp } = useUpdateApplication(applicationId)
+  const profileJobTitle = useAuthStore((s) => s.user?.signupJobTitle ?? null)
 
   const current = resolveJobText(app)
   // 직무가 없으면 처음부터 입력 상태 — 한 번 더 누르게 만들 이유가 없다
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
+  const [source, setSource] = useState<JobTitleSource>('typed')
+  const [seriesId, setSeriesId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const open = editing || (!current && variant === 'block')
   const trimmed = value.trim()
 
   const startEdit = () => {
-    setValue(app?.jobTitle?.trim() ?? '')
+    const title = app?.jobTitle?.trim() ?? ''
+    setValue(title)
+    /*
+      🔴 계열 초기값은 **직무에서 다시 판정**한다 — 저장된 `jobCategory` 라벨을 역매핑하지
+      않는다 (구 21어휘가 섞여 있어 되돌릴 수 없다). `BoardDetail` 편집 폼과 같은 규칙.
+    */
+    const verdict = title ? classifyJob(title) : null
+    setSeriesId(verdict?.status === 'confident' ? verdict.series.id : null)
+    setSource('typed')
     setEditing(true)
   }
 
@@ -52,7 +67,19 @@ export function JobTitleField({ applicationId, variant = 'inline' }: Props) {
     if (saving || !trimmed) return
     setSaving(true)
     try {
-      await updateApp({ jobTitle: trimmed })
+      /*
+        🔴 **계열을 반드시 같이 쓴다** — 못 잡았으면 `null` 로 지운다.
+        여기서 `jobTitle` 만 보내면 「승무원」을 「백엔드」로 고쳐도 태그가
+        「영업·판매·서비스」로 남는다 (2026-08-28 실기 결함과 같은 원인).
+      */
+      const seriesLabel = seriesId
+        ? JOB_SERIES.find((s) => s.id === seriesId)?.label
+        : undefined
+      await updateApp({
+        jobTitle: trimmed,
+        jobTitleSource: source,
+        jobCategory: seriesLabel ?? null,
+      })
       setEditing(false)
       toast.show('직무를 저장했어요.')
     } catch {
@@ -66,33 +93,40 @@ export function JobTitleField({ applicationId, variant = 'inline' }: Props) {
 
   if (open) {
     return (
-      <div>
-        <label
-          htmlFor={`job-title-${applicationId}`}
-          className="block text-xs text-text-tertiary mb-1.5"
-        >
-          지원 직무 {!current && <span className="text-danger">*</span>}
-        </label>
-        <div className="flex gap-1.5">
-          <input
-            id={`job-title-${applicationId}`}
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && trimmed) void save()
-              if (e.key === 'Escape' && current) setEditing(false)
-            }}
-            maxLength={MAX_LEN}
-            placeholder={PLACEHOLDER}
-            /*
-             * 지원할 회사의 직무라 **매번 다르다** — 브라우저가 프로필에 저장된
-             * 본인 직함(organization-title)을 채우면 엉뚱한 값이 들어간다.
-             */
-            autoComplete="off"
-            /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
-            className="flex-1 min-w-0 bg-input border border-line rounded-lg px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
-          />
+      <div
+        /*
+          Enter 저장 · Esc 취소는 그대로 유지한다. 🔴 단 **드롭다운이 그 키를 먼저 쓴 경우는
+          비켜준다** — `JobTitleField` 는 추천 항목을 고를 때 `preventDefault` 하므로,
+          그 신호를 보고 물러나면 「↓로 고르다가 Enter 눌렀는데 저장돼 버리는」 일이 없다.
+        */
+        onKeyDown={(e) => {
+          if (e.defaultPrevented) return
+          if (e.key === 'Enter' && trimmed) void save()
+          if (e.key === 'Escape' && current) setEditing(false)
+        }}
+      >
+        {/* 공용 입력기 — 사전 추천 + 계열 판정이 이 자리에서도 돈다 */}
+        <JobTitleInput
+          id={`job-title-${applicationId}`}
+          value={value}
+          onChange={(v, src) => {
+            setValue(v)
+            setSource(src)
+          }}
+          seriesId={seriesId}
+          onSeriesChange={(id) => setSeriesId(id)}
+          labelText={
+            <>지원 직무 {!current && <span className="text-danger">*</span>}</>
+          }
+          placeholder={PLACEHOLDER}
+        />
+        {/* 이 카드 직무가 내 희망 직무와 다르면 맞추자고 제안한다 (탭해야만 반영) */}
+        <PromoteJobTitleRow
+          profileTitle={profileJobTitle}
+          jobTitle={value}
+          seriesId={seriesId}
+        />
+        <div className="flex gap-1.5 mt-2">
           <button
             type="button"
             onClick={() => void save()}

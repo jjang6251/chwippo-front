@@ -6,8 +6,7 @@ const unwrap = <T>(res: { data: { data: T } }) => res.data.data
 /**
  * W2 — 회사명 자동완성.
  *
- * - q 빈 string OR 미전송 → signup 직군 boost 회사 추천
- * - q 1+ char → DART JSON + 사용자 누적 통합 검색
+ * - q 1+ char → DART JSON + 조사 시드 + 사용자 누적 통합 검색
  * - limit 11+ → 10 cap (backend)
  * - rate limit 분당 60회
  */

@@ -34,6 +34,8 @@ import {
  */
 const STAGE_STYLE: Record<ReachStage, { badge: string; bar: string }> = {
   signup: { badge: 'text-text-tertiary bg-card border-line', bar: 'bg-text-quaternary/40' },
+  // accent(coral) — DESIGN.md 가 「카테고리 강조」로 허용하는 쓰임. 나머지 6색과 겹치지 않는다
+  tour_completed: { badge: 'text-accent bg-accent/10 border-accent/25', bar: 'bg-accent/60' },
   card: { badge: 'text-info bg-info/10 border-info/30', bar: 'bg-info/60' },
   activity: { badge: 'text-violet bg-violet/10 border-violet/30', bar: 'bg-violet/60' },
   coverletter_question: {
@@ -124,6 +126,7 @@ export function OpsReach() {
       ) : (
         <>
           <StageFunnel data={data} />
+          <TourDropOffTable rows={data.tourDropOff ?? []} />
           <DesktopAxis data={data} />
           <ReachTable
             rows={data.rows}
@@ -174,6 +177,62 @@ function StageFunnel({ data }: { data: { stageCounts: Record<ReachStage, number>
       <p className="text-sm text-text-quaternary mt-3">
         각 단계는 <strong className="text-text-tertiary">독립 판정</strong>이다 — 활동일지는 별도 메뉴라
         카드 없이도 쓸 수 있어, 위 숫자는 위아래로 단조롭지 않을 수 있다.
+      </p>
+    </div>
+  )
+}
+
+/**
+ * ①-b 투어 이탈 장면 — **완료율 한 숫자로는 못 보는 것.**
+ *
+ * 「투어 완료 N명」만 있으면 6장 중 **어디가 지루한지**를 영영 모른다. 나간 장면이 한쪽에
+ * 몰려 있으면 그 장을 고치면 되고, 고르게 흩어져 있으면 길이 자체가 문제다.
+ *
+ * 🔴 **이탈이 0이면 블록째 없앤다** — 「이탈 없음」을 큰 표로 말하면 빈 패널이 된다.
+ * 아직 투어를 만난 사람이 없는 초기에도 같은 이유로 아무것도 그리지 않는다.
+ */
+function TourDropOffTable({ rows }: { rows: { step: number; count: number }[] }) {
+  if (rows.length === 0) return null
+  const total = rows.reduce((sum, r) => sum + r.count, 0)
+
+  return (
+    <div className="bg-surface-2 border border-line rounded-xl p-5 mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <p className="text-xs text-text-tertiary font-semibold">투어 이탈 장면</p>
+        <span className="text-[10px] text-text-quaternary bg-card px-1.5 py-0.5 rounded">
+          투어를 만났지만 안 끝낸 {total.toLocaleString()}명
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line">
+              <th className="text-left py-2 pr-4 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider whitespace-nowrap">
+                장면
+              </th>
+              <th className="text-left py-2 text-[11px] text-text-quaternary font-semibold uppercase tracking-wider whitespace-nowrap">
+                이탈 인원
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ step, count }) => (
+              <tr key={step} className="border-b border-line last:border-0">
+                <td className="py-2 pr-4 text-xs text-text-tertiary tabular-nums whitespace-nowrap">
+                  {step}장
+                </td>
+                <td className="py-2 text-xs tabular-nums">
+                  <Count value={count} suffix="명" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-sm text-text-quaternary mt-3">
+        🔴 <strong className="text-text-tertiary">완료자는 여기 없다.</strong> 마지막 장까지
+        간 사람은 「투어 완료」 단계로 세고, 이 표는 <em>도중에 나간 사람</em>만 담는다.
+        이탈이 없는 장면은 행 자체를 만들지 않는다.
       </p>
     </div>
   )
@@ -393,6 +452,11 @@ function ReadingNotes({ excludedAdmins }: { excludedAdmins: number }) {
         <li>
           온보딩이 자동 생성한 <strong className="text-text-tertiary">샘플 카드는 도달 판정에서 제외</strong>한다.
           안 그러면 온보딩을 마친 사람 전원이 "카드" 단계를 자동 통과한다.
+        </li>
+        <li>
+          🔴 <strong className="text-text-tertiary">"투어 완료"는 소급되지 않는다.</strong> 투어가
+          생기기 전에 가입한 사람은 끝낼 기회 자체가 없었으므로 이 단계에서 빠진다 — 낮은 숫자를
+          이탈로 읽으면 안 된다. 도입 이후 가입 코호트끼리만 비교한다.
         </li>
         <li>
           AI는 <strong className="text-text-tertiary">시도와 성공을 나눠</strong> 센다 — "눌렀는데

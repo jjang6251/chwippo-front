@@ -18,6 +18,14 @@ interface User {
   signupJobCategories: string[] | null
   /** W1 — "기타" 직군 자유 입력 (NULL or "") */
   signupOtherText: string | null
+  /** 온보딩 계열 1탭 답변 — `@/utils/jobRole` 의 `JOB_SERIES` id. NULL → 미답변·건너뛰기·구 경로 */
+  signupSeriesId: string | null
+  /**
+   * 온보딩에서 **사람이 타이핑한** 직무 원문.
+   * 🔴 카드 추가 모달 프리필의 유일한 재료다. 계열만 고른 사용자는 NULL —
+   * 시스템이 고른 라벨을 직무로 승격하지 않는다 (「사람 말만 볼펜」).
+   */
+  signupJobTitle: string | null
   /** W1 — 샘플 카드 전체 dismiss 시각 (NULL → 샘플 살아있음) */
   sampleCardsDismissedAt: string | null
   /** 캘린더 UX 재구성 — "이제 캘린더가 홈이에요" 안내 배너 dismiss 시각 (NULL → 첫 방문 배너 노출) */

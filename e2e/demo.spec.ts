@@ -142,7 +142,8 @@ test.describe('데모 모드', () => {
     await page.getByText('지원 중으로 추가').click()
 
     // 자동완성은 입력이 있어야 뜬다 — null 응답이면 여기서 죽었다
-    const input = page.getByPlaceholder(/회사명/)
+    // 8/28 A안 모달 — 회사 칸 placeholder 가 「어느 회사에 지원하세요?」(B 문구)로 바뀜
+    const input = page.getByPlaceholder(/어느 회사에 지원하세요/)
     await expect(input).toBeVisible()
     await input.fill('카카오')
     await expect(page.getByText('화면을 불러오지 못했어요')).toHaveCount(0)

@@ -133,6 +133,15 @@ export default {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' },
         },
+        /**
+         * 앱 소개 투어 상단 진행 바 — 현재 장면이 재생되는 동안 채워진다.
+         * `duration` 은 장면마다 다르므로 호출부가 인라인으로 준다(글자수에서 계산).
+         * 🔴 `width` 가 아니라 `scaleX` — 폭 애니메이션은 매 프레임 레이아웃을 다시 잡는다.
+         */
+        tourProgress: {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
       },
       animation: {
         fadeInUp: 'fadeInUp 0.2s ease-out',
@@ -140,6 +149,8 @@ export default {
         fadeIn: 'fadeIn 0.25s ease-out',
         celebrateUp: 'celebrateUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both',
         shimmer: 'shimmer 1.5s ease-in-out infinite',
+        // duration 은 호출부가 인라인으로 덮어쓴다 (장면 길이 = 연출 + 읽는 여유)
+        tourProgress: 'tourProgress 5s linear forwards',
       },
     },
   },

@@ -140,7 +140,8 @@ const cardHeights = (page: Page) =>
 async function addCard(page: Page) {
   await page.getByRole('button', { name: '추가', exact: true }).click()
   await page.getByText('지원 중으로 추가').click()
-  await page.getByPlaceholder('회사명 입력').fill('조사대상회사')
+  // 8/28 A안 모달 — 회사 칸 placeholder 가 「어느 회사에 지원하세요?」(B 문구)로 바뀜
+  await page.getByPlaceholder(/어느 회사에 지원하세요/).fill('조사대상회사')
   await page.getByRole('button', { name: '추가하기' }).click()
   await expect(page.locator(`[data-card-id="${NEW_ID}"]`)).toBeVisible()
 }
