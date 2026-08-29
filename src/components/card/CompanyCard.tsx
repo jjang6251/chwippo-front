@@ -178,8 +178,11 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
         `}
       >
       {/* 상단: 아바타 + 회사명 + 메뉴 */}
+      {/* 🔴 `data-card-*` 는 **시각 무변경 훅**이다 — 앱 소개 투어 1장이 카드 내부 요소를
+          순서대로 등장시키려고 잡는 자리다(`index.css` 의 `.tour-stage-1` 스코프).
+          클래스 이름으로 잡으면 스타일을 손대는 순간 안무가 조용히 끊긴다. */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex items-center gap-3 min-w-0">
+        <div data-card-header className="flex items-center gap-3 min-w-0">
           {isPassed || isFailed ? (
             <div
               className={`flex-none w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold tracking-tight ${
@@ -215,7 +218,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-none">
+        <div data-card-actions className="flex items-center gap-1 flex-none">
           {/* 별 토글 */}
           <StarToggle
             starred={application.isStarred}
@@ -224,7 +227,9 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
 
           {/* D-day 배지 */}
           {ddayTarget && !isPassed && !isFailed && (
-            <DdayBadge deadline={ddayTarget} />
+            <span data-card-dday className="inline-flex">
+              <DdayBadge deadline={ddayTarget} />
+            </span>
           )}
 
           {/* ... 메뉴 */}
@@ -281,7 +286,7 @@ export function CompanyCard({ application, onStartApplication, onSetResult }: Co
       </div>
 
       {/* 태그들 — 없어도 한 줄 높이 예약 (카드 높이 통일) */}
-      <div className="flex flex-wrap gap-1 mb-3 min-h-[22px]">
+      <div data-card-tags className="flex flex-wrap gap-1 mb-3 min-h-[22px]">
         {tags.map((tag) => {
           const colorClass = JOB_CATEGORY_COLOR[tag] ?? JOB_CATEGORY_COLOR['기타']
           const TagIcon = JOB_CATEGORY_ICON[tag] ?? JOB_CATEGORY_ICON['기타']

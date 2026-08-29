@@ -13,6 +13,14 @@ export interface AdminUser {
   /** W1 — "기타" 자유 입력 직무명 */
   signupOtherText: string | null
   /**
+   * 계열 1탭 온보딩 답변 — `JOB_SERIES` id · 사람이 타이핑한 직무 원문.
+   *
+   * 🔴 **옵셔널이다.** 백엔드가 프론트보다 늦게 뜨는 배포 창에서는 이 필드가 없다
+   * (`platform` 과 같은 이유 — 2026-07-31 실사고).
+   */
+  signupSeriesId?: string | null
+  signupJobTitle?: string | null
+  /**
    * 사용 환경 — 웹/앱 로그인 이력 기반 (서버 `user-platform.ts` 판정).
    *
    * 🔴 **옵셔널이다.** 백엔드가 프론트보다 늦게 뜨는 배포 창에서는 이 필드가 없다

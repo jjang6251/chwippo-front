@@ -63,6 +63,14 @@ interface Props {
   intro?: boolean
   /** 순차 등장 시작 시각(ms). 축하 오버레이는 체크 행이 다 뜬 뒤부터 시작한다 */
   startDelayMs?: number
+  /**
+   * 요소 간 간격(ms). 기본 90 은 **스트립·축하 오버레이의 값**이다 — 방금 한 일에 대한
+   * 반응이라 촘촘한 게 맞다.
+   *
+   * 🔴 앱 소개 투어만 이 값을 늘린다. 거기서는 **보고만 있는 사람**에게 하나씩 「똭」
+   * 보여줘야 해서, 90ms 로 겹쳐 오르면 전부 동시에 뜬 것처럼 읽힌다 (CEO 2026-08-28 실기).
+   */
+  stepMs?: number
 }
 
 /**
@@ -74,8 +82,8 @@ interface Props {
 
 /** 이 순간에 색칩 8개는 시끄럽다 — 원본 7~8개 중 앞 5개만 */
 const MAX_KEYWORDS = 5
-/** 요소 간 간격. 축하 오버레이 체크 행(400ms)보다 훨씬 촘촘하게 — 작은 요소들이다 */
-const STEP_MS = 90
+/** 요소 간 간격 기본값. 축하 오버레이 체크 행(400ms)보다 훨씬 촘촘하게 — 작은 요소들이다 */
+const DEFAULT_STEP_MS = 90
 
 export function CardResearchReveal({
   applicationId,
@@ -84,6 +92,7 @@ export function CardResearchReveal({
   onDismiss,
   intro = false,
   startDelayMs = 120,
+  stepMs = DEFAULT_STEP_MS,
 }: Props) {
   const isOverlay = variant === 'celebration'
   const isDemo = useDemoMode()
@@ -145,7 +154,7 @@ export function CardResearchReveal({
   if (!visible) return null
 
   let step = 0
-  const delay = () => ({ animationDelay: `${startDelayMs + step++ * STEP_MS}ms` })
+  const delay = () => ({ animationDelay: `${startDelayMs + step++ * stepMs}ms` })
   const enter =
     'animate-fadeInUp motion-reduce:animate-none opacity-0 motion-reduce:opacity-100 [animation-fill-mode:both]'
   /* 라벨은 정보 이름(「회사 조사」)이 아니라 **말을 건다**. 하나뿐 — 인재상·요약은

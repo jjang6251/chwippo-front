@@ -19,7 +19,7 @@ import { useApplication, useUpdateApplication, useUpdateCurrentStep, useUpdateSt
 import { useInterviewNudgeFlow } from '@/hooks/useInterviewNudgeFlow'
 import { InterviewNudgeModal } from '@/components/card/InterviewNudgeModal'
 import { NewInterviewSessionModal } from '@/components/card/NewInterviewSessionModal'
-import type { UpdateApplicationDto, ApplicationStep } from '@/types/application'
+import type { UpdateApplicationDto, ApplicationStep, JobTitleSource } from '@/types/application'
 import { StepDateField } from '@/components/board/StepDateField'
 import { useChecklist } from '@/hooks/useStepDetail'
 import { StepBar } from '@/components/card/StepBar'
@@ -33,10 +33,11 @@ import { StarToggle } from '@/components/card/StarToggle'
 import { SetResultModal } from '@/components/card/SetResultModal'
 import { FailedTakeawayBox } from '@/components/card/FailedTakeawayBox'
 import { Modal } from '@/components/common/Modal'
-import { TagSelector } from '@/components/common/TagSelector'
 import { CompanyAvatar } from '@/components/board/CompanyAvatar'
 import { CompanyInfoSection } from '@/components/board/CompanyInfoSection'
 import { CompanyMemoCard } from '@/components/board/CompanyMemoCard'
+import { PlannedGuide } from '@/components/board/PlannedGuide'
+import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { useCoverletterAiBlocked } from '@/hooks/useCoverletterAiBlocked'
 import { loadCollapseExpanded, saveCollapseExpanded, JOB_POSTING_EXPANDED_STORAGE_KEY } from '@/utils/collapsePref'
@@ -45,7 +46,10 @@ import { celebrate } from '@/stores/celebrationStore'
 import { useAuthStore } from '@/stores/authStore'
 import { trackClarityEvent } from '@/lib/clarity'
 import { hasSeenResearch, markResearchSeen } from '@/utils/researchSeen'
-import { parseTags, serializeTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
+import { parseTags, JOB_CATEGORY_COLOR, JOB_CATEGORY_ICON } from '@/utils/tags'
+import { JobTitleField } from '@/components/card/JobTitleField'
+import { PromoteJobTitleRow } from '@/components/card/PromoteJobTitleRow'
+import { JOB_SERIES, classifyJob } from '@/utils/jobRole'
 import { getStepType, STEP_TYPE_CONFIG } from '@/utils/stepTemplates'
 import { MapPin, Pencil, GripVertical } from 'lucide-react'
 
@@ -200,12 +204,18 @@ export function BoardDetail() {
   const { mutate: updateSteps, isPending: isSavingSteps } = useUpdateSteps(id!)
 
   const [showResultModal, setShowResultModal] = useState(false)
+  /** 「지원 예정」 안내 블록의 CTA — 보드 카드와 **같은 모달**을 연다 */
+  const [showStartModal, setShowStartModal] = useState(false)
+  const memoRef = useRef<HTMLDivElement>(null)
   const [showStepEditor, setShowStepEditor] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showPassConfirm, setShowPassConfirm] = useState(false)
   const [pendingStepIndex, setPendingStepIndex] = useState<number | null>(null)
   const [editSteps, setEditSteps] = useState<SortableStepItem[]>([])
-  const [editTags, setEditTags] = useState<string[]>([])
+  /** 편집 폼의 계열 — `JobTitleField` 가 직무에서 파생하거나 사용자가 직접 고른 값 */
+  const [editSeriesId, setEditSeriesId] = useState<string | null>(null)
+  const [editJobSource, setEditJobSource] = useState<JobTitleSource>('typed')
+  const user = useAuthStore((s) => s.user)
   const [editForm, setEditForm] = useState({ companyName: '', jobTitle: '', jobUrl: '' })
   /**
    * 탭은 URL `?tab=` 으로도 열 수 있다 — 다른 화면에서 특정 탭으로 바로 보내기 위해.
@@ -230,6 +240,10 @@ export function BoardDetail() {
    * `CompanyInfoTab` 이 기본 경로로 한다 — 훅이 두 경로의 캐시 키를 나눠 둔 이유가 이것이다.
    */
   const { data: researchProbe } = useCompanyResearchCache(id!, true, { countHit: false })
+  /** 「면접 키워드 N개 준비됨」의 N — 조사가 없으면 0 이라 개수를 말하지 않는다 */
+  const researchKeywordCount = hasResearchContent(researchProbe)
+    ? (researchProbe.research.interviewKeywords?.length ?? 0)
+    : 0
 
   // 공고 요건 — 파싱이 AI 호출이라 모바일·RN 에선 액션 미노출 + DART 처럼 접힘 localStorage 기억
   const jpReadOnly = useCoverletterAiBlocked()
@@ -419,7 +433,15 @@ export function BoardDetail() {
       jobTitle: app.jobTitle ?? '',
       jobUrl: app.jobUrl ?? '',
     })
-    setEditTags(currentTags)
+    /*
+      🔴 계열 초기값은 **직무에서 다시 판정**한다. 저장된 `jobCategory` 라벨을 역매핑하지
+      않는다 — 거기엔 구 21어휘(`개발,백엔드` 같은 콤마 태그)가 섞여 있어서 되돌릴 수
+      없는 값이 많고, 억지로 매핑하면 옛 어휘가 새 계열로 승격돼 버린다.
+      화면에 옛 태그를 보여주는 건 보기 모드의 fallback 이 계속 맡는다.
+    */
+    const verdict = app.jobTitle ? classifyJob(app.jobTitle) : null
+    setEditSeriesId(verdict?.status === 'confident' ? verdict.series.id : null)
+    setEditJobSource('typed')
     setShowEditModal(true)
   }
 
@@ -458,9 +480,22 @@ export function BoardDetail() {
   }
 
   const handleSaveEdit = () => {
+    const trimmedTitle = editForm.jobTitle.trim()
+    const seriesLabel = editSeriesId
+      ? JOB_SERIES.find((s) => s.id === editSeriesId)?.label
+      : undefined
     const dto: UpdateApplicationDto = {
-      jobTitle: editForm.jobTitle.trim() || undefined,
-      jobCategory: serializeTags(editTags) || undefined,
+      jobTitle: trimmedTitle || undefined,
+      /*
+        🔴 **직무를 적었으면 계열은 반드시 다시 쓰인다** — 못 잡았으면 `null` 로 **지운다**.
+        여기를 `undefined` 로 두면 「승무원」을 「백엔드」로 고쳐도 태그가 「영업·판매·서비스」로
+        남는다 (2026-08-28 실기 결함). 직무가 바뀐 마당에 옛 계열이 남는 게 비는 것보다 틀리다.
+
+        직무 칸이 비어 있으면 `jobTitle` 과 **같이** 손대지 않는다 — 이 폼은 직무 삭제를
+        지원하지 않으므로(위 `|| undefined`), 직무는 그대로인데 계열만 지우면 더 어긋난다.
+      */
+      jobCategory: trimmedTitle ? (seriesLabel ?? null) : undefined,
+      jobTitleSource: trimmedTitle ? editJobSource : undefined,
       jobUrl: editForm.jobUrl.trim() || undefined,
     }
     const name = editForm.companyName.trim()
@@ -613,6 +648,21 @@ export function BoardDetail() {
 
       {effectiveTab === 'steps' && (
         <>
+          {/* 🔴 「지원 예정」이면 **여기가 첫 화면**이다 — 아래 진행 상황 섹션이 통째로
+              빠지는 상태라, 안내가 없으면 빈 메모 에디터만 남는다 (CEO 실기 2026-08-29). */}
+          {app.status === 'PLANNED' && (
+            <PlannedGuide
+              app={app}
+              keywordCount={researchKeywordCount}
+              hasResearchTab={tabs.some((t) => t.v === 'company')}
+              onStart={() => setShowStartModal(true)}
+              onOpenResearch={() => setActiveTab('company')}
+              onFocusMemo={() =>
+                memoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }
+            />
+          )}
+
           {/* 진행 상황 — 스텝바 + 현재 스텝 카드 */}
           {app.status !== 'PLANNED' && sortedSteps.length > 0 && (
             <div className="border border-line bg-surface-2 rounded-xl p-5 mb-4">
@@ -669,7 +719,7 @@ export function BoardDetail() {
           />
 
           {/* 회사 메모 — 이 회사 전반에 대한 기록 (전형별 메모는 각 스텝 안). 시작 칩으로 섹션 유도 */}
-          <div className="mt-4">
+          <div className="mt-4" ref={memoRef}>
             <CompanyMemoCard value={app.memo ?? ''} onSave={save('memo')} />
           </div>
 
@@ -694,6 +744,17 @@ export function BoardDetail() {
         />
       )}
 
+      {/* 🔴 보드 카드와 **같은 모달**이다 — 지원 시작 경로가 화면마다 다르면 안 된다.
+          성공 시 `useUpdateApplication` 이 캐시를 갱신해 `status` 가 IN_PROGRESS 로 바뀌고,
+          안내 블록이 사라지며 그 자리에 진행 상황 섹션이 나타난다. */}
+      <StartApplicationModal
+        open={showStartModal}
+        onClose={() => setShowStartModal(false)}
+        applicationId={app.id}
+        companyName={app.companyName}
+        currentJobTitle={app.jobTitle}
+      />
+
       {/* 결과 모달 */}
       <SetResultModal
         open={showResultModal}
@@ -715,23 +776,29 @@ export function BoardDetail() {
             />
           </div>
           <div>
-            {/* 라벨·플레이스홀더는 AddCardModal · 직무 게이트 모달과 통일 (같은 컬럼이다) */}
-            <label className="block text-xs text-text-tertiary mb-1.5">지원 직무</label>
-            <input
+            {/*
+              🔴 직무가 들어오는 모든 입구가 **같은 입력기**를 쓴다 (온보딩·카드 추가·지원
+              시작·게이트·여기). 여기만 맨 input 이라 직무를 고쳐도 계열이 안 따라왔다.
+
+              직군 태그 선택기(구 21어휘 `TagSelector`)는 **없앴다** — 계열은 직무에서
+              파생하기로 한 결정(묶음 2)의 잔재였고, 남겨 두면 사용자가 직무와 태그를
+              따로 고를 수 있어 둘이 어긋난 채 저장된다.
+            */}
+            <JobTitleField
               value={editForm.jobTitle}
-              onChange={(e) => setEditForm((f) => ({ ...f, jobTitle: e.target.value }))}
-              maxLength={100}
-              placeholder="예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계"
-              className="w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+              onChange={(v, source) => {
+                setEditForm((f) => ({ ...f, jobTitle: v }))
+                setEditJobSource(source)
+              }}
+              seriesId={editSeriesId}
+              onSeriesChange={(id) => setEditSeriesId(id)}
             />
-            <p className="text-text-faint text-[11px] mt-1.5">
-              자소서·면접 AI 가 <span className="text-text-tertiary">이 직무 기준</span>
-              으로 만들어요.
-            </p>
-          </div>
-          <div>
-            <label className="block text-xs text-text-tertiary mb-2">직군 태그</label>
-            <TagSelector selected={editTags} onChange={setEditTags} />
+            {/* 이 카드 직무가 내 희망 직무와 다르면 맞추자고 제안한다 (탭해야만 반영) */}
+            <PromoteJobTitleRow
+              profileTitle={user?.signupJobTitle ?? null}
+              jobTitle={editForm.jobTitle}
+              seriesId={editSeriesId}
+            />
           </div>
           <div>
             <label className="block text-xs text-text-tertiary mb-1.5">채용공고 URL</label>

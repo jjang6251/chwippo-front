@@ -369,6 +369,7 @@ function FieldFillBlock({ data }: { data: CardFieldsData }) {
 function JobTitleVarianceBlock({ data }: { data: CardFieldsData }) {
   const { usersWithJobTitle, usersWithVariants, groups } = data.jobTitleVariance
   const hasVariance = usersWithVariants > 0
+  const texts = data.jobTitleTexts
 
   return (
     <Block
@@ -420,9 +421,63 @@ function JobTitleVarianceBlock({ data }: { data: CardFieldsData }) {
           해결할 문제가 아니라는 뜻이므로, 이 근거로 세운 계획은 접는다.
         </p>
       )}
+
+      {/*
+        🔴 **위 흔들림 판정과 답하는 질문이 다르다.** 저건 「한 사람이 흔들리나」라 사용자별로
+        접지만, 여기는 **전체가 무슨 말을 쓰나**다 — 사전에 넣을 어휘를 고르는 자리라
+        `백엔드` 와 `백엔드 개발자` 를 접지 않고 둘 다 보여준다.
+
+        이게 없으면 직군 「기타」를 고른 카드의 실체를 영영 못 본다. 채움 수는
+        「적긴 적었다」까지고, **무엇을 적었는지는 이 목록으로만** 보인다.
+
+        `texts` 부재 = 백엔드가 아직 이 필드를 안 주는 배포 창 → 행 자체를 안 그린다.
+      */}
+      {texts && texts.distinct > 0 && (
+        <div className="mt-4 pt-3 border-t border-line">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <p className="text-[11px] text-text-quaternary">
+              직무 표기{' '}
+              <span className="tabular-nums text-text-secondary">
+                {texts.distinct.toLocaleString()}
+              </span>
+              종 · 많이 쓰인 순
+            </p>
+            {/*
+              🔴 판정 기준은 **그린 개수 vs 전수**다. `top.length` 로 재면 서버가 이미
+              50에서 자른 경우(top 15 · distinct 15)에 「안 잘렸다」로 보이는데
+              화면엔 10개뿐이라, 잘린 사실이 조용히 사라진다.
+            */}
+            {texts.distinct > JOB_TITLE_TEXT_SHOWN && (
+              <span className="text-[11px] text-text-quaternary">
+                상위 {JOB_TITLE_TEXT_SHOWN}개만 표시
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {texts.top.slice(0, JOB_TITLE_TEXT_SHOWN).map((t) => (
+              <span
+                key={t.value}
+                className="text-[11px] text-text-secondary bg-card border border-line px-2 py-0.5 rounded break-all"
+              >
+                {t.value}
+                {t.cards > 1 && (
+                  <span className="ml-1 tabular-nums text-text-quaternary">{t.cards}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </Block>
   )
 }
+
+/**
+ * 화면에 그리는 직무 원문 개수 — 서버 상한(50)보다 좁다.
+ * 이 블록은 「흔들리나」가 주인공이고 원문 목록은 그 아래 보조라, 50개를 깔면
+ * 칩이 화면을 덮어 주인공이 밀린다. 전수는 옆의 `distinct` 가 지킨다.
+ */
+const JOB_TITLE_TEXT_SHOWN = 10
 
 /** ③ 직군 어휘 — 한 컬럼에 몇 갈래가 섞여 있나 */
 function CategoryVocabBlock({ data }: { data: CardFieldsData }) {
@@ -626,6 +681,7 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
     },
   ]
   const anyRecorded = rows.some((r) => r.recorded > 0)
+  const usage = data.templateUsage
 
   return (
     <Block
@@ -687,6 +743,46 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/*
+        🔴 **「무엇으로 시작했나」와 「그 뒤 손댔나」는 다른 질문이다.** 위 분포는 전자고
+        이 행은 후자다. 계열 14벌을 새로 만든 값어치가 여기서 갈린다 — 받은 대로 안 쓴다면
+        템플릿을 늘리는 건 헛수고다. 스텝 이름을 한 글자만 고쳐도 「고쳤다」로 센다.
+
+        `usage` 가 없는 경우 = 백엔드가 아직 이 필드를 안 주는 배포 창. 그때는 행 자체를
+        안 그린다 (0 으로 그리면 「아무도 안 쓴다」라는 **거짓 주장**이 된다).
+      */}
+      {usage && anyRecorded && (
+        <div className="mt-4 pt-3 border-t border-line">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <p className="text-xs text-text-secondary font-medium">전형 템플릿 그대로 쓴 카드</p>
+            <span className="text-[11px] text-text-quaternary">스텝을 안 건드렸나</span>
+            <span className="ml-auto text-[11px] tabular-nums text-text-secondary">
+              {formatShare(usage.keptAsIs, usage.withTemplate, { unit: '장' })}
+            </span>
+          </div>
+          {usage.withTemplate === 0 ? (
+            <p className="text-[11px] text-text-quaternary mt-1.5">
+              템플릿이 기록된 카드가 아직 없어요 — 도입 이후 카드부터 쌓입니다.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {usage.byTemplate.slice(0, 5).map((t) => (
+                <span
+                  key={t.templateId}
+                  className="text-[11px] text-text-secondary bg-card border border-line px-2 py-0.5 rounded break-all"
+                  title={`${t.templateId} — ${t.count}장 중 ${t.kept}장 그대로`}
+                >
+                  {t.templateId}
+                  <span className="ml-1 tabular-nums text-text-quaternary">
+                    {t.kept}/{t.count}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </Block>

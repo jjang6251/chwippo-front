@@ -34,6 +34,10 @@ interface RefreshUser {
   signupJobCategories: string[] | null
   /** W1 — "기타" 직군 자유 입력 */
   signupOtherText: string | null
+  /** 온보딩 계열 1탭 답변 — `JOB_SERIES` id */
+  signupSeriesId: string | null
+  /** 온보딩에서 사람이 타이핑한 직무 원문 (카드 프리필 재료) */
+  signupJobTitle: string | null
   /** W1 — 샘플 카드 전체 dismiss 시각 */
   sampleCardsDismissedAt: string | null
   /** 캘린더 UX 재구성 — 안내 배너 dismiss 시각 */

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
@@ -59,9 +59,25 @@ export function ProfileSettings() {
           <span className="text-sm text-text-quaternary">이메일</span>
           <span className="text-sm">{user?.email ?? '—'}</span>
         </div>
-        <div className="flex items-center justify-between py-2">
+        <div className="flex items-center justify-between py-2 border-b border-line">
           <span className="text-sm text-text-quaternary">로그인 방식</span>
           <span className="text-sm">{providerLabel ?? '소셜 로그인'}</span>
+        </div>
+        {/*
+          ③ **길잡이** — 값은 여기 없고 내 정보에 있다 (`plans/job-role-first.md` 묶음 3).
+
+          🔴 미리보기를 안 넣는다. 설정은 기기·계정 옵션 페이지라 이력 데이터의 집이 아니고,
+          여기서 값을 보여주면 「여기서도 고칠 수 있나?」를 만들어 자리가 둘로 갈린다.
+          온보딩 하단 문구도 「내 정보에서 바꿀 수 있어요」라 도착지가 하나여야 한다.
+        */}
+        <div className="flex items-center justify-between py-2">
+          <span className="text-sm text-text-quaternary">희망 직무·계열</span>
+          <Link
+            to="/myinfo#profile"
+            className="text-sm text-brand hover:text-brand-hover transition-colors"
+          >
+            내 정보에서 바꾸기 →
+          </Link>
         </div>
       </section>
 

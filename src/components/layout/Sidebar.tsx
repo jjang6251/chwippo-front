@@ -373,7 +373,12 @@ function ChevronIcon({ size, dir }: { size: number; dir: 'left' | 'right' }) {
     </svg>
   )
 }
-function GridIcon({ size }: { size: number }) {
+/*
+  🔴 아래 4개(Grid·Calendar·Journal·StudyNote)만 `export` 다 — 앱 소개 투어 5장이
+  「매일 쓰는 것들」 타일에 **같은 아이콘**을 쓴다. 복제하면 사이드바에서 하나를 고쳤을 때
+  투어가 옛 모양으로 남는다. 나머지는 쓰는 곳이 없어 그대로 지역 함수로 둔다.
+*/
+export function GridIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="5.5" height="5.5" rx="1" /><rect x="9.5" y="1" width="5.5" height="5.5" rx="1" /><rect x="1" y="9.5" width="5.5" height="5.5" rx="1" /><rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1" /></svg>
 }
 function BoardIcon({ size }: { size: number }) {
@@ -397,14 +402,14 @@ function ChatIcon({ size }: { size: number }) {
 function AdminIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1l1.5 3 3.5.5-2.5 2.5.5 3.5L8 9l-3 1.5.5-3.5L3 4.5 6.5 4z" /></svg>
 }
-function CalendarIcon({ size }: { size: number }) {
+export function CalendarIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="2.5" width="14" height="12" rx="1.5" /><line x1="1" y1="6.5" x2="15" y2="6.5" /><line x1="5" y1="1" x2="5" y2="4" /><line x1="11" y1="1" x2="11" y2="4" /><circle cx="8" cy="10.5" r="1" fill="currentColor" stroke="none" /></svg>
 }
-function JournalIcon({ size }: { size: number }) {
+export function JournalIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2h7a2 2 0 012 2v10a1 1 0 01-1 1H4a2 2 0 01-2-2V4a2 2 0 012-2z" /><line x1="5" y1="6" x2="10" y2="6" /><line x1="5" y1="8.5" x2="10" y2="8.5" /><line x1="5" y1="11" x2="8" y2="11" /></svg>
 }
 /** 공부 노트 — 펼친 공책. viewBox 만 24 라 stroke 를 2 로 맞춰 다른 항목과 굵기가 같아 보인다 */
-function StudyNoteIcon({ size }: { size: number }) {
+export function StudyNoteIcon({ size }: { size: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
 }
 function CoverLetterIcon({ size }: { size: number }) {

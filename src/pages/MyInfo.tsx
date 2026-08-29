@@ -14,6 +14,10 @@ import {
   useDocuments, useCreateDocument, useDeleteDocument,
 } from '@/hooks/useMyinfo'
 import { useExamSchedules, useDeleteExamSchedule } from '@/hooks/useExamSchedules'
+import { useUpdateJobProfile } from '@/hooks/useJobProfile'
+import { useAuthStore } from '@/stores/authStore'
+import { JobTitleField } from '@/components/card/JobTitleField'
+import type { JobProfileBody } from '@/api/users'
 import { useActivities } from '@/hooks/useActivities'
 // 경험 섹션의 type-badge (.intern·.club ...) 스타일이 활동 일지 진입 전에도 보이도록
 import '@/pages/Activity/activity-mock.css'
@@ -544,7 +548,93 @@ const GENDER_KO: Record<string, string> = { MALE: '남성', FEMALE: '여성' }
 const PROFILE_FIELDS: Array<keyof Pick<UserProfile, 'name' | 'name_hanja' | 'gender' | 'birthdate' | 'phone' | 'email_personal'>> =
   ['name', 'name_hanja', 'gender', 'birthdate', 'phone', 'email_personal']
 
-function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+/**
+ * ② **정식 자리** — 희망 직무·계열 (`plans/job-role-first.md` 묶음 3).
+ *
+ * 온보딩에서 한 번 정한 직무·계열을 나중에 바꾸는 **본 자리**다. 설정이 아니라 여기인 이유는
+ * 설정 페이지가 기기·계정 옵션(알림·테마·로그아웃)의 집이고, 이건 **내 이력 데이터**라서다 —
+ * 이름·연락처와 같은 카드에 있는 게 맞다.
+ *
+ * ## 항상 보인다 — `hasAny` 와 무관하게
+ *
+ * 인적사항이 통째로 비어 있어도 직무는 온보딩에서 이미 채워졌을 수 있고, 반대도 마찬가지다.
+ * 빈 상태 카드(`MyInfoEmptyAdd`)에 가려지면 「바꾸러 왔는데 없다」가 된다.
+ *
+ * ## 저장 — 필드 단위 자동 저장 (이 카드의 다른 필드와 같은 규칙)
+ *
+ * - **blur** → 그 사이에 실제로 바뀐 것만 싣는다 (직무 + 그에 따라 옮겨간 계열)
+ * - **계열을 손으로 고르면** 즉시 (pill 은 blur 를 기다릴 자리가 아니다)
+ * - 🔴 **타이핑 중 추론 계열은 저장하지 않는다** — `onSeriesChange` 는 글자마다 오므로
+ *   그대로 저장하면 「간」→「간호」→「간호사」에 PATCH 가 세 번 난다. blur 가 한 번에 싣는다
+ *
+ * ## 🔴 직무를 비워도 계열은 남는다
+ *
+ * 온보딩에서 **계열만 고른 사용자가 다수**다 (직무 타이핑은 선택이었다). 그들에게 이 칸은
+ * 처음부터 비어 있고, 그 상태에서 계열이 지워지면 자기 계열을 볼 수도 바꿀 수도 없게 된다.
+ * `seriesIsSaved` 가 그 계약을 건다 — 판정이 없으면 `JobTitleField` 는 계열을 **건드리지 않고**
+ * 저장된 값을 칩으로 그대로 보여준다. 「이 칸 비움」은 「계열 취소」가 아니다.
+ */
+function JobProfileBlock({ onSaved }: { onSaved: () => void }) {
+  const user = useAuthStore((s) => s.user)
+  const { mutate } = useUpdateJobProfile()
+
+  const storedTitle = user?.signupJobTitle ?? null
+  const storedSeries = user?.signupSeriesId ?? null
+
+  const [title, setTitle] = useState(storedTitle ?? '')
+  const [seriesId, setSeriesId] = useState<string | null>(storedSeries)
+
+  const save = (body: JobProfileBody) => mutate(body, { onSuccess: onSaved })
+
+  const handleBlur = () => {
+    // 비운 건 「모름」의 정직한 상태다 — 빈 문자열이 아니라 null 로 보낸다
+    const nextTitle = title.trim() || null
+    const body: JobProfileBody = {}
+    if (nextTitle !== storedTitle) body.jobTitle = nextTitle
+    /*
+      계열은 **판정이 실제로 옮겨갔을 때만** 함께 실린다. `seriesIsSaved` 덕에 판정이
+      없으면 `seriesId` 가 저장값 그대로라, 여기서 자동으로 빠진다 — 직무를 비웠다고
+      계열까지 null 로 나가지 않는다.
+    */
+    if (seriesId !== storedSeries) body.seriesId = seriesId
+    // 바뀐 게 없으면 안 부른다 — 서버가 400 을 주는 빈 body 이기도 하다
+    if (body.jobTitle === undefined && body.seriesId === undefined) return
+    save(body)
+  }
+
+  // 🔴 `seriesIsSaved` 모드라 여기 `id` 는 **절대 null 이 아니다** (판정 없음은 안 올라온다)
+  const handleSeriesChange = (id: string | null, manual: boolean) => {
+    setSeriesId(id)
+    if (!manual || id === storedSeries) return
+    save({ seriesId: id })
+  }
+
+  return (
+    <div className="mb-5 pb-5 border-b border-line">
+      <JobTitleField
+        variant="underline"
+        labelText="희망 직무"
+        placeholder="예: 간호사, 백엔드 개발자"
+        value={title}
+        onChange={(v) => setTitle(v)}
+        onBlur={handleBlur}
+        seriesId={seriesId}
+        seriesIsSaved
+        onSeriesChange={handleSeriesChange}
+      />
+      {/*
+        「AI 가 이 기준으로 만든다」는 JobTitleField 가 바로 위에서 이미 말한다 —
+        여기선 **이 화면에서만 알 수 있는 것**(카드 프리필)만 덧붙인다.
+      */}
+      <p className="text-xs text-text-tertiary mt-2">
+        카드 추가할 때 이 직무가 미리 채워져요
+      </p>
+    </div>
+  )
+}
+
+/** 🔴 `export` 는 테스트 전용이다 — 페이지는 아래 `MyInfo` 가 직접 조립한다 */
+export function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
   const { data: profile } = useProfile()
   const { mutate: update } = useUpdateProfile()
   const { saved, show } = useSaved()
@@ -570,6 +660,8 @@ function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement
 
   return (
     <SectionCard id="profile" sectionRef={sectionRef} saved={saved} isActive={isActive}>
+      {/* 🔴 빈 상태 카드보다 **위** — 인적사항이 비어도 직무는 채워져 있을 수 있다 */}
+      <JobProfileBlock onSaved={show} />
       {!hasAny && !editing ? (
         <MyInfoEmptyAdd
           emoji="👤"

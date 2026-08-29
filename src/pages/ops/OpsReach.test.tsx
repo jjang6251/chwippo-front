@@ -39,6 +39,8 @@ const row = (over: Partial<ReachRow> = {}): ReachRow => ({
   lastActiveAt: '2026-08-05T10:00:00Z',
   platform: { app: false, web: true },
   desktopSeenAt: null,
+  tourCompleted: false,
+  tourDropOffStep: null,
   cards: 0,
   sampleCards: 0,
   activityLogs: 0,
@@ -57,6 +59,7 @@ const data = (over: Partial<ReachData> = {}): ReachData => ({
   excludedAdmins: 0,
   stageCounts: {
     signup: 1,
+    tour_completed: 0,
     card: 0,
     activity: 0,
     coverletter_question: 0,
@@ -110,6 +113,7 @@ describe('OpsReach', () => {
         rows: [row({ cards: 2, stage: 'card' })],
         stageCounts: {
           signup: 1,
+          tour_completed: 0,
           card: 1,
           activity: 0,
           coverletter_question: 0,
@@ -182,6 +186,7 @@ describe('OpsReach', () => {
         desktopAxis: { confirmed: 2, coverletterAnswer: 1, coverletterAi: 0 },
         stageCounts: {
           signup: 10,
+          tour_completed: 0,
           card: 5,
           activity: 2,
           coverletter_question: 1,
@@ -221,6 +226,7 @@ describe('OpsReach', () => {
         rows: [row({ stage: 'activity' })],
         stageCounts: {
           signup: 1,
+          tour_completed: 0,
           card: 1,
           activity: 1,
           coverletter_question: 1,
@@ -235,9 +241,9 @@ describe('OpsReach', () => {
     const bars = [...container.querySelectorAll('[style*="width"]')].map(
       (el) => [...el.classList].find((c) => c.startsWith('bg-')) ?? '',
     )
-    // 6단계 = 서로 다른 색 6개 (같은 색이 섞이면 단계 구분이 안 된다)
-    expect(bars).toHaveLength(6)
-    expect(new Set(bars).size).toBe(6)
+    // 7단계 = 서로 다른 색 7개 (같은 색이 섞이면 단계 구분이 안 된다)
+    expect(bars).toHaveLength(7)
+    expect(new Set(bars).size).toBe(7)
 
     // 활동일지 막대와 표의 활동일지 뱃지가 같은 계열
     expect(bars).toContain('bg-violet/60')
@@ -314,6 +320,62 @@ describe('OpsReach', () => {
 
     expect(screen.getByText('자소서 문항/답변')).toBeInTheDocument()
     expect(screen.getByText('AI 시도/성공')).toBeInTheDocument()
+  })
+
+  /**
+   * 🔴 투어 이탈 장면 — 완료율 한 숫자로는 「6장 중 어디가 지루한가」를 못 본다.
+   * 반대로 **이탈이 0이면 표 자체가 없어야** 한다 (빈 패널은 없애는 게 디자인).
+   */
+  it('투어 이탈 장면 분포를 표로 보여준다', async () => {
+    getMock.mockResolvedValue(
+      data({
+        tourDropOff: [
+          { step: 1, count: 2 },
+          { step: 4, count: 5 },
+        ],
+      }),
+    )
+    const { container } = wrap(<OpsReach />)
+
+    await screen.findByText('테스트유저')
+    expect(screen.getByText('투어 이탈 장면')).toBeInTheDocument()
+    expect(screen.getByText('1장')).toBeInTheDocument()
+    expect(screen.getByText('4장')).toBeInTheDocument()
+    // 합계(2+5)를 캡션에 적어 「몇 명 얘기인지」를 표 밖에서도 알 수 있다
+    expect(container.textContent).toContain('안 끝낸 7명')
+    // 완료자가 섞이지 않는다는 걸 화면이 직접 말한다
+    expect(container.textContent).toContain('완료자는 여기 없다')
+  })
+
+  it('이탈이 없으면 표 자체가 없다 (빈 패널 금지)', async () => {
+    getMock.mockResolvedValue(data({ tourDropOff: [] }))
+    wrap(<OpsReach />)
+
+    await screen.findByText('테스트유저')
+    expect(screen.queryByText('투어 이탈 장면')).not.toBeInTheDocument()
+  })
+
+  // 백엔드 배포가 프론트보다 늦는 창 — 필드가 없어도 화면이 통째로 죽으면 안 된다
+  it('tourDropOff 필드가 아예 없어도 렌더된다', async () => {
+    const withoutField = data()
+    delete withoutField.tourDropOff
+    getMock.mockResolvedValue(withoutField)
+    wrap(<OpsReach />)
+
+    expect(await screen.findByText('테스트유저')).toBeInTheDocument()
+    expect(screen.queryByText('투어 이탈 장면')).not.toBeInTheDocument()
+  })
+
+  it('퍼널에 「투어 완료」 단계가 가입과 카드 사이에 있다', async () => {
+    getMock.mockResolvedValue(data())
+    const { container } = wrap(<OpsReach />)
+    await screen.findByText('테스트유저')
+
+    const labels = [...container.querySelectorAll('span')]
+      .map((el) => el.textContent ?? '')
+      .filter((t) => ['가입만', '투어 완료', '카드'].includes(t))
+    expect(labels.indexOf('투어 완료')).toBeGreaterThan(labels.indexOf('가입만'))
+    expect(labels.indexOf('투어 완료')).toBeLessThan(labels.indexOf('카드'))
   })
 
   // 이 화면 단독으로는 (a)/(b) 를 못 가른다 — 그 사실이 화면에서 사라지면 안 된다

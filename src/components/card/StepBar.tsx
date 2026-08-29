@@ -23,6 +23,7 @@ function ProgressBar({ progress, isPassed, height = 'h-1.5' }: { progress: numbe
       aria-label={isPassed ? '최종 합격' : `진행률 ${progress}%`}
     >
       <div
+        data-step-progress
         className={`h-full rounded-full transition-all duration-500 ease-out ${isPassed ? 'bg-success' : 'bg-brand'}`}
         style={{ width: `${progress}%` }}
       />
@@ -41,7 +42,18 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
   if (steps.length === 0) return null
 
   const sorted = [...steps].sort((a, b) => a.orderIndex - b.orderIndex)
-  const progress = Math.round((currentStepIndex / Math.max(sorted.length - 1, 1)) * 100)
+  /**
+   * 🔴 **음수 인덱스를 막는다.** 「지원 예정」 미리보기(`PlannedGuide`)가 **아직 아무
+   * 단계도 밟지 않았다**는 뜻으로 `-1` 을 넘긴다 — 그대로 계산하면 `-25%` 가 나와
+   * `width: -25%`(무효) + `aria-valuenow="-25"`(범위 밖)가 된다.
+   * 기존 호출부는 전부 0 이상이라 값이 달라지지 않는다.
+   */
+  const progress = Math.max(
+    0,
+    Math.round((currentStepIndex / Math.max(sorted.length - 1, 1)) * 100),
+  )
+  /** 아직 시작 전 — 이름 붙일 「현재」가 없으므로 하단 요약 줄을 내지 않는다 */
+  const started = currentStepIndex >= 0
   const nodeSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
   const checkSize = size === 'sm' ? 6 : 8
 
@@ -96,7 +108,13 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
               **노드 간격이 어긋난다**(다른 셀 41px, 실측). 예전엔 레이블이 별도 행이라
               자기 `min-w-0` 로 해결됐는데, 한 단계 깊어지면서 셀에도 필요해졌다.
             */
-            <div key={step.id} className="relative flex-1 min-w-0 flex flex-col items-center">
+            /* `data-step-cell` — 시각 무변경 훅. 앱 소개 투어 1장이 노드를 왼쪽부터
+               차례로 점등시킬 때 잡는다 (`index.css` 의 `.tour-stage-1`) */
+            <div
+              key={step.id}
+              data-step-cell
+              className="relative flex-1 min-w-0 flex flex-col items-center"
+            >
               {/*
                 🔴 **히트 영역은 셀 전체 × 32px** — 점(12×12)을 그대로 누르게 두면 안 된다.
                 44px 기준 대비 면적이 1/13 이라 모바일에서 거의 안 눌린다 (2026-08-24 실사용 보고).
@@ -221,8 +239,10 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
       </div>
 
       {/* ── sm 하단: 현재 단계 + 진행률 바 ── */}
-      {size === 'sm' && (
-        <div className="mt-2.5 space-y-1.5">
+      {/* `data-step-summary` — 시각 무변경 훅. 투어 1장에서 노드와 함께 켜진다
+          (안 잡으면 빈 카드 껍데기 안에 「현재: …  25%」만 떠 있는 프레임이 생긴다) */}
+      {size === 'sm' && started && (
+        <div data-step-summary className="mt-2.5 space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-text-quaternary text-[10px] truncate">
               현재:{' '}
@@ -239,7 +259,7 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
       )}
 
       {/* ── md 하단: 현재 단계 + % + 진행률 바 ── */}
-      {size === 'md' && (
+      {size === 'md' && started && (
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between">
             <button

@@ -71,7 +71,7 @@ const USER = {
   id: 'u1', nickname: 'tester', email: 'a@b.c', role: 'user' as const,
   onboardedAt: '2026-01-01T00:00:00.000Z', termsAgreedAt: '2026-01-01T00:00:00.000Z',
   aiConsentAt: null, aiConsentVersion: null, onboardedCoinAt: null,
-  signupJobCategories: null, signupOtherText: null, sampleCardsDismissedAt: null,
+  signupJobCategories: null, signupOtherText: null, signupSeriesId: null, signupJobTitle: null, sampleCardsDismissedAt: null,
   calendarHomeIntroDismissedAt: null, alarmPromptedAt: null,
 }
 

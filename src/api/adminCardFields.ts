@@ -50,6 +50,21 @@ export interface CardFieldsData {
     usersWithVariants: number
     groups: { variants: string[] }[]
   }
+  /**
+   * 직무 **원문** 빈도 — 사전 어휘 작업의 직접 재료.
+   *
+   * 위 `jobTitleVariance` 와 답하는 질문이 다르다. 저건 「한 사람이 흔들리나」라 사용자별로
+   * 접고, 여기는 **전체가 무슨 말을 쓰나**라 표기 정규화만으로 접는다. 이게 없으면 직군
+   * 「기타」를 고른 카드의 실체를 영영 못 본다 — 채움 수는 「적긴 적었다」까지다.
+   *
+   * 🔴 **옵셔널이다.** 프론트가 백엔드보다 먼저 뜨는 배포 창에서는 없다.
+   */
+  jobTitleTexts?: {
+    /** 정규화 기준으로 접은 서로 다른 직무 수 (전수 — `top` 이 잘려도 이건 안 잘린다) */
+    distinct: number
+    /** 빈도순 상위 (서버 상한 50). 대표 표기는 최다 빈도 **원문 그대로** */
+    top: { value: string; cards: number }[]
+  }
   status: Record<string, number>
   stepProgress: { atFirstStep: number; moved: number; noSteps: number }
   companyMatch: {
@@ -59,6 +74,18 @@ export interface CardFieldsData {
   }
   templateId: { recorded: number; distribution: Record<string, number> }
   createdVia: { recorded: number; distribution: Record<string, number> }
+  /**
+   * 추천 템플릿을 **그대로 썼나** — 「맞는 템플릿이면 쓴다」 가설의 직접 근거.
+   *
+   * 🔴 **옵셔널이다.** 프론트가 백엔드보다 먼저 뜨는 배포 창에서는 이 필드가 없다.
+   * `assertCardFieldsData` 가 이걸 필수로 요구하면 그 창 동안 **화면 전체가 에러**가 된다 —
+   * 새 지표 하나 때문에 기존 지표까지 못 보게 만들 이유가 없다.
+   */
+  templateUsage?: {
+    withTemplate: number
+    keptAsIs: number
+    byTemplate: { templateId: string; count: number; kept: number }[]
+  }
   generatedAt: string
 }
 

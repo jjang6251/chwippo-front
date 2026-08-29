@@ -81,7 +81,26 @@ export function Help() {
         })}
       </div>
 
-      <div className="mt-8 bg-surface-2 border border-line rounded-xl p-5 flex items-center justify-between">
+      {/*
+        앱 소개 다시 보기 — 투어의 **두 번째이자 마지막 진입점**이다
+        (첫 번째는 온보딩 직후 경로). 기존 사용자에게 자동으로 띄우지 않기로 했으므로
+        (`plans/app-tour.md` §Out of Scope) 스스로 찾아올 자리가 하나는 있어야 한다.
+        🔴 `?replay=1` — 저장도 부수효과도 없이 재생만 하고 여기로 되돌아온다.
+      */}
+      <div className="mt-8 bg-surface-2 border border-line rounded-xl p-5 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium mb-0.5">치뽀가 처음이신가요?</p>
+          <p className="text-xs text-text-tertiary">60초 만에 앱 사용법을 훑어봐요.</p>
+        </div>
+        <Link
+          to="/signup/tour?replay=1"
+          className="px-4 py-2 bg-brand/10 text-brand border border-brand/20 rounded-lg text-sm font-medium hover:bg-brand/20 active:bg-brand/30 transition-colors flex-shrink-0"
+        >
+          앱 소개 다시 보기
+        </Link>
+      </div>
+
+      <div className="mt-4 bg-surface-2 border border-line rounded-xl p-5 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium mb-0.5">원하는 답변을 찾지 못하셨나요?</p>
           <p className="text-xs text-text-tertiary">무엇이든 편하게 물어보세요.</p>
