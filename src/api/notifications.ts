@@ -41,3 +41,21 @@ export const updateAlarmConfig = (partial: AlarmConfigUpdate) =>
 /** soft-ask 응답 / OS 권한 상태 동기화 */
 export const recordAlarmPrompt = (granted: boolean) =>
   apiClient.patch('/me/alarm-prompt', { granted })
+
+/**
+ * 「이 사람에게 알림이 실제로 갈 상태인가」 — 기기 등록 + 설정 토글을 서버가 합쳐 준 파생값.
+ *
+ * 🔴 새 컬럼이 아니다. 프론트가 `alarm-config` 와 기기 목록을 따로 받아 판정하면
+ * **판정 규칙이 두 벌**이 되고, 「알림 켜져 있는데 안 온다」의 원인이 어느 쪽인지 못 가린다.
+ */
+export interface AlarmStatus {
+  /** 앱(네이티브) 기기가 하나라도 등록돼 있나 — 웹만 쓰면 false */
+  hasDevice: boolean
+  /** 알림 전체 스위치 */
+  enabled: boolean
+  /** 임박(2시간 전) 알림 토글 — 공고 일정 메모가 여기에 묶인다 */
+  imminentOn: boolean
+}
+
+export const getAlarmStatus = () =>
+  apiClient.get('/me/alarm-status').then(unwrap<AlarmStatus>)

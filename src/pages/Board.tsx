@@ -11,7 +11,11 @@ import { CompanyCard } from '@/components/card/CompanyCard'
 import { CardResearchReveal } from '@/components/card/CardResearchReveal'
 import { StepNodeHint } from '@/components/board/StepNodeHint'
 import { hasSeenStepNodeHint } from '@/utils/stepNodeHint'
-import { AddCardModal } from '@/components/card/AddCardModal'
+import { AddCardModal, type AddCardPrefill } from '@/components/card/AddCardModal'
+import { PendingCard } from '@/components/board/PendingCard'
+import { usePendingCardStore } from '@/stores/pendingCardStore'
+import { jobPostingCardApi } from '@/api/jobPosting'
+import { useDemoMode } from '@/contexts/demoMode'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
 import { SetResultModal } from '@/components/card/SetResultModal'
 import { SampleCardBadge } from '@/components/board/SampleCardBadge'
@@ -66,6 +70,8 @@ export function Board() {
   }
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [addModalStatus, setAddModalStatus] = useState<'PLANNED' | 'IN_PROGRESS' | null>(null)
+  /** 공고 카드 실패 → 직접 입력으로 되돌아올 때 살려 오는 값 */
+  const [addPrefill, setAddPrefill] = useState<AddCardPrefill | null>(null)
   const [startAppId, setStartAppId] = useState<string | null>(null)
   const [resultAppId, setResultAppId] = useState<string | null>(null)
   const addMenuRef = useRef<HTMLDivElement>(null)
@@ -157,6 +163,33 @@ export function Board() {
   const [hintEligible] = useState(() => !hasSeenStepNodeHint(user?.id))
   const showStepNodeHint =
     hintEligible && !hintDismissed && !isLoading && view === 'card' && realCards.length > 0
+
+  /**
+   * 「생성 중」 카드 — 정렬·필터를 타지 않고 **목록 맨 위**에 선다.
+   *
+   * 🔴 카드 그리드(`[grid-auto-rows:1fr]`) **밖**에 둔다. 안에 넣으면 아직 내용이 없는
+   * 스켈레톤 높이에 관계없는 카드들이 전부 맞춰진다 (조사 스트립이 +112px 을 만든 것과 같은 함정).
+   */
+  const pendingEntries = usePendingCardStore((s) => s.entries)
+  const restorePending = usePendingCardStore((s) => s.restore)
+  const isDemo = useDemoMode()
+
+  /**
+   * 새로고침 복원 — 보완 질문(회사명·직무) 도중 새로고침해도 카드가 사라지지 않는다.
+   * 초안은 서버가 10분간 들고 있고, 여기선 그 목록을 받아 카드 자리만 되살린다.
+   * 🔴 데모는 서버가 없다 — 부르면 데모 「백엔드 요청 0」이 깨진다.
+   */
+  const restoredRef = useRef(false)
+  useEffect(() => {
+    if (isDemo || restoredRef.current || !user?.id) return
+    restoredRef.current = true
+    void jobPostingCardApi
+      .pending()
+      .then((drafts) => { if (drafts.length > 0) restorePending(drafts) })
+      .catch(() => {
+        /* 복원 실패는 조용히 넘어간다 — 서버가 카드를 끝까지 만들면 목록에 그냥 나타난다 */
+      })
+  }, [isDemo, user?.id, restorePending])
 
   const startApp = applications.find((a) => a.id === startAppId)
   const resultApp = applications.find((a) => a.id === resultAppId)
@@ -296,6 +329,22 @@ export function Board() {
         <StepNodeHint userId={user?.id} onDismiss={() => setHintDismissed(true)} />
       )}
 
+      {/* 생성 중·보완 질문·실패 카드 — 그리드 밖·위 (위 주석 참조) */}
+      {pendingEntries.length > 0 && (
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 mb-3">
+          {pendingEntries.map((entry) => (
+            <PendingCard
+              key={entry.tempId}
+              entry={entry}
+              onManualFallback={(prefill) => {
+                setAddPrefill(prefill)
+                setAddModalStatus('IN_PROGRESS')
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* 카드 목록 */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -341,11 +390,20 @@ export function Board() {
       )}
 
       {/* 모달들 */}
-      <AddCardModal
-        open={addModalStatus !== null}
-        onClose={() => setAddModalStatus(null)}
-        defaultStatus={addModalStatus ?? 'IN_PROGRESS'}
-      />
+      {/*
+        🔴 **열릴 때 마운트한다.** 예전엔 항상 마운트한 채 `open` 만 껐는데, 모달이 열릴 때마다
+        다시 판정해야 하는 값들(마지막 모드·첫 열림 캡션·실패 폴백 프리필)이 생기면서
+        「effect 로 state 를 되돌리는」 모양이 됐다. 마운트를 조건부로 두면 `useState` 초기화가
+        그 일을 하고, 닫을 때 상태가 통째로 사라지는 것도 원래 의도(`handleClose` 의 리셋)와 같다.
+      */}
+      {addModalStatus !== null && (
+        <AddCardModal
+          open
+          onClose={() => { setAddModalStatus(null); setAddPrefill(null) }}
+          defaultStatus={addModalStatus}
+          prefill={addPrefill}
+        />
+      )}
 
       {startApp && (
         <StartApplicationModal

@@ -43,6 +43,18 @@ const FIELD_META: { key: keyof CardFieldsData['fields']; label: string; bar: str
 ]
 
 /**
+ * `applications.created_via` 코드 → 사람 말. 값의 출처:
+ * `add_modal`(AddCardModal) · `paste_posting`(공고 카드 서비스) · `onboarding_pick`/`onboarding_sample`(users.service).
+ * 새 코드가 생기면 여기 한 줄 — 없으면 코드 그대로 보여서 「모르는 값」임이 드러난다.
+ */
+const CREATED_VIA_LABEL: Record<string, string> = {
+  add_modal: '직접 입력',
+  paste_posting: '공고로 만들기',
+  onboarding_pick: '온보딩 담기',
+  onboarding_sample: '샘플 카드',
+}
+
+/**
  * 어휘 갈래 색 — `freeform_repeated` 만 warning 이다.
  * 셋 중 **유일하게 조치가 따라붙는 갈래**라서다 (목록에 없는 직군을 여러 사람이 적고 있다면
  * 그건 목록의 구멍이고, 그 값이 곧 후보다). 나머지 둘은 중립 분류다.
@@ -664,6 +676,8 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
     recorded: number
     distribution: Record<string, number>
     hint: string
+    /** 분포 키를 사람 말로 — 없으면 키 그대로 (템플릿 id 는 그대로가 더 정확하다) */
+    labelOf?: (k: string) => string
   }[] = [
     {
       key: 'templateId',
@@ -678,6 +692,9 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
       recorded: data.createdVia.recorded,
       distribution: data.createdVia.distribution,
       hint: '어느 진입점이 잘 채워진 카드를 만드나',
+      // 🔴 코드(`add_modal`)를 그대로 찍으면 「공고 N장 · 직접 입력 M장」을 찾는 사람이
+      //    못 알아본다 (2026-08-30 실제로 「없는 것 같은데?」). 모르는 코드는 그대로 둔다
+      labelOf: (k: string) => CREATED_VIA_LABEL[k] ?? k,
     },
   ]
   const anyRecorded = rows.some((r) => r.recorded > 0)
@@ -695,14 +712,13 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
         </>
       }
     >
-      {!anyRecorded ? (
-        <p className="text-xs text-text-tertiary">
-          아직 기록된 카드가 없어요.{' '}
-          <span className="text-text-quaternary">
-            도입 이후 새로 만든 카드부터 여기에 쌓입니다.
-          </span>
-        </p>
-      ) : (
+      {/*
+        🔴 기록이 0 이어도 **행 이름은 그린다.** 전에는 블록째 「아직 기록된 카드가 없어요」 한 줄로
+        접었는데, 그러면 「생성 경로」라는 행이 있다는 사실 자체가 안 보여서 어디를 봐야 하는지
+        알 수 없다 (2026-08-30 — 로컬은 관리자 카드가 제외돼 정확히 이 상태였다).
+        숫자·칩은 여전히 안 그린다 — 0 을 그리면 「아무도 안 쓴다」는 거짓 주장이 된다.
+      */}
+      {(
         <div className="space-y-4">
           {rows.map((r) => {
             const entries = Object.entries(r.distribution).sort((a, b) => b[1] - a[1])
@@ -734,7 +750,7 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
                             : 'text-text-quaternary bg-card border-line'
                         }`}
                       >
-                        {k}
+                        {r.labelOf ? r.labelOf(k) : k}
                         <span className="ml-1 tabular-nums">{v}</span>
                       </span>
                     ))}
@@ -785,7 +801,62 @@ function ObservabilityBlock({ data }: { data: CardFieldsData }) {
           )}
         </div>
       )}
+
+      <PostingRates data={data} />
     </Block>
+  )
+}
+
+/**
+ * 공고 붙여넣기 3종 — **이 기능이 쓸모 있나 · 값이 맞나 · 얼마나 되묻나**.
+ *
+ * 판정 기준은 미리 정해져 있다: `paste_posting` 비율 20% 이상이면 성공, 5% 미만이면 진입점
+ * 재검토. 그 비율은 위 「생성 경로」 분포가 이미 보여주고, 여기 셋은 **품질** 쪽을 답한다 —
+ * 만들다 만 비율(전환), AI 값을 고친 비율(정확도), 되물은 비율(파서 커버리지).
+ *
+ * 🔴 값이 없으면 행을 **아예 안 그린다.** 0/0 을 그리면 「아무도 안 쓴다」로 읽히는데,
+ * 백엔드가 아직 이 필드를 안 주는 배포 창일 수도 있다.
+ */
+function PostingRates({ data }: { data: CardFieldsData }) {
+  const rows = [
+    {
+      key: 'pasteConversion',
+      label: '파싱 → 카드 전환율',
+      hint: '붙였는데 카드가 안 된 경우',
+      rate: data.pasteConversion,
+      unit: '건',
+    },
+    {
+      key: 'aiEditRate',
+      label: 'AI 값 수정률',
+      hint: '만든 뒤 고쳐야 했나',
+      rate: data.aiEditRate,
+      unit: '장',
+    },
+    {
+      key: 'needsRate',
+      label: '보완 질문 비율',
+      hint: '회사명·직무를 되물은 카드',
+      rate: data.needsRate,
+      unit: '장',
+    },
+  ].filter((r) => r.rate != null)
+
+  if (rows.length === 0) return null
+
+  return (
+    <div className="mt-4 pt-3 border-t border-line space-y-2">
+      <p className="text-xs text-text-secondary font-medium">공고 붙여넣기</p>
+      {rows.map((r) => (
+        <div key={r.key} className="flex items-baseline gap-2 flex-wrap">
+          <p className="text-xs text-text-secondary">{r.label}</p>
+          <span className="text-[11px] text-text-quaternary">{r.hint}</span>
+          <span className="ml-auto text-[11px] tabular-nums text-text-secondary">
+            {formatShare(r.rate!.count, r.rate!.total, { unit: r.unit })}
+          </span>
+        </div>
+      ))}
+    </div>
   )
 }
 

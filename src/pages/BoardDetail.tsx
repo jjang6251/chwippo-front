@@ -38,6 +38,8 @@ import { CompanyInfoSection } from '@/components/board/CompanyInfoSection'
 import { CompanyMemoCard } from '@/components/board/CompanyMemoCard'
 import { PlannedGuide } from '@/components/board/PlannedGuide'
 import { StartApplicationModal } from '@/components/card/StartApplicationModal'
+import { PostingReviewLine } from '@/components/card/PostingReviewLine'
+import { PostingExtraDatesRow } from '@/components/board/PostingExtraDatesRow'
 import { JobPostingBanner } from '@/components/coverletter/JobPostingBanner'
 import { useCoverletterAiBlocked } from '@/hooks/useCoverletterAiBlocked'
 import { loadCollapseExpanded, saveCollapseExpanded, JOB_POSTING_EXPANDED_STORAGE_KEY } from '@/utils/collapsePref'
@@ -154,7 +156,7 @@ function CurrentStepCard({
             <p className="text-xs text-warning font-medium">결과 대기 중 — 합격·불합격을 입력해 주세요</p>
           ) : (
             <div className="flex items-center gap-x-3 gap-y-1 text-xs text-text-secondary flex-wrap">
-              <StepDateField appId={appId} stepId={step.id} stepName={step.name} scheduledDate={step.scheduledDate} iconColorCls={cfg.colorCls} />
+              <StepDateField appId={appId} stepId={step.id} stepName={step.name} scheduledDate={step.scheduledDate} iconColorCls={cfg.colorCls} emptyLabel={step.dateHint ?? undefined} />
               {step.location && <span className="inline-flex items-center gap-1 max-w-[180px]"><MapPin size={13} strokeWidth={1.75} className={`${cfg.colorCls} shrink-0`} aria-hidden="true" /> <span className="truncate">{step.location}</span></span>}
               {checklist.length > 0 && (
                 <span className="text-text-quaternary">체크리스트 {doneCount}/{checklist.length}</span>
@@ -648,6 +650,11 @@ export function BoardDetail() {
 
       {effectiveTab === 'steps' && (
         <>
+          {/* 공고로 만든 카드인데 아직 아무 데서도 확인하지 않았다 — 결과 시트를 못 본 경우의 폴백 */}
+          {app.postingMeta && !app.postingMeta.reviewedAt && (
+            <PostingReviewLine applicationId={app.id} missingJobTitle={!app.jobTitle} />
+          )}
+
           {/* 🔴 「지원 예정」이면 **여기가 첫 화면**이다 — 아래 진행 상황 섹션이 통째로
               빠지는 상태라, 안내가 없으면 빈 메모 에디터만 남는다 (CEO 실기 2026-08-29). */}
           {app.status === 'PLANNED' && (
@@ -706,6 +713,9 @@ export function BoardDetail() {
               )}
             </div>
           )}
+
+          {/* 공고에서 뽑았지만 **스텝이 아닌** 날짜들 — 발표·검진은 캘린더로 갔다 */}
+          <PostingExtraDatesRow app={app} />
 
           {/* 공고 요건 — 자소서와 동일 UI·데이터(app.jobPosting 단일 소스). 회사 메모 위 (CEO 2026-07-20) */}
           <JobPostingBanner

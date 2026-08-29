@@ -54,6 +54,17 @@ export const aiUsageApi = {
     apiClient
       .get<{ data: MonthEstimateResponse }>('/admin/ai-usage/v2/month-estimate')
       .then(unwrap),
+  /**
+   * 기능별 **이달 누적 / 이달 예상** (KST 월 경계).
+   *
+   * 🔴 `overview` 와 **다른 엔드포인트**인 이유: overview 는 사용자가 고른 기간(1d·7d·30d)을
+   * 보는데, 「이달 얼마 나갔나」는 그 기간과 무관한 **고정 창**이다. 한 응답에 섞으면
+   * 기간 필터를 바꿀 때마다 월 숫자가 따라 움직이는 것처럼 보인다.
+   */
+  featureMonth: () =>
+    apiClient
+      .get<{ data: FeatureMonthResponse }>('/admin/ai-usage/v2/feature-month')
+      .then(unwrap),
 }
 
 export interface ByModelRow {
@@ -81,6 +92,23 @@ export interface CacheHitResponse {
     avgHitsPerRow: number
   }
 }
+/** 한 기능의 이달 비용 (USD) — `avgCostPerCall` 은 호출 0 건이면 `null` (나눌 수가 없다) */
+export interface FeatureMonthRow {
+  feature: string
+  calls: number
+  monthToDateCost: number
+  monthProjectedCost: number
+  avgCostPerCall: number | null
+}
+
+export interface FeatureMonthResponse {
+  /** 이달 시작 (KST) */
+  monthStart: string
+  daysElapsed: number
+  daysInMonth: number
+  rows: FeatureMonthRow[]
+}
+
 export interface MonthEstimateResponse {
   monthStart: string
   daysElapsed: number

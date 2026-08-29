@@ -38,6 +38,8 @@ type MutateOpts = { onSuccess: (data: Application) => void }
 const mutate = vi.fn()
 vi.mock('@/hooks/useApplications', () => ({
   useCreateApplication: () => ({ mutate, isPending: false }),
+  // 목록은 NEW 알약 판정(공고 카드 보유 여부)에만 쓴다 — 이 spec 의 관심 밖
+  useApplications: () => ({ data: [] }),
 }))
 
 const mockedResearch = vi.mocked(coverletterDocApi.getResearch)

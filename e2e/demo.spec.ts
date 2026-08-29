@@ -109,6 +109,48 @@ test.describe('데모 모드', () => {
     expect(guard.consoleErrors()).toEqual([])
   })
 
+  /**
+   * 공고 붙여넣기 → 카드 자동 생성 — **데모 전체 흐름**.
+   *
+   * 🔴 이 spec 이 잡는 것: 데모 라우트는 `DemoShell` 의 **별도 QueryClient** 를 쓰는데,
+   * 뒤처리 호스트(`PostingCardHost`)가 App 레벨에만 있으면 만들어진 카드를 **앱 클라이언트**에
+   * 심는다. 그러면 보드에 카드가 안 나타나고, 결과 시트도 앱 목록에서 그 카드를 못 찾아
+   * 즉시 닫혀 **토스트만** 뜬다 (2026-08-29 실측). 유닛으로는 QueryClient 두 벌을 재현하기
+   * 어려워 실브라우저에서 잡는다.
+   *
+   * 백엔드 요청 0 도 함께 단언한다 — 데모의 AI 는 고정 응답이고 절대 모델을 부르지 않는다.
+   */
+  test('공고 붙여넣기 → 생성 중 카드 → 결과 시트 → 보드 안착 (백엔드 0)', async ({ page }) => {
+    const guard = await attachGuard(page)
+    await page.goto('/demo/board')
+    await expect(page.locator('main').getByText('카카오').first()).toBeVisible()
+
+    // 🔴 `exact` — 카드마다 있는 「즐겨찾기 추가」와 이름이 겹친다 (strict mode 위반)
+    await page.getByRole('button', { name: '추가', exact: true }).click()
+    await page.getByText('지원 중으로 추가').click()
+    await page.getByRole('button', { name: /공고로 만들기/ }).click()
+    await page.getByRole('button', { name: /샘플 공고 넣어보기/ }).click()
+    await page.getByRole('button', { name: /카드 만들기/ }).click()
+
+    // 모달은 즉시 닫히고 보드 맨 위에 생성 중 카드가 선다 (진행률 바 없음 · 단계 문구)
+    await expect(page.locator('[data-pending-card]')).toBeVisible()
+    await expect(page.getByText(/공고 읽는 중…|전형 찾는 중…|날짜 맞추는 중…/)).toBeVisible()
+
+    // 데모는 2초 흉내 — 넉넉히 4초 안에 결과 시트가 떠야 한다
+    await expect(page.getByText('카드가 만들어졌어요 ✓')).toBeVisible({ timeout: 4000 })
+    await expect(page.locator('[data-pending-card]')).toHaveCount(0)
+
+    await page.getByRole('button', { name: '좋아요' }).click()
+
+    // 닫힌 뒤에 되돌리기 토스트 — 시트와 겹치지 않는다
+    await expect(page.getByText('무신사 카드를 만들었어요')).toBeVisible()
+    // 🔴 핵심 — 카드가 **보드에** 있다 (데모 QueryClient 에 심겼다는 증거)
+    await expect(page.locator('main').getByText('무신사').first()).toBeVisible()
+
+    expect(guard.backendHits()).toBe(0)
+    expect(guard.consoleErrors()).toEqual([])
+  })
+
   test('노드(전형 스텝) 이동 — 화면 즉시 반영', async ({ page }) => {
     const guard = await attachGuard(page)
     await page.goto('/demo/board/demo-a1')

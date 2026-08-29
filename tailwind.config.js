@@ -57,6 +57,14 @@ export default {
         'brand-hover': 'rgb(var(--brand-hover) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
         'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
+        /**
+         * 🔴 `accent` 를 **면으로 깔 때 쓰는 쌍** — 글자용 accent 와 다른 값이다.
+         * 라이트 accent 는 밝은 면 위 글자 대비를 맞추려 어둡게 내린 값이라, 배경으로 쓰면
+         * 강조가 아니라 갈색 얼룩이 된다. 채움(`accent-fill`) + 그 위 글자(`accent-fill-ink`)를
+         * 항상 같이 쓴다 (index.css 주석 참조).
+         */
+        'accent-fill': 'rgb(var(--accent-fill) / <alpha-value>)',
+        'accent-fill-ink': 'rgb(var(--accent-fill-ink) / <alpha-value>)',
 
         'text-primary': 'rgb(var(--text-primary) / <alpha-value>)',
         'text-secondary': 'rgb(var(--text-secondary) / <alpha-value>)',

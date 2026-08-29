@@ -7,6 +7,7 @@
 // mutation 대상 리소스만 여기서 deep-copy 해 보관한다. 불변 리소스(대시보드 통계·프로필·
 // streak·growth 등)는 sampleData 상수를 adapter 가 직접 읽는다.
 import * as S from './sampleData'
+import * as S_POSTING from './postingSample'
 import type { Application, UpdateApplicationDto } from '@/types/application'
 import type {
   ChecklistItem,
@@ -79,6 +80,42 @@ export function resetDemoStore(): void {
 export const getApplications = (): Application[] => state.applications
 export const getApplication = (id: string): Application | undefined =>
   state.applications.find((a) => a.id === id)
+
+// ── 공고 붙여넣기로 만든 카드 (데모 — 백엔드 0) ──────────────
+/**
+ * 「샘플 공고 넣어보기」 결과를 **인메모리 보드에 실제로 얹는다.**
+ *
+ * 🔴 서버 경로(`POST /applications/from-posting`)를 타지 않는다 — 데모는 백엔드 요청 0 이
+ * e2e 단언이고, AI 호출은 비로그인에게 열어 줄 수 없다. 대신 결과가 **진짜처럼 동작**해야
+ * 하므로(스텝 힌트·캘린더 일정·되돌리기) 고정 카드를 store 에 넣고 노트도 같이 만든다.
+ */
+export function createApplicationFromPosting(): Application {
+  const appId = genId('paste')
+  const noteIds = S_POSTING.DEMO_POSTING_NOTES.map((n) => {
+    const note = createDailyNote({
+      date: n.date,
+      hourSlot: n.hourSlot,
+      content: `무신사 · ${n.label}`,
+    })
+    return note.id
+  })
+  const card = S_POSTING.buildDemoPostingCard(appId, noteIds, 'demo-user')
+  state.applications = [card, ...state.applications]
+  return card
+}
+
+/**
+ * 되돌리기 — 카드와 **그 카드가 만든 캘린더 일정까지** 지운다.
+ * 서버도 같은 규칙이라(`posting_meta.noteIds` 동시 삭제) 데모만 무르게 두지 않는다.
+ */
+export function deleteApplication(id: string): void {
+  const app = state.applications.find((a) => a.id === id)
+  const noteIds = app?.postingMeta?.extraDates.map((e) => e.noteId) ?? []
+  state.applications = state.applications.filter((a) => a.id !== id)
+  if (noteIds.length > 0) {
+    state.dailyNotes = state.dailyNotes.filter((n) => !noteIds.includes(n.id))
+  }
+}
 
 // ── 지원 카드 (mutation) ─────────────────────────────────────
 /** PATCH /applications/:id — 상태 변경·별표·회고 등 카드 필드 수정 */

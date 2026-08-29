@@ -208,4 +208,39 @@ describe('StepBar', () => {
       expect(dot(1)?.className).not.toContain('scale-125')
     })
   })
+
+  // ── 공고 날짜 힌트 ────────────────────────────────────
+  /**
+   * 공고가 날짜 대신 **말로** 알려 준 것 (「9월 예정」·「추후 공지」).
+   *
+   * 케이스: ① 힌트만 있으면 이름 아래 캡션 ② 날짜가 있으면 힌트를 안 그린다
+   * ③ 둘 다 없으면 아무것도 안 그린다 (「—」 같은 자리채움 금지)
+   */
+  describe('공고 날짜 힌트', () => {
+    it('힌트만 있으면 스텝 이름 아래 캡션으로 그린다', () => {
+      const steps = [
+        { ...makeStep(0, '서류 접수'), dateHint: null },
+        { ...makeStep(1, '필기 전형'), dateHint: '9월 중 예정' },
+      ]
+      render(<StepBar steps={steps} currentStepIndex={0} />)
+      expect(screen.getByText('9월 중 예정')).toBeInTheDocument()
+    })
+
+    it('🔴 날짜가 있으면 힌트를 그리지 않는다 (같은 칸에 두 말이 서면 안 된다)', () => {
+      const steps = [
+        {
+          ...makeStep(0, '서류 접수'),
+          scheduledDate: '2026-09-15T00:00:00+09:00',
+          dateHint: '9월 중 예정',
+        },
+      ]
+      render(<StepBar steps={steps} currentStepIndex={0} />)
+      expect(screen.queryByText('9월 중 예정')).toBeNull()
+    })
+
+    it('힌트도 날짜도 없으면 자리를 만들지 않는다', () => {
+      render(<StepBar steps={[makeStep(0, '서류 접수')]} currentStepIndex={0} />)
+      expect(screen.queryByText('—')).toBeNull()
+    })
+  })
 })

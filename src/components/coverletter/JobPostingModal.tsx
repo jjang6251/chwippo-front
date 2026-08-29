@@ -209,7 +209,8 @@ export function JobPostingModal({
     <Modal open={open} onClose={attemptClose} title={title} width="max-w-lg">
       {step === 'input' ? (
         <div>
-          <p className="text-text-tertiary text-xs leading-relaxed mb-2">
+          {/* 40자 넘는 읽는 문장 → 14px. 같은 기능군(공고로 카드 만들기)과 크기를 맞춘다 */}
+          <p className="text-text-tertiary text-sm leading-relaxed mb-2">
             채용 공고에서 담당업무·자격요건·우대사항 등을 붙여넣으면 AI가 항목별로
             정리해드려요.
           </p>
@@ -283,8 +284,13 @@ export function JobPostingModal({
             </p>
           ) : (
             <div className="text-center mt-2 space-y-0.5">
+              {/*
+                🔴 **「오늘 N/5회」 캡션을 뺐다** (2026-08-29). 한도가 admin 값 하나로 올라가
+                사람이 닿을 수 없는 수준(일 200)이 됐다 — 닿지도 않을 숫자를 세어 보여주면
+                **없는 제약을 만들어 준다.** 실제로 소진되면 아래 `soldOut` 분기가 그때 말한다.
+              */}
               <p className="text-[11px] text-text-quaternary">
-                오늘 {remaining}/{limit}회 · 치뽀 코인은 들지 않아요
+                <span className="text-brand font-semibold">무료예요</span>
               </p>
               <p className="text-[11px] text-text-quaternary">
                 정리된 내용은 회원님의 지원 준비에만 활용돼요
@@ -317,7 +323,8 @@ export function JobPostingModal({
               placeholder="예: 대규모 트래픽 서비스 경험"
             />
             <ChipSection
-              title="기술 스택"
+              /* 전 직군 공고가 자동으로 채우는 칸이라 개발자 어휘를 쓰지 않는다 (`JobPostingBanner` 와 같은 라벨) */
+              title="기술·툴"
               items={draft.techStack}
               onChange={(v) => setField('techStack', v)}
               placeholder="예: React"

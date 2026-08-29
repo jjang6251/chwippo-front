@@ -50,6 +50,10 @@ vi.mock('@/components/card/CompanyCard', () => ({
   ),
 }))
 vi.mock('@/components/card/AddCardModal', () => ({ AddCardModal: () => null }))
+// 보드 마운트 시 보완 대기 초안 조회 — 이 spec 관심 밖이라 빈 목록으로 막는다 (실요청 금지)
+vi.mock('@/api/jobPosting', () => ({
+  jobPostingCardApi: { pending: () => Promise.resolve([]) },
+}))
 
 import { Board } from './Board'
 

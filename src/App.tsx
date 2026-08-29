@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastContainer } from '@/components/common/ToastContainer'
+import { PostingCardHost } from '@/components/board/PostingCardHost'
 import { CelebrationOverlay } from '@/components/common/CelebrationOverlay'
 import { FirstCardCelebration } from '@/components/common/FirstCardCelebration'
 import { FailedCareOverlay } from '@/components/card/FailedCareOverlay'
@@ -298,6 +299,12 @@ export default function App() {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
+      {/*
+        공고 카드 뒤처리 — 모달·보드가 언마운트돼도 결과 시트·되돌리기 토스트는 뜬다.
+        🔴 이건 **실서비스 스코프** 전용이다 (main.tsx 의 앱 QueryClient). 데모는 자기
+        QueryClient 를 쓰므로 `DemoShell` 이 자기 호스트를 따로 마운트한다.
+      */}
+      <PostingCardHost />
       <ToastContainer />
       <CelebrationOverlay />
       <FirstCardCelebration />

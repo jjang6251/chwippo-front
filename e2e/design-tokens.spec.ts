@@ -11,7 +11,14 @@
  */
 import { test, expect } from '@playwright/test'
 
-const TOKENS = ['bg-line', 'bg-line-strong', 'bg-surface-2', 'bg-card-solid']
+// `bg-accent-fill` — 2026-08-29 신규(NEW 알약). tailwind.config 등록을 빠뜨리면 알약이 투명해진다
+const TOKENS = [
+  'bg-line',
+  'bg-line-strong',
+  'bg-surface-2',
+  'bg-card-solid',
+  'bg-accent-fill',
+]
 
 test('배경 의미 토큰이 실제 색을 만든다', async ({ page }) => {
   await page.goto('http://localhost:5173/demo/calendar', { waitUntil: 'domcontentloaded' })
@@ -46,4 +53,44 @@ test('🔴 화면에 실제로 쓰인 bg-line 요소가 투명하지 않다', as
       .map((e) => String(e.className).slice(0, 60)),
   )
   expect(transparent, `투명하게 그려진 요소: ${transparent.join(' / ')}`).toEqual([])
+})
+
+/**
+ * 🔴 **새 색은 다크·라이트 두 값을 동시에 정의한다** (DESIGN.md 규칙).
+ *
+ * 한쪽만 정의하면 그 테마에서 `rgb(var(--x))` 가 무효 색이 되어 요소가 **투명하게** 그려진다 —
+ * 에러도 경고도 없다. 2026-08-17 에 활동 태그 16색이 테마 무관 고정값이라 라이트에서 2.06:1 이었고,
+ * 그 종류의 침묵을 여기서 막는다. jsdom 은 CSS 를 적용하지 않아 유닛으로는 못 잡는다.
+ */
+const THEME_PAIRS = ['bg-accent-fill', 'bg-brand', 'bg-accent', 'bg-surface-2']
+
+test('테마를 바꿔도 색 토큰이 살아 있다 (한쪽만 정의 금지)', async ({ page }) => {
+  await page.goto('http://localhost:5173/demo/calendar', { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000)
+
+  const result = await page.evaluate((tokens: string[]) => {
+    const probe = document.createElement('div')
+    document.body.appendChild(probe)
+    const read = (theme: string) => {
+      document.documentElement.dataset.theme = theme
+      const out: Record<string, string> = {}
+      for (const t of tokens) {
+        probe.className = t
+        out[t] = getComputedStyle(probe).backgroundColor
+      }
+      return out
+    }
+    const dark = read('dark')
+    const light = read('light')
+    probe.remove()
+    return { dark, light }
+  }, THEME_PAIRS)
+
+  const transparent = (v: string) => v === 'rgba(0, 0, 0, 0)' || v === 'transparent'
+  for (const t of THEME_PAIRS) {
+    expect(transparent(result.dark[t]), `다크에서 ${t} 이 투명`).toBe(false)
+    expect(transparent(result.light[t]), `라이트에서 ${t} 이 투명`).toBe(false)
+    // 같은 값이면 한쪽 테마에서 반드시 대비가 깨진다 (위 주석 · DESIGN.md 실측)
+    expect(result.dark[t], `${t} 이 양 테마에서 같은 값`).not.toBe(result.light[t])
+  }
 })

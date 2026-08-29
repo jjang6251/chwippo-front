@@ -17,6 +17,18 @@ interface Props {
    * 글자·여백만 줄이고 **히트는 44px 그대로** 유지한다.
    */
   dense?: boolean
+  /**
+   * 값이 실제로 저장됐다 — 호출부가 그 사실을 따로 기록해야 할 때만 준다
+   * (공고 결과 시트: 「AI 값을 고쳤다」를 `posting_meta.editedFields` 에 남긴다).
+   */
+  onSaved?: () => void
+  /**
+   * 빈 칸에 쓸 글자 — 기본은 「날짜 설정하기」.
+   *
+   * 공고에서 온 스텝은 날짜 대신 **공고가 한 말**(「9월 예정」)을 들고 있다. 그 말을 지우고
+   * 「날짜 설정하기」로 덮으면 공고가 알려 준 정보가 화면에서 사라진다.
+   */
+  emptyLabel?: string
 }
 
 /**
@@ -42,7 +54,7 @@ interface Props {
  * 덮어썼고, 그 탓에 **임박(2시간 전) 알림에서 이탈**하고 캘린더 시간도 사라졌다
  * (ADR-049 가 없앤 결함). 쓰기는 `useStepScheduleSave` 한 곳만 지난다.
  */
-export function StepDateField({ appId, stepId, stepName, scheduledDate, iconColorCls = 'text-text-tertiary', dense }: Props) {
+export function StepDateField({ appId, stepId, stepName, scheduledDate, iconColorCls = 'text-text-tertiary', dense, onSaved, emptyLabel }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const save = useStepScheduleSave(appId, stepId)
@@ -71,7 +83,7 @@ export function StepDateField({ appId, stepId, stepName, scheduledDate, iconColo
         <input
           type="datetime-local"
           value={draft}
-          onChange={(e) => { setDraft(e.target.value); save(e.target.value) }}
+          onChange={(e) => { setDraft(e.target.value); save(e.target.value); onSaved?.() }}
           onBlur={() => setEditing(false)}
           autoFocus
           aria-label="일정 날짜 및 시간"
@@ -103,7 +115,7 @@ export function StepDateField({ appId, stepId, stepName, scheduledDate, iconColo
       className={`${hit} ${box} inline-flex items-center gap-1 bg-card-strong border border-dashed border-line-strong rounded-lg text-text-tertiary hover:text-text-secondary hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 transition-colors`}
     >
       <Calendar size={ico} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
-      날짜 설정하기
+      {emptyLabel ?? '날짜 설정하기'}
       <Pencil size={pen} strokeWidth={2} className="ml-1.5 text-text-quaternary shrink-0" aria-hidden="true" />
     </button>
   )
