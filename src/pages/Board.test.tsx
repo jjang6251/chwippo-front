@@ -7,11 +7,19 @@
  *   5. 토글 선택 → localStorage 저장
  *   6. 필터 탭(지원 중) + 그룹 뷰 조합 → IN_PROGRESS 그룹만
  *
+ * 딥링크(`?add=`) — 공지의 「지금 해보기」가 여기로 떨어진다.
+ *   7. `?add=posting` → 카드 추가 모달이 IN_PROGRESS + 공고 모드로 열린다
+ *   8. 🔴 열자마자 `add` 파라미터가 URL 에서 사라진다 (새로고침에 다시 안 열리게)
+ *   9. 🔴 `add` 를 지워도 다른 파라미터(`filter`)는 남는다
+ *  10. `?add=1` → 직접 입력 모드
+ *  11. 파라미터가 없으면 모달은 안 열린다
+ *  12. 모르는 값(`?add=xyz`)도 안 연다
+ *
  * CompanyCard·AddCardModal 은 stub (뷰 스위칭·그룹핑만 검증, 카드 내부 로직은 별도 테스트).
  */
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { Application, ApplicationStep } from '@/types/application'
 import { BOARD_VIEW_STORAGE_KEY } from '@/utils/boardViewGroups'
@@ -49,7 +57,24 @@ vi.mock('@/components/card/CompanyCard', () => ({
     <div data-testid="company-card">{application.companyName}</div>
   ),
 }))
-vi.mock('@/components/card/AddCardModal', () => ({ AddCardModal: () => null }))
+// 모달 내부는 별도 spec — 여기선 **어떻게 열렸는지**(상태·시작 모드)만 본다
+vi.mock('@/components/card/AddCardModal', () => ({
+  AddCardModal: ({
+    defaultStatus,
+    initialMode,
+    onClose,
+  }: {
+    defaultStatus?: string
+    initialMode?: string
+    onClose: () => void
+  }) => (
+    <div data-testid="add-card-modal" data-status={defaultStatus} data-mode={initialMode ?? ''}>
+      <button type="button" onClick={onClose}>
+        모달 닫기
+      </button>
+    </div>
+  ),
+}))
 // 보드 마운트 시 보완 대기 초안 조회 — 이 spec 관심 밖이라 빈 목록으로 막는다 (실요청 금지)
 vi.mock('@/api/jobPosting', () => ({
   jobPostingCardApi: { pending: () => Promise.resolve([]) },
@@ -57,16 +82,26 @@ vi.mock('@/api/jobPosting', () => ({
 
 import { Board } from './Board'
 
-function renderBoard() {
+/** 지금 URL — `add` 파라미터가 정말 지워졌는지 보려면 라우터 안에서 읽어야 한다 */
+function LocationProbe() {
+  const loc = useLocation()
+  return <span data-testid="location">{loc.pathname + loc.search}</span>
+}
+
+function renderBoard(entry = '/board') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <QueryClientProvider client={qc}>
         <Board />
+        <LocationProbe />
       </QueryClientProvider>
     </MemoryRouter>,
   )
 }
+
+const addModal = () => screen.queryByTestId('add-card-modal')
+const currentUrl = () => screen.getByTestId('location').textContent
 
 beforeEach(() => localStorage.clear())
 
@@ -126,5 +161,76 @@ describe('Board 뷰 토글', () => {
     expect(screen.queryByRole('heading', { name: /지원 예정/ })).not.toBeInTheDocument()
     expect(screen.queryByText('토스')).not.toBeInTheDocument()
     expect(screen.queryByText('쿠팡')).not.toBeInTheDocument()
+  })
+})
+
+describe('Board 딥링크 ?add=', () => {
+  it('7) ?add=posting → 카드 추가 모달이 IN_PROGRESS + 공고 모드로 열린다', () => {
+    renderBoard('/board?add=posting')
+    expect(addModal()).toBeInTheDocument()
+    expect(addModal()).toHaveAttribute('data-status', 'IN_PROGRESS')
+    expect(addModal()).toHaveAttribute('data-mode', 'posting')
+  })
+
+  it('13) 🔴 이미 /board 에 있는데 ?add=posting 으로 바뀌어도 열린다 (공지 CTA 는 보드 위에서 눌린다)', () => {
+    // 실브라우저 실측(2026-08-30): 마운트 초기값만 읽던 첫 구현은 같은 페이지 안 이동에서 파라미터만 지우고 안 열렸다
+    function NavProbe() {
+      const navigate = useNavigate()
+      return (
+        <button type="button" onClick={() => navigate('/board?add=posting')}>
+          지금 해보기
+        </button>
+      )
+    }
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    render(
+      <MemoryRouter initialEntries={['/board']}>
+        <QueryClientProvider client={qc}>
+          <Board />
+          <LocationProbe />
+          <NavProbe />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    expect(addModal()).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '지금 해보기' }))
+    expect(addModal()).toBeInTheDocument()
+    expect(addModal()).toHaveAttribute('data-mode', 'posting')
+    // 닫으면 파라미터도 같이 사라진다
+    fireEvent.click(screen.getByRole('button', { name: '모달 닫기' }))
+    expect(addModal()).not.toBeInTheDocument()
+    expect(currentUrl()).toBe('/board')
+  })
+
+  it('8) 🔴 모달을 닫으면 add 파라미터가 URL 에서 사라진다 (닫기 전엔 남아 있어 새로고침해도 다시 열린다 — 아직 안 닫았으니)', () => {
+    renderBoard('/board?add=posting')
+    expect(currentUrl()).toBe('/board?add=posting')
+    expect(addModal()).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '모달 닫기' }))
+    expect(addModal()).not.toBeInTheDocument()
+    expect(currentUrl()).toBe('/board')
+  })
+
+  it('9) 닫을 때 add 만 지우고 다른 파라미터는 남긴다', () => {
+    renderBoard('/board?filter=PLANNED&add=posting')
+    expect(addModal()).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '모달 닫기' }))
+    expect(currentUrl()).toBe('/board?filter=PLANNED')
+  })
+
+  it('10) ?add=1 → 직접 입력 모드', () => {
+    renderBoard('/board?add=1')
+    expect(addModal()).toHaveAttribute('data-status', 'IN_PROGRESS')
+    expect(addModal()).toHaveAttribute('data-mode', 'manual')
+  })
+
+  it('11) 파라미터가 없으면 모달은 안 열린다', () => {
+    renderBoard()
+    expect(addModal()).not.toBeInTheDocument()
+  })
+
+  it('12) 모르는 값은 안 연다', () => {
+    renderBoard('/board?add=xyz')
+    expect(addModal()).not.toBeInTheDocument()
   })
 })
