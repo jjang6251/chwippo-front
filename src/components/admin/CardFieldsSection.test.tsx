@@ -119,6 +119,25 @@ describe('CardFieldsSection — 전형 템플릿 그대로 쓴 카드', () => {
  *  2. 🔴 화면은 10개까지만 — 잘렸다는 사실을 「상위 N개만 표시」로 알린다 (전수는 distinct)
  *  3. 필드가 없거나 0종이면 행 자체를 안 그린다 (배포 창 · 빈 상태)
  */
+describe('CardFieldsSection — 생성 경로는 사람 말로', () => {
+  it('1) 🔴 코드가 아니라 「공고로 만들기 N · 직접 입력 M」으로 읽힌다 (2026-08-30 「없는 것 같은데?」)', async () => {
+    getMock.mockResolvedValue(
+      makeData({
+        createdVia: { recorded: 9, distribution: { add_modal: 5, paste_posting: 3, weird_code: 1 } },
+      }),
+    )
+    wrap(<CardFieldsSection />)
+
+    expect(await screen.findByText('생성 경로')).toBeInTheDocument()
+    expect(screen.getByText('공고로 만들기')).toBeInTheDocument()
+    expect(screen.getByText('직접 입력')).toBeInTheDocument()
+    expect(screen.queryByText('add_modal')).toBeNull()
+    expect(screen.queryByText('paste_posting')).toBeNull()
+    // 모르는 코드는 숨기지 않고 그대로 — 「새 값이 생겼다」가 드러나야 한다
+    expect(screen.getByText('weird_code')).toBeInTheDocument()
+  })
+})
+
 describe('CardFieldsSection — 직무 표기 원문', () => {
   it('1) 원문 칩이 빈도순으로 보이고 distinct 가 전수를 말한다', async () => {
     getMock.mockResolvedValue(

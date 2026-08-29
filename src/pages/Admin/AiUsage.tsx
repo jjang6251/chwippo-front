@@ -16,6 +16,7 @@ import {
   useAiUsageHallucination,
   useAiUsageMonthEstimate,
   useAiUsageOverview,
+  useAiUsageFeatureMonth,
   useAiUsageUserDetail,
 } from '@/hooks/useAiUsage'
 import { useAiUsageMetricsPeriod } from '@/hooks/useAiUsageMetrics'
@@ -61,6 +62,14 @@ function fmtUsd(value: number): string {
   return `$${value.toFixed(4)}`
 }
 
+/**
+ * 🔴 값이 없으면 **0 이 아니라 「—」**. `?? 0` 은 「모른다」를 「0원이다」라는 거짓 주장으로
+ * 바꾸는데, 이 표는 그 숫자로 기능을 끄고 켜는 자리다 (배포 창엔 필드 자체가 없다).
+ */
+function fmtUsdOrDash(value: number | null | undefined): string {
+  return typeof value === 'number' ? fmtUsd(value) : '—'
+}
+
 export function AiUsage() {
   const [feature, setFeature] = useState('')
   const [preset, setPreset] = useState<DatePreset>('30d')
@@ -77,6 +86,14 @@ export function AiUsage() {
   const q = { ...range, ...(feature ? { feature } : {}) }
 
   const { data: overview } = useAiUsageOverview(q)
+  /*
+    이달 누적·예상은 **별도 엔드포인트**다 (기간 필터와 무관한 고정 창).
+    🔴 실패해도 표 전체를 죽이지 않는다 — 그 두 열만 「—」가 되고 호출·비용은 그대로 읽힌다.
+  */
+  const { data: featureMonth } = useAiUsageFeatureMonth()
+  const monthByFeature = new Map(
+    (featureMonth?.rows ?? []).map((r) => [r.feature, r]),
+  )
   const { data: byUser = [] } = useAiUsageByUser(q)
   const { data: userDetail = [] } = useAiUsageUserDetail(
     selectedUser ?? undefined,
@@ -274,10 +291,16 @@ export function AiUsage() {
                   <th className="text-left pb-2">기능</th>
                   <th className="text-right pb-2">호출</th>
                   <th className="text-right pb-2">비용</th>
+                  {/* 「한 번이 얼마인가」 — 한도를 풀어 둔 기능은 이 값이 유일한 브레이크다 */}
+                  <th className="text-right pb-2">호출당</th>
+                  {/* 이달 누적 / 이달 예상 — 위가 지금, 아래가 이 속도로 갔을 때 */}
+                  <th className="text-right pb-2">이달 · 예상</th>
                 </tr>
               </thead>
               <tbody className="text-text-primary">
-                {overview?.byFeature.map((row) => (
+                {overview?.byFeature.map((row) => {
+                  const month = monthByFeature.get(row.feature)
+                  return (
                   <tr key={row.feature} className="border-t border-line">
                     <td className="py-2">
                       <span>{featureLabel(row.feature)}</span>
@@ -285,16 +308,27 @@ export function AiUsage() {
                         {row.feature}
                       </span>
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 text-right tabular-nums">
                       {row.calls.toLocaleString()}
                     </td>
-                    <td className="py-2 text-right">{fmtUsd(row.costUsd)}</td>
+                    <td className="py-2 text-right tabular-nums">{fmtUsd(row.costUsd)}</td>
+                    <td className="py-2 text-right tabular-nums">
+                      {fmtUsdOrDash(row.avgCostPerCall ?? month?.avgCostPerCall)}
+                    </td>
+                    <td className="py-2 text-right tabular-nums whitespace-nowrap">
+                      {fmtUsdOrDash(month?.monthToDateCost)}
+                      <span className="text-text-quaternary">
+                        {' · '}
+                        {fmtUsdOrDash(month?.monthProjectedCost)}
+                      </span>
+                    </td>
                   </tr>
-                ))}
+                  )
+                })}
                 {(!overview || overview.byFeature.length === 0) && (
                   <tr>
                     <td
-                      colSpan={3}
+                      colSpan={5}
                       className="py-4 text-text-quaternary text-center"
                     >
                       데이터 없음

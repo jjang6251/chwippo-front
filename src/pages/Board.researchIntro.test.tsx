@@ -50,6 +50,14 @@ vi.mock('@/components/card/CompanyCard', () => ({
   ),
 }))
 vi.mock('@/components/card/AddCardModal', () => ({ AddCardModal: () => null }))
+/*
+  보드 마운트 시 「보완 대기 초안」을 한 번 물어본다 (공고 카드 새로고침 복원).
+  실제 요청이 나가면 axios 인터셉터가 인증 실패 경로를 태워 이 spec 의 로그인 상태를 흔든다 —
+  여기 관심 밖이므로 빈 목록으로 막는다.
+*/
+vi.mock('@/api/jobPosting', () => ({
+  jobPostingCardApi: { pending: () => Promise.resolve([]) },
+}))
 vi.mock('@/api/coverletterDoc', () => ({
   coverletterDocApi: { getResearch: vi.fn() },
 }))

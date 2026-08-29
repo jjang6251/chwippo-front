@@ -86,8 +86,13 @@ export function JobPostingBanner({
   )
   const renderMore = (data: JobPosting) => (
     <>
+      {/*
+        🔴 「기술 스택」이 아니라 「기술·툴」 — 이 요건은 이제 **전 직군 공고**에서 자동으로
+        채워진다(공고 붙여넣기). 간호사 카드에 「기술 스택: 수술실 간호」가 뜨면 그 자리에서
+        앱이 개발자용으로 읽힌다. 0개면 섹션째 숨긴다 (아래 조건).
+      */}
       {data.techStack.length > 0 && (
-        <ChipItem title="기술 스택" chips={data.techStack} />
+        <ChipItem title="기술·툴" chips={data.techStack} />
       )}
       {data.qualifications.length > 0 && (
         <ChipItem title="자격증·어학" chips={data.qualifications} />

@@ -233,6 +233,22 @@ export function StepBar({ steps, currentStepIndex, status, onStepClick, onStepNa
               >
                 {step.name}
               </span>
+              {/*
+                공고가 날짜 대신 **말로** 알려 준 것 — 「9월 예정」·「추후 공지」.
+                🔴 날짜가 있으면 안 그린다(서버가 날짜를 넣을 때 힌트를 지우므로 보통 동시에
+                존재하지 않지만, 화면 쪽에서도 한 번 더 가른다 — 같은 칸에 두 말이 서면 안 된다).
+                🔴 `text-faint` 를 쓰지 않는다 — 힌트도 공고에서 온 **정보**다 (DESIGN.md 규칙 6).
+              */}
+              {!step.scheduledDate && step.dateHint && (
+                <span
+                  aria-hidden="true"
+                  className={`w-full min-w-0 text-center overflow-hidden text-ellipsis whitespace-nowrap leading-tight px-0.5 text-text-quaternary ${
+                    size === 'sm' ? 'text-[8px]' : 'text-[9px]'
+                  }`}
+                >
+                  {step.dateHint}
+                </span>
+              )}
             </div>
           )
         })}

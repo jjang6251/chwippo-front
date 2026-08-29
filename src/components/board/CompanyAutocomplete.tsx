@@ -28,6 +28,12 @@ interface Props {
   autoFocus?: boolean
   disabled?: boolean
   /**
+   * 붙여넣기 가로채기 — 카드 추가 모달이 **공고 통짜 붙여넣기**를 알아보려고 쓴다.
+   * 회사 칸에 3,000자를 붙이는 건 회사명 입력이 아니라 「이 공고로 만들어 줘」다.
+   * 기본 동작을 막을지는 호출부가 결정한다 (여기선 전달만 한다).
+   */
+  onPaste?: React.ClipboardEventHandler<HTMLInputElement>
+  /**
    * 입력 껍데기. 🔴 기본값 `'box'` = **현행 그대로** — 이 컴포넌트를 쓰는 다른 화면은 영향 0.
    *
    * `'underline'` 은 카드 추가 모달 전용이다. 거기선 「라벨 + 채움 박스」가 5쌍 쌓여
@@ -51,6 +57,7 @@ export function CompanyAutocomplete({
   autoFocus,
   disabled,
   variant = 'box',
+  onPaste,
 }: Props) {
   const inputId = useId()
   const listId = useId()
@@ -130,6 +137,7 @@ export function CompanyAutocomplete({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={handleKey}
+        onPaste={onPaste}
         maxLength={100}
         placeholder={placeholder}
         autoFocus={autoFocus}

@@ -1,10 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from '@/components/common/Modal'
 import { CompanyAutocomplete } from '@/components/board/CompanyAutocomplete'
 import { JobTitleField } from '@/components/card/JobTitleField'
 import { PromoteJobTitleRow } from '@/components/card/PromoteJobTitleRow'
-import { useCreateApplication } from '@/hooks/useApplications'
+import { PostingPasteField } from '@/components/card/PostingPasteField'
+import { useCreateApplication, useApplications } from '@/hooks/useApplications'
 import { useAuthStore } from '@/stores/authStore'
+import { useDemoMode } from '@/contexts/demoMode'
+import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
+import { POSTING_RAW_MAX, POSTING_RAW_MIN } from '@/api/jobPosting'
+import { usePendingCardStore, runPostingParse } from '@/stores/pendingCardStore'
+import {
+  hasSeenPostingHint,
+  hasSeenPostingNudge,
+  loadAddCardMode,
+  markPostingHintSeen,
+  markPostingNudgeSeen,
+  saveAddCardMode,
+  shouldShowPostingNewPill,
+  type AddCardMode,
+} from '@/utils/postingNew'
 import {
   APPLICATION_TEMPLATES,
   getApplicationTemplate,
@@ -21,10 +36,22 @@ import { prefetchCompanyResearchNoHit } from '@/hooks/useCoverletterDoc'
 import { shouldCelebrateFirstCard } from '@/utils/firstCardCelebration'
 import type { Application, JobTitleSource } from '@/types/application'
 
+/**
+ * 공고 카드가 실패했을 때 **찾은 값을 살려서** 직접 입력으로 되돌아오는 재료.
+ * 「처음부터 다시 치세요」가 되면 붙여넣기가 손해가 된다.
+ */
+export interface AddCardPrefill {
+  companyName?: string | null
+  jobTitle?: string | null
+  /** 파서가 회사명을 못 찾은 경우 — 회사 칸 아래에 그 사실을 적는다 */
+  companyNotFound?: boolean
+}
+
 interface AddCardModalProps {
   open: boolean
   onClose: () => void
   defaultStatus?: 'PLANNED' | 'IN_PROGRESS'
+  prefill?: AddCardPrefill | null
 }
 
 /**
@@ -73,6 +100,7 @@ export function AddCardModal({
   open,
   onClose,
   defaultStatus = 'IN_PROGRESS',
+  prefill = null,
 }: AddCardModalProps) {
   /*
     `user` 를 쓰는 곳은 **두 군데뿐**이다 — 첫 카드 축하 판정과 아래 직무 프리필.
@@ -99,16 +127,27 @@ export function AddCardModal({
     한 프레임짜리 죽은 값이 되고, 저장까지 갔다면 그건 **빌려온 값의 저장 승격**이라
     애초에 금지된 경로다 (계열 결정 체인 ②는 표시·추천 전용).
   */
-  const prefillVerdict = prefillTitle ? classifyJob(prefillTitle) : null
-  const prefillSeries =
-    prefillVerdict?.status === 'confident' ? prefillVerdict.series.id : null
+  /**
+   * 공고 카드가 실패해 되돌아온 경우엔 **파서가 찾아 둔 직무**가 온보딩 프리필을 대신한다.
+   * 🔴 출처는 어느 쪽이든 `prefill` 이다 — 사용자가 친 게 아니라 **미리 채워진 값을 그대로
+   * 둔 것**이라, `typed` 로 올리면 「AI 값 수정률」이 통째로 거짓이 된다.
+   */
+  const seedTitle = prefill?.jobTitle?.trim() || prefillTitle
+  /*
+    🔴 계열 초기값은 **프리필 직무에서 추론한 값만** 쓴다. `user.signupSeriesId` 를 빌려
+    seed 해도 `JobTitleField` 가 마운트 직후 자기 판정(`confident` 아니면 null)으로 덮어써서
+    한 프레임짜리 죽은 값이 되고, 저장까지 갔다면 그건 **빌려온 값의 저장 승격**이라
+    애초에 금지된 경로다 (계열 결정 체인 ②는 표시·추천 전용).
+  */
+  const seedVerdict = seedTitle ? classifyJob(seedTitle) : null
+  const seedSeries = seedVerdict?.status === 'confident' ? seedVerdict.series.id : null
 
-  const [companyName, setCompanyName] = useState('')
-  const [jobTitle, setJobTitle] = useState(prefillTitle)
+  const [companyName, setCompanyName] = useState(prefill?.companyName ?? '')
+  const [jobTitle, setJobTitle] = useState(seedTitle)
   const [jobTitleSource, setJobTitleSource] = useState<JobTitleSource>(
-    prefillTitle ? 'prefill' : 'typed',
+    seedTitle ? 'prefill' : 'typed',
   )
-  const [seriesId, setSeriesId] = useState<string | null>(prefillSeries)
+  const [seriesId, setSeriesId] = useState<string | null>(seedSeries)
   const [deadline, setDeadline] = useState('')
   const [jobUrl, setJobUrl] = useState('')
   const [templateId, setTemplateId] = useState('general')
@@ -121,6 +160,61 @@ export function AddCardModal({
   const qc = useQueryClient()
 
   const isPlanned = defaultStatus === 'PLANNED'
+
+  // ── 공고로 만들기 ─────────────────────────────────────────
+  const isDemo = useDemoMode()
+  const ensureAiConsent = useRequireAiConsent()
+  const { data: applications } = useApplications()
+  const startPending = usePendingCardStore((s) => s.start)
+
+  const userId = user?.id
+
+  /**
+   * 🔴 아래 초기값들은 **마운트 때 한 번** 정해진다. 이 모달은 열릴 때 마운트되므로
+   * (`Board` 의 조건부 렌더) 그게 곧 「열 때마다 다시 판정」이다.
+   * effect 로 되돌리면 첫 프레임에 옛 값이 한 번 보이고, 캡션은 기록 직후 스스로 사라진다.
+   *
+   * 지원 예정에는 공고 모드가 없다 — 「일단 적어두기」 화면에 AI 를 얹지 않는다.
+   * 실패 폴백으로 돌아온 경우도 직접 입력으로 연다 (붙여넣기는 방금 실패한 길이다).
+   */
+  const [mode, setMode] = useState<AddCardMode>(() =>
+    defaultStatus === 'PLANNED' || prefill ? 'manual' : loadAddCardMode(user?.id),
+  )
+  const [rawText, setRawText] = useState('')
+  /** 시작 거절 문구 (중복·동시 상한) — 토스트가 아니라 버튼 옆에 남는다 */
+  const [startError, setStartError] = useState<string | null>(null)
+  const [companyNotFound, setCompanyNotFound] = useState(
+    () => prefill?.companyNotFound === true,
+  )
+
+  /** 첫 열림 캡션·타이밍 넛지 — 사용자당 한 번 */
+  const [hintEligible] = useState(
+    () => defaultStatus !== 'PLANNED' && !hasSeenPostingHint(user?.id),
+  )
+  const [nudgeEligible] = useState(() => !hasSeenPostingNudge(user?.id))
+  /** 어느 칩을 펼쳐서 넛지가 떴나 — 그 패널 아래에만 붙는다 */
+  const [nudgeAnchor, setNudgeAnchor] = useState<'deadline' | 'template' | null>(null)
+
+  // 캡션이 **실제로 떴을 때** 기회를 쓴다 — 안 떴는데 소진시키면 영영 못 본다
+  const showHint = open && !isPlanned && hintEligible && mode === 'manual'
+  useEffect(() => {
+    if (showHint) markPostingHintSeen(userId)
+  }, [showHint, userId])
+
+  const showNewPill = shouldShowPostingNewPill(applications)
+
+  const switchMode = (next: AddCardMode) => {
+    setMode(next)
+    setStartError(null)
+    saveAddCardMode(userId, next)
+  }
+
+  /** 칩을 눌러 펼치는 순간이 **손품이 시작되는 자리**다 — 거기서 한 번만 말한다 */
+  const maybeNudge = (anchor: 'deadline' | 'template') => {
+    if (!nudgeEligible || nudgeAnchor) return
+    setNudgeAnchor(anchor)
+    markPostingNudgeSeen(userId)
+  }
 
   // 사용자가 직접 고르기 전까지는 계열·직무·회사명 기반 추천을 따라감
   const effectiveTemplateId = templateTouched
@@ -198,9 +292,9 @@ export function AddCardModal({
   const handleClose = () => {
     setCompanyName('')
     // 프리필은 **닫아도 살아 있다** — 다음에 열었을 때 없으면 "아까는 있었는데" 가 된다
-    setJobTitle(prefillTitle)
-    setJobTitleSource(prefillTitle ? 'prefill' : 'typed')
-    setSeriesId(prefillSeries)
+    setJobTitle(seedTitle)
+    setJobTitleSource(seedTitle ? 'prefill' : 'typed')
+    setSeriesId(seedSeries)
     setDeadline('')
     setJobUrl('')
     setTemplateId('general')
@@ -208,8 +302,61 @@ export function AddCardModal({
     setDeadlineOpen(false)
     setUrlOpen(false)
     setTemplateOpen(false)
+    setRawText('')
+    setStartError(null)
+    setCompanyNotFound(false)
+    setNudgeAnchor(null)
     onClose()
   }
+
+  /**
+   * 「카드 만들기」 — **모달은 즉시 닫히고** 보드 맨 위에 생성 중 카드가 선다.
+   *
+   * 🔴 결과를 여기서 기다리지 않는다. 기다리면 모달이 2~4초 잠기고, 그 사이 새로고침하면
+   * 「차감됐는데 아무것도 없다」가 된다. 진행 상태는 스토어가 들고, 뒤처리는 전역 호스트가 한다.
+   */
+  const handleCreateFromPosting = async () => {
+    const text = rawText.trim()
+    if (text.length < POSTING_RAW_MIN) return
+    setStartError(null)
+    /*
+      데모는 AI 를 부르지 않는다(고정 응답·백엔드 0). 그런데 동의 게이트는 데모에서
+      **가입 모달**을 띄우고 false 를 돌려주므로, 통과시키면 시연이 그 자리에서 끊긴다.
+    */
+    if (!isDemo && !(await ensureAiConsent())) return
+
+    const started = startPending({ rawText: text, demo: isDemo })
+    if ('rejected' in started) {
+      setStartError(
+        started.rejected === 'duplicate'
+          ? '방금 만든 공고예요 — 잠시 뒤에 다시 시도해 주세요'
+          : '먼저 만든 카드가 끝나면 이어서 만들 수 있어요',
+      )
+      return
+    }
+    void runPostingParse(started.tempId, { rawText: text, demo: isDemo })
+    handleClose()
+  }
+
+  /**
+   * 회사 칸에 **공고를 통째로** 붙인 경우 — 묻지 않고 공고 모드로 옮긴다.
+   * 200자짜리 회사명은 없다. 「이건 회사명이 아닌데요」라고 되묻는 건 사용자가 이미 아는 말이다.
+   */
+  const handleCompanyPaste: React.ClipboardEventHandler<HTMLInputElement> = (e) => {
+    if (isPlanned) return
+    const text = e.clipboardData?.getData('text') ?? ''
+    if (text.trim().length < 200) return
+    e.preventDefault()
+    setRawText(text.slice(0, POSTING_RAW_MAX))
+    switchMode('posting')
+  }
+
+  /** 데모 전용 — 픽스처를 늦게 부른다 (본 서비스 번들에 샘플 공고를 넣지 않는다) */
+  const fillDemoSample = () => {
+    void import('@/demo/postingSample').then((m) => setRawText(m.DEMO_POSTING_TEXT))
+  }
+
+  const isPostingMode = !isPlanned && mode === 'posting'
 
   const hasDeadline = deadline.length === 10
   // U20 — 과거 서류 마감일 경고 (지난 공고 기록 허용 → 저장 차단 아님)
@@ -224,6 +371,41 @@ export function AddCardModal({
       width="max-w-lg"
     >
       <form onSubmit={handleSubmit}>
+        {/*
+          ⓪ 모드 토글 — **헤더 바로 아래 한 줄**. A안의 담백함(밑줄 2칸 + 점선 칩 3)은 그대로 두고
+          「어떻게 만들 것인가」만 위에서 고른다. 지원 예정에는 없다(공고 모드 자체가 없다).
+        */}
+        {!isPlanned && (
+          <div className="mb-5 flex gap-0.5 p-0.5 bg-card border border-line rounded-[10px]">
+            <SegButton
+              active={mode === 'manual'}
+              onClick={() => switchMode('manual')}
+              label="직접 입력"
+            />
+            <SegButton
+              active={mode === 'posting'}
+              onClick={() => switchMode('posting')}
+              label="📋 공고로 만들기"
+              badge={showNewPill}
+            />
+          </div>
+        )}
+        {showHint && (
+          /* 40자 넘는 **읽는 문장**은 14px (DESIGN.md 규칙 7-b) — 11px 는 라벨 크기다 */
+          <p className="text-sm text-text-quaternary text-center leading-relaxed mb-4 -mt-3">
+            공고를 통째로 붙이면 회사·전형·날짜까지 채워요 · 코인 안 들어요 · 되돌리기 가능
+          </p>
+        )}
+
+        {isPostingMode ? (
+          <PostingPasteField
+            value={rawText}
+            onChange={setRawText}
+            autoFocus={open}
+            onFillSample={isDemo ? fillDemoSample : undefined}
+          />
+        ) : (
+        <>
         {/* ① 회사 — 이 모달의 유일한 필수값이라 제일 위·제일 크게 */}
         <div>
           {/*
@@ -240,7 +422,14 @@ export function AddCardModal({
             placeholder="어느 회사에 지원하세요?"
             autoFocus={open}
             disabled={isPending}
+            onPaste={handleCompanyPaste}
           />
+          {/* 공고에서 회사명을 못 찾아 직접 입력으로 되돌아온 경우 — 왜 비어 있는지 그 자리에 적는다 */}
+          {companyNotFound && (
+            <p className="text-[11px] text-warning mt-1.5">
+              회사명을 찾지 못했어요 — 직접 적어 주세요
+            </p>
+          )}
           {isPlanned && (
             <p className="text-text-faint text-[11px] mt-2">
               일단 적어두세요 — 직무·마감일은{' '}
@@ -284,7 +473,12 @@ export function AddCardModal({
                 expanded={deadlineOpen}
                 filled={hasDeadline}
                 controls={PANEL_DEADLINE}
-                onClick={() => setDeadlineOpen((v) => !v)}
+                onClick={() => {
+                  setDeadlineOpen((v) => {
+                    if (!v) maybeNudge('deadline')
+                    return !v
+                  })
+                }}
               />
               <RevealChip
                 label={hasJobUrl ? '공고 링크 ✓' : '+ 공고 링크'}
@@ -303,7 +497,12 @@ export function AddCardModal({
                 expanded={templateOpen}
                 filled={templateTouched}
                 controls={PANEL_TEMPLATE}
-                onClick={() => setTemplateOpen((v) => !v)}
+                onClick={() => {
+                  setTemplateOpen((v) => {
+                    if (!v) maybeNudge('template')
+                    return !v
+                  })
+                }}
               />
             </div>
 
@@ -327,6 +526,7 @@ export function AddCardModal({
                     지난 마감일이에요. 지난 공고도 기록할 수 있어요.
                   </p>
                 )}
+                {nudgeAnchor === 'deadline' && <PostingNudge onSwitch={() => switchMode('posting')} />}
               </div>
             )}
 
@@ -395,29 +595,150 @@ export function AddCardModal({
                 <p className="mt-1.5 text-[11px] text-text-quaternary leading-relaxed">
                   {templatePreview}
                 </p>
+                {nudgeAnchor === 'template' && <PostingNudge onSwitch={() => switchMode('posting')} />}
               </div>
             )}
           </>
         )}
+        </>
+        )}
 
-        <div className="flex gap-2 pt-6">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors"
-          >
-            취소
-          </button>
-          <button
-            type="submit"
-            disabled={!companyName.trim() || isPending}
-            className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40"
-          >
-            {isPending ? '추가 중...' : '추가하기'}
-          </button>
-        </div>
+        {isPostingMode ? (
+          <div className="pt-6">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              {/*
+                🔴 `type="button"` — 이 버튼은 폼을 제출하지 않는다. 제출은 「직접 입력」의
+                `create` 경로이고, 여기는 별도 엔드포인트(`from-posting`)라 흐름이 다르다.
+                flex-2 로 넓히는 이유: 취소와 같은 폭이면 「어느 쪽이 하려던 일인지」가 안 보인다.
+              */}
+              <button
+                type="button"
+                onClick={() => void handleCreateFromPosting()}
+                disabled={rawText.trim().length < POSTING_RAW_MIN}
+                className="flex-[2] py-2.5 text-xs font-semibold text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-brand"
+              >
+                ✨ 카드 만들기
+              </button>
+            </div>
+            {startError && (
+              <p role="alert" className="mt-2.5 text-[11px] text-warning text-center">
+                {startError}
+              </p>
+            )}
+            {/*
+              두 줄로 나눈 이유 — 위는 **읽어야 할 경고**(틀릴 수 있다), 아래는 **안심**(공짜다·안 남는다).
+              한 줄에 뭉치면 경고가 안심에 묻힌다.
+            */}
+            <div className="mt-3 text-center space-y-1">
+              {/* 읽는 문장(40자+) → 14px. 아래 짧은 안심 줄은 라벨이라 11px 유지 */}
+              <p className="text-sm text-text-tertiary leading-relaxed">
+                AI가 정리한 내용이라 공고와 다를 수 있어요 — 만든 뒤 꼭 확인해 주세요
+              </p>
+              <p className="text-[11px] text-text-quaternary">
+                <span className="text-brand font-semibold">무료예요</span> · 붙인 원문은 저장하지
+                않아요
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2 pt-6">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex-1 py-2.5 text-xs font-medium text-text-secondary bg-card hover:bg-card-strong active:bg-surface-3 rounded-lg transition-colors"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={!companyName.trim() || isPending}
+              className="flex-1 py-2.5 text-xs font-medium text-bg bg-brand hover:bg-accent active:bg-accent-hover rounded-lg transition-colors disabled:opacity-40"
+            >
+              {isPending ? '추가 중...' : '추가하기'}
+            </button>
+          </div>
+        )}
       </form>
     </Modal>
+  )
+}
+
+/**
+ * 모드 토글 한 칸.
+ *
+ * 활성 표시는 **면**으로 한다 — 라이트에선 흰 카드 + 얕은 그림자, 다크에선 한 단 밝은 서피스.
+ * 밑줄·색 글자로는 두 칸 중 어느 쪽이 켜졌는지가 터치 화면에서 잘 안 읽힌다.
+ *
+ * 🔴 터치 44px 은 **모바일에서만** (`RevealChip` 과 같은 판단) — 데스크탑까지 44 로 두면
+ * 토글이 밑줄 칸보다 커져 「어떻게 만들까」가 「무엇을 적을까」를 압도한다.
+ */
+function SegButton({
+  active,
+  onClick,
+  label,
+  badge,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  /** 「NEW」 알약 */
+  badge?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`relative flex-1 min-h-[44px] lg:min-h-[32px] rounded-lg text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 ${
+        active
+          ? 'font-semibold text-text-primary bg-surface shadow-sm dark:bg-surface-3 dark:shadow-none'
+          : 'font-medium text-text-tertiary hover:text-text-primary'
+      }`}
+    >
+      {label}
+      {badge && (
+        /*
+          🔴 `bg-accent` 가 아니다 — 라이트 accent 는 글자용 어두운 값이라 면으로 깔면
+          갈색 점이 된다 (CEO 「라이트에서 안 띈다」). 채움 전용 토큰 쌍을 쓴다.
+          10px·700·본문 폰트 — 9px 모노는 그냥 안 읽힌다.
+        */
+        <span
+          aria-hidden="true"
+          className="absolute -top-2 right-1.5 h-[17px] leading-[17px] px-1.5 rounded-full bg-accent-fill text-accent-fill-ink text-[10px] font-bold tracking-[0.08em] pointer-events-none"
+        >
+          NEW
+        </span>
+      )}
+    </button>
+  )
+}
+
+/**
+ * 타이밍 넛지 — **손품이 시작되는 자리**에서 한 번.
+ *
+ * 마감일·전형 칩을 펼친 순간은 「이제 공고를 보고 옮겨 적어야 하는」 순간이다. 모달을 열자마자
+ * 말하면 아직 필요를 못 느끼고, 다 적은 뒤에 말하면 놀리는 셈이 된다.
+ * 🔴 눌러도 **입력값은 그대로 남는다** — 되돌아올 수 있어야 시험 삼아 눌러 본다.
+ */
+function PostingNudge({ onSwitch }: { onSwitch: () => void }) {
+  return (
+    <p className="mt-2 text-xs lg:text-[12px] text-text-tertiary leading-relaxed">
+      공고를 붙이면 마감·전형이 자동으로 채워져요{' '}
+      <button
+        type="button"
+        onClick={onSwitch}
+        className="text-brand font-medium hover:text-brand-hover underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 rounded"
+      >
+        → 공고로 만들기
+      </button>
+    </p>
   )
 }
 

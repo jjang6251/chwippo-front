@@ -7,6 +7,7 @@ import {
 import { postToNative } from '@/utils/nativeBridge'
 import {
   getAlarmConfig,
+  getAlarmStatus,
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -78,6 +79,21 @@ export function useAlarmConfig() {
   return useQuery({
     queryKey: ['alarm-config'],
     queryFn: getAlarmConfig,
+    staleTime: 5 * 60_000,
+  })
+}
+
+/**
+ * 「알림이 실제로 갈 상태인가」 — 공고 결과 시트의 일정 블록이 안내 문구를 고를 때 쓴다.
+ *
+ * `enabled: false` 를 기본값으로 두지 않는다 — 로딩 중에 「알림이 꺼져 있어요」가 잠깐
+ * 떴다 사라지면 켜져 있는 사람에게 거짓말을 한 셈이다. 소비처는 `data` 가 올 때까지 숨긴다.
+ */
+export function useAlarmStatus(enabled = true) {
+  return useQuery({
+    queryKey: ['alarm-status'],
+    queryFn: getAlarmStatus,
+    enabled,
     staleTime: 5 * 60_000,
   })
 }

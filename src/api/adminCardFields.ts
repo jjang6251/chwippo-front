@@ -25,6 +25,24 @@ export interface FieldFill {
   filled: number
 }
 
+/** 「몇 중 몇」 — 분모까지 같이 온다 (분모가 작으면 % 를 안 쓰는 규칙 때문에 필요하다) */
+export interface PostingRate {
+  count: number
+  total: number
+}
+
+/**
+ * 🔴 서버 응답을 신뢰하지 않는다 — 모양이 다르면 **없는 것으로 친다**(화면엔 「—」).
+ * 숫자가 아닌 값을 그대로 흘려보내면 표 한 칸이 `NaN%` 가 되고, 그건 0 보다 나쁜 거짓말이다.
+ */
+export function normalizePostingRate(v: unknown): PostingRate | null {
+  if (!v || typeof v !== 'object') return null
+  const r = v as Record<string, unknown>
+  if (typeof r.count !== 'number' || typeof r.total !== 'number') return null
+  if (!Number.isFinite(r.count) || !Number.isFinite(r.total)) return null
+  return { count: r.count, total: r.total }
+}
+
 export interface CategoryVocabBucket {
   vocab: CategoryVocab
   distinctValues: number
@@ -75,6 +93,19 @@ export interface CardFieldsData {
   templateId: { recorded: number; distribution: Record<string, number> }
   createdVia: { recorded: number; distribution: Record<string, number> }
   /**
+   * 공고 붙여넣기 3종 — 🔴 **전부 옵셔널**이다 (배포 창엔 필드가 없다).
+   *
+   * 셋 다 「몇 중 몇」 꼴로 온다. 서버가 % 를 계산해 주지 않는 이유는 `formatShare` 규칙 때문이다 —
+   * 분모가 30 미만이면 백분율을 쓰지 않고 「9명 중 2명」으로 말한다. 서버가 미리 % 로 접으면
+   * 그 규칙을 화면에서 되살릴 수 없다.
+   */
+  /** 파싱 성공 → 실제로 카드가 된 비율 */
+  pasteConversion?: PostingRate | null
+  /** 공고 카드 중 AI 값을 하나라도 고친 비율 */
+  aiEditRate?: PostingRate | null
+  /** 공고 카드 중 보완 질문(회사명·직무)을 거친 비율 */
+  needsRate?: PostingRate | null
+  /**
    * 추천 템플릿을 **그대로 썼나** — 「맞는 템플릿이면 쓴다」 가설의 직접 근거.
    *
    * 🔴 **옵셔널이다.** 프론트가 백엔드보다 먼저 뜨는 배포 창에서는 이 필드가 없다.
@@ -117,7 +148,16 @@ function assertCardFieldsData(raw: unknown): CardFieldsData {
   ) {
     throw new Error('카드 입력 실태 응답 형태가 올바르지 않습니다')
   }
-  return d as CardFieldsData
+  /*
+    공고 3종은 **필수가 아니다** — 여기서 요구하면 백엔드가 뜨기 전 배포 창 동안 화면 전체가
+    에러가 된다. 새 지표 하나 때문에 기존 지표까지 못 보게 만들 이유가 없다 (`templateUsage` 와 같은 판단).
+  */
+  return {
+    ...(d as CardFieldsData),
+    pasteConversion: normalizePostingRate(d.pasteConversion),
+    aiEditRate: normalizePostingRate(d.aiEditRate),
+    needsRate: normalizePostingRate(d.needsRate),
+  }
 }
 
 /**

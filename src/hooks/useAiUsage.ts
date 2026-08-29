@@ -8,6 +8,18 @@ export function useAiUsageOverview(q: AiUsageQuery = {}) {
   })
 }
 
+/**
+ * 기능별 이달 누적·예상 — **기간 필터와 무관한 고정 창**이라 쿼리 키에 `q` 가 없다.
+ * 실패해도 표는 그려져야 하므로(그 열만 「—」) 소비처가 `data` 유무만 본다.
+ */
+export function useAiUsageFeatureMonth() {
+  return useQuery({
+    queryKey: ['ai-usage', 'feature-month'],
+    queryFn: () => aiUsageApi.featureMonth(),
+    retry: false,
+  })
+}
+
 export function useAiUsageByUser(q: AiUsageQuery = {}) {
   return useQuery({
     queryKey: ['ai-usage', 'by-user', q],
