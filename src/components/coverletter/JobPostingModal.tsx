@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Modal } from '@/components/common/Modal'
 import { toast } from '@/stores/toastStore'
 import { useAutoResize } from '@/hooks/useAutoResize'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { useAiQuotaBlocked, useMyAiQuota } from '@/hooks/useMyAiQuotas'
 import { useRequireAiConsent } from '@/hooks/useRequireAiConsent'
 import { useAiConsentStore } from '@/stores/aiConsentStore'
@@ -55,6 +56,7 @@ export function JobPostingModal({
   const { mutate: save, isPending: saving } = useUpdateJobPosting(applicationId)
   const ensureAiConsent = useRequireAiConsent()
   const requestAiConsent = useAiConsentStore((s) => s.request)
+  const isMobile = useIsMobile()
 
   // 배너가 modalMode 로 매 열림마다 새로 mount → useState 초기화가 곧 리셋 (별도 effect 불필요)
   const editEntry = mode === 'edit' && !!initial
@@ -216,7 +218,8 @@ export function JobPostingModal({
           </p>
           <textarea
             ref={taRef}
-            autoFocus
+            // 모바일은 열자마자 키보드가 모달을 덮는다 — 먼저 보고, 탭해서 붙여넣기 (2026-08-30 iPhone 실사고)
+            autoFocus={open && !isMobile}
             value={rawText}
             onChange={(e) => {
               setRawText(e.target.value)

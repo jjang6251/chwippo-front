@@ -443,6 +443,7 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={handleEnter}
+        // eslint-disable-next-line chwippo/no-bare-autofocus -- 「+ 추가」 버튼을 눌러야 이 폼이 버튼 자리에 나타난다 — 탭 뒤 등장
         autoFocus
         placeholder="전공명"
         className="text-[11px] bg-card text-text-primary placeholder:text-text-tertiary outline-none w-24 px-2 py-1 rounded-md border border-transparent focus:border-brand/40 transition-colors"

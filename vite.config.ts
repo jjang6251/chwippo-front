@@ -54,7 +54,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.test.{ts,tsx}'],
+    // eslint-rules/ 는 src 밖이라 따로 넣는다 — 재발 방지 규칙 spec 이 CI 에서 돌아야 한다
+    include: ['src/**/*.test.{ts,tsx}', 'eslint-rules/**/*.test.ts'],
     setupFiles: ['./src/test/setup.ts'],
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -311,6 +311,7 @@ export function NewInterviewSessionModal({
                   onChange={(e) => setCustomRound(e.target.value)}
                   maxLength={40}
                   placeholder="예: 모의 면접 / 코딩테스트 회고"
+                  // eslint-disable-next-line chwippo/no-bare-autofocus -- 회차 select 에서 「직접 입력」을 골라야 나타나는 칸 — 탭 뒤 등장
                   autoFocus
                   /* iOS 포커스 줌 방지 — 모바일 노출 입력은 16px 이상 */
                   className="mt-2 w-full bg-surface border border-line rounded-lg px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand/45 outline-none"

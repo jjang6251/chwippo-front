@@ -5,6 +5,7 @@ import { JobTitleField } from '@/components/card/JobTitleField'
 import { PromoteJobTitleRow } from '@/components/card/PromoteJobTitleRow'
 import { useJobTitleGateStore } from '@/stores/jobTitleGateStore'
 import { useApplication, useUpdateApplication } from '@/hooks/useApplications'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { JOB_SERIES } from '@/utils/jobRole'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
@@ -58,6 +59,7 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
   const [source, setSource] = useState<JobTitleSource>('typed')
   const [seriesId, setSeriesId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const isMobile = useIsMobile()
 
   const trimmed = value.trim()
 
@@ -125,7 +127,9 @@ function JobTitleForm({ applicationId }: { applicationId: string }) {
                 지원 직무 <span className="text-danger">*</span>
               </>
             }
-            autoFocus
+            // 모바일은 열자마자 키보드가 모달을 덮는다 — 먼저 보고, 탭해서 입력 (2026-08-30 iPhone 실사고).
+            // 이 폼은 모달이 열릴 때만 마운트되므로 `open` 대신 마운트 자체가 그 조건이다.
+            autoFocus={!isMobile}
             value={value}
             onChange={(v, src) => {
               setValue(v.slice(0, MAX_LEN))

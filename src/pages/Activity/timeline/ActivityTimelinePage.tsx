@@ -644,6 +644,7 @@ function WeeklyPromptCard({
         {answering ? (
           <>
             <textarea
+              // eslint-disable-next-line chwippo/no-bare-autofocus -- 「답하기」를 눌러야(answering) 나타나는 칸 — 탭 뒤 등장
               autoFocus
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}

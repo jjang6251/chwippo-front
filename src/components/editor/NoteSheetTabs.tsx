@@ -297,6 +297,7 @@ function SheetNameInput({
 
   return (
     <input
+      // eslint-disable-next-line chwippo/no-bare-autofocus -- 시트 탭 「이름 바꾸기」를 눌러야 탭이 이 입력으로 바뀐다 — 탭 뒤 등장
       autoFocus
       value={value}
       maxLength={NAME_MAX}
