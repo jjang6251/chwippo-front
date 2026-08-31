@@ -82,4 +82,10 @@
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  <!-- 시즌 콘텐츠 (2026-09-01) — 하반기 공채 일정. 시즌 지나면 weekly → monthly 로 -->
+  <url>
+    <loc>https://chwippo.com/guide/gongchae-iljeong-2026-h2.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
 </urlset>
