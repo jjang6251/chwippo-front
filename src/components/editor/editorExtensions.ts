@@ -1,4 +1,4 @@
-import { generateJSON, type Extensions } from '@tiptap/core'
+import { Extension, generateJSON, textInputRule, type Extensions } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Highlight from '@tiptap/extension-highlight'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -98,6 +98,23 @@ const ThemedHighlight = Highlight.extend({
  * 토글 카드. `persist: true` 라야 열림/닫힘이 **문서에 저장**된다 —
  * plan §3 의 "접고 저장하면 다음에도 접힘 = self-test 친화" 가 이 옵션 하나에 달려 있다.
  */
+/**
+ * 화살표 자동 변환 — `->` → `→` · `<-` → `←` (사용자 피드백 2026-09-02).
+ *
+ * Typography 확장 전체를 들이는 대신(새 의존성 금지) 요청받은 두 규칙만 수제로 둔다.
+ * 코드블록 안에서는 안 바뀐다 — prosemirror-inputrules 가 `code` 스펙 노드에서는
+ * 규칙을 아예 안 돌리므로 `() -> {}` 같은 코드가 망가질 일이 없다.
+ */
+const ArrowShortcuts = Extension.create({
+  name: 'arrowShortcuts',
+  addInputRules() {
+    return [
+      textInputRule({ find: /->$/, replace: '→' }),
+      textInputRule({ find: /<-$/, replace: '←' }),
+    ]
+  },
+})
+
 const StudyDetails = Details.configure({ persist: true }).extend({
   /**
    * md 열화 — `**제목**` + 본문. 접힘 상태는 마크다운으로 표현할 수 없어 사라진다.
@@ -378,6 +395,7 @@ export function buildEditorExtensions({
     }),
     ThemedHighlight.configure({ multicolor: true }),
     Placeholder.configure({ placeholder }),
+    ArrowShortcuts,
     ...(f.taskList ? [TaskList, TaskItem.configure({ nested: true })] : []),
     ...(f.details ? [StudyDetails, DetailsSummary, DetailsContent] : []),
     ...(f.codeBlock ? [CodeBlockWithHeader.configure({ lowlight })] : []),

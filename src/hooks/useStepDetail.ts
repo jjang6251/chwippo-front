@@ -74,14 +74,23 @@ export const noteSheetsKey = (appId: string, stepId: string) =>
   ['note-sheets', appId, stepId] as const
 
 /**
+ * 서버가 실어 보낸 400 문구만 뽑는다. **없으면 null** — 네트워크 실패·5xx 처럼 서버가
+ * 아무 말도 안 한 경우와, 「무엇을 줄여야 하는지」를 알려 준 경우는 다르게 다뤄야 한다
+ * (자동 저장 실패 토스트는 후자에서만 뜬다).
+ */
+export function serverMessageOrNull(err: unknown): string | null {
+  const msg = (err as { response?: { data?: { message?: unknown } } })?.response?.data?.message
+  if (typeof msg === 'string' && msg.trim()) return msg
+  if (Array.isArray(msg) && typeof msg[0] === 'string' && msg[0].trim()) return msg[0]
+  return null
+}
+
+/**
  * 🔴 **서버 문구가 우선이다.** 캡(10장)·이름 길이는 서버가 숫자를 실어 400 으로 돌려준다.
  * 프론트가 자기 문구로 덮으면 "무엇을 줄여야 하는지" 가 사라진다 (한도는 서버가 정한다).
  */
 export function serverMessage(err: unknown, fallback: string): string {
-  const msg = (err as { response?: { data?: { message?: unknown } } })?.response?.data?.message
-  if (typeof msg === 'string' && msg.trim()) return msg
-  if (Array.isArray(msg) && typeof msg[0] === 'string') return msg[0]
-  return fallback
+  return serverMessageOrNull(err) ?? fallback
 }
 
 export function useNoteSheets(appId: string, stepId: string | null) {

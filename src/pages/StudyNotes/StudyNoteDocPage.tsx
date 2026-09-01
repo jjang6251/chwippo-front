@@ -11,6 +11,7 @@ import { AiNoteBubbleMenu } from '@/components/ai-note/AiNoteBubbleMenu'
 import { AiNotePanel } from '@/components/ai-note/AiNotePanel'
 import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useMenuKeyboard } from '@/hooks/useMenuKeyboard'
+import { serverMessageOrNull } from '@/hooks/useStepDetail'
 import { useInvalidateStorageUsage } from '@/hooks/useStorageUsage'
 import { useUnloadGuard } from '@/hooks/useUnloadGuard'
 import {
@@ -127,6 +128,15 @@ export function StudyNoteDocPage() {
   const { data: backlinks = [] } = useStudyNoteBacklinks(id)
   const update = useUpdateStudyNote(id)
   const remove = useDeleteStudyNote()
+  /**
+   * 자동 저장이 400 으로 막힌 이유를 **서버 문구 그대로** 한 번만 알린다.
+   *
+   * 🔴 SaveChip 의 「저장 실패」만으로는 무엇을 줄여야 하는지 알 수 없다 — 2026-09-02 에
+   * 글자수 상한 400 이 통째로 이 칩에 뭉개져, 사용자는 56,281자 노트가 왜 안 저장되는지
+   * 모른 채 계속 썼다. 🔴 재시도가 1.5초마다 도니 **같은 문구는 다시 띄우지 않는다**
+   * (저장이 한 번 성공하면 초기화 — 다시 넘치면 그때 다시 알린다).
+   */
+  const lastSaveErrorRef = useRef<string | null>(null)
 
   const [mode, setMode] = useState<NoteMode>(loadNoteMode)
   const [title, setTitle] = useState('')
@@ -270,11 +280,18 @@ export function StudyNoteDocPage() {
       setSaveState('saving')
       try {
         await update.mutateAsync(body)
+        lastSaveErrorRef.current = null
         setSaveState('saved')
         setDirty(false)
         setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 2000)
       } catch (err) {
         setSaveState('error')
+        // 서버가 이유를 말해 준 실패만 토스트 — 네트워크·5xx 는 지금처럼 SaveChip 만
+        const message = serverMessageOrNull(err)
+        if (message !== null && message !== lastSaveErrorRef.current) {
+          lastSaveErrorRef.current = message
+          toast.error(message)
+        }
         throw err
       }
     },
