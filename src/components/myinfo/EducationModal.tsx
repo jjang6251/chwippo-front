@@ -13,6 +13,9 @@ const EDUCATION_DEGREES = ['고등학교', '전문대', '대학교 (학사)', '�
 const EDUCATION_STATUSES = ['재학중', '졸업', '졸업예정', '휴학', '수료', '편입', '중퇴']
 const MINOR_TYPES = ['복수전공', '부전공', '이중전공', '연계전공', '심화전공']
 
+/** 폼 칸 영역 — 데스크탑은 스크롤 컨테이너 자신이, 모바일은 그 안쪽 div 가 두른다 */
+const FIELDS_CLASS = 'px-8 pt-2 pb-4'
+
 function degreeToKind(degree: string): SchoolKind | null {
   if (degree === '고등학교') return 'high'
   if (degree === '전문대' || degree === '대학교 (학사)' || degree === '대학원 (석사)' || degree === '대학원 (박사)') return 'univ'
@@ -112,192 +115,194 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
 
   const isMobile = useIsMobile()
 
-  const modalHeader = (
-    <ModalHeader
-      isEdit={isEdit}
-      degree={form.degree}
-      schoolName={form.school_name}
-      onClose={onClose}
-    />
+  const modalHeaderText = (
+    <ModalHeaderText isEdit={isEdit} degree={form.degree} schoolName={form.school_name} />
   )
 
-  const modalContent = (
+  const modalHeader = (
+    <div className="relative shrink-0">
+      <ModalCloseButton onClose={onClose} />
+      {modalHeaderText}
+    </div>
+  )
+
+  const fields = (
     <>
-      {modalHeader}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-8 pt-2 pb-4">
-          <Section title="학교 정보" first>
-            <FieldLabel required>학교 단계</FieldLabel>
-            <Select
-              label=""
-              hideLabel
-              value={form.degree}
-              onChange={(v) => setForm((f) => ({
-                ...f,
-                degree: v,
-                gpa_max: f.gpa_max || (v === '고등학교' ? '5.0' : '4.5'),
-              }))}
-              options={EDUCATION_DEGREES}
-            />
-            <div className="h-3" />
-            <FieldLabel required>학교명</FieldLabel>
-            <SchoolAutocomplete
-              value={form.school_name}
-              onChange={(v) => setForm((f) => ({ ...f, school_name: v }))}
-              kind={degreeToKind(form.degree)}
-              placeholder={degreeToKind(form.degree) === 'high' ? '고등학교명 입력...' : '대학교명 입력...'}
-              inputClassName={INPUT_MODAL}
-            />
-            <div className="h-3" />
-            <FieldLabel>{isHighSchool ? '계열' : '전공'}</FieldLabel>
-            {isHighSchool ? (
-              <input
-                type="text"
-                value={form.major}
-                onChange={(e) => setForm((f) => ({ ...f, major: e.target.value }))}
-                placeholder="예: 이과 / 문과 / 자연계열"
-                className={INPUT_MODAL}
-              />
-            ) : (
-              <MajorAutocomplete
-                value={form.major}
-                onChange={(v) => setForm((f) => ({ ...f, major: v }))}
-                placeholder="예: 컴퓨터공학"
-                inputClassName={INPUT_MODAL}
-              />
-            )}
-          </Section>
+      <Section title="학교 정보" first>
+        <FieldLabel required>학교 단계</FieldLabel>
+        <Select
+          label=""
+          hideLabel
+          value={form.degree}
+          onChange={(v) => setForm((f) => ({
+            ...f,
+            degree: v,
+            gpa_max: f.gpa_max || (v === '고등학교' ? '5.0' : '4.5'),
+          }))}
+          options={EDUCATION_DEGREES}
+        />
+        <div className="h-3" />
+        <FieldLabel required>학교명</FieldLabel>
+        <SchoolAutocomplete
+          value={form.school_name}
+          onChange={(v) => setForm((f) => ({ ...f, school_name: v }))}
+          kind={degreeToKind(form.degree)}
+          placeholder={degreeToKind(form.degree) === 'high' ? '고등학교명 입력...' : '대학교명 입력...'}
+          inputClassName={INPUT_MODAL}
+        />
+        <div className="h-3" />
+        <FieldLabel>{isHighSchool ? '계열' : '전공'}</FieldLabel>
+        {isHighSchool ? (
+          <input
+            type="text"
+            value={form.major}
+            onChange={(e) => setForm((f) => ({ ...f, major: e.target.value }))}
+            placeholder="예: 이과 / 문과 / 자연계열"
+            className={INPUT_MODAL}
+          />
+        ) : (
+          <MajorAutocomplete
+            value={form.major}
+            onChange={(v) => setForm((f) => ({ ...f, major: v }))}
+            placeholder="예: 컴퓨터공학"
+            inputClassName={INPUT_MODAL}
+          />
+        )}
+      </Section>
 
-          <Section title="재학 기간">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <Select
-                label="상태"
-                value={form.status}
-                onChange={(v) => setForm((f) => ({ ...f, status: v }))}
-                options={EDUCATION_STATUSES}
-              />
-              <Field
-                label="입학"
-                type="date"
-                value={form.start_at}
-                onChange={(v) => setForm((f) => ({ ...f, start_at: v }))}
-              />
-              <Field
-                label="졸업/예정"
-                type="date"
-                value={form.end_at}
-                onChange={(v) => setForm((f) => ({ ...f, end_at: v }))}
-              />
-            </div>
-          </Section>
+      <Section title="재학 기간">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Select
+            label="상태"
+            value={form.status}
+            onChange={(v) => setForm((f) => ({ ...f, status: v }))}
+            options={EDUCATION_STATUSES}
+          />
+          <Field
+            label="입학"
+            type="date"
+            value={form.start_at}
+            onChange={(v) => setForm((f) => ({ ...f, start_at: v }))}
+          />
+          <Field
+            label="졸업/예정"
+            type="date"
+            value={form.end_at}
+            onChange={(v) => setForm((f) => ({ ...f, end_at: v }))}
+          />
+        </div>
+      </Section>
 
-          <Section title="성적">
-            <div className="grid grid-cols-2 gap-2">
-              <Field
-                label="학점"
-                value={form.gpa}
-                onChange={(v) => setForm((f) => ({ ...f, gpa: v }))}
-                placeholder="예: 3.8"
-              />
-              <Field
-                label="만점"
-                value={form.gpa_max}
-                onChange={(v) => setForm((f) => ({ ...f, gpa_max: v }))}
-                placeholder="예: 4.5"
-              />
-            </div>
-          </Section>
+      <Section title="성적">
+        <div className="grid grid-cols-2 gap-2">
+          <Field
+            label="학점"
+            value={form.gpa}
+            onChange={(v) => setForm((f) => ({ ...f, gpa: v }))}
+            placeholder="예: 3.8"
+          />
+          <Field
+            label="만점"
+            value={form.gpa_max}
+            onChange={(v) => setForm((f) => ({ ...f, gpa_max: v }))}
+            placeholder="예: 4.5"
+          />
+        </div>
+      </Section>
 
-          <Section title="추가 정보">
-            <Field
-              label="위치"
-              value={form.location}
-              onChange={(v) => setForm((f) => ({ ...f, location: v }))}
-              placeholder="선택 입력"
-            />
+      <Section title="추가 정보">
+        <Field
+          label="위치"
+          value={form.location}
+          onChange={(v) => setForm((f) => ({ ...f, location: v }))}
+          placeholder="선택 입력"
+        />
 
-            {/* 복수·부전공 — 대학교/대학원에서만 */}
-            {!isHighSchool && (
-              <div className="pt-3">
-                <FieldLabel>복수·부전공</FieldLabel>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {minors.map((m, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center gap-1.5 text-[11px] bg-card border border-line rounded-full pl-2.5 pr-1 py-1"
-                    >
-                      <span className="text-text-quaternary">{m.type}</span>
+        {/* 복수·부전공 — 대학교/대학원에서만 */}
+        {!isHighSchool && (
+          <div className="pt-3">
+            <FieldLabel>복수·부전공</FieldLabel>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {minors.map((m, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 text-[11px] bg-card border border-line rounded-full pl-2.5 pr-1 py-1"
+                >
+                  <span className="text-text-quaternary">{m.type}</span>
+                  <span className="text-text-secondary">·</span>
+                  <span className="text-text-primary">{m.name}</span>
+                  {m.gpa && (
+                    <>
                       <span className="text-text-secondary">·</span>
-                      <span className="text-text-primary">{m.name}</span>
-                      {m.gpa && (
-                        <>
-                          <span className="text-text-secondary">·</span>
-                          <span className="text-text-tertiary font-mono tabular-nums">
-                            {m.gpa}{m.gpa_max ? `/${m.gpa_max}` : ''}
-                          </span>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setMinors((arr) => arr.filter((_, i) => i !== idx))}
-                        aria-label="제거"
-                        className="w-5 h-5 flex items-center justify-center rounded-full text-text-quaternary hover:text-danger hover:bg-danger/10 transition-colors"
-                      >
-                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                          <path d="M1 1l6 6M7 1L1 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                        </svg>
-                      </button>
-                    </span>
-                  ))}
-                  <MinorAddChip onAdd={(m) => setMinors((arr) => [...arr, m])} />
-                </div>
-              </div>
-            )}
-          </Section>
+                      <span className="text-text-tertiary font-mono tabular-nums">
+                        {m.gpa}{m.gpa_max ? `/${m.gpa_max}` : ''}
+                      </span>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setMinors((arr) => arr.filter((_, i) => i !== idx))}
+                    aria-label="제거"
+                    className="w-5 h-5 flex items-center justify-center rounded-full text-text-quaternary hover:text-danger hover:bg-danger/10 transition-colors"
+                  >
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M1 1l6 6M7 1L1 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </span>
+              ))}
+              <MinorAddChip onAdd={(m) => setMinors((arr) => [...arr, m])} />
+            </div>
+          </div>
+        )}
+      </Section>
 
-          <Section title="증빙 파일">
-            <FileUpload
-              slot={slot}
-              scope="myinfo/education"
-              onChange={setSlot}
-              hint="예: 졸업증명서, 성적증명서, 재학증명서"
-              disabled={saving}
-            />
-          </Section>
-        </div>
-        <div className="flex items-center gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-line bg-surface shrink-0">
-          {onDelete && (
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={saving}
-              aria-label="삭제"
-              className="shrink-0 inline-flex items-center gap-1 text-xs text-text-quaternary hover:text-danger w-11 h-11 sm:w-auto sm:h-12 sm:px-3 justify-center transition-colors disabled:opacity-50"
-            >
-              <svg width="12" height="12" viewBox="0 0 11 11" fill="none">
-                <path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              <span className="hidden sm:inline">삭제</span>
-            </button>
-          )}
-          <div className="flex-1" />
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="flex-1 sm:flex-none sm:min-w-[6rem] h-12 px-4 sm:px-5 text-sm font-medium text-text-secondary border border-line rounded-xl hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 sm:flex-none sm:min-w-[7rem] h-12 px-4 sm:px-6 text-sm font-bold bg-brand hover:bg-accent active:bg-accent-hover text-bg rounded-xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-accent/30 transition-all disabled:opacity-50 disabled:shadow-none"
-          >
-            {saving ? '저장 중...' : isEdit ? '수정' : '추가'}
-          </button>
-        </div>
+      <Section title="증빙 파일">
+        <FileUpload
+          slot={slot}
+          scope="myinfo/education"
+          onChange={setSlot}
+          hint="예: 졸업증명서, 성적증명서, 재학증명서"
+          disabled={saving}
+        />
+      </Section>
     </>
+  )
+
+  const footer = (
+    <div className="flex items-center gap-2 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-line bg-surface shrink-0">
+      {onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={saving}
+          aria-label="삭제"
+          className="shrink-0 inline-flex items-center gap-1 text-xs text-text-quaternary hover:text-danger w-11 h-11 sm:w-auto sm:h-12 sm:px-3 justify-center transition-colors disabled:opacity-50"
+        >
+          <svg width="12" height="12" viewBox="0 0 11 11" fill="none">
+            <path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+          <span className="hidden sm:inline">삭제</span>
+        </button>
+      )}
+      <div className="flex-1" />
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={saving}
+        className="flex-1 sm:flex-none sm:min-w-[6rem] h-12 px-4 sm:px-5 text-sm font-medium text-text-secondary border border-line rounded-xl hover:bg-card active:bg-card-strong transition-colors disabled:opacity-50"
+      >
+        취소
+      </button>
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        className="flex-1 sm:flex-none sm:min-w-[7rem] h-12 px-4 sm:px-6 text-sm font-bold bg-brand hover:bg-accent active:bg-accent-hover text-bg rounded-xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-accent/30 transition-all disabled:opacity-50 disabled:shadow-none"
+      >
+        {saving ? '저장 중...' : isEdit ? '수정' : '추가'}
+      </button>
+    </div>
   )
 
   if (isMobile) {
@@ -306,6 +311,8 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
         open
         onOpenChange={(open) => { if (!open && !saving) onClose() }}
         shouldScaleBackground={false}
+        /* vaul 키보드 보정 해제 — iOS 에서 시트가 두 배로 밀려 올라간다 (근거는 InfoModal.tsx 주석) */
+        repositionInputs={false}
       >
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
@@ -314,8 +321,18 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
             className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[92dvh] flex flex-col shadow-2xl outline-none"
           >
             <Drawer.Title className="sr-only">{isEdit ? '학력 편집' : '학력 추가'}</Drawer.Title>
+            {/*
+              InfoModal 과 같은 구성 — 상단 고정은 drag handle + 닫기 X 뿐이고 emoji·제목·subtitle 은
+              스크롤 본문으로 내렸다. 키보드가 올라오면 시트에 남는 세로가 헤더 높이도 안 돼서
+              정작 입력칸이 안 보였다 (2026-09-01 iPhone). 데스크탑은 고정 그대로.
+            */}
             <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line-strong shrink-0" aria-hidden="true" />
-            {modalContent}
+            <ModalCloseButton onClose={onClose} />
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+              {modalHeaderText}
+              <div className={FIELDS_CLASS}>{fields}</div>
+            </div>
+            {footer}
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
@@ -334,7 +351,11 @@ export function EducationModal({ initial, onClose, onSave, onDelete }: Props) {
         className="bg-surface border border-line rounded-2xl w-full max-w-lg max-h-[calc(100vh-4rem)] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {modalContent}
+        {modalHeader}
+        <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain ${FIELDS_CLASS}`}>
+          {fields}
+        </div>
+        {footer}
       </div>
     </div>
   )
@@ -489,22 +510,29 @@ function MinorAddChip({ onAdd }: { onAdd: (m: EducationMinor) => void }) {
 }
 
 // ── 헤더 (노션 페이지 톤 — 큰 emoji + title 세로) ────────
-function ModalHeader({ isEdit, degree, schoolName, onClose }: { isEdit: boolean; degree: string; schoolName: string; onClose: () => void }) {
+// 닫기 X 와 제목 묶음을 나눠 둔다 — 모바일은 X 만 고정하고 제목은 본문과 같이 스크롤시키기 때문.
+
+// close X 우상단 — 데스크탑은 헤더 안, 모바일은 시트 상단에 따로 고정해서 쓴다
+function ModalCloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      aria-label="닫기"
+      className="absolute top-3 right-3 z-10 w-11 h-11 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-primary hover:bg-card transition-colors"
+    >
+      <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+        <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    </button>
+  )
+}
+
+// emoji tile + 제목 + subtitle — 데스크탑은 상단 고정, 모바일은 폼과 같이 스크롤된다
+function ModalHeaderText({ isEdit, degree, schoolName }: { isEdit: boolean; degree: string; schoolName: string }) {
   const style = DEGREE_STYLE[degree] ?? DEGREE_STYLE['기타']
   return (
-    <div className="relative px-8 pt-8 pb-5 shrink-0">
-      {/* close X 우상단 */}
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="닫기"
-        className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-primary hover:bg-card transition-colors"
-      >
-        <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
-          <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </button>
-
+    <div className="px-8 pt-8 pb-5">
       {/* 큰 emoji tile — 노션 페이지 감정 */}
       <div className="text-4xl leading-none mb-3" aria-hidden="true">
         {style.emoji}

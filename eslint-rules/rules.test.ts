@@ -20,12 +20,19 @@
  *  12. 고친 뒤 클래스 (`fixed inset-0 z-[60]`, pb 없음)          → 0건
  *  13. 템플릿 리터럴 quasi 안의 `pb-4`                          → 1건
  *  14. `fixed inset-0` 과 `pb-4` 가 **다른** 요소에 있으면        → 0건
+ *
+ *  ── chwippo/vaul-reposition-inputs (2026-09-01 iPhone 실사고) ──
+ *  15. vaul import 파일의 `<Drawer.Root>` 에 prop 없음            → 1건
+ *  16. `repositionInputs={false}` 를 명시                        → 0건
+ *  17. vaul 을 import 하지 않는 파일의 `<Drawer.Root>`            → 0건 (남의 Drawer)
+ *  18. vaul 파일이어도 `<Foo.Root>` 는 대상 아님                  → 0건
  */
 import { describe, it, expect } from 'vitest'
 import { Linter } from 'eslint'
 import tseslint from 'typescript-eslint'
 import noBareAutofocus from './no-bare-autofocus.js'
 import noOverlayBottomPadding from './no-overlay-bottom-padding.js'
+import vaulRepositionInputs from './vaul-reposition-inputs.js'
 
 const linter = new Linter()
 
@@ -56,6 +63,11 @@ const autofocus = (code: string, filename: string) =>
 
 const padding = (code: string, filename = 'Foo.tsx') =>
   lint('no-overlay-bottom-padding', noOverlayBottomPadding, code, filename)
+
+const reposition = (code: string, filename = 'FooSheet.tsx') =>
+  lint('vaul-reposition-inputs', vaulRepositionInputs, code, filename)
+
+const VAUL_IMPORT = "import { Drawer } from 'vaul'\n"
 
 describe('chwippo/no-bare-autofocus', () => {
   it('1) 오버레이 파일의 맨 autoFocus 를 잡는다', () => {
@@ -130,5 +142,29 @@ describe('chwippo/no-overlay-bottom-padding', () => {
     const code =
       'const A = () => <div className="fixed inset-0"><section className="pb-4" /></div>'
     expect(padding(code)).toHaveLength(0)
+  })
+})
+
+describe('chwippo/vaul-reposition-inputs', () => {
+  it('15) prop 없는 Drawer.Root 를 잡는다', () => {
+    const code = `${VAUL_IMPORT}const A = () => <Drawer.Root open shouldScaleBackground={false} />`
+    const messages = reposition(code)
+    expect(messages).toHaveLength(1)
+    expect(messages[0].ruleId).toBe('chwippo/vaul-reposition-inputs')
+  })
+
+  it('16) repositionInputs={false} 를 명시하면 통과', () => {
+    const code = `${VAUL_IMPORT}const A = () => <Drawer.Root open repositionInputs={false} />`
+    expect(reposition(code)).toHaveLength(0)
+  })
+
+  it("17) vaul 을 import 하지 않는 파일의 Drawer.Root 는 대상이 아니다", () => {
+    const code = "import { Drawer } from '@/components/common/Drawer'\nconst A = () => <Drawer.Root open />"
+    expect(reposition(code)).toHaveLength(0)
+  })
+
+  it('18) vaul 파일이어도 Foo.Root 는 대상이 아니다', () => {
+    const code = `${VAUL_IMPORT}const A = () => <Foo.Root open />`
+    expect(reposition(code)).toHaveLength(0)
   })
 })
