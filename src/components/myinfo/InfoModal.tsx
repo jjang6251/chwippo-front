@@ -11,6 +11,9 @@ import { useIsMobile } from '@/hooks/useMediaQuery'
 
 type ModalAccent = 'brand' | 'success' | 'warning' | 'info' | 'violet' | 'accent'
 
+/** 폼 칸 영역 — 데스크탑은 스크롤 컨테이너 자신이, 모바일은 그 안쪽 div 가 두른다 */
+const FIELDS_CLASS = 'px-8 pt-2 pb-4 space-y-3'
+
 const ACCENT_TONE: Record<ModalAccent, { ring: string; bg: string; text: string }> = {
   brand:   { ring: 'ring-brand/30',   bg: 'bg-brand/10',   text: 'text-brand' },
   success: { ring: 'ring-success/30', bg: 'bg-success/10', text: 'text-success' },
@@ -57,19 +60,25 @@ export function InfoModal({
     return () => document.removeEventListener('keydown', onKey)
   }, [isMobile, saving, onClose])
 
-  const header = (
-    <div className="relative px-8 pt-6 pb-5 shrink-0">
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="닫기"
-        disabled={saving}
-        className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-primary hover:bg-card transition-colors disabled:opacity-50"
-      >
-        <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
-          <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </button>
+  // 닫기 X — 데스크탑은 header 안, 모바일은 시트 상단에 **따로 고정**해서 쓴다.
+  // `absolute` 라 어느 쪽이든 가장 가까운 positioned 조상(desktop=header / mobile=Drawer.Content) 기준.
+  const closeButton = (
+    <button
+      type="button"
+      onClick={onClose}
+      aria-label="닫기"
+      disabled={saving}
+      className="absolute top-3 right-3 z-10 w-11 h-11 flex items-center justify-center rounded-lg text-text-quaternary hover:text-text-primary hover:bg-card transition-colors disabled:opacity-50"
+    >
+      <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+        <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    </button>
+  )
+
+  // emoji tile + 제목 + subtitle. 데스크탑은 상단 고정, 모바일은 폼과 같이 스크롤된다.
+  const headerText = (
+    <div className="px-8 pt-6 pb-5">
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl mb-3 ring-1 ${tone.ring} ${tone.bg}`} aria-hidden="true">
         {emoji}
       </div>
@@ -80,8 +89,15 @@ export function InfoModal({
     </div>
   )
 
+  const header = (
+    <div className="relative shrink-0">
+      {closeButton}
+      {headerText}
+    </div>
+  )
+
   const body = (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-8 pt-2 pb-4 space-y-3">
+    <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain ${FIELDS_CLASS}`}>
       {children}
     </div>
   )
@@ -129,6 +145,14 @@ export function InfoModal({
         open
         onOpenChange={(open) => { if (!open && !saving) onClose() }}
         shouldScaleBackground={false}
+        /*
+          🔴 vaul 의 키보드 보정을 끈다 (2026-09-01 iPhone 실기 — 시험 일정 추가에서 입력 탭 시 시트가
+          위로 튀고 아래에 키보드 높이만큼 검은 띠). 기본값 true 는 visualViewport 가 줄면 시트를
+          키보드 높이만큼 `bottom` 으로 들어올리고 높이를 줄이는데, iOS 가 이미 입력칸을 보이려고
+          화면을 밀어 올린 뒤라 **두 힘이 겹쳐 두 배로** 올라간다. 공용 `Modal`(순수 fixed)은 iOS 쪽
+          힘만 받아 멀쩡했다. 끄면 그 거동과 같아진다.
+        */
+        repositionInputs={false}
       >
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
@@ -137,9 +161,18 @@ export function InfoModal({
             className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[92dvh] flex flex-col shadow-2xl outline-none"
           >
             <Drawer.Title className="sr-only">{title}</Drawer.Title>
+            {/*
+              상단에 고정되는 건 drag handle + 닫기 X 뿐이다. emoji tile·제목·subtitle 은 아래
+              스크롤 본문 안으로 내렸다 — 키보드가 올라오면 시트에 140px 쯤만 남는데 헤더가
+              260px 를 고정으로 먹어 정작 입력칸이 안 보였다 (2026-09-01 iPhone).
+              데스크탑은 세로가 넉넉하니 헤더 고정 그대로 둔다.
+            */}
             <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line-strong shrink-0" aria-hidden="true" />
-            {header}
-            {body}
+            {closeButton}
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+              {headerText}
+              <div className={FIELDS_CLASS}>{children}</div>
+            </div>
             {footer}
           </Drawer.Content>
         </Drawer.Portal>

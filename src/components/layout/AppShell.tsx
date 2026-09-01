@@ -43,7 +43,8 @@ export function AppShell() {
               <CoinChip />
             </div>
           )}
-          <main className={`flex-1 ${isNative ? '' : 'pb-20 lg:pb-0'}`}>
+          {/* 하단 탭 회피 여백은 페이지 표준 pb-[88px] 가 담당 — 여기서 또 주면 이중 계상(~168px 공백)이라 제거 (2026-09-02 전수조사) */}
+          <main className="flex-1">
             {/* 라우트 code-split — 페이지 청크 로딩 중 shell(사이드바·nav)은 유지하고
                 본문만 스켈레톤 표시. */}
             <Suspense fallback={<RouteFallback />}>

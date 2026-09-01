@@ -189,7 +189,13 @@ export function AddEventSheet({ open, defaultDate, onClose }: Props) {
 
   if (isMobile) {
     return (
-      <Drawer.Root open onOpenChange={(o) => { if (!o) attemptClose() }} shouldScaleBackground={false}>
+      <Drawer.Root
+        open
+        onOpenChange={(o) => { if (!o) attemptClose() }}
+        shouldScaleBackground={false}
+        /* vaul 키보드 보정 해제 — iOS 에서 시트가 두 배로 밀려 올라간다 (근거는 InfoModal.tsx 주석) */
+        repositionInputs={false}
+      >
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
           <Drawer.Content
