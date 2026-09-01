@@ -187,6 +187,39 @@ describe('마크다운 파싱 — 서식 보존', () => {
   })
 })
 
+/**
+ * 노션 페이지를 복사하면 콜아웃이 `<aside>` **리터럴 줄**로 실려 온다 (2026-09-02 실사용).
+ * HTML 이 함께 오지 않은 경로(평문만 복사)를 여기서 덮는다 — 형태만 미러링한 합성 스니펫.
+ */
+describe('노션 콜아웃 전처리 — 평문 경로', () => {
+  const NOTION_PLAIN = [
+    '## 면접 준비',
+    '',
+    '<aside>',
+    '⏰',
+    '',
+    '일정 확인하기',
+    '</aside>',
+    '',
+    '- 남은 항목',
+  ].join('\n')
+
+  it('`<aside>` 구간이 인용으로 들어가고 리터럴은 남지 않는다', () => {
+    const ed = make()
+    expect(handleMarkdownPaste(ed, NOTION_PLAIN).handled).toBe(true)
+    const json = JSON.stringify(ed.getJSON())
+    expect(json).toContain('"blockquote"')
+    expect(json).not.toContain('aside')
+    expect(ed.getText()).toContain('⏰')
+  })
+
+  it('마커가 없는 평문은 전처리를 타도 그대로 — 게이트 판정이 바뀌지 않는다', () => {
+    const ed = make()
+    expect(handleMarkdownPaste(ed, '오늘 면접 봤다. 분위기 좋았음').handled).toBe(false)
+    expect(ed.isEmpty).toBe(true)
+  })
+})
+
 describe('마크다운 내보내기', () => {
   it('왕복 — md 를 붙여넣고 다시 내보내면 핵심 서식이 살아 돌아온다', () => {
     const ed = make()

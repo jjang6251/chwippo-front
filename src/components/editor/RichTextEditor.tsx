@@ -15,6 +15,7 @@ import {
   type EditorFeatures,
 } from './editorExtensions'
 import { editorToMarkdown, handleMarkdownPaste, looksLikeCodeEditorHtml } from './markdownIO'
+import { convertNotionAsides } from './notionPaste'
 import {
   hideImagePlaceholder,
   replacePlaceholderWithImage,
@@ -208,6 +209,12 @@ export function RichTextEditor({
       attributes: {
         class: `chw-prose ${minHeightClass} focus:outline-none px-4 py-3 text-text-primary leading-relaxed`,
       },
+      /**
+       * 노션 콜아웃(`<aside>` 리터럴) → 인용. tiptap 이 HTML 을 **파싱하기 직전** 한 번 손본다.
+       * 아래 handlePaste 는 text/html 이 있으면 기본 경로에 양보하므로, 그 경로에 얹는 훅이
+       * 여기다 (판정·변환 근거는 notionPaste.ts).
+       */
+      transformPastedHTML: (html) => convertNotionAsides(html),
       handlePaste: (view, event) => {
         const current = editorRef.current
         // 🔴 이미지 검사가 **먼저**다 — 스크린샷 붙여넣기는 text/plain 이 비어 있어서

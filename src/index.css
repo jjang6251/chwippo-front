@@ -440,7 +440,9 @@ input[type='time']::-webkit-calendar-picker-indicator {
 .chw-prose hr {
   margin: 0.8em 0;
   border: 0;
-  border-top: 1px solid var(--line);
+  /* --line(다크 8%·라이트 10%)은 앱에서 가장 옅은 선 — 콘텐츠 구분선으로는 안 보인다는
+     사용자 피드백(2026-09-02)으로 line-strong 승격. 토큰이라 양 테마 동시 적용 */
+  border-top: 1px solid var(--line-strong);
 }
 /* extension-placeholder 는 CSS 를 주입하지 않음 — 빈 첫 문단에 placeholder 표시 */
 .chw-prose p.is-editor-empty:first-child::before {

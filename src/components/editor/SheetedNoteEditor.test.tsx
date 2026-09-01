@@ -25,6 +25,11 @@
  *   E. 다리 텍스트 (활성 시트만)
  *     E1. 마운트 시 활성 시트 본문이 흐른다
  *     E2. 전환하면 새 시트 본문으로 갈아 끼운다
+ *   F. 🔴 자동 저장 400 문구 (2026-09-02)
+ *     F1. 서버 문구가 실린 400 → 그 문구 그대로 토스트 (「저장 실패」 라벨로 뭉개지 않는다)
+ *     F2. 같은 문구는 재시도해도 한 번만 (자동 저장이 1.5초마다 돈다)
+ *     F3. 서버가 말이 없는 실패(네트워크)는 토스트하지 않는다
+ *     F4. 🔴 승격(POST) 실패는 훅이 이미 띄운다 — 컨테이너가 겹쳐 띄우지 않는다
  */
 import ReactForMock from 'react'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
@@ -416,5 +421,64 @@ describe('E. 다리 텍스트 — 활성 시트만', () => {
     await waitFor(() => expect(onText).toHaveBeenCalledWith('1분 자기소개'))
     fireEvent.click(tab('기업 분석'))
     await waitFor(() => expect(onText).toHaveBeenLastCalledWith('MSA 경험'))
+  })
+})
+
+/**
+ * 🔴 **서버가 이유를 말했으면 그대로 보여준다** (2026-09-02 실사고).
+ * 글자수 상한 400 이 에디터의 「저장 실패」 라벨 하나로 뭉개지면, 사용자는 무엇을 줄여야
+ * 하는지 모른 채 계속 쓴다. 한도를 정하는 쪽은 서버다.
+ */
+describe('F. 🔴 자동 저장 400 문구', () => {
+  const OVER = '노트는 100,000자까지 저장할 수 있어요.'
+
+  beforeEach(() => {
+    // 이미 승격된 상태 = 저장이 PATCH 로 나간다 (승격 경로는 F4 에서 따로 본다)
+    h.getNoteSheets.mockResolvedValue([sheet({ id: 's1', name: '준비 노트' })])
+  })
+
+  it('F1. 서버 문구가 실린 400 → 그 문구 그대로 토스트', async () => {
+    h.updateNoteSheet.mockRejectedValue({ response: { data: { message: OVER } } })
+    draw()
+    await ready()
+    fireEvent.click(saveBtn())
+
+    await waitFor(() => expect(h.toastError).toHaveBeenCalledWith(OVER))
+  })
+
+  it('F2. 같은 문구는 재시도해도 한 번만', async () => {
+    // 배열 message 도 첫 항목을 뽑아 쓴다 (Nest ValidationPipe 의 두 형태 모두)
+    h.updateNoteSheet.mockRejectedValue({ response: { data: { message: [OVER] } } })
+    draw()
+    await ready()
+    fireEvent.click(saveBtn())
+    await waitFor(() => expect(h.updateNoteSheet).toHaveBeenCalledTimes(1))
+    fireEvent.click(saveBtn())
+    await waitFor(() => expect(h.updateNoteSheet).toHaveBeenCalledTimes(2))
+
+    expect(h.toastError).toHaveBeenCalledTimes(1)
+    expect(h.toastError).toHaveBeenCalledWith(OVER)
+  })
+
+  it('F3. 서버 문구가 없는 실패(네트워크)는 토스트하지 않는다', async () => {
+    h.updateNoteSheet.mockRejectedValue(new Error('Network Error'))
+    draw()
+    await ready()
+    fireEvent.click(saveBtn())
+
+    await waitFor(() => expect(h.updateNoteSheet).toHaveBeenCalledTimes(1))
+    expect(h.toastError).not.toHaveBeenCalled()
+  })
+
+  /** 🔴 승격(POST)은 `useCreateNoteSheet.onError` 가 같은 문구를 이미 띄운다 — 두 번 알리지 않는다 */
+  it('F4. 승격 실패는 토스트가 한 번만 (훅 것)', async () => {
+    h.getNoteSheets.mockResolvedValue([])
+    h.createNoteSheet.mockRejectedValue({ response: { data: { message: OVER } } })
+    draw()
+    await ready()
+    fireEvent.click(saveBtn())
+
+    await waitFor(() => expect(h.toastError).toHaveBeenCalledWith(OVER))
+    expect(h.toastError).toHaveBeenCalledTimes(1)
   })
 })

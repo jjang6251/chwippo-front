@@ -235,6 +235,33 @@ describe('마크다운 붙여넣기', () => {
     act(() => { editor.commands.insertContent('가'.repeat(12)) })
     expect(screen.getByText('12 / 2,000')).toBeInTheDocument()
   })
+
+  /**
+   * 노션 페이지를 복사하면 콜아웃이 `<aside>` 리터럴로 박혔다 (2026-09-02 실사용).
+   * HTML 은 위 규칙대로 tiptap 기본 경로가 읽는데, 그 **직전**에 transformPastedHTML 이
+   * 마커를 인용으로 바꾼다 (변환 규칙 자체는 notionPaste.test.ts).
+   */
+  it('노션 콜아웃 HTML 은 인용으로 들어간다 (리터럴이 안 남는다)', () => {
+    const { editor, container } = setup()
+    const html =
+      "<meta charset='utf-8'><p>&lt;aside&gt;<br>\n⏰</p>\n<p>일정 확인하기</p>\n<p>&lt;/aside&gt;</p>"
+    const plain = '<aside>\n⏰\n\n일정 확인하기\n</aside>'
+    const target = container.querySelector('.chw-prose')!
+    act(() => {
+      fireEvent.paste(target, {
+        // 위 paste 헬퍼와 같은 이유로 **키를 봐야 한다** (모르는 키엔 빈 문자열)
+        clipboardData: {
+          getData: (type: string) =>
+            type === 'text/html' ? html : type === 'text/plain' ? plain : '',
+          types: ['text/plain', 'text/html'],
+        },
+      })
+    })
+    const json = JSON.stringify(editor.getJSON())
+    expect(json).toContain('"blockquote"')
+    expect(json).not.toContain('aside')
+    expect(editor.getText()).toContain('일정 확인하기')
+  })
 })
 
 describe('🔴 옛 문서 회귀 — 열고 저장해도 내용이 유지된다', () => {

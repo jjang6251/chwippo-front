@@ -16,6 +16,9 @@
  *         12  백링크 0 이면 패널 자체가 없다
  *   저장  13  제목을 고치면 debounce 뒤 PATCH (title 만)
  *        13b 🔴 그 저장이 허브 캐시의 백링크 수를 지우지 않는다 (단건 응답엔 집계가 없다)
+ *        13c 🔴 400 이면 **서버 문구를 그대로** 토스트 (SaveChip 라벨로 뭉개지 않는다)
+ *        13d 🔴 같은 문구는 재시도해도 한 번만 (자동 저장이 1.5초마다 돈다)
+ *        13e 서버가 말이 없는 실패(네트워크)는 토스트하지 않는다 (SaveChip 만)
  *   정리  14  🔴 제목·본문이 **둘 다 빈 채로** 떠나면 지운다 (오터치 쓰레기 방지)
  *        14b 🔴 이미지만 있고 제목이 빈 노트는 **안 지운다** (글자 0자 ≠ 빈 노트)
  *         15  내용이 있으면 떠나도 안 지운다
@@ -38,6 +41,7 @@ import { uploadNoteImage } from '@/components/editor/noteImageUpload'
 import { storageUsageKey } from '@/hooks/useStorageUsage'
 import { studyNotesKey } from '@/hooks/useStudyNotes'
 import { assertMenuKeyboardContract } from '@/test/menuKeyboardContract'
+import { toast } from '@/stores/toastStore'
 import { StudyNoteDocPage } from './StudyNoteDocPage'
 
 vi.mock('@/api/studyNotes', () => ({
@@ -313,6 +317,59 @@ describe('문서 — 저장·정리', () => {
       expect(list?.[0].title).toBe('운영체제 정리')
       expect(list?.[0].backlinkCount).toBe(2)
     })
+  })
+
+  /**
+   * 🔴 **서버가 이유를 말했으면 그대로 보여준다** (2026-09-02 실사고).
+   * 글자수 상한 400 이 SaveChip 의 「저장 실패」 하나로 뭉개져, 사용자는 56,281자 노트가
+   * 왜 저장되지 않는지 모른 채 계속 썼다. 한도를 정하는 쪽은 서버다 — 프론트가 자기
+   * 문구로 덮으면 「무엇을 줄여야 하는지」가 사라진다.
+   */
+  it('13c 🔴 저장 400 → 서버 문구를 그대로 토스트', async () => {
+    const errorToast = vi.spyOn(toast, 'error')
+    mocked.updateStudyNote.mockRejectedValue({
+      response: { data: { message: '노트는 100,000자까지 저장할 수 있어요.' } },
+    })
+    await renderLoaded()
+    fireEvent.change(screen.getByLabelText('노트 제목'), { target: { value: 'OS 총정리' } })
+
+    await waitFor(
+      () => expect(errorToast).toHaveBeenCalledWith('노트는 100,000자까지 저장할 수 있어요.'),
+      { timeout: 3000 },
+    )
+    errorToast.mockRestore()
+  })
+
+  /** 🔴 자동 저장은 1.5초마다 재시도한다 — dedupe 가 없으면 같은 토스트가 화면을 덮는다 */
+  it('13d 🔴 같은 문구는 재시도해도 한 번만', async () => {
+    const errorToast = vi.spyOn(toast, 'error')
+    mocked.updateStudyNote.mockRejectedValue({
+      response: { data: { message: ['노트는 100,000자까지 저장할 수 있어요.'] } },
+    })
+    await renderLoaded()
+    const input = screen.getByLabelText('노트 제목')
+
+    fireEvent.change(input, { target: { value: 'OS 총정리' } })
+    await waitFor(() => expect(mocked.updateStudyNote).toHaveBeenCalledTimes(1), { timeout: 3000 })
+    fireEvent.change(input, { target: { value: 'OS 총정리 2' } })
+    await waitFor(() => expect(mocked.updateStudyNote).toHaveBeenCalledTimes(2), { timeout: 3000 })
+
+    // 배열 message 도 첫 항목을 뽑아 쓴다 (Nest ValidationPipe 의 두 형태 모두)
+    expect(errorToast).toHaveBeenCalledTimes(1)
+    expect(errorToast).toHaveBeenCalledWith('노트는 100,000자까지 저장할 수 있어요.')
+    errorToast.mockRestore()
+  })
+
+  it('13e 서버 문구가 없는 실패(네트워크)는 토스트하지 않는다', async () => {
+    const errorToast = vi.spyOn(toast, 'error')
+    mocked.updateStudyNote.mockRejectedValue(new Error('Network Error'))
+    await renderLoaded()
+    fireEvent.change(screen.getByLabelText('노트 제목'), { target: { value: 'OS 총정리' } })
+
+    await waitFor(() => expect(mocked.updateStudyNote).toHaveBeenCalled(), { timeout: 3000 })
+    expect(screen.getByText('저장 실패')).toBeInTheDocument()
+    expect(errorToast).not.toHaveBeenCalled()
+    errorToast.mockRestore()
   })
 
   it('14 🔴 제목·본문이 둘 다 빈 채로 떠나면 지운다', async () => {
