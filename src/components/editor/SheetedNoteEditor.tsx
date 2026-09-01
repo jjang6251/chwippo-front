@@ -9,6 +9,7 @@ import {
   useUpdateNoteSheet,
   useDeleteNoteSheet,
   serverMessage,
+  serverMessageOrNull,
 } from '@/hooks/useStepDetail'
 import type { StepNoteSheet } from '@/api/stepDetail'
 import { docToMemoValue, type TiptapDoc } from '@/utils/memoSections'
@@ -117,6 +118,11 @@ export function SheetedNoteEditor({
   /** 아직 서버에 못 보낸 최신 본문(저장 형태). null = 보낼 것 없음 */
   const pendingRef = useRef<string | null>(null)
   const editorRef = useRef<Editor | null>(null)
+  /**
+   * 자동 저장 400 문구를 **한 번만** 띄우기 위한 마지막 문구 (저장 성공 시 초기화).
+   * 재시도가 1.5초마다 도니 dedupe 없이는 같은 토스트가 쌓인다.
+   */
+  const lastSaveErrorRef = useRef<string | null>(null)
 
   /**
    * 🔴 **매 입력마다 저장 형태로 떠 둔다.** flush 시점에 doc 을 읽으려 하면, 언마운트에선
@@ -144,12 +150,27 @@ export function SheetedNoteEditor({
 
   /** RichTextEditor 의 1.5s 자동 저장 */
   async function handleSave(value: string): Promise<void> {
+    const sheetId = activeIdRef.current
     pendingRef.current = null
     try {
-      await persist(activeIdRef.current, value)
+      await persist(sheetId, value)
+      lastSaveErrorRef.current = null
     } catch (err) {
       // 전환 flush 가 재시도한다 + RichTextEditor 의 「저장 실패」 라벨을 살린다
       pendingRef.current = value
+      /*
+        🔴 「저장 실패」 라벨만으로는 **무엇을 줄여야 하는지** 알 수 없다 (2026-09-02 —
+        글자수 상한 400 이 라벨 하나로 뭉개졌다). 서버가 이유를 말해 준 실패만 그 문구
+        그대로 띄운다 — 네트워크·5xx 는 지금처럼 라벨만.
+        승격(DRAFT) 경로는 `useCreateNoteSheet.onError` 가 이미 같은 문구를 띄우므로 뺀다.
+      */
+      if (sheetId !== DRAFT_ID) {
+        const message = serverMessageOrNull(err)
+        if (message !== null && message !== lastSaveErrorRef.current) {
+          lastSaveErrorRef.current = message
+          toast.error(message)
+        }
+      }
       throw err
     }
   }
