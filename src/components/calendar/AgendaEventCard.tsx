@@ -192,7 +192,7 @@ export function AgendaEventCard({ event }: Props) {
               type="button"
               aria-label="삭제"
               onClick={handleDelete}
-              className="opacity-100 sm:opacity-0 sm:group-hover/agenda:opacity-100 text-text-quaternary hover:text-danger w-11 h-11 -mr-2.5 -my-3 flex items-center justify-center transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg rounded"
+              className="opacity-100 lg:opacity-0 lg:group-hover/agenda:opacity-100 text-text-quaternary hover:text-danger w-11 h-11 -mr-2.5 -my-3 flex items-center justify-center transition-all shrink-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg rounded"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                 <path d="M2 2l6 6M8 2L2 8" />

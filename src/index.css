@@ -1193,3 +1193,10 @@ input[type='time']::-webkit-calendar-picker-indicator {
   }
 }
 
+/* 홈 인디케이터(safe-area) 회피 — MobileNav 가 쓰는 클래스인데 2026-09-02 전수조사에서
+   정의가 어디에도 없음이 드러났다(홈화면 추가/standalone 에서 탭이 홈바에 깔림).
+   index.html 의 viewport-fit=cover 가 짝 — 없으면 env() 가 0 이다. */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
