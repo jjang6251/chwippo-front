@@ -598,3 +598,40 @@ describe('features — 확장 on/off', () => {
     expect(names).toContain('taskList')
   })
 })
+
+describe('화살표 자동 변환 (ArrowShortcuts)', () => {
+  /** input rule 은 실제 타이핑 경로(handleTextInput)로만 발화한다 — 한 글자씩 흘려 넣는다 */
+  function type(ed: Editor, text: string): void {
+    for (const ch of text) {
+      const { from, to } = ed.state.selection
+      const handled = ed.view.someProp('handleTextInput', (f) =>
+        f(ed.view, from, to, ch, () => ed.state.tr.insertText(ch, from, to)),
+      )
+      if (!handled) ed.view.dispatch(ed.state.tr.insertText(ch, from, to))
+    }
+  }
+
+  it('`->` 입력이 → 로 바뀐다', () => {
+    const ed = editor()
+    type(ed, 'a -> b')
+    expect(ed.getText()).toBe('a → b')
+  })
+
+  it('`<-` 입력이 ← 로 바뀐다', () => {
+    const ed = editor()
+    type(ed, 'a <- b')
+    expect(ed.getText()).toBe('a ← b')
+  })
+
+  it('코드블록 안에서는 바꾸지 않는다 — `() -> {}` 같은 코드 보호', () => {
+    const ed = editor({
+      type: 'doc',
+      content: [{ type: 'codeBlock', content: [] }],
+    })
+    ed.commands.setTextSelection(1)
+    type(ed, 'a -> b')
+    // getText() 는 빈 후행 문단까지 개행으로 세므로 포함 여부로 판정한다
+    expect(ed.getText()).toContain('a -> b')
+    expect(ed.getText()).not.toContain('→')
+  })
+})
