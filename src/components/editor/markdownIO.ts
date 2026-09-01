@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import { DOMParser as PMDOMParser, type Fragment, type Node as PMNode } from '@tiptap/pm/model'
+import { convertNotionAsideMarkdown } from './notionPaste'
 
 /**
  * study-notes Phase 2a — 마크다운 붙여넣기 파싱 · 내보내기.
@@ -179,7 +180,10 @@ export function handleMarkdownPaste(
   text: string,
   characterLimit?: number,
 ): MarkdownPasteResult {
-  if (!looksLikeMarkdown(text)) return { handled: false, truncated: false }
+  // 노션 콜아웃(`<aside>` 단독 줄) → 인용. 게이트 **전에** 손본다 — 게이트는 실제로
+  // 삽입할 문자열을 봐야 한다 (판정·변환 근거는 notionPaste.ts)
+  const md = convertNotionAsideMarkdown(text)
+  if (!looksLikeMarkdown(md)) return { handled: false, truncated: false }
   if (!markdownStorage(editor)) return { handled: false, truncated: false }
 
   const before = editor.state.doc.content.size
@@ -188,7 +192,7 @@ export function handleMarkdownPaste(
     .chain()
     .focus()
     .insertContent(
-      markdownToDocNodes(editor, text) as Parameters<typeof editor.commands.insertContent>[0],
+      markdownToDocNodes(editor, md) as Parameters<typeof editor.commands.insertContent>[0],
     )
     .run()
   const after = editor.state.doc.content.size
