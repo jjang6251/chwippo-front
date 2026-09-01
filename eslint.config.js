@@ -6,6 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 import noBareAutofocus from './eslint-rules/no-bare-autofocus.js'
 import noOverlayBottomPadding from './eslint-rules/no-overlay-bottom-padding.js'
+import vaulRepositionInputs from './eslint-rules/vaul-reposition-inputs.js'
 
 export default defineConfig([
   globalIgnores(['dist', 'coverage']),
@@ -33,17 +34,25 @@ export default defineConfig([
     ① 모달 첫 칸 `autoFocus` → 열자마자 키보드가 화면을 덮었다.
     ② 오버레이 컨테이너 하단 여백 → 시트와 탭바 사이에 검은 띠가 남았다.
     둘 다 주석으로는 이미 알려져 있었는데(AddEventSheet 2026-07-25) 강제하는 게 없어 재발했다.
+    ③ 2026-09-01 iPhone 실사고 — vaul `repositionInputs` 기본값이 iOS 와 겹쳐 시트를 두 배로 밀어 올렸다.
     테스트·e2e 는 스니펫이라 제외.
   */
   {
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['**/*.test.{ts,tsx}', 'e2e/**', 'src/test/**'],
     plugins: {
-      chwippo: { rules: { 'no-bare-autofocus': noBareAutofocus, 'no-overlay-bottom-padding': noOverlayBottomPadding } },
+      chwippo: {
+        rules: {
+          'no-bare-autofocus': noBareAutofocus,
+          'no-overlay-bottom-padding': noOverlayBottomPadding,
+          'vaul-reposition-inputs': vaulRepositionInputs,
+        },
+      },
     },
     rules: {
       'chwippo/no-bare-autofocus': 'error',
       'chwippo/no-overlay-bottom-padding': 'error',
+      'chwippo/vaul-reposition-inputs': 'error',
     },
   },
 ])
