@@ -129,6 +129,14 @@ export function InfoModal({
         open
         onOpenChange={(open) => { if (!open && !saving) onClose() }}
         shouldScaleBackground={false}
+        /*
+          🔴 vaul 의 키보드 보정을 끈다 (2026-09-01 iPhone 실기 — 시험 일정 추가에서 입력 탭 시 시트가
+          위로 튀고 아래에 키보드 높이만큼 검은 띠). 기본값 true 는 visualViewport 가 줄면 시트를
+          키보드 높이만큼 `bottom` 으로 들어올리고 높이를 줄이는데, iOS 가 이미 입력칸을 보이려고
+          화면을 밀어 올린 뒤라 **두 힘이 겹쳐 두 배로** 올라간다. 공용 `Modal`(순수 fixed)은 iOS 쪽
+          힘만 받아 멀쩡했다. 끄면 그 거동과 같아진다.
+        */
+        repositionInputs={false}
       >
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
