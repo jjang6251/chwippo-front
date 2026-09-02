@@ -184,7 +184,7 @@ describe('Landing — 약속한 기능이 제품에 실제로 있는가', () => 
     const { container } = renderLanding()
     const chips = container.querySelectorAll('h1 ~ ul li, ul li')
     const texts = Array.from(chips).map((c) => c.textContent ?? '')
-    for (const label of ['지원 현황 · 일정 관리', 'AI 자소서', 'AI 면접 준비']) {
+    for (const label of ['지원 현황 · 일정 관리', '공고 붙여넣기 · 자동 등록', 'AI 자소서', 'AI 면접 준비']) {
       expect(texts.some((t) => t.includes(label)), `${label} 칩 없음`).toBe(true)
     }
   })
