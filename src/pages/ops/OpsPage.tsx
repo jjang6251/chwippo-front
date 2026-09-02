@@ -161,6 +161,16 @@ export function OpsPage() {
           </div>
           <span className="text-text-tertiary">›</span>
         </Link>
+        <Link
+          to="/ops/feature-usage"
+          className="flex items-center justify-between bg-surface-2 border border-line rounded-xl px-5 py-4 hover:border-line-strong transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold">기능 사용 실태</p>
+            <p className="text-xs text-text-tertiary mt-0.5">누가 무엇을 쓰나 — 기능×사람 매트릭스·주차별 잔존</p>
+          </div>
+          <span className="text-text-tertiary">›</span>
+        </Link>
       </div>
 
       {/* ── 분석 대시보드 ── */}
