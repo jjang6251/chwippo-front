@@ -36,18 +36,17 @@ describe('개인정보처리방침', () => {
     it('시행일과 공고일이 표기된다', () => {
       renderPrivacy()
       // 헤더 + 변경 이력 각주에 모두 나온다 — 존재 여부만 본다
-      expect(screen.getAllByText(/시행일: 2026년 8월 4일/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/시행일: 2026년 9월 10일/).length).toBeGreaterThan(0)
       expect(
-        screen.getByText(/2026년 8월 4일 공고되어 같은 날부터 시행/),
+        screen.getByText(/2026년 9월 3일 공고되어 2026년 9월 10일부터 시행/),
       ).toBeInTheDocument()
     })
 
     /**
-     * ⚠️ **2026-08-04 개정은 즉시 시행됐다 (CEO 결정).** §9 의 "시행일 7일 전 공지" 와 어긋난다.
-     *
-     * 그래서 여기서 7일 간격을 강제하지 않는다 — **실제와 다른 것을 테스트가 주장하면 안 된다.**
-     * 대신 최소 불변식을 지킨다: **시행일이 공고일보다 앞설 수 없다**(소급 시행 금지).
-     * §9 조항 자체는 그대로 존재하므로 문구 존재도 함께 확인한다.
+     * ⚠️ 2026-08-04 개정은 §9 의 "시행일 7일 전 공지" 와 어긋난 **즉시 시행**이었고(CEO 결정),
+     * 그 주석은 "다음 개정 때 이 선례를 근거로 삼지 말 것" 이라고 남겼다.
+     * 그래서 최근 개정(2026-09-03 공고 / 09-10 시행)은 다시 §9 를 지킨다 — 여기서 강제한다.
+     * 과거 이력은 실제와 다르게 주장하면 안 되므로 그대로 남겨 둔다.
      */
     it('변경 이력에 즉시 시행 사유가 기록돼 있다', () => {
       renderPrivacy()
@@ -57,12 +56,16 @@ describe('개인정보처리방침', () => {
       ).toBeGreaterThan(0)
     })
 
-    it('시행일이 공고일보다 앞서지 않는다 (소급 시행 금지)', () => {
+    it('🔴 최근 개정이 §9 를 지킨다 (공고 → 시행 7일 이상 · 소급 시행 금지)', () => {
       renderPrivacy()
-      const notice = new Date('2026-08-04')
-      const effective = new Date('2026-08-04')
-      expect(effective.getTime()).toBeGreaterThanOrEqual(notice.getTime())
+      const notice = new Date('2026-09-03')
+      const effective = new Date('2026-09-10')
+      const days = (effective.getTime() - notice.getTime()) / 86_400_000
+      expect(days).toBeGreaterThanOrEqual(7)
       expect(screen.getByText(/시행일 7일 전 서비스 내 공지/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/공고일: 2026년 9월 3일 · 시행일: 2026년 9월 10일/),
+      ).toBeInTheDocument()
     })
   })
 
@@ -73,6 +76,7 @@ describe('개인정보처리방침', () => {
      * - Microsoft → Clarity (8/11 시행)
      * - Vercel → 프론트 호스팅
      * - Sentry → `lib/sentry.ts`
+     * - Meta → `lib/metaPixel.ts` (Meta Pixel · 2026-09-10 시행)
      */
     it.each([
       ['Kakao Corp.', '소셜 로그인'],
@@ -82,6 +86,7 @@ describe('개인정보처리방침', () => {
       ['Vercel Inc.', '프론트 호스팅'],
       ['Microsoft Corporation', 'Clarity 행태 분석'],
       ['Google LLC', 'AdSense 광고'],
+      ['Meta Platforms, Inc.', 'Meta Pixel 맞춤형 광고'],
     ])('%s 가 위탁 표에 있다 (%s)', (vendor) => {
       renderPrivacy()
       expect(screen.getByText(vendor)).toBeInTheDocument()
@@ -108,6 +113,28 @@ describe('개인정보처리방침', () => {
         'href',
         'https://adssettings.google.com',
       )
+    })
+
+    /**
+     * 🔴 **광고 도구를 늘리면 거부 경로도 같이 늘어야 한다.** Google 링크 하나만 두면
+     * Meta 맞춤 광고는 끌 방법을 안내받지 못한 채 수집만 시작된다.
+     */
+    it('온라인 맞춤형 광고(Meta Pixel) 항목과 Meta 광고 설정 링크가 있다', () => {
+      renderPrivacy()
+      expect(screen.getAllByText(/온라인 맞춤형 광고/).length).toBeGreaterThan(0)
+      expect(screen.getByRole('link', { name: /Meta 광고 설정/ })).toHaveAttribute(
+        'href',
+        'https://www.facebook.com/adpreferences',
+      )
+    })
+
+    /** 행태정보는 보유 기간을 밝히지 않으면 고지가 완결되지 않는다 */
+    it('행태정보 보유·이용 기간을 명시한다', () => {
+      renderPrivacy()
+      expect(screen.getAllByText(/보유·이용 기간/).length).toBeGreaterThan(0)
+      expect(
+        screen.getAllByText(/수집일로부터 최대 2년/).length,
+      ).toBeGreaterThan(0)
     })
 
     /**

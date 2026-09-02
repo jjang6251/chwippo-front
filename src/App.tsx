@@ -16,6 +16,7 @@ import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary'
 import { RouteFallback } from '@/components/common/RouteFallback'
 import { DemoRouteGuard } from '@/components/demo/DemoRouteGuard'
 import { RouteMeta } from '@/components/layout/RouteMeta'
+import { MetaPixelPageView } from '@/components/layout/MetaPixelPageView'
 import { lazyWithReload } from '@/utils/lazyWithReload'
 // ── 첫 진입 코어 (eager) ────────────────────────────────────────────────
 // 홈(캘린더)·보드·로그인·온보딩·설정·문의 등 로그인 직후 흔히 닿는 화면은 즉시 로드해
@@ -164,6 +165,9 @@ export default function App() {
       {/* 라우트별 title·canonical·OG 갱신 — 없으면 sitemap 의 8개 URL 이
           전부 "표준 주소는 홈" 이라고 선언한다 (`utils/routeMeta.ts` 참조) */}
       <RouteMeta />
+      {/* 라우트 변경마다 Meta Pixel PageView — SPA 는 문서를 다시 로드하지 않아
+          표준 스니펫만으로는 방문당 1건에 그친다 (`lib/metaPixel.ts` 참조). `/ops/*` 는 제외 */}
+      <MetaPixelPageView />
       <DemoRouteGuard />
       <Routes>
         <Route path="/" element={<Landing />} />

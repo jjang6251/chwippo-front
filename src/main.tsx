@@ -10,6 +10,7 @@ import 'dayjs/locale/ko'
 import App from './App.tsx'
 import { requireEnvs } from '@/utils/requireEnvs'
 import { initClarity } from '@/lib/clarity'
+import { initMetaPixel } from '@/lib/metaPixel'
 import { initSentry, setSentryUser } from '@/lib/sentry'
 import { useAuthStore } from '@/stores/authStore'
 import './index.css'
@@ -26,6 +27,9 @@ requireEnvs(['VITE_API_URL'], import.meta.env)
 initSentry()
 // 행태 분석 — VITE_CLARITY_PROJECT_ID 미설정이면 no-op. 방침 시행일(8/11) 전까지 미주입.
 initClarity()
+// 광고 성과 측정 — VITE_META_PIXEL_ID 미설정이면 no-op. 방침 시행일(9/10) 전까지 미주입.
+// 라우트 변경 PageView 는 App.tsx 의 MetaPixelPageView 가 이어받는다 (SPA 라 문서 재로드 없음).
+initMetaPixel()
 // 로그인 상태를 Sentry user 에 반영 — **id 만** 전달 (개인정보처리방침 §1)
 let lastUserId: string | null = null
 useAuthStore.subscribe((state) => {
