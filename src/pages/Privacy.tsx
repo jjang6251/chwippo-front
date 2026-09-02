@@ -2,6 +2,13 @@
 // TODO: 유료 결제 도입 시 → 결제 수탁업체(PG사) 추가, §3 보유 기간에 전자상거래법 5년 명시
 // TODO: 사업자 등록 시 → §8 개인정보 보호책임자에 사업자 정보 추가
 // 갱신 이력:
+// - 2026-09-03 공고 / **2026-09-10 시행** (§9 「시행일 7일 전 공지」 준수): §5 수탁업체에 Meta Platforms 추가 +
+//   §5-2 에 온라인 맞춤형 광고(Meta Pixel) 항목·보유 기간·거부 방법 추가.
+//   🔴 **8/4 의 즉시 시행을 선례로 삼지 않았다** — 그 개정 주석이 "다음 개정 때 이 선례를 근거로 삼지 말 것"
+//      이라고 남겨둔 그대로다. Clarity 와 마찬가지로 **신규 수집**이므로 유예를 둔다.
+//   🔴 **순서가 중요하다** — 방침 시행(9/10)이 먼저, `VITE_META_PIXEL_ID` 주입이 나중이다.
+//      순서가 뒤집히면 고지가 0인 상태의 수집이 된다 (`src/lib/metaPixel.ts` 는 미설정 시 완전 no-op).
+//   ⚠️ 공고일 = **운영 배포일**. develop 머지만으로는 공고가 아니다.
 // - 2026-08-04 공고 / **2026-08-04 즉시 시행** (CEO 결정): §1 에 서비스 이용 분석(자동) + §5 수탁업체에 Microsoft(Clarity)·
 //   Google(AdSense)·Vercel 추가 + §5-2 쿠키·행태정보 신설.
 //   🔴 Google·Vercel 은 **새로 시작하는 것이 아니라 이미 하고 있던 것을 명확히 반영**한 것이다 —
@@ -40,10 +47,10 @@ export function Privacy() {
           ← 뒤로
         </button>
         <h1 className="text-2xl font-bold mb-2">개인정보처리방침</h1>
-        <p className="text-text-quaternary text-sm mb-2">시행일: 2026년 8월 4일</p>
+        <p className="text-text-quaternary text-sm mb-2">시행일: 2026년 9월 10일</p>
         <p className="text-text-tertiary text-xs mb-12 leading-relaxed">
-          이 방침은 2026년 8월 4일 공고되어 같은 날부터 시행됩니다. 변경 내용은 아래 페이지
-          하단에 정리되어 있습니다.
+          이 방침은 2026년 9월 3일 공고되어 2026년 9월 10일부터 시행됩니다 (§9 시행일 7일 전
+          공지). 변경 내용은 아래 페이지 하단에 정리되어 있습니다.
         </p>
 
         <DocSection title="1. 수집하는 개인정보 항목">
@@ -148,6 +155,11 @@ export function Privacy() {
                 '미국',
               ],
               ['Google LLC', '광고 게재 (AdSense)', '미국'],
+              [
+                'Meta Platforms, Inc.',
+                '온라인 맞춤형 광고 성과 측정 (Meta Pixel) — 광고 식별 쿠키·광고 식별자와 방문 페이지·가입 완료 등 이용 기록. 회원이 작성한 내용(자소서·메모·내 정보 창고 입력값)은 전송되지 않습니다',
+                '미국',
+              ],
             ]}
           />
           <p className="mt-3 text-text-quaternary text-xs">
@@ -239,7 +251,21 @@ export function Privacy() {
             <li>
               <strong>광고 (Google AdSense)</strong> — 광고 게재에 사용됩니다.
             </li>
+            <li>
+              <strong>온라인 맞춤형 광고 (Meta Pixel — Meta Platforms, Inc.)</strong> — 광고를
+              보고 들어온 방문이 실제 가입으로 이어졌는지 측정하고, 맞춤형 광고를 제공하는 데
+              사용합니다. 수집 항목은{' '}
+              <strong className="text-text-primary">
+                광고 식별 쿠키·광고 식별자와 방문 페이지·가입 완료 등 이용 기록
+              </strong>
+              이며, 자기소개서·활동 기록·내 정보 등 회원이 작성한 내용은 전송되지 않습니다.
+            </li>
           </ul>
+          <p className="mt-3">
+            <strong>보유·이용 기간</strong> — 행태정보는 수집일로부터 최대 2년간 보관하며, 그
+            전이라도 분석·광고 목적이 달성되면 지체 없이 파기합니다. 각 수탁 업체(Microsoft·
+            Google·Meta)로 전송된 정보의 보관 기간은 해당 업체의 데이터 정책을 따릅니다.
+          </p>
           <p className="mt-3">
             <strong>거부 방법</strong> — 브라우저 설정에서 쿠키를 차단하거나,{' '}
             <a
@@ -250,7 +276,16 @@ export function Privacy() {
             >
               Google 광고 설정
             </a>
-            에서 맞춤 광고를 해제할 수 있습니다. 쿠키를 차단해도 서비스 이용에는 지장이 없습니다.
+            에서 맞춤 광고를 해제할 수 있습니다. Meta(페이스북·인스타그램) 맞춤 광고는{' '}
+            <a
+              href="https://www.facebook.com/adpreferences"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand hover:underline"
+            >
+              Meta 광고 설정
+            </a>
+            에서 해제할 수 있습니다. 쿠키를 차단해도 서비스 이용에는 지장이 없습니다.
           </p>
         </DocSection>
 
@@ -299,6 +334,18 @@ export function Privacy() {
         <div className="mt-12 pt-6 border-t border-line text-text-quaternary text-xs space-y-2">
           <p>
             <span className="text-text-primary font-medium">
+              공고일: 2026년 9월 3일 · 시행일: 2026년 9월 10일 (§9 시행일 7일 전 공지 준수)
+            </span>
+            <br />
+            ① §5 수탁 업체에 <strong>Meta Platforms, Inc.(미국)</strong> 추가 — 온라인 맞춤형
+            광고 성과 측정(Meta Pixel) ② <strong>§5-2</strong> 에 온라인 맞춤형 광고 항목,
+            <strong> 보유·이용 기간</strong>(수집일로부터 최대 2년), Meta 광고 설정을 통한
+            <strong> 거부 방법</strong> 추가. 수집 항목은 광고 식별 쿠키·광고 식별자와 방문
+            페이지·가입 완료 등 이용 기록이며, 회원이 작성한 내용(자소서·활동 기록·내 정보)은
+            전송되지 않습니다.
+          </p>
+          <p>
+            <span className="text-text-tertiary font-medium">
               공고일: 2026년 8월 4일 · 시행일: 2026년 8월 4일 (베타 서비스로 사용자 적어 즉시 시행)
             </span>
             <br />
