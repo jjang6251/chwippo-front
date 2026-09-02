@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { resolvePostLoginDestination } from '@/utils/authRouting'
 import { CompanyCard } from '@/components/card/CompanyCard'
 import { ScaledPreview } from '@/components/landing/ScaledPreview'
+import { SeasonStrip } from '@/components/landing/SeasonStrip'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
 import { MessageBubble } from '@/components/coverletter/CoverletterChatPanel'
@@ -168,6 +169,12 @@ export function Landing() {
             ⚠️ 표본이 작다(실사용자 2명 · `/ops` 세션은 CEO 본인). 이 수정의 목표는
             "전환율 개선" 이 아니라 **랜딩이 실제 제품을 설명하게 만드는 것**이다.
           */}
+          {/*
+            시즌 훅 — 확정 공고가 전부 마감되면 스스로 사라진다(`SeasonStrip`).
+            🔴 회사명은 쓰지 않는다 (개수·시기만). 아래 h1 카피·보드는 무접촉이다.
+          */}
+          <SeasonStrip />
+
           <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-tight mb-6 break-keep">
             지원한 회사가 늘어날수록<br />
             <span className="text-brand">헷갈리지 않게</span>
