@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { resolvePostLoginDestination } from '@/utils/authRouting'
 import { CompanyCard } from '@/components/card/CompanyCard'
 import { ScaledPreview } from '@/components/landing/ScaledPreview'
+import { SeasonStrip } from '@/components/landing/SeasonStrip'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
 import { MessageBubble } from '@/components/coverletter/CoverletterChatPanel'
@@ -168,6 +169,12 @@ export function Landing() {
             ⚠️ 표본이 작다(실사용자 2명 · `/ops` 세션은 CEO 본인). 이 수정의 목표는
             "전환율 개선" 이 아니라 **랜딩이 실제 제품을 설명하게 만드는 것**이다.
           */}
+          {/*
+            시즌 훅 — 확정 공고가 전부 마감되면 스스로 사라진다(`SeasonStrip`).
+            🔴 회사명은 쓰지 않는다 (개수·시기만). 아래 h1 카피·보드는 무접촉이다.
+          */}
+          <SeasonStrip />
+
           <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-tight mb-6 break-keep">
             지원한 회사가 늘어날수록<br />
             <span className="text-brand">헷갈리지 않게</span>
@@ -198,7 +205,7 @@ export function Landing() {
             */}
             취업 준비는 회사마다 전형이 다릅니다.{' '}
             <br className="hidden sm:block" />
-            회사·직군만 고르면 단계가 자동으로 생기고, 어디까지 왔는지 한눈에 보여요.
+            공고를 붙여넣거나 회사·직군만 고르면 단계와 일정이 자동으로 생기고, 어디까지 왔는지 한눈에 보여요.
           </p>
 
           {/*
@@ -214,6 +221,9 @@ export function Landing() {
           <ul className="flex flex-wrap items-center justify-center gap-2 mb-8">
             {[
               { label: '지원 현황 · 일정 관리', pcOnly: false },
+              /* 광고 소재가 「공고 붙여넣으면 일정 등록 끝」을 약속한다 — 랜딩이 안 받아주면
+                 클릭이 이탈로 샌다 (2026-09-03 소재-랜딩 정합). 기능은 v1.24 출시 실재 */
+              { label: '공고 붙여넣기 · 자동 등록', pcOnly: false },
               { label: 'AI 자소서', pcOnly: true },
               { label: 'AI 면접 준비', pcOnly: true },
             ].map(({ label, pcOnly }) => (
