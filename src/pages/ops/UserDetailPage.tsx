@@ -7,6 +7,7 @@ import { GrantCoinModal } from '@/components/admin/GrantCoinModal'
 import { RevokeCoinModal } from '@/components/admin/RevokeCoinModal'
 import { SuspendUserModal } from '@/components/admin/SuspendUserModal'
 import { ForcePlanChangeModal } from '@/components/admin/ForcePlanChangeModal'
+import { UserFeatureUsageSection } from '@/components/admin/UserFeatureUsageSection'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '@/utils/datetime'
 import { toast } from '@/stores/toastStore'
@@ -441,6 +442,12 @@ export function UserDetailPage() {
               value={isSuspended ? '정지됨' : '정상'}
             />
           </div>
+          {/*
+            기능 사용 — `/ops/feature-usage` 와 **같은 응답**에서 이 사람 행만 꺼낸다.
+            사용자당 전용 API 를 새로 열면 같은 질문에 답하는 집계가 두 벌이 되고,
+            두 값이 갈라지는 순간 어느 쪽도 못 믿게 된다.
+          */}
+          {id && <UserFeatureUsageSection userId={id} />}
         </div>
       )}
 

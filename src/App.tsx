@@ -124,6 +124,11 @@ const OpsAnnouncements = lazyWithReload(() =>
 const OpsCardFields = lazyWithReload(() =>
   import('@/pages/ops/OpsCardFields').then((m) => ({ default: m.OpsCardFields })),
 )
+const OpsFeatureUsage = lazyWithReload(() =>
+  import('@/pages/ops/OpsFeatureUsage').then((m) => ({
+    default: m.OpsFeatureUsage,
+  })),
+)
 const OpsReach = lazyWithReload(() =>
   import('@/pages/ops/OpsReach').then((m) => ({ default: m.OpsReach })),
 )
@@ -281,6 +286,7 @@ export default function App() {
               <Route path="/ops/announcements" element={<OpsAnnouncements />} />
               <Route path="/ops/reach" element={<OpsReach />} />
               <Route path="/ops/card-fields" element={<OpsCardFields />} />
+              <Route path="/ops/feature-usage" element={<OpsFeatureUsage />} />
               <Route path="/ops/users" element={<OpsUsers />} />
               <Route path="/ops/users/:id" element={<UserDetailPage />} />
               <Route path="/ops/ai-usage" element={<AiUsage />} />
