@@ -205,7 +205,7 @@ export function Landing() {
             */}
             취업 준비는 회사마다 전형이 다릅니다.{' '}
             <br className="hidden sm:block" />
-            회사·직군만 고르면 단계가 자동으로 생기고, 어디까지 왔는지 한눈에 보여요.
+            공고를 붙여넣거나 회사·직군만 고르면 단계와 일정이 자동으로 생기고, 어디까지 왔는지 한눈에 보여요.
           </p>
 
           {/*
@@ -221,6 +221,9 @@ export function Landing() {
           <ul className="flex flex-wrap items-center justify-center gap-2 mb-8">
             {[
               { label: '지원 현황 · 일정 관리', pcOnly: false },
+              /* 광고 소재가 「공고 붙여넣으면 일정 등록 끝」을 약속한다 — 랜딩이 안 받아주면
+                 클릭이 이탈로 샌다 (2026-09-03 소재-랜딩 정합). 기능은 v1.24 출시 실재 */
+              { label: '공고 붙여넣기 · 자동 등록', pcOnly: false },
               { label: 'AI 자소서', pcOnly: true },
               { label: 'AI 면접 준비', pcOnly: true },
             ].map(({ label, pcOnly }) => (
