@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Apple } from 'lucide-react'
+import { Apple, Play, Smartphone } from 'lucide-react'
 import axios from 'axios'
 import { REFRESH_HTTP_TIMEOUT_MS } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
@@ -8,6 +8,8 @@ import { resolvePostLoginDestination } from '@/utils/authRouting'
 import { CompanyCard } from '@/components/card/CompanyCard'
 import { ScaledPreview } from '@/components/landing/ScaledPreview'
 import { SeasonStrip } from '@/components/landing/SeasonStrip'
+import { AppSmartBanner } from '@/components/landing/AppSmartBanner'
+import { STORE_URLS, detectMobileOS } from '@/lib/appStores'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { InterviewQuestionCard } from '@/components/card/InterviewQuestionCard'
 import { MessageBubble } from '@/components/coverletter/CoverletterChatPanel'
@@ -114,8 +116,27 @@ export function Landing() {
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/apple`
   }
 
+  /*
+    상단 네비 「앱 다운로드」의 목적지는 **보고 있는 기기가 정한다** (2026-09-04 Play 출시).
+    예전엔 App Store 로 고정이라, 안드로이드 방문자가 누르면 받을 수 없는 스토어로 나갔다.
+    데스크탑에는 줄 스토어가 없으므로 하단 앱 섹션 앵커로 보낸다 — 같은 탭이라야
+    "눌렀는데 아무 일도 안 일어난 것 같다" 가 안 생긴다.
+  */
+  const mobileOS = detectMobileOS()
+  const appNav =
+    mobileOS === 'ios'
+      ? { href: STORE_URLS.ios, external: true, label: 'App Store 에서 앱 받기' }
+      : mobileOS === 'android'
+        ? { href: STORE_URLS.android, external: true, label: 'Google Play 에서 앱 받기' }
+        : { href: '#app-download', external: false, label: '앱 받기 — 아래 앱 안내로 이동' }
+
   return (
     <div className="min-h-screen bg-bg text-text-primary">
+      {/*
+        커스텀 스마트 배너 — 헤더 **위**. 애플 배너가 안 뜨는 환경(안드로이드·iOS 인앱 브라우저)
+        에서만 스스로 켜진다. 조건 판정은 컴포넌트 안에 있다.
+      */}
+      <AppSmartBanner />
       {/* 헤더 */}
       <header className="sticky top-0 z-50 bg-bg/80 backdrop-blur border-b border-line">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
@@ -129,22 +150,31 @@ export function Landing() {
           >
             치뽀
           </Link>
-          {/* gap-1: 320px 에서 4번째 항목(iOS 앱)까지 안 넘치게 — sm 부터 원래 간격 (2026-09-03) */}
+          {/* gap-1: 320px 에서 4번째 항목(앱 다운로드)까지 안 넘치게 — sm 부터 원래 간격 (2026-09-03) */}
           <nav aria-label="메인 네비게이션" className="flex items-center gap-1 sm:gap-2">
             {/*
               앱 존재를 맨 아래(하단 섹션)에서만 알 수 있다는 지적(2026-09-03)으로 상단 상시 노출.
               CTA 묶음(가입 전환)에 안 섞고 보조 링크 급으로 — 320px 은 아이콘만, sm+ 라벨.
+
+              🔴 Apple 아이콘·「iOS 앱」 라벨은 안드로이드가 Play 에 오르면서(2026-09-04)
+              **사실이 아니게 됐다.** 한쪽 OS 를 그리는 아이콘 대신 중립 기기 아이콘을 쓴다.
+
+              🔴 라벨은 「앱 다운로드」가 아니라 **「앱 받기」**다 — 폭 때문이다.
+              360px 에서 이 줄에 남는 폭은 312px 인데(px-6 제외), 「iOS 앱」(42px) 기준으로
+              **이미 311px 로 꽉 차 있었다**(위 `gap-1` 주석이 그 튜닝이다).
+              「앱 다운로드」는 74px 이라 +32px → 360·390px 에서 넘친다. 「앱 받기」(46px)면
+              들어가고, 「받기」는 하단 섹션·스마트 배너·캘린더 배너가 이미 쓰는 동사다.
+              `px-2 sm:px-3` 로 8px 을 더 벌어 여유를 남긴다.
             */}
             <a
-              href="https://apps.apple.com/app/id6789707709"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="iOS 앱 — App Store 에서 받기"
-              className="text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+              href={appNav.href}
+              {...(appNav.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              aria-label={appNav.label}
+              className="text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center gap-1.5 min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
             >
-              <Apple size={15} strokeWidth={2} aria-hidden="true" />
+              <Smartphone size={15} strokeWidth={2} aria-hidden="true" />
               {/* 320px 만 아이콘 전용 — 실폰(375+)에선 라벨이 보여야 「앱이 있다」가 전달된다 */}
-              <span className="hidden min-[360px]:inline">iOS 앱</span>
+              <span className="hidden min-[360px]:inline whitespace-nowrap">앱 받기</span>
             </a>
             <Link
               to="/demo"
@@ -279,7 +309,7 @@ export function Landing() {
               로그인 없이 둘러보기 →
             </Link>
           </div>
-          <p className="text-text-quaternary text-xs">무료로 시작 · 카드 등록 불필요 · iPhone 앱 지원</p>
+          <p className="text-text-quaternary text-xs">무료로 시작 · 카드 등록 불필요 · 모바일 앱 지원</p>
         </div>
 
         {/* GIF placeholder */}
@@ -659,27 +689,43 @@ export function Landing() {
       {/*
         앱 안내 — 2026-07-26 App Store 출시 후에도 웹 어디에도 앱 존재를 알리는 곳이
         없었다 (2026-07-29 발견). 검색으로 들어온 사람이 앱을 모르고 나간다.
-        안드로이드는 아직 스토어에 없으므로 iOS 만 안내한다.
+        2026-09-04 Play 출시로 안드로이드도 함께 안내한다 — 그전까지 「iOS 전용」으로 읽히던
+        표기(네비 라벨·히어로 캡션·이 문단·JSON-LD)를 같이 갱신했다.
+
+        `id="app-download"` = 데스크탑에서 상단 네비 「앱 다운로드」가 내려오는 자리.
+        `scroll-mt-16` — 헤더가 sticky(h-14) 라 앵커가 그 밑으로 숨는 걸 막는다.
       */}
-      <section className="border-t border-line py-10">
+      <section id="app-download" className="border-t border-line py-10 scroll-mt-16">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left">
           <div>
             <p className="text-text-primary text-sm font-semibold">
               마감 알림은 앱으로 받으세요
             </p>
             <p className="text-text-tertiary text-xs mt-1 leading-relaxed">
-              서류 마감·면접 일정을 놓치지 않게 알려드려요. iPhone·iPad 지원.
+              서류 마감·면접 일정을 놓치지 않게 알려드려요. iPhone·iPad·Android 지원.
             </p>
           </div>
-          <a
-            href="https://apps.apple.com/app/id6789707709"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg bg-brand hover:bg-accent text-bg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
-          >
-            <Apple size={15} strokeWidth={2} aria-hidden="true" />
-            App Store 에서 받기
-          </a>
+          {/* 320px 에서는 두 버튼이 줄바꿈으로 쌓인다 (가로 오버플로 금지) */}
+          <div className="shrink-0 flex flex-wrap items-center justify-center gap-2">
+            <a
+              href={STORE_URLS.ios}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg bg-brand hover:bg-accent text-bg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+            >
+              <Apple size={15} strokeWidth={2} aria-hidden="true" />
+              App Store 에서 받기
+            </a>
+            <a
+              href={STORE_URLS.android}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg bg-brand hover:bg-accent text-bg text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+            >
+              <Play size={15} strokeWidth={2} aria-hidden="true" />
+              Google Play 에서 받기
+            </a>
+          </div>
         </div>
       </section>
 
