@@ -18,7 +18,8 @@
     <!--
       iOS 사파리 Smart App Banner — 애플이 상단에 "받기/열기" 배너를 자동 표시.
       사파리 **전용**이다. iOS 크롬·카카오 인앱 브라우저에는 안 뜬다.
-      안드로이드는 아직 스토어에 앱이 없으므로 대응 대상이 아니다.
+      그 사각(안드로이드 · iOS 인앱 브라우저)은 커스텀 배너 `AppSmartBanner` 가 맡는다 —
+      그쪽은 iOS 사파리로 확정되면 스스로 접으므로 이 배너와 겹치지 않는다 (2026-09-04 Play 출시).
       app-id = App Store Connect 의 Apple ID (번들 ID 아님) · eas.json ascAppId 와 동일.
     -->
     <meta name="apple-itunes-app" content="app-id=6789707709" />
@@ -80,7 +81,7 @@
             "url": "https://chwippo.com",
             "description": "취준생을 위한 올인원 취업 일정 관리 서비스. 지원 현황 보드·마감 캘린더·자소서 관리·면접 준비 체크리스트를 한곳에서.",
             "applicationCategory": "BusinessApplication",
-            "operatingSystem": "Web, iOS",
+            "operatingSystem": "Web, iOS, Android",
             "inLanguage": "ko-KR",
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
             "featureList": [

@@ -18,7 +18,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
 import { toast } from '@/stores/toastStore'
 import { REFRESH_HTTP_TIMEOUT_MS } from '@/api/client'
@@ -69,8 +69,31 @@ function renderLanding() {
   )
 }
 
+/**
+ * 상단 네비 앱 링크는 **보고 있는 기기**로 목적지가 갈린다 (2026-09-04 Play 출시).
+ * jsdom 기본 UA 는 모바일이 아니므로 아무것도 안 건드리면 데스크탑(앵커) 분기다.
+ */
+const UA = {
+  androidChrome:
+    'Mozilla/5.0 (Linux; Android 14; SM-S918N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
+  iphoneSafari:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+} as const
+
+const originalUserAgent = navigator.userAgent
+
+function setUserAgent(ua: string) {
+  Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true })
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+})
+
+afterEach(() => {
+  setUserAgent(originalUserAgent)
+  window.localStorage.clear()
+  window.sessionStorage.clear()
 })
 
 describe('Landing — 출시 상태 고지', () => {
@@ -270,12 +293,98 @@ describe('Landing — 진입 경로', () => {
     expect(demo).toHaveAttribute('href', '/demo')
   })
 
-  /** 앱 존재가 하단 섹션에서만 보이던 문제(2026-09-03) — 상단 네비에 상시 노출 */
-  it('상단 네비에 iOS 앱 링크가 App Store 를 가리킨다', () => {
+  /**
+   * 앱 존재가 하단 섹션에서만 보이던 문제(2026-09-03) — 상단 네비에 상시 노출.
+   *
+   * 🔴 2026-09-04 Play 출시 후 **목적지는 기기가 정한다.** 예전엔 App Store 고정이라
+   * 안드로이드 방문자가 누르면 **받을 수 없는 스토어**로 나갔다. 데스크탑에는 줄 스토어가
+   * 없으므로 하단 앱 섹션 앵커로 (같은 탭) 보낸다.
+   */
+  it('상단 네비 앱 링크 — 데스크탑은 하단 앱 섹션 앵커(같은 탭)', () => {
     renderLanding()
-    const app = screen.getByRole('link', { name: 'iOS 앱 — App Store 에서 받기' })
+    const app = screen.getByRole('link', { name: '앱 받기 — 아래 앱 안내로 이동' })
+    expect(app).toHaveAttribute('href', '#app-download')
+    expect(app).not.toHaveAttribute('target')
+  })
+
+  it('상단 네비 앱 링크 — Android 는 Google Play 로 새 탭', () => {
+    setUserAgent(UA.androidChrome)
+    renderLanding()
+    const app = screen.getByRole('link', { name: 'Google Play 에서 앱 받기' })
+    expect(app).toHaveAttribute(
+      'href',
+      'https://play.google.com/store/apps/details?id=com.chwippo.app',
+    )
+    expect(app).toHaveAttribute('target', '_blank')
+  })
+
+  it('상단 네비 앱 링크 — iOS 는 App Store 로 새 탭', () => {
+    setUserAgent(UA.iphoneSafari)
+    renderLanding()
+    const app = screen.getByRole('link', { name: 'App Store 에서 앱 받기' })
     expect(app).toHaveAttribute('href', 'https://apps.apple.com/app/id6789707709')
     expect(app).toHaveAttribute('target', '_blank')
+  })
+
+  /**
+   * 🔴 **접근성 이름은 눈에 보이는 글자를 품어야 한다** (WCAG 2.5.3 Label in Name).
+   * 음성 제어 사용자가 "앱 받기" 라고 말했을 때 이 링크가 잡혀야 한다.
+   * 라벨 폭(360px 네비)이 빠듯해 문구를 줄이는 손질이 앞으로도 있을 자리라 묶어둔다.
+   */
+  it('네비 앱 링크의 접근성 이름이 보이는 라벨을 포함한다', () => {
+    const { container } = renderLanding()
+    const app = screen.getByRole('link', { name: /앱 받기/ })
+    expect(app.textContent).toContain('앱 받기')
+    expect(app.getAttribute('aria-label')).toContain('앱 받기')
+    // 320px 아이콘 전용 분기가 유지되는지 (라벨만 숨고 링크는 남는다)
+    expect(container.querySelector('nav .min-\\[360px\\]\\:inline')).toBeTruthy()
+  })
+
+  /** 네비의 데스크탑 목적지가 실재해야 한다 — 앵커가 없으면 눌러도 아무 일이 안 일어난다 */
+  it('하단 앱 섹션이 #app-download 앵커로 존재하고 두 스토어를 모두 안내한다', () => {
+    const { container } = renderLanding()
+    const section = container.querySelector('#app-download')
+    expect(section, '#app-download 섹션 없음').toBeTruthy()
+
+    const links = Array.from(section!.querySelectorAll('a')).map((a) => a.getAttribute('href'))
+    expect(links).toContain('https://apps.apple.com/app/id6789707709')
+    expect(links).toContain('https://play.google.com/store/apps/details?id=com.chwippo.app')
+  })
+
+  /**
+   * 커스텀 스마트 배너는 **헤더보다 위**에 붙는다 (애플 배너와 같은 자리 은유).
+   * 조건 판정은 `AppSmartBanner` spec 이 맡고, 여기서는 **배선과 순서**만 지킨다.
+   */
+  it('앱 스마트 배너가 헤더 위에 배선돼 있다 (모바일 웹에서만)', () => {
+    setUserAgent(UA.androidChrome)
+    const { container } = renderLanding()
+    const bannerCta = screen.getByRole('link', { name: 'Google Play 에서 치뽀 앱 받기' })
+    const header = container.querySelector('header')
+    expect(header).toBeTruthy()
+    // compareDocumentPosition: 배너가 헤더보다 문서 앞쪽이어야 한다
+    expect(
+      bannerCta.compareDocumentPosition(header!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      '스마트 배너가 헤더 위가 아니다',
+    ).toBeTruthy()
+  })
+
+  it('데스크탑에서는 스마트 배너가 없다 (앱을 줄 수 없는 기기)', () => {
+    renderLanding()
+    expect(screen.queryByRole('link', { name: /치뽀 앱 받기/ })).toBeNull()
+  })
+
+  /**
+   * 🔴 **랜딩이 「iOS 전용」으로 읽히면 안 된다** (2026-09-04 Play 출시).
+   * 구글 AI 요약이 치뽀를 iOS 전용이라고 말한 원인이 이런 표기들이었다.
+   * 네비 라벨·히어로 캡션·하단 문단이 전부 한 방향으로 낡아 있었다.
+   */
+  it('🔴 안드로이드를 빠뜨린 낡은 표기가 남아 있지 않다', () => {
+    const { container } = renderLanding()
+    const t = container.textContent ?? ''
+    expect(t, '히어로 캡션').not.toContain('iPhone 앱 지원')
+    expect(t, '네비 라벨').not.toContain('iOS 앱')
+    expect(t, '하단 앱 안내').not.toContain('iPhone·iPad 지원')
+    expect(t, '안드로이드도 안내해야 한다').toContain('Android')
   })
 
   /**

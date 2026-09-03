@@ -24,6 +24,7 @@ import { CountdownPillCard } from '@/components/calendar/CountdownPillCard'
 import { EmptyDeadlineHero } from '@/components/calendar/EmptyDeadlineHero'
 import { JobSiteChips } from '@/components/common/JobSiteChips'
 import { AddEventSheet } from '@/components/calendar/AddEventSheet'
+import { AppInstallPrompt } from '@/components/calendar/AppInstallPrompt'
 
 type CalendarView = 'agenda' | 'month'
 const VIEW_STORAGE_KEY = 'calendar-view'
@@ -295,6 +296,10 @@ export function Calendar() {
           회고 보기 →
         </a>
       </div>
+
+      {/* 모바일 웹 사용자에게만 — 마감 알림의 실체는 푸시인데 웹엔 그 통로가 없다.
+          닫으면 영구. 데스크탑·네이티브 앱에선 렌더 자체를 안 한다 (컴포넌트 안에서 판정). */}
+      <AppInstallPrompt />
 
       {/* Tabs */}
       <div className="flex items-center gap-3 mb-6">
