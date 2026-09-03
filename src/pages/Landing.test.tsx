@@ -270,6 +270,14 @@ describe('Landing — 진입 경로', () => {
     expect(demo).toHaveAttribute('href', '/demo')
   })
 
+  /** 앱 존재가 하단 섹션에서만 보이던 문제(2026-09-03) — 상단 네비에 상시 노출 */
+  it('상단 네비에 iOS 앱 링크가 App Store 를 가리킨다', () => {
+    renderLanding()
+    const app = screen.getByRole('link', { name: 'iOS 앱 — App Store 에서 받기' })
+    expect(app).toHaveAttribute('href', 'https://apps.apple.com/app/id6789707709')
+    expect(app).toHaveAttribute('target', '_blank')
+  })
+
   /**
    * 🔴 이전엔 `/inquiry` 를 걸었는데 그 라우트는 `AuthGuard` 안이라
    * **비로그인 방문자가 로그인으로 튕겼다** — 피드백을 달라면서 못 보내게 하고 있었다.
