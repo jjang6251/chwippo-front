@@ -129,7 +129,23 @@ export function Landing() {
           >
             치뽀
           </Link>
-          <nav aria-label="메인 네비게이션" className="flex items-center gap-2">
+          {/* gap-1: 320px 에서 4번째 항목(iOS 앱)까지 안 넘치게 — sm 부터 원래 간격 (2026-09-03) */}
+          <nav aria-label="메인 네비게이션" className="flex items-center gap-1 sm:gap-2">
+            {/*
+              앱 존재를 맨 아래(하단 섹션)에서만 알 수 있다는 지적(2026-09-03)으로 상단 상시 노출.
+              CTA 묶음(가입 전환)에 안 섞고 보조 링크 급으로 — 320px 은 아이콘만, sm+ 라벨.
+            */}
+            <a
+              href="https://apps.apple.com/app/id6789707709"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="iOS 앱 — App Store 에서 받기"
+              className="text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+            >
+              <Apple size={15} strokeWidth={2} aria-hidden="true" />
+              {/* 320px 만 아이콘 전용 — 실폰(375+)에선 라벨이 보여야 「앱이 있다」가 전달된다 */}
+              <span className="hidden min-[360px]:inline">iOS 앱</span>
+            </a>
             <Link
               to="/demo"
               className="text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center min-h-[44px] px-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
@@ -263,7 +279,7 @@ export function Landing() {
               로그인 없이 둘러보기 →
             </Link>
           </div>
-          <p className="text-text-quaternary text-xs">무료로 시작 · 카드 등록 불필요</p>
+          <p className="text-text-quaternary text-xs">무료로 시작 · 카드 등록 불필요 · iPhone 앱 지원</p>
         </div>
 
         {/* GIF placeholder */}
