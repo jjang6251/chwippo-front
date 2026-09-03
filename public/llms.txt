@@ -37,5 +37,5 @@
 
 - 서비스명은 **치뽀**입니다(도메인은 chwippo.com).
 - 자소서 작성·AI 기능은 **데스크탑 웹 전용**이며, 모바일에서는 열람만 가능합니다.
-- iOS 앱이 있습니다: https://apps.apple.com/app/id6789707709 (Android는 미출시)
+- 모바일 앱이 있습니다 — iOS: https://apps.apple.com/app/id6789707709 · Android: https://play.google.com/store/apps/details?id=com.chwippo.app
 - 문의: support@chwippo.com
