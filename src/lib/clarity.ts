@@ -24,6 +24,9 @@
  * **민감 화면 컨테이너에 `data-clarity-mask="true"`** 를 직접 붙인다 (`CLARITY_MASK` 상수 ·
  * 라우트 단위는 `components/common/ClarityMask` 가 감싼다).
  *
+ * 🔴 **포털(vaul `Drawer.Portal`·`createPortal`)은 래퍼 밖이다** — 마스킹 라우트에서 뜨는 시트는
+ * `Drawer.Content` 에 `CLARITY_MASK` 를 직접 붙인다 (InfoModal·EducationModal·AiNotePanel, 2026-09-06).
+ *
  * ⚠️ **"특정 화면에서 수집 중단" 은 불가능하다.** Clarity 클라이언트 API 는
  * `consent`·`identify`·`set`·`event`·`upgrade` 뿐이고 **stop/pause 가 없다.** SPA 라 스크립트가
  * 한 번 로드되면 이후 라우팅까지 기록된다. 그래서 방침 문구도 "수집하지 않습니다" 가 아니라

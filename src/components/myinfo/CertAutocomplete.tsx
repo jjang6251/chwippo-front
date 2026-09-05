@@ -11,6 +11,11 @@ interface Props {
   placeholder?: string
   disabled?: boolean
   inputClassName?: string
+  /**
+   * 바깥 라벨(`FieldLabel htmlFor`)이 가리키는 id. 안 주면 내부 `useId` 를 쓰는데,
+   * 그 값은 밖에서 알 수 없어 라벨을 연결할 방법이 없다 — 그래서 열어 둔다.
+   */
+  id?: string
 }
 
 /**
@@ -18,9 +23,10 @@ interface Props {
  * dropdown 항목 = name + category chip + issuer subtitle.
  * onSelect → issuer/hasNumber/validYears 등 metadata 전파 (Certs modal 에서 자동 채움).
  */
-export function CertAutocomplete({ value, onChange, onSelect, placeholder, disabled, inputClassName }: Props) {
+export function CertAutocomplete({ value, onChange, onSelect, placeholder, disabled, inputClassName, id }: Props) {
   const isDemo = useDemoMode()
-  const inputId = useId()
+  const fallbackId = useId()
+  const inputId = id ?? fallbackId
   const listId = useId()
   const wrapRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
@@ -157,6 +163,11 @@ const CATEGORY_COLOR: Record<string, string> = {
   '안전·응급': 'bg-danger/15 text-danger',
   '국가전문': 'bg-brand/15 text-brand',
   '교육': 'bg-info/15 text-info',
+  '의료·보건': 'bg-success/15 text-success',
+  '디자인': 'bg-accent/15 text-accent',
+  '마케팅·영업·물류': 'bg-warning/15 text-warning',
+  '운전·조작': 'bg-card-strong text-text-tertiary',
+  '체육': 'bg-brand/15 text-brand',
   '기타': 'bg-card-strong text-text-tertiary',
 }
 

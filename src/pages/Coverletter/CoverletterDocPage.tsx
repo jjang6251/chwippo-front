@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useAiEnabled, useInterviewAiEnabled } from '@/hooks/useAiEnabled'
 import { useCoverletterAiBlocked } from '@/hooks/useCoverletterAiBlocked'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { JobTitleField } from '@/components/common/JobTitleField'
 import { CoverletterChatPanel } from '@/components/coverletter/CoverletterChatPanel'
 import { CoverletterQuestionCard } from '@/components/coverletter/CoverletterQuestionCard'
@@ -127,6 +127,33 @@ export function CoverletterDocPage() {
     },
     [expandedClIds],
   )
+
+  /**
+   * 🔴 **문항 딥링크** — `/board/:id/coverletter#cl-<clId>`.
+   *
+   * 확장(지원 폼)이 「치뽀에서 작성하고 돌아오면 채워드려요」로 **이 문항 하나**를 가리키며
+   * 보낸다. 도착해서 접혀 있으면 링크가 아무 일도 안 한 것처럼 보이므로, 저장된 펼침
+   * 상태(localStorage)와 **무관하게 강제로 편다**. 목록에 없는 id 는 조용히 무시한다.
+   *
+   * 해시가 바뀌면 다시 동작한다 (같은 페이지 안에서 다른 문항으로 건너뛰는 경우).
+   * `handledHashRef` 가 같은 해시의 반복 실행만 막는다 — 사용자가 편 카드를 도로 접었는데
+   * 렌더 한 번에 다시 펴지면 그게 더 이상하다.
+   */
+  const location = useLocation()
+  const hashClId = location.hash.startsWith('#cl-') ? location.hash.slice('#cl-'.length) : null
+  const handledHashRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!hashClId) {
+      handledHashRef.current = null
+      return
+    }
+    if (handledHashRef.current === hashClId) return
+    if (!cls.some((c) => c.id === hashClId)) return // 아직 안 불러왔거나 지워진 문항
+    handledHashRef.current = hashClId
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- URL(외부 입력) 반영. 렌더 중엔 알 수 없다
+    setUserExpanded(new Set<string>([...expandedClIds, hashClId]))
+    requestAnimationFrame(() => handleJump(hashClId))
+  }, [hashClId, cls, expandedClIds, handleJump])
 
   const handleUpdate = useCallback(
     (clId: string, dto: UpdateCoverletterDto) => {

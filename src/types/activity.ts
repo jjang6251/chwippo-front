@@ -2,6 +2,10 @@
 
 export type ActivityType =
   | 'intern'
+  // ── 경력 3종 — 지원서의 「경력사항」 칸은 인턴·알바만으로 안 채워진다 (대장 44) ──
+  | 'fulltime'
+  | 'contract'
+  | 'freelance'
   | 'club'
   | 'study'
   | 'project'
@@ -13,6 +17,20 @@ export type ActivityType =
   | 'overseas'
   | 'bootcamp'
   | 'other'
+
+/**
+ * 경력 5유형 — 「경력」과 「경험」을 가르는 단 하나의 기준 (CEO 2026-09-06).
+ *
+ * 저장소는 `activities` 하나지만 화면·모달·게이지는 이 집합으로 둘로 갈린다.
+ * `TYPE_GROUPS` 첫 그룹(💼 경력)과 같은 목록이라, 여기를 고치면 그쪽도 같이 봐야 한다.
+ * 화면 파일이 아니라 타입 파일에 두는 이유: 창고 화면·폼·게이지 셋이 같은 기준을 봐야 한다.
+ */
+export const CAREER_TYPES: ReadonlySet<ActivityType> = new Set<ActivityType>([
+  'intern', 'parttime', 'fulltime', 'contract', 'freelance',
+])
+
+/** 값이 없으면(`null`·미지정) 경력이 아니다 — 분류를 못 한 활동은 경험 쪽에 남는다 */
+export const isCareerType = (t?: ActivityType | null): boolean => !!t && CAREER_TYPES.has(t)
 
 export type LogCategory =
   // 취준 실전 3종 (auto-tagger v2)
@@ -78,6 +96,17 @@ export interface Activity {
   legacyExperienceId: string | null
   /** 활동 총괄 회고 (베타 피드백 2026-06-23) — 끝난 활동 wrap up. NULL=미작성. 5000자 cap */
   summaryReflection: string | null
+  /**
+   * 지원서용 요약 (≤500자) — 내 정보 「경험」의 경량 폼이 쓰는 칸.
+   * 총괄 회고(5000자·나를 위한 글)와 다르다: 이건 **지원서 칸에 그대로 옮겨 적을 문장**이다.
+   */
+  applicationSummary?: string | null
+  /** 해외 경험의 국가 */
+  country?: string | null
+  /** 경력 유형의 부서 (≤100) — 지원서 경력 칸이 회사·부서·직위를 함께 묻는다 */
+  orgDepartment?: string | null
+  /** 재직 중 — `true` 면 서버가 `endedAt` 을 null 로 저장한다 */
+  isCurrent?: boolean | null
   logs?: ActivityLog[]
   reflections?: ActivityReflection[]
   createdAt: string
@@ -127,11 +156,28 @@ export interface CreateActivityDto {
   outcome?: string
   startedAt?: string
   endedAt?: string
+  /** 지원서용 요약 (≤500자) — 내 정보 「경험」 경량 폼 입구 */
+  applicationSummary?: string
+  /** 해외 경험의 국가 */
+  country?: string
+  /** 경력 유형의 부서 (≤100) */
+  orgDepartment?: string
+  /** 재직 중 — 서버가 `endedAt` 을 null 로 저장한다 */
+  isCurrent?: boolean
 }
 
-export type UpdateActivityDto = Partial<CreateActivityDto> & {
+export type UpdateActivityDto = Omit<
+  Partial<CreateActivityDto>,
+  'applicationSummary' | 'country' | 'orgDepartment'
+> & {
   /** 활동 총괄 회고 — null 또는 빈 string 으로 clear */
   summaryReflection?: string | null
+  /** 지원서용 요약 — null 또는 빈 string 으로 clear */
+  applicationSummary?: string | null
+  /** 국가 — null 로 clear */
+  country?: string | null
+  /** 부서 — null 로 clear */
+  orgDepartment?: string | null
 }
 
 export interface CreateActivityLogDto {

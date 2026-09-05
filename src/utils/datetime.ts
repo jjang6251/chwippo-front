@@ -108,6 +108,28 @@ export function addYears(dateStr: string, years: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+/**
+ * 'YYYY-MM-DD' 에 개월 수 더한 결과 — TZ 무관 (UTC 정오 기준 date-only math).
+ *
+ * 기간 보조 칩(「+1학기」·「18개월」)이 시작일에서 종료일을 만들 때 쓴다.
+ * **말일 보정**: 1/31 + 1개월은 3/2 가 아니라 **2/28(윤년 2/29)** 로 잘라 준다 —
+ * `setUTCMonth` 기본 동작(넘침 → 다음 달)은 사용자가 기대하는 「한 달 뒤」가 아니다.
+ * 입력이 'YYYY-MM-DD' 가 아니면 빈 문자열을 돌려준다 (렌더 중 호출이라 던지지 않는다).
+ */
+export function addMonths(dateStr: string, months: number): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return ''
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const targetMonthIndex = m - 1 + months
+  const targetYear = y + Math.floor(targetMonthIndex / 12)
+  const targetMonth = ((targetMonthIndex % 12) + 12) % 12
+  // 그 달의 말일 (다음 달 0일 = 이번 달 마지막 날)
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 12, 0, 0)).getUTCDate()
+  const day = Math.min(d, lastDay)
+  const mm = String(targetMonth + 1).padStart(2, '0')
+  const dd = String(day).padStart(2, '0')
+  return `${targetYear}-${mm}-${dd}`
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // 주 경계 — ISO 월요일 ~ 일요일
 // ────────────────────────────────────────────────────────────────────────

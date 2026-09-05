@@ -57,14 +57,14 @@ describe('AddExamScheduleModal', () => {
       expect(options).toContain('TOEIC')
       expect(options).toContain('OPIC')
       // 자유 입력 placeholder 없음
-      expect(screen.queryByPlaceholderText('예: 정보처리기사 필기')).toBeNull()
+      expect(screen.queryByPlaceholderText('예: 컴퓨터활용능력 1급 필기')).toBeNull()
     })
 
     it('자격증 토글 → 자유 입력 폼 노출, select 없음', () => {
       const { container } = render(<AddExamScheduleModal open={true} onClose={() => {}} />)
       fireEvent.click(screen.getByRole('button', { name: '자격증' }))
 
-      expect(screen.getByPlaceholderText('예: 정보처리기사 필기')).toBeDefined()
+      expect(screen.getByPlaceholderText('예: 컴퓨터활용능력 1급 필기')).toBeDefined()
       // 자격증 모드에선 cert_type select 없음
       const select = container.querySelector('select')
       expect(select).toBeNull()
@@ -88,7 +88,7 @@ describe('AddExamScheduleModal', () => {
     it('자격증 + 시험명 입력 → 추가 버튼 enabled', () => {
       render(<AddExamScheduleModal open={true} onClose={() => {}} />)
       fireEvent.click(screen.getByRole('button', { name: '자격증' }))
-      fireEvent.change(screen.getByPlaceholderText('예: 정보처리기사 필기'), { target: { value: '정보처리기사 필기' } })
+      fireEvent.change(screen.getByPlaceholderText('예: 컴퓨터활용능력 1급 필기'), { target: { value: '정보처리기사 필기' } })
       const btn = screen.getByRole('button', { name: '추가' })
       expect((btn as HTMLButtonElement).disabled).toBe(false)
     })
@@ -114,7 +114,7 @@ describe('AddExamScheduleModal', () => {
       createMutate.mockImplementation((_payload: any, options: any) => options?.onSuccess?.())
       render(<AddExamScheduleModal open={true} onClose={() => {}} defaultDate="2026-06-15" />)
       fireEvent.click(screen.getByRole('button', { name: '자격증' }))
-      fireEvent.change(screen.getByPlaceholderText('예: 정보처리기사 필기'), { target: { value: 'SQLD' } })
+      fireEvent.change(screen.getByPlaceholderText('예: 컴퓨터활용능력 1급 필기'), { target: { value: 'SQLD' } })
       fireEvent.click(screen.getByRole('button', { name: '추가' }))
 
       const payload = createMutate.mock.calls[0][0]
@@ -215,6 +215,28 @@ describe('AddExamScheduleModal', () => {
       render(<AddExamScheduleModal open={true} onClose={onClose} />)
       fireEvent.click(screen.getByRole('button', { name: '닫기' }))
       expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  describe('입력칸 48px 통일 (창고 공용 Field 톤)', () => {
+    it('시험명 select · 시험일 · 시간 · 장소 · 메모가 전부 h-12 · text-base · rounded-xl', () => {
+      const { container } = render(<AddExamScheduleModal open={true} onClose={() => {}} />)
+      const select = container.querySelector('select')!
+      expect(select.className).toContain('h-12')
+      expect(select.className).toContain('appearance-none')
+      for (const el of container.querySelectorAll('input')) {
+        expect(el.className, el.getAttribute('type') ?? 'input').toContain('h-12')
+        expect(el.className).toContain('text-base')
+        expect(el.className).toContain('rounded-xl')
+        expect(el.className).not.toContain('text-xs')
+      }
+      const memo = container.querySelector('textarea')!
+      expect(memo.className).toContain('text-base')
+      expect(memo.className).toContain('rounded-xl')
+
+      // 자격증 모드의 자유 입력 시험명도 같은 톤
+      fireEvent.click(screen.getByRole('button', { name: '자격증' }))
+      expect(screen.getByPlaceholderText('예: 컴퓨터활용능력 1급 필기').className).toContain('h-12')
     })
   })
 })

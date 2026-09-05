@@ -11,6 +11,7 @@ import { qaMarkdownToToggleNodes } from './qaToggles'
 import { useEditorInteracted } from './useEditorInteracted'
 import { toast } from '@/stores/toastStore'
 import { isNearLimit } from '@/utils/inputLimit'
+import { CLARITY_MASK } from '@/lib/clarity'
 import type { NoteAiActionKind, NoteAiResource } from '@/api/noteAiAction'
 import {
   AI_ACTION_CHIPS,
@@ -518,7 +519,9 @@ function AiNotePanelInner({
     >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm print:hidden" />
+        {/* 포털이라 `ClarityMask` 래퍼 밖 — 시트 컨테이너에 직접 마스킹 (방침 §5-2) */}
         <Drawer.Content
+          {...CLARITY_MASK}
           aria-label="노트 AI"
           className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[88dvh] h-[88dvh] flex flex-col shadow-2xl outline-none print:hidden"
         >
