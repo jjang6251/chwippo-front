@@ -10,7 +10,7 @@ import type { CalendarEvent, DailyNote } from '@/api/calendar'
 import type { ChecklistItem, StepNoteSheet } from '@/api/stepDetail'
 import type { CoverletterChatMessage } from '@/api/coverletterDoc'
 import type {
-  UserProfile, LanguageCert, Cert, Award, Experience, CoverletterData, StorageUsage,
+  UserProfile, LanguageCert, Cert, Award, Experience, CoverletterData, StorageUsage, MyDocument,
 } from '@/api/myinfo'
 import type { Education } from '@/api/myinfo'
 import type { ExamSchedule } from '@/types/exam-schedule'
@@ -638,11 +638,21 @@ export const DEMO_DAILY_NOTES: DailyNote[] = [
 export const DEMO_PROFILE: UserProfile = {
   user_id: DEMO_USER, name: '김취준', gender: 'MALE', birthdate: '1999-03-14',
   phone: '010-1234-5678', email_personal: 'demo@example.com',
+  // 기본 세트 게이지가 「병역」을 `military_status` 로 세므로 옛 필드와 함께 상태도 둔다 — 없으면 데모가 「병역」을 빈칸으로 보여 섹션과 어긋난다
+  military_status: 'completed',
   military_branch: '육군', military_type: '현역', military_start: '2019-06-01', military_end: '2021-01-15', military_unit: '제00사단',
+  // 학력 섹션이 이걸로 단계 카드(고등학교 · 대학교)를 편다 — 없으면 둘러보기에서 그 화면을 못 본다
+  highest_degree: 'bachelor',
   goal_toeic: 950, goal_certs: '정보처리기사, SQLD', goal_other: '오픽 IH 이상',
 }
 export const DEMO_LANG_CERTS: LanguageCert[] = [
-  { id: 'demo-lc1', cert_type: 'TOEIC', score_grade: '925', issuer: 'ETS', acquired_at: '2025-08-10', expires_at: '2027-08-10' },
+  // 🔴 첨부는 **메타만** — `file_url` 을 비워 두는 이유는 DEMO_DOCUMENTS 주석과 같다
+  {
+    id: 'demo-lc1', cert_type: 'TOEIC', score_grade: '925', issuer: 'ETS',
+    acquired_at: '2025-08-10', expires_at: '2027-08-10',
+    file_size_bytes: Math.round(0.5 * 1024 * 1024),
+    suggested_file_name: '김취뽀_TOEIC_성적표.pdf',
+  },
   { id: 'demo-lc2', cert_type: 'OPIc', score_grade: 'IH', issuer: 'ACTFL', acquired_at: '2025-09-02' },
 ]
 export const DEMO_CERTS: Cert[] = [
@@ -656,6 +666,26 @@ export const DEMO_EXPERIENCES: Experience[] = [
   { id: 'demo-ex1', activity_name: '스타트업 백엔드 인턴', org: '○○테크', start_at: '2025-01-02', end_at: '2025-06-30', content: '결제 정산 배치 개선(4시간→40분), 이벤트 큐 시스템 모니터링 추가' },
   { id: 'demo-ex2', activity_name: '교내 개발 동아리 운영진', org: 'OO대학교', start_at: '2023-03-01', end_at: '2024-12-31', content: '주간 스터디 진행, 신입 멘토링, 해커톤 2회 주최' },
 ]
+/**
+ * 지원 서류 고정 슬롯 — **메타만** 둔다.
+ * 🔴 `file_url` 은 비워 둔다: 둘러보기에서 [열기] 를 눌러 404 를 보는 것보다, 「이런 자리가
+ * 있고 이렇게 채워진다」만 보이는 편이 정직하다. 슬롯 행은 원본 파일명·크기·날짜로 이미 설명된다.
+ */
+export const DEMO_DOCUMENTS: MyDocument[] = [
+  {
+    id: 'demo-doc1', title: '이력서', slot: 'resume', file_url: null,
+    file_size_bytes: Math.round(0.4 * 1024 * 1024), created_at: d(-12) + 'T00:00:00Z',
+    original_name: '이력서_최종.pdf', mime: 'application/pdf',
+    suggested_file_name: '김취뽀_이력서.pdf',
+  },
+  {
+    id: 'demo-doc2', title: '증명사진', slot: 'photo', file_url: null,
+    file_size_bytes: Math.round(0.3 * 1024 * 1024), created_at: d(-40) + 'T00:00:00Z',
+    original_name: 'KakaoTalk_20260726_photo.jpg', mime: 'image/jpeg',
+    suggested_file_name: '김취뽀_증명사진.jpg',
+  },
+]
+
 export const DEMO_EXAM_SCHEDULES: ExamSchedule[] = [
   {
     id: 'demo-e1', user_id: DEMO_USER, exam_type: 'cert', cert_type: 'SQLD', name: 'SQLD 정기시험',
@@ -664,7 +694,18 @@ export const DEMO_EXAM_SCHEDULES: ExamSchedule[] = [
   },
 ]
 export const DEMO_EDUCATIONS: Education[] = [
-  { id: 'demo-ed1', school_name: 'OO대학교', major: '컴퓨터공학과', degree: '대학교 (학사)', status: '졸업', start_at: '2018-03-01', end_at: '2025-02-28', gpa: '3.8', gpa_max: '4.5' },
+  {
+    id: 'demo-ed1', school_name: 'OO대학교', major: '컴퓨터공학과', degree: '대학교 (학사)',
+    status: '졸업', start_at: '2018-03-01', end_at: '2025-02-28', gpa: '3.8', gpa_max: '4.5',
+    // 성적증명서는 슬롯이 아니라 **학력 항목**에 붙는다 — 서류함에는 읽기 전용으로 비친다
+    transcript_file_size_bytes: Math.round(0.8 * 1024 * 1024),
+    transcript_suggested_file_name: '김취뽀_성적증명서.pdf',
+  },
+  // 학사면 고등학교 칸도 지원서가 묻는다 — 계열(track)은 고등학교에서만 실린다
+  {
+    id: 'demo-ed2', school_name: 'OO고등학교', degree: '고등학교', status: '졸업',
+    start_at: '2015-03-02', end_at: '2018-02-09', gpa: '', gpa_max: '5.0', track: 'natural',
+  },
 ]
 export const DEMO_COVERLETTER: CoverletterData = {
   coverletter: {
@@ -732,6 +773,17 @@ export const DEMO_ACTIVITIES: Activity[] = [
     ],
     reflections: [],
     createdAt: d(-90) + 'T00:00:00Z', updatedAt: d(-1) + 'T00:00:00Z',
+  },
+  // 경력 유형(정규직) — 부서·재직 중이 내 정보 「경험」 경량 폼과 지원서 경력 칸에서 어떻게 보이는지
+  {
+    id: 'demo-act5', userId: DEMO_USER, name: '△△커머스 백엔드 개발', type: 'fulltime',
+    org: '△△커머스', orgDepartment: '주문·정산팀', role: '사원', resultUrl: null, outcome: null,
+    startedAt: '2025-09-01', endedAt: null, isCurrent: true, archivedAt: null, isInbox: false,
+    legacyExperienceId: null, summaryReflection: null,
+    applicationSummary: '주문·정산 API 운영과 정산 배치 개선을 맡고 있습니다. 배치 처리 시간을 4시간에서 40분으로 줄였고, 장애 알림 체계를 새로 세웠습니다.',
+    logs: [],
+    reflections: [],
+    createdAt: '2025-09-01T00:00:00Z', updatedAt: d(-3) + 'T00:00:00Z',
   },
   {
     id: 'demo-act2', userId: DEMO_USER, name: '스타트업 백엔드 인턴', type: 'intern',

@@ -36,10 +36,47 @@ describe('개인정보처리방침', () => {
     it('시행일과 공고일이 표기된다', () => {
       renderPrivacy()
       // 헤더 + 변경 이력 각주에 모두 나온다 — 존재 여부만 본다
-      expect(screen.getAllByText(/시행일: 2026년 9월 10일/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/시행일: 2026년 9월 \S+일/).length).toBeGreaterThan(0)
       expect(
-        screen.getByText(/2026년 9월 3일 공고되어 2026년 9월 10일부터 시행/),
+        screen.getByText(/이 방침은 2026년 9월 \S+일 공고되어 같은 날 시행됩니다/),
       ).toBeInTheDocument()
+    })
+
+    /**
+     * 🔴 배포 게이트 — 1단계(창고 확장) 개정의 공고일·시행일은 CEO 가 확정한다. 그전까지 문서에
+     * `__일` 플레이스홀더가 남아 있고, 그 상태로 배포하면 사용자에게 「9월 __일」이 그대로 보인다.
+     * 이 테스트가 빨간 동안은 커밋·릴리즈 불가 — 날짜를 채우면 저절로 초록이 된다.
+     */
+    it('🔴 게이트 — 시행일 플레이스홀더(__일 · CEO 확정)가 화면에 남아 있지 않다', () => {
+      const { container } = renderPrivacy()
+      expect(container.textContent).not.toMatch(/__일|CEO 확정/)
+    })
+
+    /**
+     * 🔴 1단계 개정은 **당일 시행**이다 (CEO 결정 · 공고일 = 시행일 = 2026-09-06). §9 의 "시행일 7일 전
+     * 공지" 와 어긋나므로, 8/4 때와 같이 **사유를 하단 이력에 남기는 것까지가 한 세트**다 — 신규 항목은
+     * 전부 선택 입력이고 민감정보(장애)는 이용자가 별도 동의를 누른 뒤에만 수집돼, 이용자 모르게
+     * 시작되는 처리가 없다.
+     *
+     * 날짜를 못 박지 않고 **두 날짜가 같은지**만 본다 — 공고일 = 운영 배포일이라 main 머지가 다른 날이면
+     * 그 날짜로 고쳐 릴리즈하기 때문. 플레이스홀더(`__일`)면 정규식이 안 맞아 여기서 빨간다.
+     */
+    it('1단계 개정은 당일 시행(CEO 결정) — 공고일 = 시행일 = 2026-09-06 이고 즉시 시행 사유가 하단 이력에 기록돼 있다', () => {
+      renderPrivacy()
+      // 하단 이력에서 창고 확장 개정 블록(장애 정보 별도 동의를 언급)을 찾아 날짜를 읽는다
+      const block = screen.getByText(/장애 정보\(민감정보\) 별도 동의/).closest('p')
+      const m = block?.textContent?.match(/공고일: 2026년 (\d{1,2})월 (\d{1,2})일 · 시행일: 2026년 (\d{1,2})월 (\d{1,2})일/)
+      expect(m, '창고 확장 개정 블록의 공고일·시행일이 숫자로 채워져 있어야 한다').not.toBeNull()
+      const notice = new Date(2026, Number(m![1]) - 1, Number(m![2]))
+      const effective = new Date(2026, Number(m![3]) - 1, Number(m![4]))
+      expect(effective.getTime(), '공고일과 시행일이 같은 날이어야 한다 (당일 시행)').toBe(
+        notice.getTime(),
+      )
+      // 사유 없이 당일 시행만 적으면 §9 위반이 기록 없이 남는다
+      expect(block?.textContent, '즉시 시행이라고 밝혀야 한다').toMatch(/즉시 시행/)
+      expect(block?.textContent, '민감정보는 별도 동의 뒤에만 수집한다는 사유가 있어야 한다').toMatch(
+        /별도 동의 뒤에만/,
+      )
     })
 
     /**
@@ -159,4 +196,69 @@ describe('개인정보처리방침', () => {
       expect(screen.getByText('서비스 이용 분석 (자동)')).toBeInTheDocument()
     })
   })
+
+  /**
+   * 1단계(내 정보 창고 확장 · 대장 44) — 코드가 실제로 저장하는 것과 문서가 일치해야 한다.
+   *
+   * 시나리오
+   *  1. §1 프로필 행에 새 항목(영문 이름·주소·국적·보훈·병역 상세)이 있다
+   *  2. §1 비상 연락처 행 — 제3자 정보라는 점을 밝힌다
+   *  3. §1 장애 정보 행 — 「별도 동의」 · 각주가 「원칙적으로 수집하지 않는다 + 장애 정보 예외」로 바뀌었다
+   *     (옛 각주 「민감정보는 수집하지 않습니다」 단정문이 남아 있으면 장애 수집과 정면 모순)
+   *  4. 고유식별정보(주민등록번호 등) 미수집·입력 차단 명시 — 확장 규칙 「주민번호류 저장 금지」의 문서 짝
+   *  5. §2 가명처리 통계 · §3 철회 시 즉시 삭제 · §6 철회 파기 · §7 철회 방법(경로) — 동의/철회 짝이 문서에도 있다
+   *  6. §6-1 안전성 확보조치 — 암호화 + 「프로필 항목은 AI 에 전달되지 않는다」(getSafeDumpForAi 가 프로필을 안 읽는 것과 일치)
+   *  7. 확장(브라우저 확장) 조항 §5-3 은 2단계 릴리즈 몫 — 1단계 문서에 없어야 한다
+   */
+  describe('내 정보 창고 확장 (1단계 · 대장 44)', () => {
+    it('§1 프로필 행에 영문 이름·주소·국적·보훈·병역 상세가 있다', () => {
+      renderPrivacy()
+      const row = screen.getByText(/실명·한자 이름·영문 이름/)
+      expect(row.textContent).toMatch(/주소\(우편번호/)
+      expect(row.textContent).toMatch(/국적/)
+      expect(row.textContent).toMatch(/보훈 대상 여부/)
+      expect(row.textContent).toMatch(/계급·병과/)
+    })
+
+    it('§1 비상 연락처 행 — 제3자 정보임을 밝힌다', () => {
+      renderPrivacy()
+      expect(screen.getByText('내 정보 창고 — 비상 연락처 (선택)')).toBeInTheDocument()
+      expect(screen.getByText(/가족 등 제3자의 정보/)).toBeInTheDocument()
+    })
+
+    it('§1 장애 정보 행은 별도 동의 · 각주는 「원칙적으로」 + 장애 예외 (단정문 모순 제거)', () => {
+      renderPrivacy()
+      expect(screen.getByText('내 정보 창고 — 장애 정보 (선택 · 별도 동의)')).toBeInTheDocument()
+      expect(screen.getByText(/원칙적으로 수집하지 않습니다\. 다만/)).toBeInTheDocument()
+      expect(screen.queryByText(/시행령 18조 민감정보.*는 수집하지 않습니다\.$/)).toBeNull()
+    })
+
+    it('고유식별정보(주민등록번호 등)는 수집·저장하지 않고 입력이 차단된다고 명시한다', () => {
+      renderPrivacy()
+      expect(screen.getByText(/주민등록번호·여권번호·운전면허번호·외국인등록번호는 어떤 경우에도/)).toBeInTheDocument()
+    })
+
+    it('동의/철회 짝 — §2 가명 통계 · §3 즉시 삭제 · §6 파기 · §7 철회 경로', () => {
+      renderPrivacy()
+      expect(screen.getByText(/가명처리한 정보\(출생 연도·거주 지역·병역/)).toBeInTheDocument()
+      // §3 본문 + 하단 이력에 같은 문구가 있어 2곳 이상 — 존재 여부만 본다
+      expect(screen.getAllByText(/동의 철회 시 즉시 삭제/).length).toBeGreaterThan(0)
+      expect(screen.getByText(/장애 정보: 동의 철회 즉시 삭제/)).toBeInTheDocument()
+      expect(screen.getByText(/민감정보\(장애 정보\) 동의 철회 — 내 정보 창고 › 우대·기타/)).toBeInTheDocument()
+    })
+
+    it('§6-1 안전성 확보조치 — 암호화 + 프로필 항목은 AI 에 전달되지 않는다', () => {
+      renderPrivacy()
+      expect(screen.getByText('6-1. 개인정보의 안전성 확보조치')).toBeInTheDocument()
+      expect(screen.getByText('AES-256-GCM')).toBeInTheDocument()
+      expect(screen.getByText(/AI 처리에 전달되지 않습니다\./)).toBeInTheDocument()
+    })
+
+    it('확장(브라우저 확장) 조항은 1단계 문서에 없다 — 2단계 릴리즈 몫', () => {
+      renderPrivacy()
+      expect(screen.queryByText(/5-3\. 지원서 자동 입력 기능/)).toBeNull()
+      expect(screen.queryByText(/브라우저 확장/)).toBeNull()
+    })
+  })
+
 })

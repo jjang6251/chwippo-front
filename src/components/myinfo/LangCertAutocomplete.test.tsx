@@ -82,4 +82,10 @@ describe('LangCertAutocomplete', () => {
     fireEvent.focus(screen.getByRole('combobox'))
     await waitFor(() => expect(screen.getByText(/직접 입력해도 돼요/)).toBeInTheDocument())
   })
+
+  /** 🔴 내부 `useId` 값은 밖에서 알 수 없다 — 라벨을 이으려면 id 를 받아야 한다 */
+  it('id 를 주면 그 값이 input 에 실린다 (바깥 라벨과 잇는 유일한 통로)', () => {
+    render(<LangCertAutocomplete id="lang-cert-type" value="" onChange={vi.fn()} />, { wrapper })
+    expect(screen.getByRole('combobox')).toHaveAttribute('id', 'lang-cert-type')
+  })
 })

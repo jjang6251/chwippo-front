@@ -495,3 +495,31 @@ describe('스크린리더 라이브 리전 (2026-08-19 /uiux 개선 반영)', ()
     expect(screen.getByRole('status')).toHaveTextContent('요청이 실패했어요')
   })
 })
+
+/**
+ * 방침 §5-2 는 「공부 노트·준비 노트 등 민감 화면은 마스킹되어 Clarity 에 전송되지 않는다」고
+ * 약속하고 `App.tsx` 가 그 라우트를 `<ClarityMask>` 로 감싼다. 그런데 **모바일 갈래는 vaul
+ * `Drawer.Portal` 로 `document.body` 에 붙어 그 래퍼 밖에 렌더**된다 — 노트 원문·AI 결과가
+ * 마스킹 밖으로 새는 구멍이었다 (2026-09-06). 그래서 `Drawer.Content` 자신에 마스킹을 붙였다.
+ *
+ * 여기서는 vaul 을 mock 하지 않는다 — 증명할 것이 「포털로 빠져나간 노드에 마스킹이 붙어 있나」라
+ * 포털을 흉내낸 래퍼로는 결함을 못 잡는다. 데스크탑(우측 슬라이드) 갈래는 라우트 래퍼가 덮으므로
+ * 이 케이스의 대상이 아니다.
+ */
+describe('AiNotePanel — 모바일 시트 Clarity 마스킹 (방침 §5-2)', () => {
+  beforeEach(() => {
+    stubMatchMedia(false) // isDesktop=false → vaul Drawer 갈래
+  })
+
+  it('포털된 시트 컨테이너가 마스킹 대상이다', () => {
+    renderPanel()
+    // 포털이라 render 컨테이너 밖 — document 전체에서 잡아야 의미가 있다
+    const sheet = screen.getByRole('dialog', { name: '노트 AI' })
+    expect(sheet.closest('[data-clarity-mask="true"]')).not.toBeNull()
+  })
+
+  it('시트 안 노트 원문(선택 미리보기)도 같은 마스킹 안이다', () => {
+    renderPanel()
+    expect(screen.getByText(SELECTION_MD).closest('[data-clarity-mask="true"]')).not.toBeNull()
+  })
+})

@@ -8,6 +8,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { Drawer } from 'vaul'
 import { useIsMobile } from '@/hooks/useMediaQuery'
+import { CLARITY_MASK } from '@/lib/clarity'
 
 type ModalAccent = 'brand' | 'success' | 'warning' | 'info' | 'violet' | 'accent'
 
@@ -156,7 +157,9 @@ export function InfoModal({
       >
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+          {/* 포털이라 `ClarityMask` 래퍼 밖 — 시트 컨테이너에 직접 마스킹 (방침 §5-2) */}
           <Drawer.Content
+            {...CLARITY_MASK}
             aria-label={title}
             className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[92dvh] flex flex-col shadow-2xl outline-none"
           >

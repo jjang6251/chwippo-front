@@ -17,11 +17,19 @@
  *  8. 직무 칸이 비어도 자기 계열이 보인다
  *  9. 🔴 빈 칸을 스치기만 해도 계열이 지워지던 회귀 (2026-08-28 재현·수정)
  * 10. 그 상태에서도 계열을 바꿀 수 있다
+ *
+ * ### 빈 섹션 · 게이지 칩 지시 · 성별 라벨 · 복사 (대장 44)
+ * 11. 🔴 이름·연락처가 둘 다 비면 처음부터 편집 폼이다 (빈 상태 카드 없이)
+ * 12. 둘 중 하나라도 있으면 보기 모드로 시작한다
+ * 13. 🔴 칩 지시 {edit, focus} → 편집으로 열리고 그 칸(연락처·성별·우편번호)에 포커스
+ * 14. 성별은 남성/여성으로 보이고 저장값은 MALE/FEMALE
+ * 15. 🔴 편집 폼에는 복사 버튼이 없다 — 복사는 보기 모드 행의 몫
+ * 16. 보기 모드 — 이름·영문 이름·연락처·이메일·비상 연락처 행에 복사 버튼
  */
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ProfileSection } from './MyInfo'
+import { ProfileSection, type SectionIntent } from './MyInfo'
 import { useAuthStore } from '@/stores/authStore'
 import { patchJobProfile } from '@/api/users'
 import type { UserProfile } from '@/api/myinfo'
@@ -62,13 +70,13 @@ function signIn(over: { signupJobTitle?: string | null; signupSeriesId?: string 
   })
 }
 
-function renderSection() {
+function renderSection(intent?: SectionIntent | null) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   return render(
     <QueryClientProvider client={qc}>
-      <ProfileSection sectionRef={() => {}} />
+      <ProfileSection sectionRef={() => {}} intent={intent} />
     </QueryClientProvider>,
   )
 }
@@ -108,13 +116,13 @@ describe('ProfileSection — 희망 직무·계열', () => {
     expect(screen.getByText('카드 추가할 때 이 직무가 미리 채워져요')).toBeInTheDocument()
   })
 
-  it('2) 🔴 인적사항이 비어 있어도(빈 상태 카드) 블록은 보인다', () => {
+  it('2) 🔴 인적사항이 비어 있어도(편집 폼부터 열린 상태) 블록은 보인다', () => {
     // 온보딩에서 직무는 정했지만 이름·연락처는 아직 안 적은 사람이 정확히 이 상태다
     profileData.mockReturnValue({})
     signIn()
     renderSection()
 
-    expect(screen.getByText(/기본 인적사항 입력하기/)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('홍길동')).toBeInTheDocument()
     expect(jobInput()).toHaveValue('간호사')
   })
 
@@ -223,5 +231,75 @@ describe('ProfileSection — 희망 직무·계열', () => {
       볼 수도 바꿀 수도 없게 된다. 비워도 칩은 계속 보인다(테스트 8).
     */
     expect(patchJobProfile).toHaveBeenCalledWith({ jobTitle: null })
+  })
+})
+
+describe('ProfileSection — 빈 섹션 · 칩 지시 · 성별 라벨 · 복사', () => {
+  const filled: Partial<UserProfile> = {
+    name: '홍길동', phone: '010-1234-5678', email_personal: 'a@b.c',
+    name_en_last: 'HONG', emergency_phone: '010-0000-0000',
+  }
+  const intentFor = (focus: string): SectionIntent => ({ section: 'profile', opts: { edit: true, focus }, seq: 1 })
+
+  it('11) 🔴 이름·연락처가 둘 다 비면 처음부터 편집 폼이다 (빈 상태 카드 없이)', () => {
+    profileData.mockReturnValue({ user_id: 'u1', birthdate: '2000-01-01' })
+    signIn()
+    renderSection()
+    expect(screen.getByPlaceholderText('홍길동')).toBeInTheDocument()
+    expect(screen.queryByText(/기본 인적사항 입력하기/)).toBeNull()
+    expect(screen.getByRole('button', { name: '완료' })).toBeInTheDocument()
+  })
+
+  it('12) 둘 중 하나라도 있으면 보기 모드로 시작한다', () => {
+    profileData.mockReturnValue({ name: '홍길동' })
+    signIn()
+    renderSection()
+    expect(screen.queryByPlaceholderText('홍길동')).toBeNull()
+    expect(screen.getByRole('button', { name: '편집' })).toBeInTheDocument()
+  })
+
+  it('13) 🔴 칩 지시 {edit, focus:"phone"} → 편집으로 열리고 연락처 칸에 포커스', () => {
+    profileData.mockReturnValue({ name: '홍길동' })
+    signIn()
+    const { container } = renderSection(intentFor('phone'))
+    expect(container.querySelector('input[name="phone"]')).toHaveFocus()
+  })
+
+  it('13-a) 「병역」 칩(성별 미저장) → 성별 select 에 포커스', () => {
+    profileData.mockReturnValue({ name: '홍길동' })
+    signIn()
+    const { container } = renderSection(intentFor('gender'))
+    expect(container.querySelector('select[name="gender"]')).toHaveFocus()
+  })
+
+  it('13-b) 「주소」 칩 → 우편번호 칸에 포커스 (검색 버튼이 그 옆에 있다)', () => {
+    profileData.mockReturnValue({ name: '홍길동' })
+    signIn()
+    const { container } = renderSection(intentFor('address_zip'))
+    expect(container.querySelector('input[name="address_zip"]')).toHaveFocus()
+  })
+
+  it('14) 성별은 남성/여성으로 보이고 저장값은 MALE/FEMALE', () => {
+    profileData.mockReturnValue({ user_id: 'u1' })
+    signIn()
+    renderSection()
+    expect(screen.getByRole('option', { name: '남성' })).toHaveValue('MALE')
+    expect(screen.getByRole('option', { name: '여성' })).toHaveValue('FEMALE')
+    fireEvent.change(screen.getByLabelText('성별'), { target: { value: 'FEMALE' } })
+    expect(updateProfile).toHaveBeenCalledWith({ gender: 'FEMALE' }, expect.anything())
+  })
+
+  it('15) 🔴 편집 폼에는 복사 버튼이 없다', () => {
+    profileData.mockReturnValue({ user_id: 'u1' })
+    signIn()
+    renderSection()
+    expect(screen.queryAllByTitle('복사')).toHaveLength(0)
+  })
+
+  it('16) 보기 모드 — 이름·영문 이름·연락처·이메일·비상 연락처 행에 복사 버튼', () => {
+    profileData.mockReturnValue(filled)
+    signIn()
+    renderSection()
+    expect(screen.getAllByTitle('복사')).toHaveLength(5)
   })
 })

@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
 import type { JobTitleSource } from '@/types/application'
 
-const PLACEHOLDER = '예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계'
+const PLACEHOLDER = '예: 퍼포먼스 마케터 / 간호사 / 재무회계'
 
 interface Props {
   applicationId: string
