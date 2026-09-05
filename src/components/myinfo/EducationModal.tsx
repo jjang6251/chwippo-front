@@ -12,6 +12,7 @@ import { SegmentedToggle } from '@/components/common/SegmentedToggle'
 import { DurationChips } from '@/components/common/DurationChips'
 import { SEMESTER_PRESETS } from '@/utils/durationPresets'
 import { HelpPill } from '@/components/common/HelpPill'
+import { CLARITY_MASK } from '@/lib/clarity'
 
 const EDUCATION_DEGREES = ['고등학교', '전문대', '대학교 (학사)', '대학원 (석사)', '대학원 (박사)', '기타']
 const EDUCATION_STATUSES = ['재학중', '졸업', '졸업예정', '휴학', '수료', '편입', '중퇴']
@@ -569,7 +570,9 @@ export function EducationModal({ initial, initialDegree, onClose, onSave, onDele
       >
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+          {/* 포털이라 `ClarityMask` 래퍼 밖 — 시트 컨테이너에 직접 마스킹 (방침 §5-2) */}
           <Drawer.Content
+            {...CLARITY_MASK}
             aria-label={isEdit ? '학력 편집' : '학력 추가'}
             className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line rounded-t-2xl max-h-[92dvh] flex flex-col shadow-2xl outline-none"
           >
