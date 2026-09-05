@@ -11,6 +11,8 @@ interface Props {
   placeholder?: string
   disabled?: boolean
   inputClassName?: string
+  /** 바깥 라벨(`FieldLabel htmlFor`)이 가리키는 id — 내부 `useId` 는 밖에서 알 수 없다 */
+  id?: string
 }
 
 const LANG_COLOR: Record<string, string> = {
@@ -29,9 +31,10 @@ const LANG_COLOR: Record<string, string> = {
  * dropdown 항목 = name + category chip + issuer + scoreExample.
  * onSelect → language/level/scoreType/scoreMax metadata 전파.
  */
-export function LangCertAutocomplete({ value, onChange, onSelect, placeholder, disabled, inputClassName }: Props) {
+export function LangCertAutocomplete({ value, onChange, onSelect, placeholder, disabled, inputClassName, id }: Props) {
   const isDemo = useDemoMode()
-  const inputId = useId()
+  const fallbackId = useId()
+  const inputId = id ?? fallbackId
   const listId = useId()
   const wrapRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)

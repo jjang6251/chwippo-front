@@ -60,6 +60,27 @@ describe('clearFileBySource (UX-5: 보관함 X = 파일만 제거)', () => {
     })
   })
 
+  /**
+   * 🔴 학력만 파일 칸이 셋이다 (성적증명서 · 졸업(예정)증명서 · 옛 「기타 증빙」).
+   * 칸을 안 고르면 옛 칸을 비운다 — 새 칸을 비우려던 호출이 엉뚱한 파일을 지우면 안 된다.
+   */
+  it.each<['transcript' | 'graduation' | 'legacy', Record<string, string | null>]>([
+    ['transcript', { transcript_file_url: '', transcript_file_size_bytes: null }],
+    ['graduation', { graduation_file_url: '', graduation_file_size_bytes: null }],
+    ['legacy', { file_url: '', file_size_bytes: null }],
+  ])('학력 %s → 그 칸만 비운다', (field, dto) => {
+    clearFileBySource('학력', 'edu-1', updaters, field)
+    expect(updaters.updateEducation).toHaveBeenCalledWith({ id: 'edu-1', dto })
+  })
+
+  it('학력 — 칸을 안 고르면 옛 「기타 증빙」을 비운다', () => {
+    clearFileBySource('학력', 'edu-1', updaters)
+    expect(updaters.updateEducation).toHaveBeenCalledWith({
+      id: 'edu-1',
+      dto: { file_url: '', file_size_bytes: null },
+    })
+  })
+
   it('각 source는 동일한 dto 패턴 사용 — 일관성 보장', () => {
     clearFileBySource('학력', 'edu-1', updaters)
     clearFileBySource('어학 자격증', 'lang-1', updaters)

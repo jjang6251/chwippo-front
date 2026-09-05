@@ -5,7 +5,7 @@
  *   <MyInfoEmptyAdd
  *     emoji="🎓"
  *     label="첫 학력 추가하기"
- *     example="예: 서울대학교 · 컴퓨터공학 · 2020-2024"
+ *     example="예: 한양대학교 · 경영학과 · 2020-2024"
  *     onClick={() => setAddOpen(true)}
  *   />
  *

@@ -116,8 +116,11 @@ function resolveGet(url: string, params: Record<string, unknown>): unknown {
     case '/myinfo/educations': return S.DEMO_EDUCATIONS
     case '/myinfo/exam-schedules': return S.DEMO_EXAM_SCHEDULES
     case '/myinfo/coverletter': return S.DEMO_COVERLETTER
-    case '/myinfo/documents': return []
+    case '/myinfo/documents': return S.DEMO_DOCUMENTS
     case '/myinfo/storage-usage': return S.DEMO_STORAGE_USAGE
+    // 내 정보 「추가 정보」 슬롯의 필드 사전 — 데모엔 슬롯 항목을 두지 않는다(저장이 차단이라
+    // 칸만 보이면 막다른 길이 된다). null 이면 「추가 정보」 블록이 통째로 안 그려진다.
+    case '/myinfo/field-dictionary': return null
     // 회사 정보(DART) — 실존 회사 재무·공시를 지어내면 허위사실이 되므로 null(섹션 미노출).
     case '/companies/details': return null
     // A7 브리핑 배너·알림 벨이 캘린더에서 조회 — null 이면 pages[null].items 렌더 크래시

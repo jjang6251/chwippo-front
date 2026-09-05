@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   APP_TIMEZONE,
+  addMonths,
   addYears,
   toLocalDateString,
   todayLocal,
@@ -277,6 +278,46 @@ describe('utils/datetime — KST-fixed 헬퍼', () => {
     it('2/29 + 비윤년 → 3/1 오버플로 (명시 동작)', () => {
       expect(addYears('2024-02-29', 1)).toBe('2025-03-01')
       expect(addYears('2024-02-29', 4)).toBe('2028-02-29')
+    })
+  })
+
+  /**
+   * 기간 보조 칩(`DurationChips`) — 시작일 + 「+1학기(6)·+1년(12)·18/21/24개월」.
+   *
+   * 케이스: 정상 · 해 넘김 · 말일 보정(넘침 금지) · 윤년 2월 · 0/음수 · 잘못된 입력.
+   */
+  describe('addMonths — 재학·복무 기간 보조 칩', () => {
+    it('정상 +N개월', () => {
+      expect(addMonths('2026-03-02', 6)).toBe('2026-09-02')
+      expect(addMonths('2026-03-02', 18)).toBe('2027-09-02')
+      expect(addMonths('2026-03-02', 24)).toBe('2028-03-02')
+    })
+
+    it('해를 넘긴다', () => {
+      expect(addMonths('2026-11-15', 3)).toBe('2027-02-15')
+      expect(addMonths('2026-12-31', 1)).toBe('2027-01-31')
+    })
+
+    it('🔴 말일 보정 — 1/31 + 1개월은 3/2 가 아니라 2/28 이다', () => {
+      expect(addMonths('2026-01-31', 1)).toBe('2026-02-28')
+      expect(addMonths('2026-08-31', 6)).toBe('2027-02-28')
+    })
+
+    it('윤년 2월은 29일까지 살린다', () => {
+      expect(addMonths('2024-01-31', 1)).toBe('2024-02-29')
+      expect(addMonths('2023-12-31', 2)).toBe('2024-02-29')
+    })
+
+    it('0 · 음수', () => {
+      expect(addMonths('2026-05-10', 0)).toBe('2026-05-10')
+      expect(addMonths('2026-01-10', -1)).toBe('2025-12-10')
+      expect(addMonths('2026-01-10', -13)).toBe('2024-12-10')
+    })
+
+    it('날짜 형식이 아니면 빈 문자열 (렌더 중 호출이라 던지지 않는다)', () => {
+      expect(addMonths('', 6)).toBe('')
+      expect(addMonths('2026-05', 6)).toBe('')
+      expect(addMonths('날짜아님', 6)).toBe('')
     })
   })
 

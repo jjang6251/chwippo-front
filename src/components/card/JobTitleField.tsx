@@ -65,9 +65,11 @@ interface JobTitleFieldProps {
    * 입력 껍데기. 🔴 기본값 `'box'` = **현행 그대로** (라벨 「지원 직무」 + 채움 박스).
    *
    * `'underline'` 은 카드 추가·지원 시작 모달의 A안 결 — 캡션 라벨 「직무」 + 밑줄 + 17px.
-   * 드롭다운·계열 판정 행·helper 는 두 variant 가 **완전히 같다** (모양만 바뀐다).
+   * `'field'` 는 내 정보 창고의 공용 `Field` 톤(h-12 · rounded-xl) — 같은 카드의 다른 칸과
+   * 높이가 어긋나면 어느 쪽이 「정상」인지 사용자가 매번 다시 읽는다.
+   * 드롭다운·계열 판정 행·helper 는 세 variant 가 **완전히 같다** (모양만 바뀐다).
    */
-  variant?: 'box' | 'underline'
+  variant?: 'box' | 'underline' | 'field'
   /**
    * 계열 판정 행(② 겹)을 숨긴다. 기본 `false` = **현행 그대로**.
    *
@@ -113,7 +115,7 @@ const SHELL = {
     labelText: '지원 직무',
     input:
       'w-full bg-input border border-line rounded-lg px-3 py-2.5 text-base lg:text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all',
-    placeholder: '예: 백엔드 개발자 / 퍼포먼스 마케터 / 재무회계',
+    placeholder: '예: 퍼포먼스 마케터 / 간호사 / 재무회계',
   },
   underline: {
     label: 'block text-[11px] font-semibold text-text-quaternary tracking-wide mb-0.5',
@@ -122,6 +124,13 @@ const SHELL = {
       'w-full bg-transparent border-0 border-b-[1.5px] border-line-strong rounded-none px-0.5 py-2.5 text-[17px] lg:text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand transition-colors',
     // 짧은 라벨은 무엇을 적는 칸인지 덜 말해 준다 — 예시로 폭을 넓게 잡아 준다
     // (사무직만 떠올리게 하는 예시는 쓰지 않는다)
+    placeholder: '예: 간호사, 백엔드 개발자, 텔러',
+  },
+  field: {
+    label: 'block text-sm text-text-secondary mb-2 font-medium',
+    labelText: '희망 직무',
+    input:
+      'w-full bg-input border border-line rounded-xl px-4 h-12 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all',
     placeholder: '예: 간호사, 백엔드 개발자, 텔러',
   },
 } as const

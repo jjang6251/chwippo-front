@@ -3,6 +3,9 @@ import type { ActivityType, LogMood, QuantValue } from '@/types/activity'
 
 export const TYPE_KO: Record<ActivityType, string> = {
   intern: '인턴',
+  fulltime: '정규직',
+  contract: '계약직',
+  freelance: '프리랜서',
   club: '동아리',
   study: '스터디',
   project: '팀 프로젝트',
@@ -134,6 +137,9 @@ export const MOOD_EM: Record<string, string> = {
 
 export const TYPE_TO_CL: Record<ActivityType, string[]> = {
   intern: ['job_competency'],
+  fulltime: ['job_competency', 'challenge'],
+  contract: ['job_competency', 'challenge'],
+  freelance: ['job_competency', 'own_strength'],
   club: ['collaboration', 'background'],
   study: ['job_competency', 'background'],
   project: ['job_competency', 'collaboration'],
@@ -160,10 +166,17 @@ export interface TypeGroup {
 
 export const TYPE_GROUPS: TypeGroup[] = [
   {
-    gl: '💼 직무 경험',
+    /*
+      「경력」 — 지원서의 경력사항 칸은 인턴·알바만으로 안 채워진다 (대장 44). 정규직·계약직·
+      프리랜서가 없으면 졸업 후 일한 사람이 자기 경력을 넣을 자리가 없다.
+    */
+    gl: '💼 경력',
     types: [
       { v: 'intern', em: '🏢', label: '인턴' },
       { v: 'parttime', em: '🏪', label: '알바' },
+      { v: 'fulltime', em: '🏢', label: '정규직' },
+      { v: 'contract', em: '📝', label: '계약직' },
+      { v: 'freelance', em: '🧑‍💻', label: '프리랜서' },
     ],
   },
   {
@@ -225,6 +238,9 @@ export const TYPE_KEYWORDS: Partial<Record<ActivityType, string[]>> = {
 export const NAME_PLACEHOLDERS: Record<ActivityType, string> = {
   intern: '회사 + 부서·팀 + 직무 (예: 네이버 클로바 ML 인턴)',
   parttime: '매장·회사 + 직무 (예: 스타벅스 파트너 / 영어 과외)',
+  fulltime: '회사 + 부서·직무 (예: 카카오 결제플랫폼 백엔드 개발)',
+  contract: '회사 + 부서·직무 (예: OO공단 데이터 분석 계약직)',
+  freelance: '프로젝트·클라이언트 + 직무 (예: 쇼핑몰 UI 디자인 외주)',
   club: '동아리명 (예: 학과 학술 동아리 / IT 연합 동아리 X)',
   study: '스터디 주제 (예: 자료구조 알고리즘 스터디)',
   project: '프로젝트명 (예: 친환경 패키지 디자인 졸업작품)',
@@ -262,6 +278,39 @@ export const TYPE_LABELS: Record<ActivityType, TypeFormConfig> = {
     showOrg: true,
     showRole: true,
     showResultUrl: false,
+    showOutcome: false,
+  },
+  fulltime: {
+    name: '활동명',
+    org: '회사',
+    role: '직위·직급',
+    orgPh: '예: CJ제일제당 / 네이버 / 토스',
+    rolePh: '예: 사원 / 대리 / 매니저',
+    showOrg: true,
+    showRole: true,
+    showResultUrl: false,
+    showOutcome: false,
+  },
+  contract: {
+    name: '활동명',
+    org: '회사',
+    role: '직위·직급',
+    orgPh: '예: 한국OO공단 / 스타트업 A',
+    rolePh: '예: 계약직 연구원 / 주임',
+    showOrg: true,
+    showRole: true,
+    showResultUrl: false,
+    showOutcome: false,
+  },
+  freelance: {
+    name: '활동명',
+    org: '회사',
+    role: '직위·직급',
+    orgPh: '예: 클라이언트 회사명',
+    rolePh: '예: 프리랜서 디자이너 / 외주 개발',
+    showOrg: true,
+    showRole: true,
+    showResultUrl: true,
     showOutcome: false,
   },
   club: {
@@ -407,6 +456,27 @@ export const PAST_QUESTIONS: Record<ActivityType, string[]> = {
     '특별히 잘했던 점·인정받은 일?',
     '어려웠던 고객·상황과 대응?',
     '함께한 동료·매니저는?',
+    '여기서 배운 점?',
+  ],
+  fulltime: [
+    '담당 업무를 한 문장으로?',
+    '수치로 표현되는 성과 (매출 · KPI · 개선율)?',
+    '가장 어려웠던 과제와 해결 과정?',
+    '협업한 팀·직무 구성은?',
+    '여기서 성장한 점?',
+  ],
+  contract: [
+    '담당 업무를 한 문장으로?',
+    '계약 기간 안에 낸 성과는?',
+    '가장 어려웠던 과제와 해결 과정?',
+    '협업한 팀·직무 구성은?',
+    '여기서 성장한 점?',
+  ],
+  freelance: [
+    '어떤 일을 맡았고 결과물은?',
+    '클라이언트 요구를 어떻게 정리했는지?',
+    '일정·범위 조율에서 겪은 어려움은?',
+    '수치로 표현되는 결과 (건수 · 매출 · 만족도)?',
     '여기서 배운 점?',
   ],
   club: [

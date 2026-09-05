@@ -93,4 +93,15 @@ describe('CertAutocomplete', () => {
     fireEvent.keyDown(input, { key: 'Escape' })
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
+
+  /** 🔴 내부 `useId` 값은 밖에서 알 수 없다 — 라벨을 이으려면 id 를 받아야 한다 */
+  it('id 를 주면 그 값이 input 에 실린다 (바깥 라벨과 잇는 유일한 통로)', () => {
+    render(<CertAutocomplete id="cert-name" value="" onChange={vi.fn()} />, { wrapper })
+    expect(screen.getByRole('combobox')).toHaveAttribute('id', 'cert-name')
+  })
+
+  it('id 를 안 주면 내부 id 로 스스로 굴러간다 (기존 호출부 회귀 방어)', () => {
+    render(<CertAutocomplete value="" onChange={vi.fn()} />, { wrapper })
+    expect(screen.getByRole('combobox').id).toBeTruthy()
+  })
 })

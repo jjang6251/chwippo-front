@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, createContext, useContext } from 'react'
+import { useId, useRef, useState, useEffect, createContext, useContext, Fragment } from 'react'
 import { useAutoResize } from '@/hooks/useAutoResize'
 import { useNativeMode } from '@/hooks/useNativeMode'
 import { useDemoLink } from '@/hooks/useDemoLink'
@@ -19,12 +19,14 @@ import { useAuthStore } from '@/stores/authStore'
 import { JobTitleField } from '@/components/card/JobTitleField'
 import type { JobProfileBody } from '@/api/users'
 import { useActivities } from '@/hooks/useActivities'
-// 경험 섹션의 type-badge (.intern·.club ...) 스타일이 활동 일지 진입 전에도 보이도록
-import '@/pages/Activity/activity-mock.css'
 import { useMyinfoProgress } from '@/hooks/useMyinfoProgress'
+import { HIGHEST_DEGREE_TO_EDU, type JumpOptions } from '@/utils/myinfoProgress'
 import { calcDday, getDdayLabel, getDdayVariant } from '@/utils/dday'
-import { addYears, todayLocal, getWeekMonday } from '@/utils/datetime'
-import type { UserProfile, LanguageCert, Cert, Award, Coverletter, CoverletterCustom, MyDocument, Education } from '@/api/myinfo'
+import { addYears, todayLocal } from '@/utils/datetime'
+import type {
+  UserProfile, UpdateProfileDto, MilitaryStatus, MilitaryDischarge, HighestDegree,
+  LanguageCert, Cert, Award, Coverletter, CoverletterCustom, MyDocument, Education,
+} from '@/api/myinfo'
 import { EducationModal } from '@/components/myinfo/EducationModal'
 import type { ExamSchedule } from '@/types/exam-schedule'
 import { toast } from '@/stores/toastStore'
@@ -37,7 +39,6 @@ function notifySaveError(err: unknown, fallback = '저장에 실패했어요.') 
 import { CopyButton } from '@/components/myinfo/CopyButton'
 import { FileUpload } from '@/components/myinfo/FileUpload'
 import { EMPTY_SLOT, resolveFileForSubmit, slotFromExisting, type FileSlot } from '@/utils/fileSlot'
-import { clearFileBySource } from '@/utils/myinfoFileActions'
 import { AddExamScheduleModal } from '@/components/myinfo/AddExamScheduleModal'
 import { ConvertExamToCertModal } from '@/components/myinfo/ConvertExamToCertModal'
 import { MyinfoProgressGauge } from '@/components/myinfo/MyinfoProgressGauge'
@@ -50,22 +51,69 @@ import { InfoModal } from '@/components/myinfo/InfoModal'
 import { CertAutocomplete } from '@/components/myinfo/CertAutocomplete'
 import { LangCertAutocomplete } from '@/components/myinfo/LangCertAutocomplete'
 import type { CertSuggestion, LangCertSuggestion } from '@/api/schools'
+import { Field, FieldLabel, ModalSection, SelectField, FIELD_INPUT_CLASS, FIELD_SELECT_CLASS } from '@/components/myinfo/fields'
+import { AddressField } from '@/components/myinfo/AddressField'
+import { ExtrasSectionBody } from '@/components/myinfo/ExtrasSection'
+import { ExperienceFormModal, type ExperienceFormMode } from '@/components/myinfo/ExperienceFormModal'
+import { SegmentedToggle } from '@/components/common/SegmentedToggle'
+import { DurationChips } from '@/components/common/DurationChips'
+import { MILITARY_PRESETS } from '@/utils/durationPresets'
+import { HelpPill } from '@/components/common/HelpPill'
+import { TYPE_KO } from '@/pages/Activity/constants'
+import { useRemoveActivity } from '@/hooks/useActivities'
+import { isCareerType } from '@/types/activity'
+import type { Activity } from '@/types/activity'
+import { DocumentSlotsBody } from '@/components/myinfo/DocumentSlotsSection'
 
 // ── 섹션 메타데이터 ────────────────────────────────────────
+/**
+ * 🔴 **두 묶음** — 「지원서에 옮겨 적는 정보」와 「취업 준비 도구」가 한 줄로 섞여 있어서
+ * 사용자가 「확장을 쓰려면 이걸 다 채워야 하나」로 읽었다. 페이지는 그대로 하나지만
+ * (탭은 만들지 않는다 — 딥링크·모두 펼치기가 깨진다) 순서와 헤더로 답을 준다.
+ */
 const SECTIONS = [
-  { id: 'profile',        label: '기본 인적사항', icon: '👤', accent: 'brand'   },
-  { id: 'education',      label: '학력',         icon: '🎓', accent: 'success' },
-  { id: 'military',       label: '병역사항',     icon: '🪖', accent: 'warning' },
-  { id: 'coverletter',    label: '자소서 소재',   icon: '✍️', accent: 'brand'   },
-  { id: 'experiences',    label: '경험',         icon: '💼', accent: 'success' },
-  { id: 'awards',         label: '수상 내역',     icon: '🏆', accent: 'warning' },
-  { id: 'language-certs', label: '어학 자격증',   icon: '🌐', accent: 'success' },
-  { id: 'certs',          label: '자격증',       icon: '📜', accent: 'brand'   },
-  // ─── 게이지 미포함 ───
-  { id: 'exam-schedules', label: '시험 일정',     icon: '📚', accent: 'violet'  },
-  { id: 'goals',          label: '스펙 목표',     icon: '🎯', accent: 'danger'  },
-  { id: 'files',          label: '파일 보관함',   icon: '📁', accent: 'success' },
+  // ─── 지원서 정보 ───
+  { id: 'profile',        label: '기본 인적사항', icon: '👤', accent: 'brand',   group: 'application' },
+  { id: 'education',      label: '학력',         icon: '🎓', accent: 'success', group: 'application' },
+  { id: 'military',       label: '병역사항',     icon: '🪖', accent: 'warning', group: 'application' },
+  { id: 'extras',         label: '우대·기타',     icon: '🎗️', accent: 'violet',  group: 'application' },
+  // 경력·경험은 저장소가 하나지만 지원서에서는 다른 칸이다 (CEO 2026-09-06) — 나란히 두고 갈라 보여준다
+  { id: 'career',         label: '경력',         icon: '💼', accent: 'success', group: 'application' },
+  { id: 'experiences',    label: '경험',         icon: '🌱', accent: 'success', group: 'application' },
+  { id: 'language-certs', label: '어학 자격증',   icon: '🌐', accent: 'success', group: 'application' },
+  { id: 'certs',          label: '자격증',       icon: '📜', accent: 'brand',   group: 'application' },
+  { id: 'awards',         label: '수상 내역',     icon: '🏆', accent: 'warning', group: 'application' },
+  { id: 'files',          label: '지원 서류',     icon: '📁', accent: 'success', group: 'application' },
+  // ─── 준비 도구 ───
+  { id: 'coverletter',    label: '자소서 소재',   icon: '✍️', accent: 'brand',   group: 'tools' },
+  { id: 'goals',          label: '스펙 목표',     icon: '🎯', accent: 'danger',  group: 'tools' },
+  { id: 'exam-schedules', label: '시험 일정',     icon: '📚', accent: 'violet',  group: 'tools' },
 ] as const
+
+type SectionGroup = 'application' | 'tools'
+
+const GROUPS: { id: SectionGroup; title: string; blurb: string }[] = [
+  // 확장 문장은 뺐다 — 아직 없는 것을 설명하면 「그거 없으면 소용없나」가 된다
+  { id: 'application', title: '지원서 정보', blurb: '채용 폼에 옮겨 적는 정보예요' },
+  { id: 'tools',       title: '준비 도구',   blurb: '지원서와 별개로 취업 준비를 돕는 것' },
+]
+
+/**
+ * 게이지 칩이 섹션에 남기는 지시 — 「펴고 스크롤」 다음에 그 섹션이 할 일.
+ * `seq` 는 **같은 칩을 다시 눌러도** 효과가 다시 돌게 하는 값이다 (옵션이 같으면 객체가
+ * 같아 보여 effect 가 안 뛴다).
+ */
+export interface SectionIntent {
+  section: string
+  opts: JumpOptions
+  seq: number
+}
+
+/** 각 그룹의 첫 섹션 id — 헤더·구분점을 여기 앞에 넣는다 */
+const GROUP_FIRST_ID: Record<SectionGroup, string | undefined> = {
+  application: SECTIONS.find((s) => s.group === 'application')?.id,
+  tools: SECTIONS.find((s) => s.group === 'tools')?.id,
+}
 
 const ACCENT_STYLE = {
   brand:   { icon: 'bg-brand/15 text-brand',    border: 'border border-brand/25',   activeBorder: 'border-2 border-brand',   activeGlow: 'shadow-lg'   },
@@ -104,6 +152,13 @@ function useCollapsedSections() {
       if (next.has(id)) next.delete(id); else next.add(id)
       persist(next)
     },
+    /** 게이지 칩이 보낸 섹션은 **펴서** 보여준다 — 접힌 채로 스크롤하면 헛걸음이다 */
+    expand: (id: string) => {
+      if (!collapsed.has(id)) return
+      const next = new Set(collapsed)
+      next.delete(id)
+      persist(next)
+    },
     collapseAll: () => persist(new Set(SECTIONS.map((s) => s.id))),
     expandAll: () => persist(new Set()),
     allCollapsed: collapsed.size >= SECTIONS.length,
@@ -116,7 +171,6 @@ function useCollapse(): CollapseCtxValue {
 }
 
 const MILITARY_BRANCHES = ['육군', '해군', '공군', '해병대', '사회복무요원', '산업기능요원', '전문연구요원']
-const MILITARY_TYPES = ['만기전역', '의병전역', '불명예전역', '복무 중']
 
 // ── 자동저장 상태 ──────────────────────────────────────────
 function useSaved() {
@@ -126,16 +180,9 @@ function useSaved() {
 }
 
 // ── 공통 인풋 ──────────────────────────────────────────────
-/** 필수 입력 라벨 — ui-specs.md "필수 입력 필드" 규칙 따름 */
-// InfoModal 안 body section 그룹핑 (Education 톤과 통일)
-function ModalSection({ title, children, first }: { title: string; children: React.ReactNode; first?: boolean }) {
-  return (
-    <div className={first ? '' : 'pt-6 border-t border-line'}>
-      <p className="text-[13px] font-bold text-text-primary mb-3.5">{title}</p>
-      {children}
-    </div>
-  )
-}
+// `ModalSection`·`FieldLabel`·`Field`·`SelectField` 는 `@/components/myinfo/fields` 로 옮겼다 —
+// 새 섹션(우대·기타)과 경험 경량 폼이 같은 칸 톤을 써야 하는데, 화면 파일에서 import 하면
+// 방향이 뒤집힌다. 클래스·동작은 그대로다 (이관만).
 
 /** 자동완성 선택 후 자격증 정보 카드 (issuer · category · validYears) */
 function CertInfoCard({ issuer, category, categoryColor, validYears }: {
@@ -158,110 +205,6 @@ function CertInfoCard({ issuer, category, categoryColor, validYears }: {
   )
 }
 
-function FieldLabel({ label, required }: { label: string; required?: boolean }) {
-  return (
-    <label className="block text-sm text-text-secondary mb-2 font-medium">
-      {label}
-      {required && <span className="text-danger ml-1" aria-label="필수 입력">*</span>}
-    </label>
-  )
-}
-
-function Field({
-  label, value, onChange, onBlur, type = 'text',
-  placeholder, maxLength, copyable, as, span, required, disabled,
-}: {
-  label: string; value: string; onChange: (v: string) => void
-  onBlur?: () => void; type?: string; placeholder?: string
-  maxLength?: number; copyable?: boolean; as?: 'textarea'; span?: boolean
-  required?: boolean; disabled?: boolean
-}) {
-  // Toss 톤 — h-12 (48px), text-base, rounded-xl, focus 4px halo
-  const base = 'w-full bg-input border border-line rounded-xl text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all'
-  const cls = `${base} px-4 h-12 ${copyable ? 'pr-12' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
-  const textareaCls = `${base} px-4 py-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
-  // 자소서 소재 textarea — 베타 피드백 패턴 (auto-resize 200~500 + lineHeight 1.6)
-  const { ref: textareaRef, autoResize } = useAutoResize(value, { min: 80, max: 500 })
-  return (
-    <div className={span ? 'col-span-2' : ''}>
-      <FieldLabel label={label} required={required} />
-      {as === 'textarea' ? (
-        <div className="flex items-start gap-1.5">
-          <div className="flex-1">
-            <textarea
-              ref={textareaRef}
-              value={value}
-              onChange={(e) => {
-                onChange(e.target.value)
-                autoResize()
-              }}
-              onBlur={onBlur}
-              placeholder={placeholder}
-              maxLength={maxLength}
-              style={{ minHeight: 80, lineHeight: 1.6 }}
-              className={textareaCls + ' resize-y'}
-            />
-            {maxLength && (
-              <p
-                className={`text-xs text-right mt-1 ${
-                  value.length >= maxLength
-                    ? 'text-danger'
-                    : value.length >= maxLength * 0.9
-                    ? 'text-warning'
-                    : value.length >= 200
-                    ? 'text-success'
-                    : 'text-text-quaternary'
-                }`}
-              >
-                {value.length} / {maxLength}
-              </p>
-            )}
-          </div>
-          {copyable && <CopyButton value={value} />}
-        </div>
-      ) : (
-        <div className="relative">
-          <input
-            type={type}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onBlur={onBlur}
-            placeholder={placeholder}
-            maxLength={maxLength}
-            disabled={disabled}
-            className={cls}
-          />
-          {copyable && (
-            <span className="absolute right-1 top-1/2 -translate-y-1/2">
-              <CopyButton value={value} />
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function SelectField({ label, value, onChange, options, required }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[]; required?: boolean
-}) {
-  return (
-    <div>
-      <FieldLabel label={label} required={required} />
-      <div className="relative">
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full appearance-none bg-input border border-line rounded-xl pl-4 pr-11 h-12 text-base text-text-primary cursor-pointer focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 transition-all">
-          <option value="">선택</option>
-          {options.map((o) => <option key={o} value={o}>{o}</option>)}
-        </select>
-        <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className="absolute right-4 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
-          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-    </div>
-  )
-}
-
-
 function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: string; onClose: () => void; onConfirm: () => void }) {
   // 이 확인창은 InfoModal 위에 겹쳐 열린다 — capture 단계에서 ESC 를 선점하고 preventDefault 해야
   // 뒤에 있는 InfoModal 의 ESC 닫기(U14)가 먼저 먹어 편집 모달만 사라지는 일이 없다.
@@ -283,8 +226,8 @@ function DeleteModal({ label = '이 항목', onClose, onConfirm }: { label?: str
           <p className="text-xs text-text-quaternary">{label}을(를) 삭제하면 복구할 수 없어요.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 text-xs border border-line text-text-secondary rounded-lg hover:bg-card active:bg-card-strong transition-colors">취소</button>
-          <button onClick={onConfirm} className="flex-1 py-2.5 text-xs font-semibold bg-danger/90 hover:bg-danger text-text-primary rounded-lg transition-colors">삭제</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 min-h-[44px] sm:min-h-0 text-xs border border-line text-text-secondary rounded-lg hover:bg-card active:bg-card-strong transition-colors">취소</button>
+          <button type="button" onClick={onConfirm} className="flex-1 py-2.5 min-h-[44px] sm:min-h-0 text-xs font-semibold bg-danger/90 hover:bg-danger text-text-primary rounded-lg transition-colors">삭제</button>
         </div>
       </div>
     </div>
@@ -300,38 +243,64 @@ function SectionCard({ id, sectionRef, saved, isActive, headerRight, children }:
   const { isCollapsed, toggle } = useCollapse()
   const closed = isCollapsed(id)
   return (
-    <section id={id} ref={sectionRef as React.RefCallback<HTMLElement>} className={`rounded-xl transition-all duration-300 bg-card overflow-hidden
+    <section id={id} ref={sectionRef as React.RefCallback<HTMLElement>} className={`rounded-xl transition-[border-color,box-shadow] duration-300 bg-card overflow-hidden
       ${isActive ? `${ac.activeBorder} ${ac.activeGlow}` : ac.border}`}>
-      <button
-        type="button"
-        onClick={() => toggle(id)}
-        aria-expanded={!closed}
-        aria-controls={`${id}-body`}
-        className={`w-full px-6 py-4 flex items-center justify-between text-left hover:bg-surface-2/40 transition-colors ${closed ? '' : 'border-b border-line'}`}
-      >
-        <div className="flex items-center gap-3">
-          <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base ${ac.icon}`}>{meta.icon}</span>
-          <h2 className="text-sm font-semibold text-text-primary">{meta.label}</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          {headerRight}
-          {saved && (
-            <span className="text-[10px] font-medium text-success flex items-center gap-1">
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              저장됨
-            </span>
-          )}
-          <CollapsibleChevron open={!closed} />
-        </div>
-      </button>
+      {/*
+        🔴 `<button>` **안**의 `<h2>` 는 제목이 아니다 — 버튼 내용은 한 줄 이름으로 납작해져
+        heading 역할이 사라진다. 그래서 페이지에 섹션 제목이 하나도 없었다. 뒤집어서 heading 이
+        버튼을 감싼다 (`h3` — 그룹 헤더가 `h2` 다). 클래스는 그대로라 보이는 모습은 같다.
+      */}
+      <h3>
+        <button
+          type="button"
+          onClick={() => toggle(id)}
+          aria-expanded={!closed}
+          aria-controls={closed ? undefined : `${id}-body`}
+          className={`w-full px-6 py-4 flex items-center justify-between text-left hover:bg-surface-2/40 transition-colors ${closed ? '' : 'border-b border-line'}`}
+        >
+          <div className="flex items-center gap-3">
+            <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base ${ac.icon}`}>{meta.icon}</span>
+            <span className="text-sm font-semibold text-text-primary">{meta.label}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {headerRight}
+            {saved && (
+              <span className="text-[10px] font-medium text-success flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                저장됨
+              </span>
+            )}
+            <CollapsibleChevron open={!closed} />
+          </div>
+        </button>
+      </h3>
+      {/*
+        접힌 동안 본문을 **떼어 낸다** — 섹션 12개의 폼·업로더를 늘 붙여 두면 접기가 무의미하다.
+        그래서 `aria-controls` 도 열려 있을 때만 건다 (없는 id 를 가리키는 것보다 안 거는 게 낫다).
+      */}
       {!closed && <div id={`${id}-body`} className="px-6 py-5">{children}</div>}
     </section>
   )
 }
 
+/**
+ * 두 묶음의 경계 — 옛 「기타」 구분선을 확장한 정도로 **가볍게** 둔다.
+ * 탭이 아니라 헤더인 이유: 딥링크(`#goals`)·「모두 펼치기」·스크롤 스파이가 한 페이지를
+ * 전제로 짜여 있고, 탭을 넣으면 그 셋이 모두 깨진다.
+ */
+function GroupHeader({ group }: { group: SectionGroup }) {
+  const meta = GROUPS.find((g) => g.id === group)!
+  return (
+    <div className={group === 'application' ? '' : 'pt-3 border-t border-line'}>
+      <h2 className="text-[13px] font-bold text-text-primary">{meta.title}</h2>
+      <p className="text-text-tertiary text-xs mt-1">{meta.blurb}</p>
+    </div>
+  )
+}
+
 function AddButton({ onClick, label = '추가' }: { onClick: () => void; label?: string }) {
   return (
-    <button onClick={onClick} className="w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5">
+    <button type="button" onClick={onClick} className="w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl py-3 min-h-[44px] sm:min-h-0 transition-colors flex items-center justify-center gap-1.5">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
       {label}
     </button>
@@ -348,6 +317,9 @@ export function MyInfo() {
   const location = useLocation()
   const { sections: progressSections } = useMyinfoProgress()
   const collapse = useCollapsedSections()
+  /** 게이지 칩이 남긴 지시 (편집 열기·칸 포커스) — 대상 섹션 하나만 읽는다 */
+  const [intent, setIntent] = useState<SectionIntent | null>(null)
+  const seqRef = useRef(0)
   // 네이티브 앱은 웹 모바일 헤더(h-12)가 숨겨지므로 sticky 오프셋을 0으로 —
   // top-12 를 그대로 두면 칩 바가 상단에서 48px 떠서 스크롤됨 (CEO 실기 2026-07-19)
   const isNative = useNativeMode()
@@ -423,26 +395,42 @@ export function MyInfo() {
     }, 800)
   }
 
+  /**
+   * 게이지 칩 → 해당 섹션을 **펴고** 이동 (접힌 채 스크롤하면 빈 헤더만 본다).
+   *
+   * 🔴 여기서 끝내면 도착지가 **보기 모드의 빈 줄**이다 — 칩이 「비었다」고 해서 눌렀는데
+   * [편집] 을 한 번 더 찾아야 한다. `opts` 가 그 한 걸음을 없앤다.
+   */
+  const jumpTo = (id: string, opts?: JumpOptions) => {
+    collapse.expand(id)
+    scrollTo(id)
+    if (!opts) { setIntent(null); return }
+    seqRef.current += 1
+    setIntent({ section: id, opts, seq: seqRef.current })
+  }
+  /** 지시는 **그 섹션에만** 전달한다 — 객체 동일성이 유지돼야 effect 가 헛돌지 않는다 */
+  const intentFor = (id: string) => (intent?.section === id ? intent : null)
+
   return (
     <CollapseCtx.Provider value={{ isCollapsed: collapse.isCollapsed, toggle: collapse.toggle }}>
     <div className="w-full mx-auto px-[18px] pt-6 pb-[88px] lg:max-w-[1100px] lg:px-9 lg:py-9">
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-text-primary text-xl font-bold">내 정보 창고</h1>
-          <p className="text-text-tertiary text-xs mt-1.5">이력서·자소서 작성 시 한 번 쓰면 평생 재활용하는 데이터 창고예요</p>
-          <p className="text-text-quaternary text-[11px] mt-0.5">필드를 벗어나면 자동 저장 · 복사 버튼으로 자소서 작성 시 바로 활용</p>
+          {/* 두 줄이 서로를 반쯤 되풀이했다 — 「무엇을 하는 곳」과 「어떻게 저장되나」 한 줄로 */}
+          <p className="text-text-tertiary text-xs mt-1.5">지원서·자소서에 쓰는 정보를 한 번만 적어 두는 곳이에요. 칸을 벗어나면 저장돼요.</p>
         </div>
         <button
           type="button"
           onClick={() => collapse.allCollapsed ? collapse.expandAll() : collapse.collapseAll()}
-          className="shrink-0 text-[11px] font-medium text-text-tertiary hover:text-text-primary px-2.5 py-1.5 rounded-md border border-line hover:bg-card-strong transition-colors"
+          className="shrink-0 text-[11px] font-medium text-text-tertiary hover:text-text-primary px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md border border-line hover:bg-card-strong touch-manipulation transition-colors"
         >
           {collapse.allCollapsed ? '모두 펼치기' : '모두 접기'}
         </button>
       </div>
 
       <div className="mb-6 space-y-3">
-        <MyinfoProgressGauge />
+        <MyinfoProgressGauge onJump={jumpTo} />
         <StorageUsageBar />
       </div>
 
@@ -456,26 +444,34 @@ export function MyInfo() {
             const isActive = activeSection === s.id
             const status = progressSections.find((p) => p.id === s.id)
             return (
-              <button
-                key={s.id}
-                ref={(el) => { tabRefs.current[s.id] = el }}
-                onClick={() => scrollTo(s.id)}
-                className={`flex-none flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all duration-150 border
-                  ${isActive
-                    ? 'bg-brand/15 text-brand border-brand/30'
-                    : 'bg-card text-text-quaternary border-line hover:text-text-secondary hover:bg-card active:bg-card-strong'
-                  }`}
-              >
-                <span>{s.icon}</span>
-                <span>{s.label}</span>
-                {status && status.active && (
-                  status.kind === 'multi'
-                    ? <span className={`text-[10px] font-mono tabular-nums ${status.count > 0 ? 'text-brand' : 'text-text-quaternary'}`}>({status.count})</span>
-                    : status.filled
-                      ? <span className="text-success text-[10px]">✓</span>
-                      : null
+              <Fragment key={s.id}>
+                {/* 두 묶음 사이 구분점 하나 — 칩 바는 좁아서 헤더가 들어갈 자리가 없다 */}
+                {s.id === GROUP_FIRST_ID.tools && (
+                  <span aria-hidden="true" className="flex-none self-center text-text-quaternary px-0.5">·</span>
                 )}
-              </button>
+                {/* 지금 보고 있는 섹션 칩은 `aria-current` 로도 말해야 한다 — 색만으로는 안 들린다 */}
+                <button
+                  ref={(el) => { tabRefs.current[s.id] = el }}
+                  type="button"
+                  aria-current={isActive ? 'true' : undefined}
+                  onClick={() => scrollTo(s.id)}
+                  className={`flex-none flex items-center gap-1 px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-full text-[11px] font-medium whitespace-nowrap touch-manipulation transition-colors duration-150 border
+                    ${isActive
+                      ? 'bg-brand/15 text-brand border-brand/30'
+                      : 'bg-card text-text-quaternary border-line hover:text-text-secondary hover:bg-card active:bg-card-strong'
+                    }`}
+                >
+                  <span>{s.icon}</span>
+                  <span>{s.label}</span>
+                  {status && status.active && (
+                    status.kind === 'multi'
+                      ? <span className={`text-[10px] font-mono tabular-nums ${status.count > 0 ? 'text-brand' : 'text-text-quaternary'}`}>({status.count})</span>
+                      : status.filled
+                        ? <span className="text-success text-[10px]">✓</span>
+                        : null
+                  )}
+                </button>
+              </Fragment>
             )
           })}
         </div>
@@ -484,22 +480,26 @@ export function MyInfo() {
       <div className="flex gap-8">
         {/* 좌측 섹션 네비 */}
         <aside className="hidden lg:block w-44 flex-none sticky top-8 self-start">
-          <p className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider mb-3 px-3">섹션</p>
           <nav className="space-y-0.5">
             {SECTIONS.map((s) => {
               const ac = ACCENT_STYLE[s.accent as keyof typeof ACCENT_STYLE]
               const isActive = activeSection === s.id
               const status = progressSections.find((p) => p.id === s.id)
-              const isFirstExcluded = s.id === 'exam-schedules'
+              // 그룹 라벨은 옛 「기타」 구분선 자리를 그대로 쓴다 — 두 묶음이 사이드바에서도
+              // 같은 경계로 보여야 본문의 그룹 헤더와 어긋나지 않는다.
+              const groupHead = GROUPS.find((g) => GROUP_FIRST_ID[g.id] === s.id)
               return (
                 <div key={s.id}>
-                  {isFirstExcluded && (
-                    <div className="my-2 px-3">
-                      <div className="h-px bg-card-strong" />
-                      <p className="text-[10px] text-text-quaternary font-medium uppercase tracking-wider mt-2">기타</p>
+                  {groupHead && (
+                    <div className={`px-3 ${groupHead.id === 'application' ? 'mb-2' : 'my-2'}`}>
+                      {groupHead.id !== 'application' && <div className="h-px bg-card-strong mb-2" />}
+                      <p className="text-[10px] text-text-quaternary font-semibold uppercase tracking-wider">{groupHead.title}</p>
                     </div>
                   )}
+                {/* 모바일 칩의 짝 — 지금 보는 섹션은 색만이 아니라 `aria-current` 로도 말한다 */}
                 <button
+                  type="button"
+                  aria-current={isActive ? 'true' : undefined}
                   onClick={() => scrollTo(s.id)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150
                     ${isActive
@@ -525,17 +525,22 @@ export function MyInfo() {
 
         {/* 우측 섹션들 — SECTIONS 배열 순서와 동일 */}
         <div className="flex-1 space-y-5 min-w-0">
-          <ProfileSection       sectionRef={(el) => { sectionRefs.current['profile'] = el }}          isActive={activeSection === 'profile'} />
-          <EducationsSection    sectionRef={(el) => { sectionRefs.current['education'] = el }}        isActive={activeSection === 'education'} />
-          <MilitarySection      sectionRef={(el) => { sectionRefs.current['military'] = el }}         isActive={activeSection === 'military'} />
-          <CoverletterSection   sectionRef={(el) => { sectionRefs.current['coverletter'] = el }}      isActive={activeSection === 'coverletter'} />
-          <ExperiencesSection   sectionRef={(el) => { sectionRefs.current['experiences'] = el }}      isActive={activeSection === 'experiences'} />
-          <AwardsSection        sectionRef={(el) => { sectionRefs.current['awards'] = el }}           isActive={activeSection === 'awards'} />
+          <GroupHeader group="application" />
+          <ProfileSection       sectionRef={(el) => { sectionRefs.current['profile'] = el }}          isActive={activeSection === 'profile'}   intent={intentFor('profile')} />
+          <EducationsSection    sectionRef={(el) => { sectionRefs.current['education'] = el }}        isActive={activeSection === 'education'} intent={intentFor('education')} />
+          <MilitarySection      sectionRef={(el) => { sectionRefs.current['military'] = el }}         isActive={activeSection === 'military'}  intent={intentFor('military')} />
+          <ExtrasSection        sectionRef={(el) => { sectionRefs.current['extras'] = el }}          isActive={activeSection === 'extras'}    intent={intentFor('extras')} />
+          <ActivitySection mode="career"     sectionRef={(el) => { sectionRefs.current['career'] = el }}      isActive={activeSection === 'career'} />
+          <ActivitySection mode="experience" sectionRef={(el) => { sectionRefs.current['experiences'] = el }} isActive={activeSection === 'experiences'} />
           <LangCertsSection     sectionRef={(el) => { sectionRefs.current['language-certs'] = el }}   isActive={activeSection === 'language-certs'} />
           <CertsSection         sectionRef={(el) => { sectionRefs.current['certs'] = el }}            isActive={activeSection === 'certs'} />
-          <ExamSchedulesSection sectionRef={(el) => { sectionRefs.current['exam-schedules'] = el }}   isActive={activeSection === 'exam-schedules'} />
+          <AwardsSection        sectionRef={(el) => { sectionRefs.current['awards'] = el }}           isActive={activeSection === 'awards'} />
+          <FilesSection         sectionRef={(el) => { sectionRefs.current['files'] = el }}            isActive={activeSection === 'files'} onJump={jumpTo} />
+
+          <GroupHeader group="tools" />
+          <CoverletterSection   sectionRef={(el) => { sectionRefs.current['coverletter'] = el }}      isActive={activeSection === 'coverletter'} />
           <GoalsSection         sectionRef={(el) => { sectionRefs.current['goals'] = el }}            isActive={activeSection === 'goals'} />
-          <FilesSection         sectionRef={(el) => { sectionRefs.current['files'] = el }}            isActive={activeSection === 'files'} />
+          <ExamSchedulesSection sectionRef={(el) => { sectionRefs.current['exam-schedules'] = el }}   isActive={activeSection === 'exam-schedules'} />
         </div>
       </div>
     </div>
@@ -545,8 +550,23 @@ export function MyInfo() {
 
 // ── 기본 인적사항 ─────────────────────────────────────────
 const GENDER_KO: Record<string, string> = { MALE: '남성', FEMALE: '여성' }
-const PROFILE_FIELDS: Array<keyof Pick<UserProfile, 'name' | 'name_hanja' | 'gender' | 'birthdate' | 'phone' | 'email_personal'>> =
-  ['name', 'name_hanja', 'gender', 'birthdate', 'phone', 'email_personal']
+/**
+ * 「인적사항이 하나라도 채워졌나」 판정 대상.
+ *
+ * 🔴 새로 늘어난 칸(영문 이름·주소·국적·비상연락처)도 여기 있어야 한다 — 없으면 주소만
+ * 채운 사용자가 새로고침했을 때 빈 상태 카드가 덮어써서 **자기가 넣은 값을 못 본다.**
+ */
+const PROFILE_FIELDS: Array<keyof UserProfile> = [
+  'name', 'name_hanja', 'gender', 'birthdate', 'phone', 'email_personal',
+  'name_en_last', 'name_en_first',
+  'address_zip', 'address_base', 'address_detail', 'address_region',
+  'nationality_2', 'emergency_phone', 'emergency_relation',
+  // ⚠️ `nationality` 는 일부러 뺐다 — 서버 기본값이 '대한민국' 이라 넣으면 **모든 계정이**
+  //    「채워짐」이 되어 빈 상태 카드가 아무에게도 안 뜬다.
+]
+
+/** 비상연락처 관계 — 지원서 4곳이 같은 목록을 쓴다 */
+const EMERGENCY_RELATIONS = ['부', '모', '배우자', '형제자매', '친척', '지인', '기타']
 
 /**
  * ② **정식 자리** — 희망 직무·계열 (`plans/job-role-first.md` 묶음 3).
@@ -612,9 +632,9 @@ function JobProfileBlock({ onSaved }: { onSaved: () => void }) {
   return (
     <div className="mb-5 pb-5 border-b border-line">
       <JobTitleField
-        variant="underline"
+        variant="field"
         labelText="희망 직무"
-        placeholder="예: 간호사, 백엔드 개발자"
+        placeholder="예: 마케터, 간호사, 회계 담당자"
         value={title}
         onChange={(v) => setTitle(v)}
         onBlur={handleBlur}
@@ -634,27 +654,75 @@ function JobProfileBlock({ onSaved }: { onSaved: () => void }) {
 }
 
 /** 🔴 `export` 는 테스트 전용이다 — 페이지는 아래 `MyInfo` 가 직접 조립한다 */
-export function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+export function ProfileSection({ sectionRef, isActive, intent }: {
+  sectionRef: (el: HTMLElement | null) => void; isActive?: boolean; intent?: SectionIntent | null
+}) {
   const { data: profile } = useProfile()
   const { mutate: update } = useUpdateProfile()
   const { saved, show } = useSaved()
+  /** 게이지 칩이 지목한 칸을 찾을 범위 — 편집 폼 안쪽만 본다 */
+  const formRef = useRef<HTMLDivElement>(null)
 
-  const init = { name: '', name_hanja: '', gender: '', birthdate: '', phone: '', email_personal: '' }
+  const init = {
+    name: '', name_hanja: '', gender: '', birthdate: '', phone: '', email_personal: '',
+    name_en_last: '', name_en_first: '',
+    address_zip: '', address_base: '', address_detail: '', address_region: '',
+    nationality: '', nationality_2: '',
+    emergency_phone: '', emergency_relation: '',
+  }
   const [form, setForm] = useState(init)
   const [loaded, setLoaded] = useState(false)
   const [editing, setEditing] = useState(false)
+  /** 이중 국적 칸은 접어 둔다 — 5/11 폼만 묻고, 그중에서도 두 번째 국적은 드물다 */
+  const [showSecondNationality, setShowSecondNationality] = useState(false)
 
   if (profile && !loaded) {
     setForm({
       name: profile.name ?? '', name_hanja: profile.name_hanja ?? '',
       gender: profile.gender ?? '', birthdate: profile.birthdate ?? '',
       phone: profile.phone ?? '', email_personal: profile.email_personal ?? '',
+      name_en_last: profile.name_en_last ?? '', name_en_first: profile.name_en_first ?? '',
+      address_zip: profile.address_zip ?? '', address_base: profile.address_base ?? '',
+      address_detail: profile.address_detail ?? '', address_region: profile.address_region ?? '',
+      // 기본값 「대한민국」 — 5/11 폼이 국적을 묻고 거의 전부 대한민국이다
+      nationality: profile.nationality ?? '대한민국',
+      nationality_2: profile.nationality_2 ?? '',
+      emergency_phone: profile.emergency_phone ?? '', emergency_relation: profile.emergency_relation ?? '',
     })
+    setShowSecondNationality(!!profile.nationality_2)
+    /*
+      🔴 이름·연락처가 **둘 다** 비었으면 처음부터 편집 폼이다. 보기 모드의 「—」 줄 열 개는
+      「없다」만 알려 주고 채울 방법은 안 알려 준다 — 창고의 첫 화면이 그러면 안 된다.
+      둘 중 하나라도 있으면 이미 쓰던 사람이라 보기 모드가 맞다.
+    */
+    if (!profile.name?.trim() && !profile.phone?.trim()) setEditing(true)
     setLoaded(true)
   }
 
+  /*
+    게이지 칩이 보낸 지시 — 편집으로 열고, 폼이 붙은 다음 렌더에서 그 칸에 포커스한다.
+    (`setEditing` 은 같은 tick 에 DOM 을 바꾸지 않으므로 두 번에 나눠 처리한다)
+  */
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!intent) return
+    if (intent.opts.edit && !editing) { setEditing(true); return }
+    const key = intent.opts.focus
+    // eslint-disable-next-line chwippo/no-bare-autofocus -- 게이지 칩을 탭한 뒤에만 도는 이동이다 (열자마자 포커스가 아니다)
+    if (key) formRef.current?.querySelector<HTMLElement>(`[name="${key}"]`)?.focus()
+  }, [intent, editing])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const save = (key: string, val: string) =>
-    update({ [key]: val || null } as Partial<UserProfile>, { onSuccess: show })
+    update({ [key]: val || null } as UpdateProfileDto, { onSuccess: show })
+
+  /** 여러 칸을 한 번에 (주소 검색 결과처럼 한 동작에서 여러 값이 정해질 때) */
+  const savePatch = (patch: Record<string, string>) => {
+    const dto = Object.fromEntries(
+      Object.entries(patch).map(([k, v]) => [k, v || null]),
+    ) as UpdateProfileDto
+    update(dto, { onSuccess: show })
+  }
 
   const hasAny = !!profile && PROFILE_FIELDS.some((k) => (profile[k] ?? '').toString().trim().length > 0)
 
@@ -675,22 +743,92 @@ export function ProfileSection({ sectionRef, isActive }: { sectionRef: (el: HTML
             <EditToggleButton editing={editing} onClick={() => setEditing((v) => !v)} />
           </div>
           {editing ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <Field label="이름" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} onBlur={() => save('name', form.name)} placeholder="홍길동" copyable required />
-              <Field label="이름 (한자)" value={form.name_hanja} onChange={(v) => setForm(f => ({ ...f, name_hanja: v }))} onBlur={() => save('name_hanja', form.name_hanja)} placeholder="洪吉童" copyable />
-              <SelectField label="성별" value={form.gender} onChange={(v) => { setForm(f => ({ ...f, gender: v })); save('gender', v) }} options={['MALE', 'FEMALE']} />
-              <Field label="생년월일" type="date" value={form.birthdate} onChange={(v) => { setForm(f => ({ ...f, birthdate: v })); save('birthdate', v) }} />
-              <Field label="연락처" value={form.phone} onChange={(v) => setForm(f => ({ ...f, phone: v }))} onBlur={() => save('phone', form.phone)} placeholder="010-0000-0000" copyable />
-              <Field label="이메일" value={form.email_personal} onChange={(v) => setForm(f => ({ ...f, email_personal: v }))} onBlur={() => save('email_personal', form.email_personal)} placeholder="example@email.com" copyable />
+            /*
+              🔴 편집 폼에는 복사 버튼을 두지 않는다 — 쓰는 중에 칸 오른쪽을 가리고, 값이
+              아직 저장 전이라 「지금 복사한 게 저장된 값인가」가 애매하다. 복사는 보기 모드의
+              몫이다 (`MyInfoViewRow copyable`).
+            */
+            <div className="space-y-6" ref={formRef}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                {/* 브라우저가 이미 아는 값(이름·연락처·주소)은 창고에서도 그대로 받는다 — 타이핑이 0 이 된다 */}
+                <Field name="name" label="이름" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} onBlur={() => save('name', form.name)} placeholder="홍길동" required autoComplete="name" />
+                {/* 빈도 pill 은 **데스크탑에서만** 라벨 옆에 — 모바일은 섹션 헤더 하나로 충분하다 */}
+                <Field name="name_hanja" label="이름 (한자)" value={form.name_hanja} onChange={(v) => setForm(f => ({ ...f, name_hanja: v }))} onBlur={() => save('name_hanja', form.name_hanja)} placeholder="洪吉童" />
+                {/* 저장값은 `MALE`·`FEMALE` 이지만 사람에게는 「남성」·「여성」으로 보인다 */}
+                <SelectField name="gender" label="성별" value={form.gender} onChange={(v) => { setForm(f => ({ ...f, gender: v })); save('gender', v) }} options={['MALE', 'FEMALE']} optionLabels={GENDER_KO} />
+                <Field name="birthdate" label="생년월일" type="date" value={form.birthdate} onChange={(v) => { setForm(f => ({ ...f, birthdate: v })); save('birthdate', v) }} />
+                <Field name="phone" label="연락처" value={form.phone} onChange={(v) => setForm(f => ({ ...f, phone: v }))} onBlur={() => save('phone', form.phone)} placeholder="010-0000-0000" autoComplete="tel" inputMode="tel" />
+                <Field name="email_personal" label="이메일" value={form.email_personal} onChange={(v) => setForm(f => ({ ...f, email_personal: v }))} onBlur={() => save('email_personal', form.email_personal)} placeholder="example@email.com" autoComplete="email" inputMode="email" spellCheck={false} />
+              </div>
+
+              {/* 영문 이름 — 지원서 8/11 이 묻고, 그중 여럿이 성/이름을 **분리** 입력받는다 */}
+              <div className="pt-5 border-t border-line">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  {/* 「영문이름」은 실측에서 성/이름 한 항목이다 — pill 은 그룹의 첫 칸에만 */}
+                  <Field name="name_en_last" label="영문 성" value={form.name_en_last} onChange={(v) => setForm(f => ({ ...f, name_en_last: v }))} onBlur={() => save('name_en_last', form.name_en_last)} placeholder="HONG" maxLength={40} autoComplete="family-name" />
+                  <Field name="name_en_first" label="영문 이름" value={form.name_en_first} onChange={(v) => setForm(f => ({ ...f, name_en_first: v }))} onBlur={() => save('name_en_first', form.name_en_first)} placeholder="GILDONG" maxLength={40} autoComplete="given-name" />
+                </div>
+                <HelpPill label="입력 형식">영문 성, 이름 순 · 예 HONG GILDONG (대문자)</HelpPill>
+              </div>
+
+              {/* 주소 — 8/11 이 묻고 4곳은 우편번호 팝업을 쓴다 */}
+              <div className="pt-5 border-t border-line">
+                <AddressField
+                  value={{
+                    address_zip: form.address_zip,
+                    address_base: form.address_base,
+                    address_detail: form.address_detail,
+                    address_region: form.address_region,
+                  }}
+                  onChange={(patch) => setForm(f => ({ ...f, ...patch }))}
+                  onCommit={savePatch}
+                />
+              </div>
+
+              {/* 국적 · 비상연락처 */}
+              <div className="pt-5 border-t border-line space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <Field name="nationality" label="국적" value={form.nationality} onChange={(v) => setForm(f => ({ ...f, nationality: v }))} onBlur={() => save('nationality', form.nationality)} placeholder="대한민국" maxLength={40} />
+                  {showSecondNationality ? (
+                    <Field label="추가 국적" value={form.nationality_2} onChange={(v) => setForm(f => ({ ...f, nationality_2: v }))} onBlur={() => save('nationality_2', form.nationality_2)} placeholder="이중 국적이 있다면" maxLength={40} />
+                  ) : (
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowSecondNationality(true)}
+                        className="min-h-[44px] px-3 text-[13px] font-medium text-text-tertiary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl transition-colors"
+                      >
+                        + 추가 국적
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <Field name="emergency_phone" label="비상 연락처" type="tel" value={form.emergency_phone} onChange={(v) => setForm(f => ({ ...f, emergency_phone: v }))} onBlur={() => save('emergency_phone', form.emergency_phone)} placeholder="010-0000-0000" maxLength={20} autoComplete="tel" inputMode="tel" />
+                  <SelectField label="비상 연락처 관계" value={form.emergency_relation} onChange={(v) => { setForm(f => ({ ...f, emergency_relation: v })); save('emergency_relation', v) }} options={EMERGENCY_RELATIONS} />
+                </div>
+              </div>
             </div>
           ) : (
             <div>
               <MyInfoViewRow label="이름" value={profile?.name} copyable />
               <MyInfoViewRow label="이름 (한자)" value={profile?.name_hanja} copyable />
+              <MyInfoViewRow label="영문 이름" value={[profile?.name_en_last, profile?.name_en_first].filter(Boolean).join(' ')} copyable />
               <MyInfoViewRow label="성별" value={profile?.gender ? GENDER_KO[profile.gender] : ''} />
               <MyInfoViewRow label="생년월일" value={profile?.birthdate} />
               <MyInfoViewRow label="연락처" value={profile?.phone} copyable />
               <MyInfoViewRow label="이메일" value={profile?.email_personal} copyable />
+              <MyInfoViewRow
+                label="주소"
+                value={[
+                  profile?.address_zip ? `(${profile.address_zip})` : '',
+                  profile?.address_base,
+                  profile?.address_detail,
+                ].filter(Boolean).join(' ')}
+                copyable
+              />
+              <MyInfoViewRow label="국적" value={[profile?.nationality, profile?.nationality_2].filter(Boolean).join(' · ')} />
+              <MyInfoViewRow label="비상 연락처" value={[profile?.emergency_phone, profile?.emergency_relation].filter(Boolean).join(' · ')} copyable />
             </div>
           )}
         </div>
@@ -730,31 +868,149 @@ function EditToggleButton({ editing, onClick }: { editing: boolean; onClick: () 
 }
 
 // ── 병역사항 ──────────────────────────────────────────────
+/**
+ * 병역 상태 9종 — 지원서 폼 합집합(현대차 9 · 현대카드 6 · 우리은행 4)을 그대로 담았다.
+ * 기본 = **비대상**. 대부분의 사용자는 여기서 손을 안 댄다 (센서스 「입력 UX 관찰」 #1).
+ */
+const MILITARY_STATUS_OPTIONS: { value: MilitaryStatus; label: string }[] = [
+  { value: 'not_applicable', label: '비대상' },
+  { value: 'completed', label: '군필' },
+  { value: 'serving', label: '복무 중' },
+  { value: 'discharge_expected', label: '전역예정' },
+  { value: 'not_completed', label: '미필' },
+  { value: 'exempted', label: '면제' },
+  { value: 'alt_service_serving', label: '특례 복무 중' },
+  { value: 'alt_service_completed', label: '특례 필' },
+  { value: 'medical_discharge', label: '의가사 전역' },
+]
+
+/** 군별·계급·병과·복무기간·제대구분을 펴는 상태들 */
+const MILITARY_DETAIL_STATUSES: MilitaryStatus[] = [
+  'completed', 'serving', 'discharge_expected',
+  'alt_service_serving', 'alt_service_completed', 'medical_discharge',
+]
+/** 사유 한 칸만 묻는 상태들 */
+const MILITARY_REASON_STATUSES: MilitaryStatus[] = ['not_completed', 'exempted']
+
+const MILITARY_DISCHARGE_OPTIONS: { value: MilitaryDischarge; label: string }[] = [
+  { value: 'honorable', label: '만기전역' },
+  { value: 'medical', label: '의병전역' },
+  { value: 'release_from_call', label: '소집해제' },
+  { value: 'wounded', label: '상이전역' },
+  { value: 'dishonorable', label: '불명예전역' },
+  { value: 'other', label: '기타' },
+]
+
+const MILITARY_STATUS_KO: Record<MilitaryStatus, string> =
+  Object.fromEntries(MILITARY_STATUS_OPTIONS.map((o) => [o.value, o.label])) as Record<MilitaryStatus, string>
+const MILITARY_DISCHARGE_KO: Record<MilitaryDischarge, string> =
+  Object.fromEntries(MILITARY_DISCHARGE_OPTIONS.map((o) => [o.value, o.label])) as Record<MilitaryDischarge, string>
+
+/** 옛 `military_type`(한글 라벨) → 새 `military_discharge` 코드값 */
+const LEGACY_TYPE_TO_DISCHARGE: Record<string, MilitaryDischarge> = {
+  '만기전역': 'honorable',
+  '의병전역': 'medical',
+  '불명예전역': 'dishonorable',
+}
+
+/**
+ * 🔴 **옛 데이터 매핑** — 새 컬럼이 비어 있으면 옛 칸에서 읽어 온다.
+ * `military_type` 이 '복무 중' 이면 상태는 `serving`, 그 외 값이 있으면 `completed`.
+ * 어느 쪽도 없고 옛 칸이 하나라도 차 있으면 「군필」로 본다 (예전 UI 가 그 뜻이었다).
+ */
+function deriveMilitaryStatus(p?: UserProfile): MilitaryStatus {
+  if (p?.military_status) return p.military_status
+  if (p?.military_type === '복무 중') return 'serving'
+  const legacyFilled = !!(p?.military_branch || p?.military_type || p?.military_start || p?.military_end || p?.military_unit)
+  return legacyFilled ? 'completed' : 'not_applicable'
+}
+
+function deriveDischarge(p?: UserProfile): MilitaryDischarge | '' {
+  if (p?.military_discharge) return p.military_discharge
+  return (p?.military_type && LEGACY_TYPE_TO_DISCHARGE[p.military_type]) || ''
+}
+
 const MILITARY_FIELDS: Array<keyof Pick<UserProfile, 'military_branch' | 'military_type' | 'military_start' | 'military_end' | 'military_unit'>> =
   ['military_branch', 'military_type', 'military_start', 'military_end', 'military_unit']
 
-function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+/** 🔴 `export` 는 테스트 전용이다 — 페이지는 위 `MyInfo` 가 직접 조립한다 */
+export function MilitarySection({ sectionRef, isActive, intent }: {
+  sectionRef: (el: HTMLElement | null) => void; isActive?: boolean; intent?: SectionIntent | null
+}) {
   const { data: profile } = useProfile()
   const { mutate: update } = useUpdateProfile()
   const { saved, show } = useSaved()
-  const init = { military_branch: '', military_type: '', military_start: '', military_end: '', military_unit: '' }
-  const [form, setForm] = useState(init)
+  const [form, setForm] = useState({
+    military_status: 'not_applicable' as MilitaryStatus,
+    military_branch: '',
+    military_rank: '',
+    military_specialty: '',
+    military_start: '',
+    military_end: '',
+    military_discharge: '' as MilitaryDischarge | '',
+    military_exempt_reason: '',
+  })
   const [loaded, setLoaded] = useState(false)
   const [editing, setEditing] = useState(false)
+  const durationChipsId = useId()
 
   if (profile && !loaded) {
     setForm({
-      military_branch: profile.military_branch ?? '', military_type: profile.military_type ?? '',
-      military_start: profile.military_start ?? '', military_end: profile.military_end ?? '',
-      military_unit: profile.military_unit ?? '',
+      military_status: deriveMilitaryStatus(profile),
+      military_branch: profile.military_branch ?? '',
+      military_rank: profile.military_rank ?? '',
+      // 병과는 옛 `military_unit` 에 있던 값이다 — 새 칸이 비어 있으면 그걸 끌어온다
+      military_specialty: profile.military_specialty ?? profile.military_unit ?? '',
+      military_start: profile.military_start ?? '',
+      military_end: profile.military_end ?? '',
+      military_discharge: deriveDischarge(profile),
+      military_exempt_reason: profile.military_exempt_reason ?? '',
     })
+    /*
+      🔴 남성인데 병역이 **통째로 비었으면** 처음부터 편집이다 — 보기 모드의 「비대상」 한 줄은
+      저장된 답처럼 보이는데 실제로는 아무것도 안 정해진 상태다 (게이지도 계속 미완료다).
+      옛 칸에 값이 있으면 이미 쓰던 사람이라 보기 모드가 맞다.
+    */
+    const legacyFilled = MILITARY_FIELDS.some((k) => (profile[k] ?? '').toString().trim().length > 0)
+    if (profile.gender === 'MALE' && !profile.military_status && !legacyFilled) setEditing(true)
     setLoaded(true)
   }
 
+  /** 게이지의 「병역」 칩 — 성별이 저장돼 있으면 바로 편집으로 연다 */
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (intent?.opts.edit) setEditing(true)
+  }, [intent])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const isMale = profile?.gender === 'MALE'
-  const hasAny = !!profile && MILITARY_FIELDS.some((k) => (profile[k] ?? '').toString().trim().length > 0)
-  const isServing = form.military_type === '복무 중'
-  const save = (key: string, val: string) => update({ [key]: val || null } as Partial<UserProfile>, { onSuccess: show })
+  const hasAny = !!profile && (
+    !!profile.military_status ||
+    MILITARY_FIELDS.some((k) => (profile[k] ?? '').toString().trim().length > 0)
+  )
+  const status = form.military_status
+  const showDetail = MILITARY_DETAIL_STATUSES.includes(status)
+  const showReason = MILITARY_REASON_STATUSES.includes(status)
+  const isServing = status === 'serving' || status === 'alt_service_serving'
+
+  const save = (dto: UpdateProfileDto) => update(dto, { onSuccess: show })
+
+  const handleStatusChange = (v: MilitaryStatus) => {
+    setForm(f => ({ ...f, military_status: v, military_end: v === 'serving' || v === 'alt_service_serving' ? '' : f.military_end }))
+    const dto: UpdateProfileDto = { military_status: v }
+    // 복무 중이면 전역일은 아직 없는 값이다 — 남겨두면 지원서에 거짓이 채워진다
+    if ((v === 'serving' || v === 'alt_service_serving') && form.military_end) dto.military_end = null
+    save(dto)
+  }
+
+  const handleStartChange = (v: string) => {
+    if (v && form.military_end && v > form.military_end) {
+      toast.error('입대일은 전역일 이전이어야 해요.')
+      return
+    }
+    setForm(f => ({ ...f, military_start: v }))
+    save({ military_start: v || null })
+  }
 
   const handleEndChange = (v: string) => {
     if (v && form.military_start && v < form.military_start) {
@@ -762,20 +1018,17 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
       return
     }
     setForm(f => ({ ...f, military_end: v }))
-    save('military_end', v)
+    save({ military_end: v || null })
   }
-  const handleStartChange = (v: string) => {
-    if (v && form.military_end && v > form.military_end) {
-      toast.error('입대일은 전역일 이전이어야 해요.')
-      return
-    }
-    setForm(f => ({ ...f, military_start: v }))
-    save('military_start', v)
-  }
-  const handleTypeChange = (v: string) => {
-    setForm(f => ({ ...f, military_type: v, military_end: v === '복무 중' ? '' : f.military_end }))
-    save('military_type', v)
-    if (v === '복무 중' && form.military_end) save('military_end', '')
+
+  /** 병과 — 새 칸과 옛 칸을 **같이** 쓴다 (옛 데이터를 읽는 곳이 아직 남아 있다) */
+  const saveSpecialty = () =>
+    save({ military_specialty: form.military_specialty || null, military_unit: form.military_specialty || null })
+
+  /** 제대 구분 — 새 코드값과 옛 한글 라벨을 같이 쓴다 (같은 이유) */
+  const handleDischargeChange = (v: MilitaryDischarge) => {
+    setForm(f => ({ ...f, military_discharge: v }))
+    save({ military_discharge: v, military_type: MILITARY_DISCHARGE_KO[v] })
   }
 
   return (
@@ -798,26 +1051,88 @@ function MilitarySection({ sectionRef, isActive }: { sectionRef: (el: HTMLElemen
             <EditToggleButton editing={editing} onClick={() => setEditing((v) => !v)} />
           </div>
           {editing ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <SelectField label="군별" value={form.military_branch} onChange={(v) => { setForm(f => ({ ...f, military_branch: v })); save('military_branch', v) }} options={MILITARY_BRANCHES} />
-              <SelectField label="전역 구분" value={form.military_type} onChange={handleTypeChange} options={MILITARY_TYPES} />
-              <Field label="입대일" type="date" value={form.military_start} onChange={handleStartChange} />
-              <Field
-                label={isServing ? '전역일 (복무 중)' : '전역일'}
-                type="date"
-                value={isServing ? '' : form.military_end}
-                onChange={handleEndChange}
-                disabled={isServing}
-              />
-              <Field label="병과" value={form.military_unit} onChange={(v) => setForm(f => ({ ...f, military_unit: v }))} onBlur={() => save('military_unit', form.military_unit)} placeholder="보병, 통신 등" span />
+            <div className="space-y-4">
+              <div>
+                <FieldLabel label="병역 상태" />
+                <SegmentedToggle
+                  label="병역 상태"
+                  value={status}
+                  options={MILITARY_STATUS_OPTIONS}
+                  onChange={handleStatusChange}
+                />
+                {status === 'not_applicable' && (
+                  <HelpPill label="대부분">비대상이면 여기서 끝이에요 — 지원서 병역 칸이 자동으로 채워져요</HelpPill>
+                )}
+              </div>
+
+              {/* 조건부 펼침 — 회색 미리보기 없이 그냥 숨긴다 (있지도 않은 칸을 보여주지 않는다) */}
+              {showDetail && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <SelectField label="군별" value={form.military_branch} onChange={(v) => { setForm(f => ({ ...f, military_branch: v })); save({ military_branch: v || null }) }} options={MILITARY_BRANCHES} />
+                  <Field label="계급" value={form.military_rank} onChange={(v) => setForm(f => ({ ...f, military_rank: v }))} onBlur={() => save({ military_rank: form.military_rank || null })} placeholder="병장, 하사 등" maxLength={20} />
+                  <Field label="병과" value={form.military_specialty} onChange={(v) => setForm(f => ({ ...f, military_specialty: v }))} onBlur={saveSpecialty} placeholder="보병, 통신 등" maxLength={40} span />
+
+                  <Field label="입대일" type="date" value={form.military_start} onChange={handleStartChange} />
+                  {/* 종료일 칸에서 「칩으로 채울 수 있다」를 알려면 칩 묶음이 그 칸의 설명이어야 한다 */}
+                  <Field
+                    label={isServing ? '전역일 (복무 중)' : '전역일'}
+                    type="date"
+                    value={isServing ? '' : form.military_end}
+                    onChange={handleEndChange}
+                    disabled={isServing}
+                    describedBy={isServing ? undefined : durationChipsId}
+                  />
+                  {!isServing && (
+                    <div className="md:col-span-2">
+                      <DurationChips
+                        id={durationChipsId}
+                        start={form.military_start}
+                        presets={MILITARY_PRESETS}
+                        label="복무 기간 자동 계산"
+                        onPick={(end) => handleEndChange(end)}
+                      />
+                    </div>
+                  )}
+
+                  <div className="md:col-span-2">
+                    <FieldLabel label="제대 구분" />
+                    <SegmentedToggle
+                      label="제대 구분"
+                      value={form.military_discharge || 'honorable'}
+                      options={MILITARY_DISCHARGE_OPTIONS}
+                      onChange={handleDischargeChange}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {showReason && (
+                <Field
+                  label={status === 'exempted' ? '면제 사유' : '미필 사유'}
+                  value={form.military_exempt_reason}
+                  onChange={(v) => setForm(f => ({ ...f, military_exempt_reason: v }))}
+                  onBlur={() => save({ military_exempt_reason: form.military_exempt_reason || null })}
+                  placeholder="예: 생계곤란, 질병"
+                  maxLength={100}
+                />
+              )}
             </div>
           ) : (
             <div>
-              <MyInfoViewRow label="군별" value={profile?.military_branch} />
-              <MyInfoViewRow label="전역 구분" value={profile?.military_type} />
-              <MyInfoViewRow label="입대일" value={profile?.military_start} />
-              <MyInfoViewRow label="전역일" value={isServing ? '복무 중' : profile?.military_end} />
-              <MyInfoViewRow label="병과" value={profile?.military_unit} />
+              <MyInfoViewRow label="병역 상태" value={MILITARY_STATUS_KO[status]} />
+              {showDetail && (
+                <>
+                  <MyInfoViewRow label="군별" value={profile?.military_branch} />
+                  <MyInfoViewRow label="계급" value={profile?.military_rank} />
+                  <MyInfoViewRow label="병과" value={profile?.military_specialty ?? profile?.military_unit} />
+                  <MyInfoViewRow label="입대일" value={profile?.military_start} />
+                  <MyInfoViewRow label="전역일" value={isServing ? '복무 중' : profile?.military_end} />
+                  <MyInfoViewRow label="제대 구분" value={form.military_discharge ? MILITARY_DISCHARGE_KO[form.military_discharge] : ''} />
+                </>
+              )}
+              {showReason && (
+                <MyInfoViewRow label={status === 'exempted' ? '면제 사유' : '미필 사유'} value={profile?.military_exempt_reason} />
+              )}
             </div>
           )}
         </div>
@@ -838,6 +1153,8 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
   const [form, setForm] = useState(emptyForm)
   const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
   const [saving, setSaving] = useState(false)
+  /** 자동완성 칸은 `Field` 가 아니라 라벨을 직접 이어야 한다 (없으면 「콤보박스」로만 읽힌다) */
+  const certTypeInputId = useId()
   const [langCertMeta, setLangCertMeta] = useState<LangCertSuggestion | null>(null)
 
   const scoreLabel = langCertMeta
@@ -941,12 +1258,14 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
           <ModalSection title="시험 정보" first>
             <div className="space-y-3">
               <div>
-                <FieldLabel label="종류" required />
+                <FieldLabel label="종류" required htmlFor={certTypeInputId} />
                 <LangCertAutocomplete
+                  id={certTypeInputId}
                   value={form.cert_type}
                   onChange={(v) => setForm(f => ({ ...f, cert_type: v }))}
                   onSelect={handleLangCertSelect}
                   placeholder="예: TOEIC · JLPT · HSK"
+                  inputClassName={FIELD_INPUT_CLASS}
                 />
               </div>
               {langCertMeta && (
@@ -967,7 +1286,7 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
                 <Field label={scoreLabel} value={form.score_grade} onChange={(v) => setForm(f => ({ ...f, score_grade: v }))} placeholder={scorePlaceholder} />
               )}
               <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder={langCertMeta?.issuer ?? 'ETS'} />
-              <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} />
+              <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} spellCheck={false} />
             </div>
           </ModalSection>
           <ModalSection title="취득 · 만료">
@@ -999,17 +1318,20 @@ function LangCertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLEleme
 }
 
 // ── 자격증 ────────────────────────────────────────────────
-function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+/** 🔴 `export` 는 테스트 전용이다 — 페이지는 위 `MyInfo` 가 직접 조립한다 */
+export function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
   const { data: items = [], isLoading } = useCerts()
   const { mutateAsync: create } = useCreateCert()
   const { mutateAsync: update } = useUpdateCert()
   const { mutate: remove } = useDeleteCert()
   const [modal, setModal] = useState<null | 'add' | Cert>(null)
   const [deleteTarget, setDeleteTarget] = useState<Cert | null>(null)
-  const emptyForm = { name: '', issuer: '', cert_number: '', acquired_at: '', expires_at: '' }
+  const emptyForm = { name: '', grade: '', issuer: '', cert_number: '', acquired_at: '', expires_at: '' }
   const [form, setForm] = useState(emptyForm)
   const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
   const [saving, setSaving] = useState(false)
+  /** 자동완성 칸은 `Field` 가 아니라 라벨을 직접 이어야 한다 (없으면 「콤보박스」로만 읽힌다) */
+  const nameInputId = useId()
   /** 자격증 정적 카탈로그 메타 (자동완성 선택 후 hasNumber/validYears 등 조건부 표시 위해) */
   const [certMeta, setCertMeta] = useState<CertSuggestion | null>(null)
   /** 자격증번호 placeholder (선택된 자격증의 numberExample) */
@@ -1019,7 +1341,7 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
 
   const openAdd = () => { setForm(emptyForm); setSlot(EMPTY_SLOT); setCertMeta(null); setModal('add') }
   const openEdit = (item: Cert) => {
-    setForm({ name: item.name, issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '' })
+    setForm({ name: item.name, grade: item.grade ?? '', issuer: item.issuer ?? '', cert_number: item.cert_number ?? '', acquired_at: item.acquired_at ?? '', expires_at: item.expires_at ?? '' })
     setSlot(slotFromExisting(item.file_url, item.file_size_bytes))
     setCertMeta(null) // 초기엔 미매칭, 자동완성 재선택 시 재설정
     setModal(item)
@@ -1072,13 +1394,14 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           <MyInfoEmptyAdd
             emoji="📜"
             label="첫 자격증 추가하기"
-            example="예: 정보처리기사 · 한국산업인력공단 · 2024.05"
+            example="예: 컴퓨터활용능력 1급 · 대한상공회의소 · 2024.05"
             onClick={openAdd}
           />
         )}
         {items.map((item) => {
           const fields = [
             { label: '자격증명', value: item.name ?? '' },
+            { label: '등급', value: item.grade ?? '' },
             { label: '발급기관', value: item.issuer ?? '' },
             { label: '자격번호', value: item.cert_number ?? '', mono: true },
             { label: '취득일', value: item.acquired_at ?? '', mono: true },
@@ -1089,7 +1412,7 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
               key={item.id}
               emoji="📜"
               accent="brand"
-              title={item.name}
+              title={[item.name, item.grade].filter(Boolean).join(' · ')}
               meta={[item.issuer, item.acquired_at, item.file_url && '📎 파일'].filter(Boolean).join(' · ') || undefined}
               onClick={() => openEdit(item)}
               onEdit={() => openEdit(item)}
@@ -1116,12 +1439,14 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           <ModalSection title="자격증 정보" first>
             <div className="space-y-3">
               <div>
-                <FieldLabel label="자격증명" required />
+                <FieldLabel label="자격증명" required htmlFor={nameInputId} />
                 <CertAutocomplete
+                  id={nameInputId}
                   value={form.name}
                   onChange={(v) => setForm(f => ({ ...f, name: v }))}
                   onSelect={handleCertSelect}
-                  placeholder="예: 정보처리기사"
+                  placeholder="예: 컴퓨터활용능력 1급"
+                  inputClassName={FIELD_INPUT_CLASS}
                 />
               </div>
               {certMeta && (
@@ -1131,9 +1456,11 @@ function CertsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   validYears={certMeta.validYears}
                 />
               )}
+              {/* 「기사」·「1급」처럼 자격증명과 별개로 등급을 묻는 폼이 있다 (≤40) */}
+              <Field label="등급" value={form.grade} onChange={(v) => setForm(f => ({ ...f, grade: v }))} placeholder="예: 기사 · 1급" maxLength={40} />
               <Field label="발급기관" value={form.issuer} onChange={(v) => setForm(f => ({ ...f, issuer: v }))} placeholder={certMeta?.issuer ?? '한국산업인력공단'} />
               {showNumberField && (
-                <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} placeholder={numberPlaceholder} />
+                <Field label="자격증번호" value={form.cert_number} onChange={(v) => setForm(f => ({ ...f, cert_number: v }))} placeholder={numberPlaceholder} spellCheck={false} />
               )}
             </div>
           </ModalSection>
@@ -1187,7 +1514,7 @@ function ExamSchedulesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLE
           <MyInfoEmptyAdd
             emoji="📚"
             label="첫 시험 일정 추가하기"
-            example="예: 정보처리기사 필기 · 2024.08.15 14:00"
+            example="예: 컴퓨터활용능력 1급 필기 · 2024.08.15 14:00"
             onClick={() => setModal('add')}
           />
         )}
@@ -1268,13 +1595,104 @@ function degreeToStyle(degree?: string): { emoji: string; accent: EducationAccen
 }
 
 
-function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+/**
+ * 최종 학력 세그먼트 — 「고졸·전문학사·학사·석사·박사」.
+ *
+ * 왜 이게 학력 섹션의 첫 칸인가: 학력은 사람마다 **필요한 칸 수가 다르다**. 고졸에게
+ * 대학원 칸을 보여주는 건 「나는 여기 해당 없음」을 매번 다시 판단하게 만드는 일이고,
+ * 박사에게 학교 하나짜리 목록은 어디에 무엇을 넣어야 할지 알려 주지 않는다.
+ */
+const HIGHEST_DEGREE_OPTIONS: { value: HighestDegree; label: string }[] = [
+  { value: 'high',      label: '고졸' },
+  { value: 'associate', label: '전문학사' },
+  { value: 'bachelor',  label: '학사' },
+  { value: 'master',    label: '석사' },
+  { value: 'doctor',    label: '박사' },
+]
+
+/** 한 카드가 맡는 학교 단계 — 카드 제목 · 그 카드가 인정하는 `degree` 값 · [추가] 프리셋 */
+interface EducationStage {
+  key: string
+  label: string
+  degrees: string[]
+  modalDegree: string
+}
+
+const STAGE_HIGH: EducationStage = {
+  key: 'high', label: '고등학교', degrees: ['고등학교'], modalDegree: '고등학교',
+}
+const stageUniv = (associate: boolean): EducationStage => ({
+  // 전문대·대학교는 **한 카드**다 — 어느 쪽인지는 모달의 「학교 단계」가 이미 묻는다
+  key: 'univ', label: '대학교', degrees: ['전문대', '대학교 (학사)'],
+  modalDegree: associate ? '전문대' : '대학교 (학사)',
+})
+const STAGE_MASTER: EducationStage = {
+  key: 'master', label: '대학원 석사', degrees: ['대학원 (석사)'], modalDegree: '대학원 (석사)',
+}
+const STAGE_DOCTOR: EducationStage = {
+  key: 'doctor', label: '대학원 박사', degrees: ['대학원 (박사)'], modalDegree: '대학원 (박사)',
+}
+
+/** 고른 최종 학력까지 **거쳐 온 단계 전부** — 학사면 고등학교도 지원서가 묻는다 */
+function stagesFor(highest: HighestDegree): EducationStage[] {
+  switch (highest) {
+    case 'high':      return [STAGE_HIGH]
+    case 'associate': return [STAGE_HIGH, stageUniv(true)]
+    case 'bachelor':  return [STAGE_HIGH, stageUniv(false)]
+    case 'master':    return [STAGE_HIGH, stageUniv(false), STAGE_MASTER]
+    case 'doctor':    return [STAGE_HIGH, stageUniv(false), STAGE_MASTER, STAGE_DOCTOR]
+  }
+}
+
+/** 🔴 `export` 는 테스트 전용이다 — 페이지는 위 `MyInfo` 가 직접 조립한다 */
+export function EducationsSection({ sectionRef, isActive, intent }: {
+  sectionRef: (el: HTMLElement | null) => void; isActive?: boolean; intent?: SectionIntent | null
+}) {
   const { data: items = [], isLoading } = useEducations()
+  const { data: profile } = useProfile()
+  const { mutate: updateProfile } = useUpdateProfile()
+  const { saved, show } = useSaved()
   const { mutateAsync: create } = useCreateEducation()
   const { mutateAsync: update } = useUpdateEducation()
   const { mutate: remove } = useDeleteEducation()
   const [modal, setModal] = useState<null | 'add' | Education>(null)
+  /** 추가 모드에서 미리 고를 단계 — 「+ 대학교 추가」가 왔다는 뜻 */
+  const [addDegree, setAddDegree] = useState<string | undefined>(undefined)
   const [deleteTarget, setDeleteTarget] = useState<Education | null>(null)
+  /** 최종 학력 — 누르면 바로 바뀌어야 한다 (재조회를 기다리면 단계 카드가 한 박자 늦게 움직인다) */
+  const [highest, setHighest] = useState<HighestDegree | null>(null)
+  const [loaded, setLoaded] = useState(false)
+
+  if (profile && !loaded) {
+    setHighest(profile.highest_degree ?? null)
+    setLoaded(true)
+  }
+
+  const stages = highest ? stagesFor(highest) : []
+
+  const openAdd = (degree?: string) => { setAddDegree(degree); setModal('add') }
+  const openEdit = (item: Education) => { setAddDegree(undefined); setModal(item) }
+
+  const handleHighestChange = (v: HighestDegree) => {
+    if (v === highest) return
+    setHighest(v)
+    updateProfile({ highest_degree: v }, { onSuccess: show, onError: (err) => notifySaveError(err) })
+  }
+
+  /**
+   * 게이지의 「최종 학력」 칩 — 고른 단계가 있으면 그 단계로 추가 모달을 연다.
+   * 🔴 `highest` 를 deps 에 넣지 않는다 — 모달을 닫고 토글을 바꾸는 순간 모달이 다시 열린다.
+   */
+  const highestLabelId = useId()
+  const highestHelpId = useId()
+  const highestRef = useRef(highest)
+  useEffect(() => { highestRef.current = highest })
+  useEffect(() => {
+    if (!intent?.opts.edit) return
+    const h = highestRef.current
+    setAddDegree(h ? HIGHEST_DEGREE_TO_EDU[h] : undefined)
+    setModal('add')
+  }, [intent])
 
   const handleSave = async (dto: Omit<Education, 'id'>) => {
     if (modal === 'add') {
@@ -1292,57 +1710,115 @@ function EducationsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElem
     return `${s} ~ ${x}`
   }
 
+  /** 단계 카드가 인정하는 항목 / 어느 단계에도 안 들어가는 나머지(「추가 학력」) */
+  const itemsOf = (s: EducationStage) => items.filter((e) => s.degrees.includes(e.degree ?? ''))
+  const stagedIds = new Set(stages.flatMap((s) => itemsOf(s).map((e) => e.id)))
+  const extras = items.filter((e) => !stagedIds.has(e.id))
+
+  const renderItem = (item: Education) => {
+    const gpa = item.gpa ? (item.gpa_max ? `${item.gpa}/${item.gpa_max}` : item.gpa) : ''
+    const meta = [item.status, periodOf(item), gpa, item.file_url && '📎 파일']
+      .filter(Boolean)
+      .join(' · ')
+    const style = degreeToStyle(item.degree)
+    const fields = [
+      { label: '학교명', value: item.school_name ?? '' },
+      { label: '학교 단계', value: item.degree ?? '' },
+      { label: '전공', value: item.major ?? '' },
+      { label: '상태', value: item.status ?? '' },
+      { label: '입학', value: item.start_at ?? '', mono: true },
+      { label: '졸업 (예정)', value: item.end_at ?? '', mono: true },
+      { label: '학점', value: gpa, mono: true },
+      { label: '위치', value: item.location ?? '' },
+    ]
+    return (
+      <MyInfoItemRow
+        key={item.id}
+        emoji={style.emoji}
+        accent={style.accent}
+        title={[item.school_name || '(학교명 미입력)', item.major].filter(Boolean).join(' · ')}
+        meta={meta || undefined}
+        onClick={() => openEdit(item)}
+        onEdit={() => openEdit(item)}
+        badge={item.degree || undefined}
+        detailFields={fields}
+      />
+    )
+  }
+
   return (
-    <SectionCard id="education" sectionRef={sectionRef} isActive={isActive}>
-      <div className="space-y-2">
+    <SectionCard id="education" sectionRef={sectionRef} saved={saved} isActive={isActive}>
+      <div className="space-y-5">
+        {/* 최종 학력 먼저 — 사람마다 필요한 학교 칸 수가 다르다 (`HIGHEST_DEGREE_OPTIONS` 주석) */}
+        <div>
+          <FieldLabel label="최종 학력" id={highestLabelId} />
+          <SegmentedToggle
+            label="최종 학력"
+            labelledBy={highestLabelId}
+            describedBy={highest ? undefined : highestHelpId}
+            value={highest}
+            options={HIGHEST_DEGREE_OPTIONS}
+            onChange={handleHighestChange}
+          />
+          {!highest && (
+            <HelpPill label="먼저" id={highestHelpId}>최종 학력을 고르면 필요한 학교만 보여드려요</HelpPill>
+          )}
+        </div>
+
         {isLoading && [1, 2].map((i) => (
           <div key={i} className="h-14 rounded-xl bg-card animate-pulse" />
         ))}
-        {!isLoading && items.length === 0 && (
-          <MyInfoEmptyAdd
-            emoji="🎓"
-            label="첫 학력 추가하기"
-            example="예: 서울대학교 · 컴퓨터공학 · 2020-2024"
-            onClick={() => setModal('add')}
-          />
+
+        {/* 골랐으면 거쳐 온 단계마다 한 묶음 — 빈 단계는 「+ {단계} 추가」가 그 단계 프리셋으로 연다 */}
+        {!isLoading && highest && (
+          <>
+            {stages.map((s) => {
+              const own = itemsOf(s)
+              return (
+                <div key={s.key} role="group" aria-label={s.label} className="pt-4 border-t border-line">
+                  <p className="text-[13px] font-bold text-text-primary mb-2">{s.label}</p>
+                  <div className="space-y-2">
+                    {own.length === 0 ? (
+                      <MyInfoEmptyAdd label={`${s.label} 추가`} compact onClick={() => openAdd(s.modalDegree)} />
+                    ) : own.map(renderItem)}
+                  </div>
+                </div>
+              )
+            })}
+            <div className="pt-4 border-t border-line">
+              {extras.length > 0 && (
+                <p className="text-[13px] font-bold text-text-primary mb-2">추가 학력</p>
+              )}
+              <div className="space-y-2">
+                {extras.map(renderItem)}
+                <MyInfoEmptyAdd label="학력 추가" compact onClick={() => openAdd()} />
+              </div>
+            </div>
+          </>
         )}
-        {items.map((item) => {
-          const gpa = item.gpa ? (item.gpa_max ? `${item.gpa}/${item.gpa_max}` : item.gpa) : ''
-          const meta = [item.status, periodOf(item), gpa, item.file_url && '📎 파일']
-            .filter(Boolean)
-            .join(' · ')
-          const style = degreeToStyle(item.degree)
-          const fields = [
-            { label: '학교명', value: item.school_name ?? '' },
-            { label: '학교 단계', value: item.degree ?? '' },
-            { label: '전공', value: item.major ?? '' },
-            { label: '상태', value: item.status ?? '' },
-            { label: '입학', value: item.start_at ?? '', mono: true },
-            { label: '졸업 (예정)', value: item.end_at ?? '', mono: true },
-            { label: '학점', value: gpa, mono: true },
-            { label: '위치', value: item.location ?? '' },
-          ]
-          return (
-            <MyInfoItemRow
-              key={item.id}
-              emoji={style.emoji}
-              accent={style.accent}
-              title={[item.school_name || '(학교명 미입력)', item.major].filter(Boolean).join(' · ')}
-              meta={meta || undefined}
-              onClick={() => setModal(item)}
-              onEdit={() => setModal(item)}
-              badge={item.degree || undefined}
-              detailFields={fields}
-            />
-          )
-        })}
-        {!isLoading && items.length > 0 && (
-          <MyInfoEmptyAdd label="학력 추가" compact onClick={() => setModal('add')} />
+
+        {/* 아직 안 골랐으면 예전처럼 목록 하나 — 토글 아래 안내가 다음 걸음을 말한다 */}
+        {!isLoading && !highest && (
+          <div className="space-y-2">
+            {items.length === 0 && (
+              <MyInfoEmptyAdd
+                emoji="🎓"
+                label="첫 학력 추가하기"
+                example="예: 한양대학교 · 경영학과 · 2020-2024"
+                onClick={() => openAdd()}
+              />
+            )}
+            {items.map(renderItem)}
+            {items.length > 0 && (
+              <MyInfoEmptyAdd label="학력 추가" compact onClick={() => openAdd()} />
+            )}
+          </div>
         )}
       </div>
       {modal && (
         <EducationModal
           initial={modal === 'add' ? null : modal}
+          initialDegree={modal === 'add' ? addDegree : undefined}
           onClose={() => setModal(null)}
           onSave={handleSave}
           onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
@@ -1405,7 +1881,7 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
           <MyInfoEmptyAdd
             emoji="🏆"
             label="첫 수상 내역 추가하기"
-            example="예: 교내 프로그래밍 대회 · 대상 · 2024.06"
+            example="예: 대학생 광고 공모전 · 우수상 · 2024.06"
             onClick={openAdd}
           />
         )}
@@ -1473,144 +1949,182 @@ function AwardsSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement 
   )
 }
 
-// ── 경험 (활동 일지로 이전됨 — mock #page-myinfo summary-card 1:1) ──
-function ExperiencesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
+// ── 경력·경험 = 활동(`Activity`) 경량 폼 ───────────────────
+/**
+ * 🔴 **저장소는 하나(`Activity`), 입구는 둘** (계획 A′).
+ *
+ * 예전엔 여기가 활동 일지를 **읽기만** 하고 「자세히 보기」로 떠넘겼다. 그런데 이력서에
+ * 옮겨 적을 한 줄을 추가하려고 일지로 건너가 다른 폼을 쓰는 건 불편하다는 지적이 있었다
+ * (2026-09-05). 그래서 여기서 바로 추가·편집하되 **저장은 같은 `Activity`** 로 간다 —
+ * 로그·회고 같은 깊이는 계속 활동 일지의 몫이다.
+ *
+ * 🔴 화면은 다시 **둘로** 갈렸다 (CEO 2026-09-06 「경험이랑 경력은 분류해야지」). 지원서는
+ * 「경력사항」과 「대외활동」을 다른 칸으로 묻는데 한 목록에 인턴과 동아리가 섞여 있으면
+ * 옮겨 적을 때 매번 골라내야 한다. **저장은 그대로 `activities` 하나**, `type` 이 기준이다.
+ *
+ * 몸통을 하나로 둔 이유: 행·빈 상태·모달·삭제가 같은 흐름이라, 복사하면 한쪽만 고쳐지는
+ * 버그가 생긴다. 다른 것은 아래 `MODE` 표에 모아 둔 말과 필터뿐이다.
+ *
+ * 옛 `myinfo experiences` API 는 더 이상 읽지도 쓰지도 않는다.
+ */
+const ACTIVITY_SECTION_MODE = {
+  career: {
+    id: 'career',
+    emoji: '💼',
+    /** 재직 중 = 끝나지 않은 경력. 「진행 중」은 동아리의 말이라 경력 칸에서는 어색하다 */
+    ongoingLabel: '재직 중',
+    emptyLabel: '첫 경력 추가하기',
+    emptyExample: '예: ○○커머스 · 사원 · 2025.09 ~ 재직 중',
+    addLabel: '경력 추가',
+    orgLabel: '회사',
+    roleLabel: '직위·직급',
+    summaryLabel: '담당 업무',
+  },
+  experience: {
+    id: 'experiences',
+    emoji: '🌱',
+    ongoingLabel: '진행 중',
+    emptyLabel: '첫 경험 추가하기',
+    emptyExample: '예: 마케팅 학회 · 운영진 · 2025.03 ~ 2025.06',
+    addLabel: '경험 추가',
+    orgLabel: '기관·회사',
+    roleLabel: '역할',
+    summaryLabel: '지원서용 요약',
+  },
+} as const
+
+export function ActivitySection({ mode, sectionRef, isActive }: {
+  mode: ExperienceFormMode; sectionRef: (el: HTMLElement | null) => void; isActive?: boolean
+}) {
+  const m = ACTIVITY_SECTION_MODE[mode]
   const link = useDemoLink()
-  const { data: activities = [] } = useActivities(false)
-  const [showCompleted, setShowCompleted] = useState(false)
+  const { data: activities = [], isLoading } = useActivities(false)
+  const { mutate: removeActivity } = useRemoveActivity()
+  const [modal, setModal] = useState<null | 'add' | Activity>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null)
   const today = todayLocal()
-  // 기본함(미분류) 은 활동이 아니라 퀵캡처 수신함 — 경험 카드에서 제외
-  const visibleActs = activities.filter((a) => !a.isInbox)
-  const ongoing = visibleActs.filter((a) => !a.archivedAt && (!a.endedAt || a.endedAt >= today))
-  const completed = visibleActs.filter((a) => !a.archivedAt && a.endedAt && a.endedAt < today)
-  const allLogs = activities.flatMap((a) => a.logs ?? [])
-  // 이번주 KST 월요일 (수기 계산은 로컬 TZ+UTC slice 혼합으로 KST 아침에 하루 밀림 — 헬퍼 사용)
-  const monday = getWeekMonday()
-  const weekLogCount = (activityId: string) =>
-    allLogs.filter((l) => l.activityId === activityId && l.occurredAt >= monday).length
+
+  // 기본함(미분류)은 활동이 아니라 퀵캡처 수신함 — 목록에서 제외
+  const items = activities.filter(
+    (a) => !a.isInbox && !a.archivedAt && isCareerType(a.type) === (mode === 'career'),
+  )
+  const ongoingCount = items.filter((a) => !a.endedAt || a.endedAt >= today).length
+
+  const periodOf = (a: Activity) => {
+    const fmt = (d?: string | null) => (d ? d.slice(0, 7).replace('-', '.') : '')
+    const s = fmt(a.startedAt)
+    // 재직 중이면 끝이 없다 — 서버가 `endedAt` 을 비워 두므로 여기서 글자로 채운다
+    if (a.isCurrent) return s ? `${s} ~ 재직 중` : '재직 중'
+    const e = fmt(a.endedAt)
+    if (!s && !e) return ''
+    return s && e ? `${s} ~ ${e}` : (e || s)
+  }
 
   return (
     <SectionCard
-      id="experiences"
+      id={m.id}
       sectionRef={sectionRef}
       isActive={isActive}
       headerRight={
         <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-brand/10 text-brand">
-          진행 중 {ongoing.length}개
+          {m.ongoingLabel} {ongoingCount}개
         </span>
       }
     >
-      <div className="space-y-3">
-        {/* 부제 — mock 의 summary-card 부제 */}
-        <p className="text-[11px] text-text-tertiary leading-relaxed">
-          활동 일지에서 일별 기록·회고와 함께 관리되고 있어요.
-        </p>
+      <div className="space-y-2">
+        {isLoading && [1, 2].map((i) => (
+          <div key={i} className="h-14 rounded-xl bg-card animate-pulse" />
+        ))}
 
-        {/* 진행 중 활동 mini list */}
-        <div className="space-y-1.5">
-          {ongoing.length === 0 ? (
-            <div className="text-center py-4 text-[11px] text-text-tertiary">
-              진행 중인 활동이 없어요. 활동 일지에서 시작해보세요.
-            </div>
-          ) : (
-            ongoing.map((a) => (
-              <Link
-                key={a.id}
-                to={link('/activity')}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-line bg-card hover:bg-card-hover active:bg-card-strong transition-colors"
-              >
-                <span className={`type-badge ${a.type ?? 'other'} text-[9.5px] px-2 py-0.5 rounded shrink-0`}>
-                  {a.type ? (ACTIVITY_TYPE_KO[a.type] ?? a.type) : '기타'}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-text-primary truncate">{a.name}</div>
-                  {(a.role || a.org) && (
-                    <div className="text-[10.5px] text-text-tertiary truncate">
-                      {a.role ?? ''}{a.role && a.org ? ' · ' : ''}{a.org ?? ''}
-                    </div>
-                  )}
-                </div>
-                <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand">
-                  {weekLogCount(a.id)} 이번주
-                </span>
-              </Link>
-            ))
-          )}
-        </div>
-
-        {/* 완료 활동 토글 */}
-        {completed.length > 0 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setShowCompleted((v) => !v)}
-              className="w-full flex items-center justify-center gap-1 text-[11px] font-medium text-text-tertiary hover:text-text-secondary py-1.5"
-            >
-              완료 활동 {completed.length}개 보기 {showCompleted ? '▴' : '▾'}
-            </button>
-            {showCompleted && (
-              <div className="space-y-1.5">
-                {completed.map((a) => {
-                  const logCount = allLogs.filter((l) => l.activityId === a.id).length
-                  const period = (() => {
-                    if (!a.startedAt && !a.endedAt) return ''
-                    const start = a.startedAt?.slice(0, 7).replace('-', '.') ?? ''
-                    const end = a.endedAt?.slice(0, 7).replace('-', '.') ?? ''
-                    return start && end ? `${start} ~ ${end}` : (end || start)
-                  })()
-                  return (
-                    <Link
-                      key={a.id}
-                      to={link('/activity')}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-line bg-card hover:bg-card-hover active:bg-card-strong transition-colors"
-                    >
-                      <span className={`type-badge ${a.type ?? 'other'} text-[9.5px] px-2 py-0.5 rounded shrink-0`}>
-                        {a.type ? (ACTIVITY_TYPE_KO[a.type] ?? a.type) : '기타'}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-text-primary truncate">{a.name}</div>
-                        {(a.role || period) && (
-                          <div className="text-[10.5px] text-text-tertiary truncate">
-                            {a.role ?? ''}{a.role && period ? ' · ' : ''}{period}
-                          </div>
-                        )}
-                      </div>
-                      <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-text-quaternary/15 text-text-tertiary">
-                        {logCount}건
-                      </span>
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-          </>
+        {!isLoading && items.length === 0 && (
+          <MyInfoEmptyAdd
+            emoji={m.emoji}
+            label={m.emptyLabel}
+            example={m.emptyExample}
+            onClick={() => setModal('add')}
+          />
         )}
 
-        {/* 활동 일지로 이동 */}
-        <Link
-          to={link('/activity')}
-          className="flex items-center justify-center gap-1 w-full bg-brand/10 hover:bg-brand/20 active:bg-brand/30 text-brand text-xs font-semibold py-2.5 rounded-lg transition-colors border border-brand/20"
-        >
-          → 활동 일지에서 자세히 보기
-        </Link>
+        {items.map((a) => {
+          const type = a.type ?? 'other'
+          const fields = [
+            { label: '활동명', value: a.name },
+            { label: '유형', value: TYPE_KO[type] },
+            { label: m.orgLabel, value: a.org ?? '' },
+            ...(a.orgDepartment ? [{ label: '부서', value: a.orgDepartment }] : []),
+            { label: m.roleLabel, value: a.role ?? '' },
+            { label: '기간', value: periodOf(a), mono: true },
+            ...(a.country ? [{ label: '국가', value: a.country }] : []),
+            { label: '성과', value: a.outcome ?? '' },
+            { label: m.summaryLabel, value: a.applicationSummary ?? '' },
+          ]
+          return (
+            <MyInfoItemRow
+              key={a.id}
+              emoji={m.emoji}
+              accent="success"
+              title={a.name}
+              badge={TYPE_KO[type]}
+              // 부서는 회사 바로 뒤 — 지원서 경력 칸이 「회사 · 부서 · 직위」 순으로 묻는다
+              meta={[a.org, a.orgDepartment, a.role, periodOf(a)].filter(Boolean).join(' · ') || undefined}
+              onClick={() => setModal(a)}
+              onEdit={() => setModal(a)}
+              detailFields={fields}
+            />
+          )
+        })}
+
+        {!isLoading && items.length > 0 && (
+          <MyInfoEmptyAdd label={m.addLabel} compact onClick={() => setModal('add')} />
+        )}
+
+        {/* 깊이는 계속 활동 일지의 몫 — 링크는 유지한다. 같은 링크를 두 섹션에 두면 잔소리라 경험 쪽에만 둔다 */}
+        {mode === 'experience' && (
+          <Link
+            to={link('/activity')}
+            className="flex items-center justify-center gap-1 w-full bg-brand/10 hover:bg-brand/20 active:bg-brand/30 text-brand text-xs font-semibold py-2.5 rounded-lg transition-colors border border-brand/20"
+          >
+            활동 일지에서 기록 쌓기 →
+          </Link>
+        )}
       </div>
+
+      {modal && (
+        <ExperienceFormModal
+          mode={mode}
+          editing={modal === 'add' ? null : modal}
+          onClose={() => setModal(null)}
+          onDelete={modal !== 'add' && typeof modal === 'object' ? () => setDeleteTarget(modal) : undefined}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteModal
+          label={deleteTarget.name}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            removeActivity(deleteTarget.id, {
+              onError: () => toast.error('기록이 달린 활동은 활동 일지에서 정리해 주세요.'),
+            })
+            setDeleteTarget(null)
+            setModal(null)
+          }}
+        />
+      )}
     </SectionCard>
   )
 }
 
-const ACTIVITY_TYPE_KO: Record<string, string> = {
-  intern: '인턴',
-  club: '동아리',
-  study: '스터디',
-  project: '팀 프로젝트',
-  sideproject: '사이드 프로젝트',
-  contest: '공모전·해커톤',
-  research: '연구·학술',
-  parttime: '알바',
-  volunteer: '봉사',
-  overseas: '해외 경험',
-  bootcamp: '부트캠프·교육',
-  other: '기타',
+// ── 우대·기타 (보훈 · 장애 · 추가 정보) ────────────────────
+function ExtrasSection({ sectionRef, isActive, intent }: {
+  sectionRef: (el: HTMLElement | null) => void; isActive?: boolean; intent?: SectionIntent | null
+}) {
+  const { saved, show } = useSaved()
+  return (
+    <SectionCard id="extras" sectionRef={sectionRef} saved={saved} isActive={isActive}>
+      {/* 「보훈 여부」 칩은 섹션 위가 아니라 **그 토글**로 데려가야 한다 (추가 정보가 길다) */}
+      <ExtrasSectionBody onSaved={show} focus={intent?.opts.focus} focusSeq={intent?.seq} />
+    </SectionCard>
+  )
 }
 
 // ── 스펙 목표 (자유 입력) ─────────────────────────────────
@@ -1918,17 +2432,13 @@ function CoverletterTextField({
   )
 }
 
-// ── 파일 보관함 ───────────────────────────────────────────
-const DOC_CATEGORIES = ['이력서', '포트폴리오', '성적증명서', '졸업증명서', '자기소개서', '기타(직접입력)']
-
-type ExistingFileSource = '학력' | '어학 자격증' | '자격증' | '수상 내역'
-interface ExistingFile {
-  id: string
-  label: string
-  source: ExistingFileSource
-  file_url: string
-  file_size_bytes: number | null
-}
+// ── 지원 서류 (고정 슬롯 + 항목 첨부 + 기타 파일) ─────────
+// 슬롯 4행과 「항목에서 첨부한 서류」 묶음은 `DocumentSlotsBody` 가 그린다.
+// 여기 남은 것은 **기타 파일** — 자유 업로드(슬롯 없는 document)다.
+// 🔴 성적·졸업증명서는 **학력 항목 첨부가 원본**이다 (CEO 2026-09-05) — 자유 파일로도 고를 수
+// 있게 두면 같은 서류가 두 군데 저장된다. 이력서·포트폴리오는 슬롯의 변형본(영문 이력서 등)
+// 용도로 남긴다. 옛 문서에 남은 category 값은 이 목록과 무관하게 저장된 문자열 그대로 보인다.
+const DOC_CATEGORIES = ['이력서', '포트폴리오', '자기소개서', '기타(직접입력)']
 
 /** 바이트 → "1.2MB" / "340KB" 표시 */
 function formatBytes(bytes: number | null | undefined): string {
@@ -1938,19 +2448,16 @@ function formatBytes(bytes: number | null | undefined): string {
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`
 }
 
-function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement | null) => void; isActive?: boolean }) {
-  const { data: langCerts = [] } = useLangCerts()
-  const { data: certs = [] } = useCerts()
-  const { data: awards = [] } = useAwards()
-  const { data: educations = [] } = useEducations()
-  const { data: documents = [] } = useDocuments()
+function FilesSection({ sectionRef, isActive, onJump }: {
+  sectionRef: (el: HTMLElement | null) => void
+  isActive?: boolean
+  onJump: (sectionId: string) => void
+}) {
+  // 🔴 고정 슬롯에 들어간 문서는 위 슬롯 행이 이미 보여준다 — 여기 또 나오면 같은 파일이 두 번 뜬다
+  const { data: allDocuments = [] } = useDocuments()
+  const documents = allDocuments.filter((d) => !d.slot)
   const { mutateAsync: createDoc } = useCreateDocument()
   const { mutate: deleteDoc } = useDeleteDocument()
-  // 보관함 X 버튼은 "파일만" 비움 — 항목 row는 남김. file_url=''로 PATCH → 백엔드 EmptyToNull + R2 cascade.
-  const { mutate: updateEdu } = useUpdateEducation()
-  const { mutate: updateLangCert } = useUpdateLangCert()
-  const { mutate: updateCert } = useUpdateCert()
-  const { mutate: updateAward } = useUpdateAward()
 
   const [showUpload, setShowUpload] = useState(false)
   const [title, setTitle] = useState('')
@@ -1959,30 +2466,6 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
   const [slot, setSlot] = useState<FileSlot>(EMPTY_SLOT)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<MyDocument | null>(null)
-  const [existingDeleteTarget, setExistingDeleteTarget] = useState<ExistingFile | null>(null)
-
-  // 기존 섹션에서 올라간 파일 집계
-  const existingFiles: ExistingFile[] = [
-    ...educations.filter(i => i.file_url).map((i): ExistingFile => ({ id: i.id, label: i.school_name, source: '학력', file_url: i.file_url!, file_size_bytes: i.file_size_bytes ?? null })),
-    ...langCerts.filter(i => i.file_url).map((i): ExistingFile => ({ id: i.id, label: i.cert_type, source: '어학 자격증', file_url: i.file_url!, file_size_bytes: i.file_size_bytes ?? null })),
-    ...certs.filter(i => i.file_url).map((i): ExistingFile => ({ id: i.id, label: i.name, source: '자격증', file_url: i.file_url!, file_size_bytes: i.file_size_bytes ?? null })),
-    ...awards.filter(i => i.file_url).map((i): ExistingFile => ({ id: i.id, label: i.contest_name, source: '수상 내역', file_url: i.file_url!, file_size_bytes: i.file_size_bytes ?? null })),
-  ]
-
-  // 보관함에서 X 버튼 = "파일만" 제거 (utils/myinfoFileActions에서 단위 테스트됨)
-  const updaters = {
-    updateEducation: updateEdu as never,
-    updateLangCert: updateLangCert as never,
-    updateCert: updateCert as never,
-    updateAward: updateAward as never,
-  }
-
-  const SOURCE_STYLE: Record<string, string> = {
-    '학력':       'bg-success/12 text-success',
-    '어학 자격증': 'bg-success/12 text-success',
-    '자격증':     'bg-brand/10 text-brand',
-    '수상 내역':   'bg-warning/12 text-warning',
-  }
 
   const handleSave = async () => {
     if (!title.trim() || slot.kind === 'empty' || saving) return
@@ -2019,59 +2502,11 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
 
   return (
     <SectionCard id="files" sectionRef={sectionRef} isActive={isActive}>
+      <DocumentSlotsBody onJump={onJump}>
       <div className="space-y-5">
-
-        {/* 기존 섹션 파일 */}
-        {existingFiles.length > 0 && (
-          <div>
-            <p className="text-[11px] text-text-quaternary font-semibold mb-2">학력 · 자격증 · 수상 내역에서 등록한 파일</p>
-            <div className="space-y-1.5">
-              {existingFiles.map((f) => (
-                <div
-                  key={`${f.source}-${f.id}`}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card hover:border-line-strong hover:bg-card active:bg-card-strong transition-all group"
-                >
-                  <a
-                    href={f.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-1 min-w-0 items-center gap-3"
-                  >
-                    <FileIcon url={f.file_url} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-text-primary truncate group-hover:text-brand transition-colors">{f.label}</p>
-                    </div>
-                    {f.file_size_bytes != null && f.file_size_bytes > 0 && (
-                      <span className="text-[10px] text-text-quaternary flex-none">{formatBytes(f.file_size_bytes)}</span>
-                    )}
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-none ${SOURCE_STYLE[f.source] ?? 'bg-card-strong text-text-tertiary'}`}>{f.source}</span>
-                  </a>
-                  <button
-                    type="button"
-                    aria-label={`${f.label} 항목 삭제`}
-                    onClick={() => setExistingDeleteTarget(f)}
-                    className="flex-none w-8 h-8 flex items-center justify-center text-text-quaternary hover:text-danger transition-colors"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 구분선 */}
-        {existingFiles.length > 0 && (
-          <div className="border-t border-line" />
-        )}
 
         {/* 직접 올린 파일들 */}
         <div>
-          {existingFiles.length > 0 && (
-            <p className="text-[11px] text-text-quaternary font-semibold mb-2">직접 올린 파일</p>
-          )}
           <div className="space-y-1.5">
             {documents.map((doc) => (
               <div
@@ -2079,12 +2514,12 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                 className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line bg-card hover:border-line-strong hover:bg-card active:bg-card-strong transition-all group"
               >
                 <a
-                  href={doc.file_url}
+                  href={doc.file_url ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-1 min-w-0 items-center gap-3"
                 >
-                  <FileIcon url={doc.file_url} />
+                  <FileIcon url={doc.file_url ?? ''} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-text-primary truncate group-hover:text-brand transition-colors">{doc.title}</p>
                   </div>
@@ -2120,21 +2555,22 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="예: 2025 토익 성적표, 개인 포트폴리오"
-                  className="w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                  className={FIELD_INPUT_CLASS}
                 />
               </div>
               <div>
-                <label className="block text-xs text-text-tertiary mb-1.5 font-medium">카테고리 (선택)</label>
+                <FieldLabel label="카테고리 (선택)" />
                 <div className="relative">
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-input border border-line rounded-lg px-3 py-2 pr-8 text-xs text-text-primary cursor-pointer focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all appearance-none"
+                    aria-label="카테고리"
+                    className={FIELD_SELECT_CLASS}
                   >
                     <option value="">선택 안함</option>
                     {DOC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+                  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className="absolute right-4 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
                     <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
@@ -2143,7 +2579,8 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
                     placeholder="카테고리 직접 입력"
-                    className="mt-2 w-full bg-input border border-line rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                    aria-label="카테고리 직접 입력"
+                    className={`mt-2 ${FIELD_INPUT_CLASS}`}
                   />
                 )}
               </div>
@@ -2176,7 +2613,7 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           ) : (
             <button
               onClick={() => setShowUpload(true)}
-              className="mt-1.5 w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl py-3 transition-all flex items-center justify-center gap-1.5"
+              className="mt-1.5 w-full text-xs text-text-quaternary hover:text-brand border border-dashed border-line hover:border-brand/30 rounded-xl py-3 min-h-[44px] sm:min-h-0 transition-all flex items-center justify-center gap-1.5"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
               파일 올리기
@@ -2184,28 +2621,14 @@ function FilesSection({ sectionRef, isActive }: { sectionRef: (el: HTMLElement |
           )}
         </div>
 
-        {existingFiles.length === 0 && documents.length === 0 && !showUpload && (
-          <p className="text-xs text-text-quaternary text-center py-2">자격증·수상 내역에서 첨부한 파일과 직접 올린 파일이 여기에 모여요</p>
-        )}
       </div>
+      </DocumentSlotsBody>
 
       {deleteTarget && (
         <DeleteModal
           label={deleteTarget.title}
           onClose={() => setDeleteTarget(null)}
           onConfirm={() => { deleteDoc(deleteTarget.id); setDeleteTarget(null) }}
-        />
-      )}
-
-      {/* 보관함 X 버튼 → "파일만" 제거. 항목 row는 그대로, file_url=null + R2 cascade로 정리 */}
-      {existingDeleteTarget && (
-        <DeleteModal
-          label={`${existingDeleteTarget.label}의 첨부 파일`}
-          onClose={() => setExistingDeleteTarget(null)}
-          onConfirm={() => {
-            clearFileBySource(existingDeleteTarget.source, existingDeleteTarget.id, updaters)
-            setExistingDeleteTarget(null)
-          }}
         />
       )}
     </SectionCard>

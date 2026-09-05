@@ -4,6 +4,8 @@ import { todayLocal } from '@/utils/datetime'
 import { useCreateExamSchedule, useUpdateExamSchedule } from '@/hooks/useExamSchedules'
 import { LANGUAGE_CERT_TYPES, type ExamSchedule, type ExamType } from '@/types/exam-schedule'
 import { InfoModal } from './InfoModal'
+// 창고의 다른 모달(학력·자격증)과 같은 48px 칸 — 한 화면에 40px 이 섞이면 어느 쪽이 정상인지 다시 읽는다
+import { FIELD_INPUT_CLASS, FIELD_SELECT_CLASS, FIELD_TEXTAREA_CLASS } from '@/components/myinfo/fields'
 
 interface Props {
   open: boolean
@@ -124,11 +126,11 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
                 <select
                   value={certType}
                   onChange={(e) => setCertType(e.target.value)}
-                  className="w-full appearance-none bg-input border border-line rounded-lg pl-3 pr-9 py-2 text-base sm:text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all cursor-pointer"
+                  className={FIELD_SELECT_CLASS}
                 >
                   {LANGUAGE_CERT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
+                <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className="absolute right-4 top-1/2 -translate-y-1/2 text-text-quaternary pointer-events-none">
                   <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
@@ -141,10 +143,10 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="예: 정보처리기사 필기"
+                placeholder="예: 컴퓨터활용능력 1급 필기"
                 aria-invalid={isNameMissing}
                 aria-describedby={isNameMissing ? 'exam-name-error' : undefined}
-                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                className={FIELD_INPUT_CLASS}
               />
               {isNameMissing && (
                 <p id="exam-name-error" role="alert" className="mt-1 text-[11px] text-danger">
@@ -172,7 +174,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
                       ? 'exam-date-warning'
                       : undefined
                 }
-                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                className={FIELD_INPUT_CLASS}
               />
             </div>
             <div>
@@ -181,7 +183,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+                className={FIELD_INPUT_CLASS}
               />
             </div>
           </div>
@@ -203,7 +205,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="예: 홍익대학교 종합교육관"
-              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all"
+              className={FIELD_INPUT_CLASS}
             />
           </div>
 
@@ -216,7 +218,7 @@ export function AddExamScheduleModal({ open, onClose, initial, defaultDate, onDe
               rows={2}
               maxLength={500}
               placeholder="준비물, 목표 점수 등"
-              className="w-full bg-input border border-line rounded-lg px-3 py-2 text-base sm:text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20 transition-all resize-none"
+              className={`${FIELD_TEXTAREA_CLASS} resize-none`}
             />
             <p className={`text-[10px] text-right mt-1 ${memo.length >= 500 ? 'text-danger' : memo.length >= 450 ? 'text-warning' : 'text-text-quaternary'}`}>
               {memo.length} / 500
