@@ -18,6 +18,10 @@ import { SEMESTER_PRESETS, MILITARY_PRESETS } from '@/utils/durationPresets'
  *  9. type="button"
  * 10. 🔴 안내 문구는 aria-live="polite" — 시작일을 넣는 순간 칩이 살아나는 걸 알려야 한다
  * 11. `id` 를 주면 그 값이 묶음에 실린다 (종료일 칸의 `aria-describedby` 대상)
+ *  ── 시작일 포함 기간 (복무)
+ * 12. 🔴 inclusiveEnd → 2020-01-01 + 18개월은 2021-07-01 이 아니라 2021-06-30
+ * 13. 🔴 말일 예외는 하루를 빼지 않는다 — 2020-01-31 + 1개월 → 2020-02-29 (윤년)
+ * 14. inclusiveEnd 없는 칸(학력)은 종전 그대로다
  */
 describe('DurationChips', () => {
   it('role=group + 접근성 이름', () => {
@@ -86,5 +90,34 @@ describe('DurationChips', () => {
     )
     const described = screen.getByLabelText('졸업/예정').getAttribute('aria-describedby')!
     expect(document.getElementById(described)).toBe(screen.getByRole('group'))
+  })
+
+  /**
+   * 복무는 **입대일이 기간에 들어간다** — 전역일은 「해당일 −1」이다. 이 칸만 켠다:
+   * 학력 재학 기간에 같은 −1일을 적용하면 졸업/예정이 하루씩 당겨진다.
+   */
+  describe('inclusiveEnd — 시작일이 포함되는 기간 (복무)', () => {
+    it('🔴 2020-01-01 + 18개월 → 2021-07-01 이 아니라 2021-06-30', () => {
+      const onPick = vi.fn()
+      render(<DurationChips inclusiveEnd start="2020-01-01" presets={MILITARY_PRESETS} onPick={onPick} />)
+      fireEvent.click(screen.getByRole('button', { name: '18개월' }))
+      expect(onPick).toHaveBeenCalledWith('2021-06-30')
+    })
+
+    it('🔴 말일 예외는 하루를 빼지 않는다 — 2020-01-31 + 1개월 → 2020-02-29 (윤년)', () => {
+      const onPick = vi.fn()
+      render(
+        <DurationChips inclusiveEnd start="2020-01-31" presets={[{ label: '1개월', months: 1 }]} onPick={onPick} />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: '1개월' }))
+      expect(onPick).toHaveBeenCalledWith('2020-02-29')
+    })
+
+    it('끄면(학력) 종전 그대로 — 2020-01-01 + 24개월 → 2022-01-01', () => {
+      const onPick = vi.fn()
+      render(<DurationChips start="2020-01-01" presets={SEMESTER_PRESETS} onPick={onPick} />)
+      fireEvent.click(screen.getByRole('button', { name: '+2년' }))
+      expect(onPick).toHaveBeenCalledWith('2022-01-01')
+    })
   })
 })

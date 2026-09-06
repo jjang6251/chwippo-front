@@ -226,6 +226,18 @@ describe('개인정보처리방침', () => {
       expect(screen.getByText(/가족 등 제3자의 정보/)).toBeInTheDocument()
     })
 
+    /**
+     * 🔴 창고에서 「추가 정보(취미·특기)」 칸을 없애고 「논문 정보」로 바꿨다. 방침 §1 은
+     * **수집하는 항목만** 적어야 한다 — 없어진 칸이 남아 있으면 「수집한다고 적어 놓고 안 받는」
+     * 과대 고지가 되고, 새로 받는 칸이 빠져 있으면 미고지가 된다. 둘 다 이 한 건이 막는다.
+     */
+    it('§1 자격·이력 행 — 논문 정보가 있고, 없어진 「추가 정보(취미·특기)」 문구는 남아 있지 않다', () => {
+      const { container } = renderPrivacy()
+      const row = screen.getByText(/자격증·어학·상장·학력/)
+      expect(row.textContent).toMatch(/논문 정보\(지도교수·연구 분야·논문 제목·요약, 대학원 지원 시\)/)
+      expect(container.textContent).not.toMatch(/취미·특기/)
+    })
+
     it('§1 장애 정보 행은 별도 동의 · 각주는 「원칙적으로」 + 장애 예외 (단정문 모순 제거)', () => {
       renderPrivacy()
       expect(screen.getByText('내 정보 창고 — 장애 정보 (선택 · 별도 동의)')).toBeInTheDocument()

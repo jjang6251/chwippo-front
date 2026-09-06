@@ -130,6 +130,27 @@ export function addMonths(dateStr: string, months: number): string {
   return `${targetYear}-${mm}-${dd}`
 }
 
+/**
+ * **시작일을 포함하는** N개월 기간의 마지막 날 — TZ 무관 (date-only math).
+ *
+ * 복무 기간이 이 셈법이다: 2020-01-01 입대 + 18개월 복무 → 전역일은 2021-07-01 이 아니라
+ * **2021-06-30**. 초일(입대일)이 기간에 들어가므로 만료일은 「해당일의 전날」이다
+ * (민법 제157조 단서·제160조 ②).
+ *
+ * 🔴 말일 예외는 하루를 빼지 않는다 — 최후의 월에 해당일이 없으면 **그 달의 말일**로
+ * 기간이 만료한다 (민법 제160조 ③). 2020-01-31 + 1개월 → 2월에 31일이 없으므로 2020-02-29
+ * (윤년) 이고, 여기서 또 하루를 빼면 법이 정한 날보다 이르다.
+ *
+ * 입력이 'YYYY-MM-DD' 가 아니면 빈 문자열 (`addMonths` 와 같은 규칙 — 렌더 중 호출이라 던지지 않는다).
+ */
+export function addMonthsInclusiveEnd(dateStr: string, months: number): string {
+  const anniversary = addMonths(dateStr, months)
+  if (!anniversary) return ''
+  // 말일 보정으로 일자가 깎였나 — 깎였으면 그 말일이 곧 만료일이다
+  if (anniversary.slice(8, 10) !== dateStr.slice(8, 10)) return anniversary
+  return ymdAddDays(anniversary, -1)
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // 주 경계 — ISO 월요일 ~ 일요일
 // ────────────────────────────────────────────────────────────────────────

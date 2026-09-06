@@ -14,7 +14,7 @@
  *  1-f. 🔴 첫 칸의 말도 갈린다 — 경력 「경력 정보 · 경력명 · 예: 화장품 브랜드 마케팅 인턴」 /
  *       경험 「활동 정보 · 활동명 · 예: 마케팅 학회」 (CEO 실기 2026-09-06)
  *  2. 이름 칸이 비면 저장 버튼이 비활성 (막다른 저장 시도 자체를 막는다)
- *  3. 🔴 저장 → create 에 계약대로 실린다 (name·type·org·role·기간·outcome·applicationSummary)
+ *  3. 🔴 저장 → create 에 계약대로 실린다 (name·type·org·role·기간·applicationSummary)
  *  4. 빈 선택 칸은 페이로드에 아예 넣지 않는다 (빈 문자열로 덮어쓰지 않는다)
  *  5. 국가는 「해외 경험」에서만 묻고, 그때만 실린다
  *  6. 유형을 바꾸면 국가 칸이 사라지고 값도 안 실린다
@@ -34,6 +34,10 @@
  * 18. 🔴 요약 초과 — 누르기 전에도 role=alert (초과하면 [추가] 가 비활성이라 이유가 보여야 한다)
  * 19. 요약 오류 줄은 textarea 의 aria-describedby 로 이어진다 (도움말 pill 과 함께)
  * 20. 🔴 「담당 업무」 textarea 가 라벨과 이어져 있다 (getByLabelText 로 잡힌다)
+ *  ── 「성과」 칸 삭제 (지원서용 요약과 묻는 게 겹쳤다)
+ * 21. 🔴 두 모드 모두 성과 칸이 없다 (라벨·placeholder 둘 다)
+ * 22. 🔴 추가 payload 에 outcome 이 없다
+ * 23. 🔴 편집 — 기존 outcome 값이 있어도 update payload 에 outcome 이 없다 (덮어쓰지도, 지우지도 않는다)
  */
 import { render, screen, fireEvent, cleanup, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -181,7 +185,6 @@ describe('경험 경량 폼', () => {
     fireEvent.change(screen.getByPlaceholderText('예: 아모레퍼시픽'), { target: { value: '카카오' } })
     // 인턴은 경력 유형이라 역할 칸이 「직위·직급」이다
     fireEvent.change(screen.getByLabelText('직위·직급'), { target: { value: '백엔드' } })
-    fireEvent.change(screen.getByPlaceholderText('예: 인스타그램 팔로워 30% 증가'), { target: { value: '지표 개선' } })
     fireEvent.change(screen.getByPlaceholderText(/지원서 활동 칸에 그대로/), { target: { value: '요약 문장' } })
     fireEvent.click(saveBtn())
 
@@ -191,7 +194,6 @@ describe('경험 경량 폼', () => {
       type: 'intern',
       org: '카카오',
       role: '백엔드',
-      outcome: '지표 개선',
       applicationSummary: '요약 문장',
     })
   })
@@ -272,7 +274,6 @@ describe('경험 경량 폼', () => {
       role: '백엔드',
       startedAt: '2025-07-01',
       endedAt: '2025-08-31',
-      outcome: '응답 40% 개선',
       applicationSummary: null,
       country: null,
       orgDepartment: null,
@@ -430,5 +431,38 @@ describe('오류를 칸에서 말한다', () => {
   it('20) 🔴 「담당 업무」 textarea 가 라벨과 이어져 있다', () => {
     drawAdd()
     expect(screen.getByLabelText('담당 업무')).toBe(summaryBox())
+  })
+})
+
+/**
+ * 「성과」는 지원서용 요약과 묻는 게 겹쳐 같은 문장을 두 번 쓰게 만들었다 — 칸을 뺀다.
+ * 🔴 `activities.outcome` 컬럼은 활동 일지가 계속 쓴다 — 여기서 **안 보낼 뿐**이라
+ *    기존 값이 지워지면 안 된다 (payload 에 `outcome` 키 자체가 없어야 한다).
+ */
+describe('「성과」 칸 삭제', () => {
+  it.each<ExperienceFormMode>(['career', 'experience'])('21) 🔴 %s 모드에 성과 칸이 없다', (mode) => {
+    drawAdd(mode)
+    expect(screen.queryByLabelText('성과')).toBeNull()
+    expect(screen.queryByPlaceholderText('예: 인스타그램 팔로워 30% 증가')).toBeNull()
+  })
+
+  it('22) 🔴 추가 payload 에 outcome 이 없다', async () => {
+    drawAdd()
+    fireEvent.change(nameInput(), { target: { value: '카카오 인턴' } })
+    fireEvent.change(screen.getByPlaceholderText(/지원서 활동 칸에 그대로/), { target: { value: '요약' } })
+    fireEvent.click(saveBtn())
+
+    await waitFor(() => expect(h.create).toHaveBeenCalled())
+    expect(h.create.mock.calls[0][0]).not.toHaveProperty('outcome')
+  })
+
+  it('23) 🔴 편집 — 기존 outcome 이 있어도 update payload 에 실리지 않는다', async () => {
+    render(<ExperienceFormModal mode="career" editing={BASE} onClose={vi.fn()} />)
+    // 화면 어디에도 그 값이 안 보인다 (편집 칸으로 복원하지 않는다)
+    expect(screen.queryByDisplayValue('응답 40% 개선')).toBeNull()
+    fireEvent.click(saveBtn())
+
+    await waitFor(() => expect(h.update).toHaveBeenCalled())
+    expect(h.update.mock.calls[0][0]).not.toHaveProperty('outcome')
   })
 })

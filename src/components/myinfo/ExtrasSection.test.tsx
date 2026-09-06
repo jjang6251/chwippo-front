@@ -1,5 +1,5 @@
 /**
- * 「우대·기타」 — 보훈 조건부 펼침 · **장애 민감정보 동의 게이트** · 추가 정보 동적 렌더.
+ * 「우대·기타」 — 보훈 조건부 펼침 · **장애 민감정보 동의 게이트**.
  *
  * 🔴 이 spec 의 심장은 **동의 게이트**다. 동의 전에는 장애 칸이 렌더조차 되지 않아야 하고,
  *    동의 후 저장에는 `sensitive_consent: true` 가 **반드시** 실려야 한다 (빠지면 백엔드 400).
@@ -28,12 +28,8 @@
  *  21. 🔴 확인 → body 가 **정확히** { sensitive_consent: false } — 민감 필드를 동봉하지 않는다
  *  22. 성공 → 카드가 동의 전 상태로 돌아가고 지운 값이 되살아나지 않는다
  *  23. 취소 → 아무 요청도 나가지 않는다
- *  ── 추가 정보 (필드 사전)
- *  13. storage:'extra' 항목만 그린다 (column 은 제외)
- *  14. sensitive·forbidden 항목은 그리지 않는다
- *  15. 타입별 렌더 — text · select · date · bool
- *  16. 저장은 PATCH extra-fields, 빈 값은 null
- *  17. 사전 호출이 실패하면 블록이 통째로 사라진다 (페이지는 살아 있다)
+ *  ── 「추가 정보」 삭제 (취미·특기 등 — 지원서가 거의 안 묻는 칸이라 뺐다)
+ *  13. 🔴 사전에 extra 항목이 와도 이 섹션은 그리지 않는다 (블록·제목·저장 경로 전부 없다)
  *  ── 게이지 칩 → 그 토글로 (focus)
  *  24. focus="patriot" → 보훈 토글로 스크롤하고 첫 버튼에 포커스
  *  25. focus="disability" — 동의 전이면 동의 카드의 [동의] 에 선다
@@ -42,8 +38,6 @@
  *  27. 🔴 관계·가점 비율 — 「대상」 직후엔 아무것도 안 눌려 있다 (「본인」·「0%」 아님)
  *  28. 저장된 값이 있으면 그게 눌린다 (회귀 방어)
  *  29. 🔴 장애 정도 — 「대상」 직후엔 아무것도 안 눌려 있다 (「심하지 않은 장애」 아님)
- *  30. 🔴 추가 정보 예/아니오 — 값이 없으면 「아니오」가 미리 눌리지 않는다
- *  31. 저장된 「false」 는 「아니오」로 눌려 보인다 (미선택과 구분된다)
  */
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -71,7 +65,6 @@ const draw = (props: Partial<ComponentProps<typeof ExtrasSectionBody>> = {}) =>
   render(<ExtrasSectionBody onSaved={vi.fn()} {...props} />)
 /** mutate 에 실린 dto (첫 인자) */
 const lastProfileDto = () => h.updateProfile.mock.calls.at(-1)?.[0]
-const lastExtraDto = () => h.updateExtra.mock.calls.at(-1)?.[0]
 
 beforeEach(() => {
   h.profile = { user_id: 'u1' }
@@ -271,79 +264,41 @@ describe('장애 — 민감정보 동의 철회', () => {
   })
 })
 
-describe('추가 정보 — 필드 사전 동적 렌더', () => {
-  const dict: FieldDictionary = {
-    version: '2026-09.1',
-    fields: [
-      { key: 'hobby', label: '취미', type: 'text', maxLength: 40, storage: 'extra' },
-      { key: 'apply_route', label: '지원 경로', type: 'select', options: ['취업카페', '학교'], storage: 'extra' },
-      { key: 'available_from', label: '입사 가능일', type: 'date', storage: 'extra' },
-      { key: 'relocatable', label: '지방 근무 가능', type: 'bool', storage: 'extra' },
-      { key: 'name', label: '이름', type: 'text', storage: 'column' },
-      { key: 'disability_number', label: '장애인 등록번호', type: 'text', storage: 'extra', sensitive: true },
-      { key: 'rrn', label: '주민등록번호', type: 'text', storage: 'extra', forbidden: true },
-    ],
-  }
-
-  it("storage:'extra' 항목만 그린다 — column 은 여기 없다", () => {
-    h.dictionary = dict
-    draw()
-    expect(screen.getByText('취미')).toBeInTheDocument()
-    // 「이름」은 기본 인적사항의 정식 칸이라 여기서 또 그리면 안 된다
-    expect(screen.queryByText('이름')).toBeNull()
-  })
-
-  it('🔴 sensitive·forbidden 항목은 슬롯에 그리지 않는다', () => {
-    h.dictionary = dict
-    draw()
-    expect(screen.queryByText('장애인 등록번호')).toBeNull()
-    expect(screen.queryByText('주민등록번호')).toBeNull()
-  })
-
-  it('타입별로 그린다 — text · select · date · bool', () => {
-    h.dictionary = dict
-    h.profile = { user_id: 'u1', extra_fields: { hobby: '등산' } }
-    const { container } = draw()
-    expect(screen.getByDisplayValue('등산')).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: '취업카페' })).toBeInTheDocument()
-    expect(container.querySelector('input[type="date"]')).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: '지방 근무 가능' })).toBeInTheDocument()
-  })
-
-  it('저장은 extra-fields PATCH — 빈 값은 null', () => {
-    h.dictionary = dict
+/**
+ * 🔴 옛 「추가 정보」 블록(취미·특기·입사 가능 시기·희망 근무 지역·비자·회화 수준)을 없앴다.
+ * 사전은 여전히 `storage:'extra'` 항목을 줄 수 있다 — 우대·기타는 **그걸 더 이상 보지 않는다**
+ * (extra 자리는 이제 대학원 4키가 쓰고, 그건 「논문」 섹션의 몫이다).
+ */
+describe('「추가 정보」 삭제', () => {
+  it("13) 🔴 사전에 storage:'extra' 항목이 와도 이 섹션은 아무것도 그리지 않는다", () => {
+    h.dictionary = {
+      version: '2026-09.1',
+      fields: [
+        { key: 'hobby', label: '취미', type: 'text', maxLength: 40, storage: 'extra' },
+        { key: 'preferred_region', label: '희망 근무 지역', type: 'select', options: ['서울'], storage: 'extra' },
+        { key: 'academic_advisor', label: '지도교수', type: 'text', maxLength: 40, storage: 'extra' },
+      ],
+    }
     h.profile = { user_id: 'u1', extra_fields: { hobby: '등산' } }
     draw()
 
-    const hobby = screen.getByDisplayValue('등산')
-    fireEvent.change(hobby, { target: { value: '독서' } })
-    fireEvent.blur(hobby)
-    expect(lastExtraDto()).toEqual({ hobby: '독서' })
-
-    fireEvent.change(hobby, { target: { value: '   ' } })
-    fireEvent.blur(hobby)
-    expect(lastExtraDto()).toEqual({ hobby: null })
-  })
-
-  it('bool 은 문자열 true/false 로 저장한다', () => {
-    h.dictionary = dict
-    draw()
-    fireEvent.click(within(screen.getByRole('group', { name: '지방 근무 가능' }), '예'))
-    expect(lastExtraDto()).toEqual({ relocatable: 'true' })
-  })
-
-  it('사전 호출이 실패하면 블록이 통째로 사라진다 (페이지는 산다)', () => {
-    h.dictError = true
-    draw()
     expect(screen.queryByText('추가 정보')).toBeNull()
-    // 보훈 섹션은 그대로 살아 있어야 한다
+    expect(screen.queryByText('취미')).toBeNull()
+    expect(screen.queryByText('희망 근무 지역')).toBeNull()
+    expect(screen.queryByText('지도교수')).toBeNull()
+    expect(screen.queryByDisplayValue('등산')).toBeNull()
+    // 보훈·장애는 그대로 살아 있다
     expect(screen.getByRole('group', { name: '보훈 대상 여부' })).toBeInTheDocument()
   })
 
-  it('사전에 extra 항목이 없으면 블록을 그리지 않는다', () => {
-    h.dictionary = { version: 'v', fields: [{ key: 'name', label: '이름', type: 'text', storage: 'column' }] }
+  it('13-a) 저장 경로도 없다 — extra-fields PATCH 가 나갈 자리가 없다', () => {
+    h.dictionary = {
+      version: '2026-09.1',
+      fields: [{ key: 'hobby', label: '취미', type: 'text', maxLength: 40, storage: 'extra' }],
+    }
     draw()
-    expect(screen.queryByText('추가 정보')).toBeNull()
+    fireEvent.click(within(screen.getByRole('group', { name: '보훈 대상 여부' }), '비대상'))
+    expect(h.updateExtra).not.toHaveBeenCalled()
   })
 })
 
@@ -405,31 +360,6 @@ describe('미선택은 미선택으로', () => {
     nothingPressed('장애 정도')
   })
 
-  it('🔴 추가 정보 예/아니오 — 저장된 값이 없으면 「아니오」가 미리 눌리지 않는다', () => {
-    h.dictionary = {
-      version: '2026-09.1',
-      fields: [{ key: 'relocatable', label: '지방 근무 가능', type: 'bool', storage: 'extra' }],
-    }
-    draw()
-    nothingPressed('지방 근무 가능')
-
-    // 눌러야 저장되고, 그때부터 눌린 상태가 된다
-    fireEvent.click(within(screen.getByRole('group', { name: '지방 근무 가능' }), '아니오'))
-    expect(lastExtraDto()).toEqual({ relocatable: 'false' })
-    expect(within(screen.getByRole('group', { name: '지방 근무 가능' }), '아니오'))
-      .toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('저장된 「false」 는 「아니오」로 눌려 보인다 (미선택과 구분된다)', () => {
-    h.dictionary = {
-      version: '2026-09.1',
-      fields: [{ key: 'relocatable', label: '지방 근무 가능', type: 'bool', storage: 'extra' }],
-    }
-    h.profile = { user_id: 'u1', extra_fields: { relocatable: 'false' } }
-    draw()
-    expect(within(screen.getByRole('group', { name: '지방 근무 가능' }), '아니오'))
-      .toHaveAttribute('aria-pressed', 'true')
-  })
 })
 
 /** group 안에서 라벨로 버튼 찾기 — 같은 라벨(「대상」)이 여러 group 에 있어서 범위를 좁힌다 */

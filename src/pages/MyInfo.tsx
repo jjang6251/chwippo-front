@@ -26,6 +26,7 @@ import { addYears, todayLocal } from '@/utils/datetime'
 import type {
   UserProfile, UpdateProfileDto, MilitaryStatus, MilitaryDischarge, HighestDegree,
   LanguageCert, Cert, Award, Coverletter, CoverletterCustom, MyDocument, Education,
+  FieldDictionaryEntry,
 } from '@/api/myinfo'
 import { EducationModal } from '@/components/myinfo/EducationModal'
 import type { ExamSchedule } from '@/types/exam-schedule'
@@ -54,6 +55,9 @@ import type { CertSuggestion, LangCertSuggestion } from '@/api/schools'
 import { Field, FieldLabel, ModalSection, SelectField, FIELD_INPUT_CLASS, FIELD_SELECT_CLASS } from '@/components/myinfo/fields'
 import { AddressField } from '@/components/myinfo/AddressField'
 import { ExtrasSectionBody } from '@/components/myinfo/ExtrasSection'
+import { ThesisSectionBody } from '@/components/myinfo/ThesisSection'
+import { useThesisFields } from '@/hooks/useThesisFields'
+import { GRAD_DEGREES } from '@/utils/thesisFields'
 import { ExperienceFormModal, type ExperienceFormMode } from '@/components/myinfo/ExperienceFormModal'
 import { SegmentedToggle } from '@/components/common/SegmentedToggle'
 import { DurationChips } from '@/components/common/DurationChips'
@@ -75,6 +79,8 @@ const SECTIONS = [
   // ─── 지원서 정보 ───
   { id: 'profile',        label: '기본 인적사항', icon: '👤', accent: 'brand',   group: 'application' },
   { id: 'education',      label: '학력',         icon: '🎓', accent: 'success', group: 'application' },
+  // 🔴 석·박사에게만 보인다 (`GRAD_DEGREES`) — 학사 지원자에게는 칩도 섹션도 없다
+  { id: 'thesis',         label: '논문',         icon: '📄', accent: 'violet',  group: 'application' },
   { id: 'military',       label: '병역사항',     icon: '🪖', accent: 'warning', group: 'application' },
   { id: 'extras',         label: '우대·기타',     icon: '🎗️', accent: 'violet',  group: 'application' },
   // 경력·경험은 저장소가 하나지만 지원서에서는 다른 칸이다 (CEO 2026-09-06) — 나란히 두고 갈라 보여준다
@@ -317,6 +323,18 @@ export function MyInfo() {
   const location = useLocation()
   const { sections: progressSections } = useMyinfoProgress()
   const collapse = useCollapsedSections()
+  /*
+    「논문」은 조건이 둘이다 — 최종 학력이 석·박사이고, 사전이 그 4키를 준다.
+    칩(사이드바·모바일)과 본문이 **같은 조건**을 봐야 한다: 한쪽만 걸면 눌러도 아무 데도
+    안 가는 칩이 남는다.
+  */
+  const { data: myProfile } = useProfile()
+  const thesisFields = useThesisFields()
+  const showThesis =
+    !!myProfile?.highest_degree &&
+    (GRAD_DEGREES as readonly string[]).includes(myProfile.highest_degree) &&
+    thesisFields.length > 0
+  const visibleSections = SECTIONS.filter((s) => s.id !== 'thesis' || showThesis)
   /** 게이지 칩이 남긴 지시 (편집 열기·칸 포커스) — 대상 섹션 하나만 읽는다 */
   const [intent, setIntent] = useState<SectionIntent | null>(null)
   const seqRef = useRef(0)
@@ -440,7 +458,7 @@ export function MyInfo() {
           className="flex gap-1.5 overflow-x-auto py-2"
           style={{ scrollbarWidth: 'none' }}
         >
-          {SECTIONS.map((s) => {
+          {visibleSections.map((s) => {
             const isActive = activeSection === s.id
             const status = progressSections.find((p) => p.id === s.id)
             return (
@@ -481,7 +499,7 @@ export function MyInfo() {
         {/* 좌측 섹션 네비 */}
         <aside className="hidden lg:block w-44 flex-none sticky top-8 self-start">
           <nav className="space-y-0.5">
-            {SECTIONS.map((s) => {
+            {visibleSections.map((s) => {
               const ac = ACCENT_STYLE[s.accent as keyof typeof ACCENT_STYLE]
               const isActive = activeSection === s.id
               const status = progressSections.find((p) => p.id === s.id)
@@ -528,6 +546,9 @@ export function MyInfo() {
           <GroupHeader group="application" />
           <ProfileSection       sectionRef={(el) => { sectionRefs.current['profile'] = el }}          isActive={activeSection === 'profile'}   intent={intentFor('profile')} />
           <EducationsSection    sectionRef={(el) => { sectionRefs.current['education'] = el }}        isActive={activeSection === 'education'} intent={intentFor('education')} />
+          {showThesis && (
+            <ThesisSection      sectionRef={(el) => { sectionRefs.current['thesis'] = el }}          isActive={activeSection === 'thesis'} fields={thesisFields} />
+          )}
           <MilitarySection      sectionRef={(el) => { sectionRefs.current['military'] = el }}         isActive={activeSection === 'military'}  intent={intentFor('military')} />
           <ExtrasSection        sectionRef={(el) => { sectionRefs.current['extras'] = el }}          isActive={activeSection === 'extras'}    intent={intentFor('extras')} />
           <ActivitySection mode="career"     sectionRef={(el) => { sectionRefs.current['career'] = el }}      isActive={activeSection === 'career'} />
@@ -917,12 +938,20 @@ const LEGACY_TYPE_TO_DISCHARGE: Record<string, MilitaryDischarge> = {
  * 🔴 **옛 데이터 매핑** — 새 컬럼이 비어 있으면 옛 칸에서 읽어 온다.
  * `military_type` 이 '복무 중' 이면 상태는 `serving`, 그 외 값이 있으면 `completed`.
  * 어느 쪽도 없고 옛 칸이 하나라도 차 있으면 「군필」로 본다 (예전 UI 가 그 뜻이었다).
+ *
+ * 🔴 아무 흔적도 없으면 `''`(미선택)이다 — 「비대상」을 미리 골라 두면 **저장 전인데 답한
+ * 것처럼 보인다**(게이지는 계속 미완료라 화면과 어긋난다). 보훈·장애 토글에서 이미 고친 규칙.
  */
-function deriveMilitaryStatus(p?: UserProfile): MilitaryStatus {
+function deriveMilitaryStatus(p?: UserProfile): MilitaryStatus | '' {
   if (p?.military_status) return p.military_status
   if (p?.military_type === '복무 중') return 'serving'
   const legacyFilled = !!(p?.military_branch || p?.military_type || p?.military_start || p?.military_end || p?.military_unit)
-  return legacyFilled ? 'completed' : 'not_applicable'
+  return legacyFilled ? 'completed' : ''
+}
+
+/** select 가 돌려준 문자열을 상태 9종으로 좁힌다 — 목록에 없으면 미선택 */
+function toMilitaryStatus(v: string): MilitaryStatus | '' {
+  return MILITARY_STATUS_OPTIONS.find((o) => o.value === v)?.value ?? ''
 }
 
 function deriveDischarge(p?: UserProfile): MilitaryDischarge | '' {
@@ -941,7 +970,7 @@ export function MilitarySection({ sectionRef, isActive, intent }: {
   const { mutate: update } = useUpdateProfile()
   const { saved, show } = useSaved()
   const [form, setForm] = useState({
-    military_status: 'not_applicable' as MilitaryStatus,
+    military_status: '' as MilitaryStatus | '',
     military_branch: '',
     military_rank: '',
     military_specialty: '',
@@ -989,15 +1018,16 @@ export function MilitarySection({ sectionRef, isActive, intent }: {
     MILITARY_FIELDS.some((k) => (profile[k] ?? '').toString().trim().length > 0)
   )
   const status = form.military_status
-  const showDetail = MILITARY_DETAIL_STATUSES.includes(status)
-  const showReason = MILITARY_REASON_STATUSES.includes(status)
+  const showDetail = status !== '' && MILITARY_DETAIL_STATUSES.includes(status)
+  const showReason = status !== '' && MILITARY_REASON_STATUSES.includes(status)
   const isServing = status === 'serving' || status === 'alt_service_serving'
 
   const save = (dto: UpdateProfileDto) => update(dto, { onSuccess: show })
 
-  const handleStatusChange = (v: MilitaryStatus) => {
+  const handleStatusChange = (v: MilitaryStatus | '') => {
     setForm(f => ({ ...f, military_status: v, military_end: v === 'serving' || v === 'alt_service_serving' ? '' : f.military_end }))
-    const dto: UpdateProfileDto = { military_status: v }
+    // 「선택」으로 되돌리면 그 칸을 비운다 (이 API 의 관례 — 빈 문자열이 아니라 null)
+    const dto: UpdateProfileDto = { military_status: v || null }
     // 복무 중이면 전역일은 아직 없는 값이다 — 남겨두면 지원서에 거짓이 채워진다
     if ((v === 'serving' || v === 'alt_service_serving') && form.military_end) dto.military_end = null
     save(dto)
@@ -1053,12 +1083,17 @@ export function MilitarySection({ sectionRef, isActive, intent }: {
           {editing ? (
             <div className="space-y-4">
               <div>
-                <FieldLabel label="병역 상태" />
-                <SegmentedToggle
+                {/*
+                  🔴 세그먼트 9칸은 모바일에서 두 줄로 접혀 「어느 게 골라진 건가」를 매번 다시
+                  읽게 만들었다. 고를 게 많고 서로 배타적인 값은 select 가 맞다 — 프로젝트의
+                  다른 칸(군별·제대 사유)과 같은 `SelectField` 를 그대로 쓴다.
+                */}
+                <SelectField
                   label="병역 상태"
                   value={status}
-                  options={MILITARY_STATUS_OPTIONS}
-                  onChange={handleStatusChange}
+                  options={MILITARY_STATUS_OPTIONS.map((o) => o.value)}
+                  optionLabels={MILITARY_STATUS_KO}
+                  onChange={(v) => handleStatusChange(toMilitaryStatus(v))}
                 />
                 {status === 'not_applicable' && (
                   <HelpPill label="대부분">비대상이면 여기서 끝이에요 — 지원서 병역 칸이 자동으로 채워져요</HelpPill>
@@ -1067,7 +1102,12 @@ export function MilitarySection({ sectionRef, isActive, intent }: {
 
               {/* 조건부 펼침 — 회색 미리보기 없이 그냥 숨긴다 (있지도 않은 칸을 보여주지 않는다) */}
               {showDetail && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                /*
+                  🔴 분기점은 `lg` 하나다 (DESIGN.md §9 — 사이드바가 나타나는 지점).
+                  칸 안의 `span`(병과)·`col-span-2`(칩·제대 구분)도 **같은 `lg`** 여야 한다:
+                  하나라도 어긋나면 그 구간에서 암시 칼럼이 생겨 첫 칸이 0px 이 된다.
+                */
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
                   <SelectField label="군별" value={form.military_branch} onChange={(v) => { setForm(f => ({ ...f, military_branch: v })); save({ military_branch: v || null }) }} options={MILITARY_BRANCHES} />
                   <Field label="계급" value={form.military_rank} onChange={(v) => setForm(f => ({ ...f, military_rank: v }))} onBlur={() => save({ military_rank: form.military_rank || null })} placeholder="병장, 하사 등" maxLength={20} />
                   <Field label="병과" value={form.military_specialty} onChange={(v) => setForm(f => ({ ...f, military_specialty: v }))} onBlur={saveSpecialty} placeholder="보병, 통신 등" maxLength={40} span />
@@ -1083,18 +1123,20 @@ export function MilitarySection({ sectionRef, isActive, intent }: {
                     describedBy={isServing ? undefined : durationChipsId}
                   />
                   {!isServing && (
-                    <div className="md:col-span-2">
+                    <div className="lg:col-span-2">
                       <DurationChips
                         id={durationChipsId}
                         start={form.military_start}
                         presets={MILITARY_PRESETS}
+                        // 입대일이 복무 기간에 들어간다 — 2020-01-01 + 18개월 → 전역 2021-06-30
+                        inclusiveEnd
                         label="복무 기간 자동 계산"
                         onPick={(end) => handleEndChange(end)}
                       />
                     </div>
                   )}
 
-                  <div className="md:col-span-2">
+                  <div className="lg:col-span-2">
                     <FieldLabel label="제대 구분" />
                     <SegmentedToggle
                       label="제대 구분"
@@ -1119,7 +1161,7 @@ export function MilitarySection({ sectionRef, isActive, intent }: {
             </div>
           ) : (
             <div>
-              <MyInfoViewRow label="병역 상태" value={MILITARY_STATUS_KO[status]} />
+              <MyInfoViewRow label="병역 상태" value={status ? MILITARY_STATUS_KO[status] : ''} />
               {showDetail && (
                 <>
                   <MyInfoViewRow label="군별" value={profile?.military_branch} />
@@ -2055,7 +2097,8 @@ export function ActivitySection({ mode, sectionRef, isActive }: {
             { label: m.roleLabel, value: a.role ?? '' },
             { label: '기간', value: periodOf(a), mono: true },
             ...(a.country ? [{ label: '국가', value: a.country }] : []),
-            { label: '성과', value: a.outcome ?? '' },
+            // 성과는 이제 활동 일지에서만 쓴다 — 값이 남아 있는 항목에만 보여준다 (빈 줄을 만들지 않는다)
+            ...(a.outcome ? [{ label: '성과', value: a.outcome }] : []),
             { label: m.summaryLabel, value: a.applicationSummary ?? '' },
           ]
           return (
@@ -2114,15 +2157,31 @@ export function ActivitySection({ mode, sectionRef, isActive }: {
   )
 }
 
-// ── 우대·기타 (보훈 · 장애 · 추가 정보) ────────────────────
+// ── 우대·기타 (보훈 · 장애) ───────────────────────────────
 function ExtrasSection({ sectionRef, isActive, intent }: {
   sectionRef: (el: HTMLElement | null) => void; isActive?: boolean; intent?: SectionIntent | null
 }) {
   const { saved, show } = useSaved()
   return (
     <SectionCard id="extras" sectionRef={sectionRef} saved={saved} isActive={isActive}>
-      {/* 「보훈 여부」 칩은 섹션 위가 아니라 **그 토글**로 데려가야 한다 (추가 정보가 길다) */}
+      {/* 「보훈 여부」 칩은 섹션 위가 아니라 **그 토글**로 데려간다 */}
       <ExtrasSectionBody onSaved={show} focus={intent?.opts.focus} focusSeq={intent?.seq} />
+    </SectionCard>
+  )
+}
+
+// ── 논문 (석·박사 전용) ───────────────────────────────────
+/**
+ * 🔴 표시 조건은 **호출부**(`MyInfo`)가 판정한다 — 칩 목록과 본문이 같은 조건을 봐야 하고,
+ * 그 조건(`showThesis`)은 사이드바를 그릴 때 이미 계산돼 있다.
+ */
+function ThesisSection({ sectionRef, isActive, fields }: {
+  sectionRef: (el: HTMLElement | null) => void; isActive?: boolean; fields: FieldDictionaryEntry[]
+}) {
+  const { saved, show } = useSaved()
+  return (
+    <SectionCard id="thesis" sectionRef={sectionRef} saved={saved} isActive={isActive}>
+      <ThesisSectionBody fields={fields} onSaved={show} />
     </SectionCard>
   )
 }
