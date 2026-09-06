@@ -188,6 +188,26 @@ describe('Settings — 내 정보 창고 이사', () => {
   })
 })
 
+/**
+ * 「연결된 확장」 진입 (대장 44 · `plans/autofill-extension.md` §2-7).
+ * 확장 연결·해제의 **유일한 시작점**이라 설정 목록에 자리가 있어야 한다 — 확장은 스스로
+ * 코드를 뽑지 못하므로(백엔드가 `pair` 를 웹 세션에만 연다) 여기가 막히면 연결 경로가 없다.
+ */
+describe('Settings — 연결된 확장 진입', () => {
+  it('메뉴에 「연결된 확장」 + /settings/extension 링크', () => {
+    renderSettings()
+    const link = screen.getByRole('link', { name: /연결된 확장/ })
+    expect(link.getAttribute('href')).toBe('/settings/extension')
+  })
+
+  it('데모: 링크 대신 버튼 + 가입 모달 (AuthGuard 라우트 이탈 방지)', () => {
+    renderDemoSettings()
+    expect(screen.queryByRole('link', { name: /연결된 확장/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /연결된 확장/ }))
+    expect(useDemoSignupStore.getState().open).toBe(true)
+  })
+})
+
 describe('Settings — 관리자 페이지 진입 링크', () => {
   it('admin role: "관리자 페이지" 링크 노출 + /ops 링크', () => {
     useAuthStore.setState((s) => ({ user: { ...s.user!, role: 'admin' } }))

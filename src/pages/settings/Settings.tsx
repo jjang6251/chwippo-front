@@ -22,6 +22,7 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
  */
 const MENU = [
   { label: '내 정보 창고', sub: '학력·자격증·경험 정리', path: '/myinfo', icon: '📦', badge: '이사왔어요' },
+  { label: '연결된 확장', sub: '지원서 자동 입력 보조 연결·해제', path: '/settings/extension', icon: '🧩' },
   { label: '프로필 설정', sub: '닉네임 변경, 계정 탈퇴', path: '/settings/profile', icon: '👤' },
   { label: '알림 설정', sub: '마감·면접 알림 (준비 중)', path: '/settings/alarm', icon: '🔔' },
   { label: '도움말', sub: '자주 묻는 질문', path: '/settings/help', icon: '❓' },

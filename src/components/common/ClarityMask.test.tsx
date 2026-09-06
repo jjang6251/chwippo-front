@@ -12,6 +12,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import appSource from '../../App.tsx?raw'
 import { ClarityMask } from './ClarityMask'
 
 function renderAt(path: string, child: React.ReactNode) {
@@ -57,6 +58,51 @@ describe('ClarityMask', () => {
     )
     const masked = container.querySelector('[data-clarity-mask="true"]')
     expect(masked).toContainElement(screen.getByAltText('필기 사진'))
+  })
+
+  /**
+   * 「연결된 확장」(`/settings/extension`) — 화면에 **60초짜리 페어링 코드**(자격증명)와
+   * 기기 지문이 뜬다. 세션 리플레이에 남으면 녹화를 보는 사람이 그 창 안에서 남의 계정에
+   * 확장을 붙일 수 있다. 다른 설정 하위 페이지와 달리 이 화면만 마스킹 경계 안이어야 한다.
+   */
+  it('연결된 확장 화면의 코드·지문이 마스킹 안에 들어간다', () => {
+    const { container } = renderAt(
+      '/secret',
+      <>
+        <span>638836</span>
+        <span>ff73cf77 3b60405a</span>
+      </>,
+    )
+    const masked = container.querySelector('[data-clarity-mask="true"]')
+    expect(masked).toContainElement(screen.getByText('638836'))
+    expect(masked).toContainElement(screen.getByText('ff73cf77 3b60405a'))
+  })
+
+  /**
+   * 🔴 위 렌더 단언은 **감싸면 어떻게 되는지**만 보증한다. 정작 회귀는 App.tsx 에서 라우트
+   * 한 줄이 그룹 **밖으로** 옮겨질 때 생기고, 그건 렌더 테스트로 안 잡힌다 (App 은
+   * `BrowserRouter` + 전체 가드라 테스트에서 마운트할 수 없다). 그래서 라우트 트리 원문에서
+   * `<Route element={<ClarityMask />}>` 블록의 경계를 찾아 그 안에 있는지 직접 확인한다.
+   */
+  it('App.tsx 라우트 트리에서 /settings/extension 이 ClarityMask 그룹 안에 있다', () => {
+    const open = appSource.indexOf('<Route element={<ClarityMask />}>')
+    expect(open).toBeGreaterThan(-1)
+
+    // 그룹의 닫는 태그 = 여는 태그와 같은 들여쓰기의 첫 `</Route>`
+    const indent = appSource.slice(0, open).split('\n').pop()!.length
+    const close = appSource.indexOf(`\n${' '.repeat(indent)}</Route>`, open)
+    expect(close).toBeGreaterThan(open)
+
+    const group = appSource.slice(open, close)
+    // 경계 검출이 맞는지부터 — 마스킹 안(내 정보)은 들어오고 밖(도움말)은 안 들어와야 한다.
+    // 이 두 줄이 없으면 `close` 를 잘못 잡아 그룹이 통째로 커져도 아래 단언이 통과한다.
+    expect(group).toContain('path="/myinfo"')
+    expect(group).not.toContain('path="/settings/help"')
+
+    expect(group).toContain('path="/settings/extension"')
+    // 그룹 밖에 같은 경로가 또 있으면 어느 쪽이 이기는지 알 수 없다
+    const outside = appSource.slice(0, open) + appSource.slice(close)
+    expect(outside).not.toContain('path="/settings/extension"')
   })
 
   /** 값이 boolean 으로 바뀌면 React 가 속성을 지워 마스킹이 조용히 사라진다 */

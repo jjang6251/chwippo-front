@@ -42,6 +42,7 @@ import { AlarmSettings } from '@/pages/settings/AlarmSettings'
 import { Notifications } from '@/pages/Notifications'
 import { ProfileSettings } from '@/pages/settings/ProfileSettings'
 import { Help } from '@/pages/settings/Help'
+import { ExtensionSettings } from '@/pages/settings/ExtensionSettings'
 import { TermsAgreement } from '@/pages/TermsAgreement'
 // ── code-split (lazy) ──────────────────────────────────────────────────
 // 일반 유저가 첫 로드에 절대 필요 없는 화면 + 무거운 라이브러리(recharts·tiptap) 사용처.
@@ -252,6 +253,9 @@ export default function App() {
               <Route path="/inquiry" element={<InquiryList />} />
               <Route path="/inquiry/new" element={<InquiryNew />} />
               <Route path="/inquiry/:id" element={<InquiryDetail />} />
+              {/* 연결된 확장 — 화면에 **페어링 코드(60초짜리 자격증명)** 와 기기 지문이 뜬다.
+                  세션 리플레이에 남으면 녹화를 보는 사람이 그 창 안에서 남의 확장을 붙일 수 있다. */}
+              <Route path="/settings/extension" element={<ExtensionSettings />} />
             </Route>
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />

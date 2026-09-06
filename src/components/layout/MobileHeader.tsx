@@ -12,6 +12,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings/profile': '프로필 설정',
   '/settings/alarm': '알림 설정',
   '/settings/help': '도움말',
+  '/settings/extension': '연결된 확장',
   '/inquiry': '문의 내역',
   '/inquiry/new': '새 문의',
 }
