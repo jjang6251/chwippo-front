@@ -1,5 +1,5 @@
 /**
- * 「우대·기타」 섹션 본문 — 보훈 · 장애(민감정보) · 추가 정보 슬롯.
+ * 「우대·기타」 섹션 본문 — 보훈 · 장애(민감정보).
  *
  * 왜 한 섹션인가: 지원서 폼 실측에서 보훈 9/11 · 장애 8/11 로 거의 모든 폼이 묻는데,
  * **대부분의 사용자는 「비대상」 한 번 저장으로 끝난다**(`autofill-census-2026-09.md`).
@@ -8,19 +8,19 @@
  * 🔴 장애 4칸은 **민감정보**라 별도 동의 카드 뒤에만 나온다. 동의 전에는 칸 자체가
  * 렌더되지 않으므로 저장 경로가 없다(백엔드도 `sensitive_consent` 없으면 400).
  *
+ * 옛 「추가 정보」 블록(취미·특기·입사 가능 시기·희망 근무 지역·비자·회화 수준)은 없앴다 —
+ * 지원서 폼 실측에서 거의 안 묻는 칸이라 우대·기타를 길게 만들기만 했다. 사전의 `storage:'extra'`
+ * 자리는 이제 대학원 4키가 쓰고, 그건 별도 섹션(`ThesisSection`)이 그린다.
+ *
  * 프레임(`SectionCard`)은 `MyInfo.tsx` 가 씌운다 — 여기는 본문만 그린다.
  */
 import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from '@/stores/toastStore'
-import {
-  useProfile, useUpdateProfile, useFieldDictionary, useUpdateExtraFields,
-} from '@/hooks/useMyinfo'
-import type {
-  DisabilityGrade, FieldDictionaryEntry, PatriotRelation, UpdateProfileDto,
-} from '@/api/myinfo'
+import { useProfile, useUpdateProfile } from '@/hooks/useMyinfo'
+import type { DisabilityGrade, PatriotRelation, UpdateProfileDto } from '@/api/myinfo'
 import { SegmentedToggle } from '@/components/common/SegmentedToggle'
 import { HelpPill } from '@/components/common/HelpPill'
-import { Field, FieldLabel, SelectField } from '@/components/myinfo/fields'
+import { Field, FieldLabel } from '@/components/myinfo/fields'
 import { Modal } from '@/components/common/Modal'
 
 /** §17 고정 문장 — 사용자 대면 표면 전부에 같은 문장이 들어간다. 변경은 CEO 승인. */
@@ -47,11 +47,6 @@ const DISABILITY_GRADES: { value: DisabilityGrade; label: string }[] = [
   { value: 'severe', label: '심한 장애' },
   { value: 'mild', label: '심하지 않은 장애' },
 ]
-
-const BOOL_OPTIONS = [
-  { value: 'true', label: '예' },
-  { value: 'false', label: '아니오' },
-] as const
 
 function notifySaveError(err: unknown) {
   const shown = (err as { config?: { _toastShown?: boolean } } | null)?.config?._toastShown
@@ -358,9 +353,6 @@ export function ExtrasSectionBody({ onSaved, focus, focusSeq }: {
           </div>
         )}
       </div>
-
-      {/* ── 추가 정보 (필드 사전) ───────────────────────── */}
-      <ExtraFieldsBlock onSaved={onSaved} />
     </div>
   )
 }
@@ -424,105 +416,6 @@ function ConsentRow({ term, children }: { term: string; children: React.ReactNod
     <div className="flex flex-col sm:flex-row sm:gap-2">
       <dt className="sm:shrink-0 sm:w-[5.5rem] text-text-quaternary">{term}</dt>
       <dd className="min-w-0 sm:flex-1 text-text-secondary leading-relaxed">{children}</dd>
-    </div>
-  )
-}
-
-// ────────────────────────────────────────────────────────────
-/**
- * 「추가 정보」 — 서버 필드 사전(`storage: 'extra'`)을 읽어 타입별로 그린다.
- * 새 항목은 사전 한 줄이면 되고 프론트 배포가 필요 없다 (컨셉 §14).
- *
- * 🔴 `sensitive`·`forbidden` 은 슬롯에 저장하지 않는다 — 렌더 자체를 하지 않는다.
- */
-export function ExtraFieldsBlock({ onSaved }: { onSaved: () => void }) {
-  const { data: profile } = useProfile()
-  const { data: dictionary, isError } = useFieldDictionary()
-  const { mutate: updateExtra } = useUpdateExtraFields()
-  const labelIdBase = useId()
-
-  const [values, setValues] = useState<Record<string, string>>({})
-  const [loaded, setLoaded] = useState(false)
-
-  if (profile && !loaded) {
-    setValues({ ...(profile.extra_fields ?? {}) })
-    setLoaded(true)
-  }
-
-  const entries: FieldDictionaryEntry[] = (dictionary?.fields ?? []).filter(
-    (f) => f.storage === 'extra' && !f.sensitive && !f.forbidden,
-  )
-
-  // 사전이 없거나(백엔드 미배포·장애) 슬롯 항목이 0개면 블록을 통째로 숨긴다
-  if (isError || entries.length === 0) return null
-
-  const commit = (key: string, raw: string) =>
-    updateExtra({ [key]: raw.trim() ? raw.trim() : null }, {
-      onSuccess: onSaved,
-      onError: notifySaveError,
-    })
-
-  const set = (key: string, v: string) => setValues((s) => ({ ...s, [key]: v }))
-
-  return (
-    <div className="pt-6 border-t border-line">
-      <p className="text-[13px] font-bold text-text-primary mb-1">추가 정보</p>
-      <p className="text-sm text-text-tertiary mb-3.5">
-        지원서에서 자주 묻는 칸이에요. 채워두면 다음 지원서에서 그대로 쓰여요.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-        {entries.map((f) => {
-          const v = values[f.key] ?? ''
-          if (f.type === 'bool') {
-            const labelId = `${labelIdBase}-${f.key}`
-            return (
-              <div key={f.key}>
-                <FieldLabel label={f.label} id={labelId} />
-                {/* 저장된 값이 없으면 「아니오」가 아니라 **미선택**이다 — 안 고른 걸 답으로 세지 않는다 */}
-                <SegmentedToggle
-                  label={f.label}
-                  labelledBy={labelId}
-                  value={v === 'true' ? 'true' : v === 'false' ? 'false' : null}
-                  options={BOOL_OPTIONS}
-                  onChange={(next) => { set(f.key, next); commit(f.key, next) }}
-                />
-              </div>
-            )
-          }
-          if (f.type === 'select') {
-            return (
-              <SelectField
-                key={f.key}
-                label={f.label}
-                value={v}
-                options={f.options ?? []}
-                onChange={(next) => { set(f.key, next); commit(f.key, next) }}
-              />
-            )
-          }
-          if (f.type === 'date') {
-            return (
-              <Field
-                key={f.key}
-                label={f.label}
-                type="date"
-                value={v}
-                onChange={(next) => { set(f.key, next); commit(f.key, next) }}
-              />
-            )
-          }
-          return (
-            <Field
-              key={f.key}
-              label={f.label}
-              value={v}
-              maxLength={f.maxLength}
-              onChange={(next) => set(f.key, next)}
-              onBlur={() => commit(f.key, v)}
-            />
-          )
-        })}
-      </div>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   APP_TIMEZONE,
   addMonths,
+  addMonthsInclusiveEnd,
   addYears,
   toLocalDateString,
   todayLocal,
@@ -318,6 +319,47 @@ describe('utils/datetime — KST-fixed 헬퍼', () => {
       expect(addMonths('', 6)).toBe('')
       expect(addMonths('2026-05', 6)).toBe('')
       expect(addMonths('날짜아님', 6)).toBe('')
+    })
+  })
+
+  /**
+   * `addMonthsInclusiveEnd` — 시작일을 **포함하는** N개월의 마지막 날 (복무 기간).
+   *
+   * 케이스: 기본(전역일 = 해당일 −1) · 해 넘김 · 🔴 말일 예외(하루 빼지 않는다) ·
+   * 윤년 · 1일 시작 · 잘못된 입력.
+   */
+  describe('addMonthsInclusiveEnd — 복무 기간(초일 산입) 만료일', () => {
+    it('🔴 입대일 + N개월 − 1일 — 2020-01-01 + 18개월 → 2021-06-30', () => {
+      expect(addMonthsInclusiveEnd('2020-01-01', 18)).toBe('2021-06-30')
+      expect(addMonthsInclusiveEnd('2020-01-01', 21)).toBe('2021-09-30')
+      expect(addMonthsInclusiveEnd('2020-01-01', 24)).toBe('2021-12-31')
+    })
+
+    it('달 중간에서 시작해도 해당일의 전날이다', () => {
+      expect(addMonthsInclusiveEnd('2019-03-04', 18)).toBe('2020-09-03')
+      expect(addMonthsInclusiveEnd('2026-03-02', 6)).toBe('2026-09-01')
+    })
+
+    it('🔴 말일 예외 — 2020-01-31 + 1개월은 2/28 이 아니라 2020-02-29 (윤년 말일)', () => {
+      expect(addMonthsInclusiveEnd('2020-01-31', 1)).toBe('2020-02-29')
+      expect(addMonthsInclusiveEnd('2026-01-31', 1)).toBe('2026-02-28')
+      expect(addMonthsInclusiveEnd('2026-08-31', 6)).toBe('2027-02-28')
+    })
+
+    it('말이 아닌 날은 말일 예외가 아니다 — 3/1 + 1개월 → 3/31', () => {
+      expect(addMonthsInclusiveEnd('2020-03-01', 1)).toBe('2020-03-31')
+      expect(addMonthsInclusiveEnd('2020-01-30', 1)).toBe('2020-02-29')
+    })
+
+    it('해·달 경계를 넘는다', () => {
+      expect(addMonthsInclusiveEnd('2026-12-01', 1)).toBe('2026-12-31')
+      expect(addMonthsInclusiveEnd('2026-11-15', 3)).toBe('2027-02-14')
+    })
+
+    it('날짜 형식이 아니면 빈 문자열', () => {
+      expect(addMonthsInclusiveEnd('', 18)).toBe('')
+      expect(addMonthsInclusiveEnd('2026-05', 18)).toBe('')
+      expect(addMonthsInclusiveEnd('날짜아님', 18)).toBe('')
     })
   })
 
