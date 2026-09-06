@@ -13,8 +13,8 @@
  *  5. 🔴 병역처럼 힌트가 있으면 칩 글자가 힌트로 바뀐다 (「성별을 고르면…」)
  *  6. 🔴 7/7 → 완성 문구 · 칩 없음
  *  7. 단계 색 — 0% 빨강 · 30% 주황 · 70% 인디고 · 100% 초록
- *  8. 「있으면 자동으로 채워져요 (N/12)」 — 기본은 접혀 있다 (경력·경험이 갈라져 11 → 12)
- *  9. 펼치면 12개가 ✓/○ 로 나오고, 동의 없는 장애는 「선택」
+ *  8. 「있으면 자동으로 채워져요 (N/11)」 — 기본은 접혀 있다 (추가 정보가 빠져 12 → 11)
+ *  9. 펼치면 11개가 ✓/○ 로 나오고, 동의 없는 장애는 「선택」
  * 10. 접이식 항목도 눌러서 이동한다
  * 11. ARIA progressbar 속성
  * 12. 「지금 쓰이는 곳」 — 약속이 아니라 지금 동작하는 것만 적는다
@@ -47,7 +47,7 @@ const OPTIONAL: [OptionalItemId, string][] = [
   ['name-en', '영문 이름'], ['email', '이메일'], ['nationality', '국적'], ['emergency', '비상 연락처'],
   ['language-certs', '어학'], ['certs', '자격증'], ['awards', '수상'],
   ['career', '경력'], ['experiences', '경험'],
-  ['extra-fields', '추가 정보'], ['documents', '지원 서류'], ['disability', '장애 정보'],
+  ['documents', '지원 서류'], ['disability', '장애 정보'],
 ]
 
 /** 앞에서부터 `doneCount` 개를 채운 기본 세트 */
@@ -72,7 +72,7 @@ function coreSet(doneCount: number, over: Partial<CoreSet> = {}): CoreSet {
     firstEmptyId: doneCount < 7 ? 'profile' : null,
     optional,
     optionalDone: 0,
-    optionalTotal: 12,
+    optionalTotal: 11,
     ...over,
   }
 }
@@ -173,14 +173,14 @@ describe('기본 세트 N/7', () => {
 })
 
 describe('「있으면 자동으로 채워져요」', () => {
-  it('기본은 접혀 있고 (N/12) 만 보인다', () => {
+  it('기본은 접혀 있고 (N/11) 만 보인다', () => {
     mount(coreSet(7))
     const toggle = screen.getByRole('button', { expanded: false })
-    expect(toggle.textContent?.replace(/\s+/g, ' ')).toContain('있으면 자동으로 채워져요 (0/12)')
+    expect(toggle.textContent?.replace(/\s+/g, ' ')).toContain('있으면 자동으로 채워져요 (0/11)')
     expect(screen.queryByRole('button', { name: /영문 이름/ })).toBeNull()
   })
 
-  it('펼치면 12개가 나오고 완료는 ✓ · 미완료는 ○ (경력·경험이 각각 한 줄)', () => {
+  it('펼치면 11개가 나오고 완료는 ✓ · 미완료는 ○ (경력·경험이 각각 한 줄)', () => {
     const set = coreSet(7)
     set.optional = set.optional.map((o, i) => ({ ...o, done: i < 2 }))
     set.optionalDone = 2
@@ -188,9 +188,9 @@ describe('「있으면 자동으로 채워져요」', () => {
     fireEvent.click(screen.getByRole('button', { expanded: false }))
 
     const list = screen.getByRole('list')
-    expect(within(list).getAllByRole('listitem')).toHaveLength(12)
+    expect(within(list).getAllByRole('listitem')).toHaveLength(11)
     expect(within(list).getAllByLabelText('채움')).toHaveLength(2)
-    expect(within(list).getAllByLabelText('비어 있음')).toHaveLength(10)
+    expect(within(list).getAllByLabelText('비어 있음')).toHaveLength(9)
     expect(within(list).getByRole('button', { name: /경력/ })).toBeInTheDocument()
     expect(within(list).getByRole('button', { name: /경험/ })).toBeInTheDocument()
   })
@@ -234,7 +234,7 @@ describe('상태를 글자로', () => {
     fireEvent.click(screen.getByRole('button', { expanded: false }))
 
     expect(screen.getAllByRole('img', { name: '채움' })).toHaveLength(1)
-    expect(screen.getAllByRole('img', { name: '비어 있음' })).toHaveLength(11)
+    expect(screen.getAllByRole('img', { name: '비어 있음' })).toHaveLength(10)
   })
 
   it('🔴 칩에 title 이 없다 — 보이는 글자와 툴팁이 같은 말을 두 번 하던 자리', () => {

@@ -2,6 +2,7 @@ import type { UserProfile, LanguageCert, Cert, Award, MyDocument, Coverletter, C
 import type { ExamSchedule } from '@/types/exam-schedule'
 import { isCareerType } from '@/types/activity'
 import type { ActivityType } from '@/types/activity'
+import { GRAD_DEGREES, THESIS_FIELD_KEYS } from '@/utils/thesisFields'
 
 /**
  * 최종 학력 ↔ 그 단계의 학력 항목 `degree` 문자열.
@@ -20,6 +21,7 @@ export const HIGHEST_DEGREE_TO_EDU: Record<HighestDegree, string> = {
 export type SectionId =
   | 'profile'
   | 'education'
+  | 'thesis'
   | 'military'
   | 'coverletter'
   | 'career'
@@ -85,19 +87,31 @@ function militaryFilled(p?: UserProfile): boolean {
 }
 
 /**
- * 우대·기타 — 보훈·장애·추가 정보 중 하나라도 손을 댔는가.
+ * 우대·기타 — 보훈·장애 중 하나라도 손을 댔는가.
  *
  * 「비대상」을 저장한 것도 **채운 것**이다(지원서에 그대로 채워진다). 그래서 값의 참/거짓이
  * 아니라 **존재 여부**(`!= null`)로 본다. 게이지 분모에는 안 들어가지만 사이드바 ✓ 는 뜬다.
+ *
+ * 🔴 `extra_fields` 는 더 이상 여기서 세지 않는다 — 옛 「추가 정보」 블록이 없어지고 그 자리는
+ * 대학원 4키(논문 섹션)가 쓴다. 논문만 채운 사용자에게 우대·기타 ✓ 가 뜨면 거짓말이 된다.
  */
 function extrasFilled(p?: UserProfile): boolean {
   if (!p) return false
   return (
     p.patriot_yn != null ||
     p.disability_yn != null ||
-    !!p.sensitive_consent_at ||
-    Object.keys(p.extra_fields ?? {}).length > 0
+    !!p.sensitive_consent_at
   )
+}
+
+/**
+ * 논문 — 대학원 4키 중 하나라도 채웠는가. 사이드바 ✓ 용이다.
+ * (게이지 분모에는 안 들어간다 — `EXCLUDED_FROM_GAUGE`. 석·박사에게만 있는 칸이라
+ *  분모에 넣으면 학사 지원자의 진척도가 채울 수 없는 칸 때문에 깎인다.)
+ */
+function thesisFilled(p?: UserProfile): boolean {
+  const extra = p?.extra_fields ?? {}
+  return THESIS_FIELD_KEYS.some((k) => !!extra[k]?.trim())
 }
 
 function goalsFilled(p?: UserProfile): boolean {
@@ -117,6 +131,8 @@ function coverletterFilled(cl?: Coverletter): boolean {
 
 export function computeMyinfoSections(input: Inputs): SectionStatus[] {
   const isMale = input.profile?.gender === 'MALE'
+  const degree = input.profile?.highest_degree
+  const isGrad = !!degree && (GRAD_DEGREES as readonly string[]).includes(degree)
 
   // 학력 — school_name이 채워진 row만 카운트 (빈 row는 자동 생성될 수 있으므로 제외)
   const filledEducations = input.educations.filter((e) => e.school_name && e.school_name.trim())
@@ -127,6 +143,8 @@ export function computeMyinfoSections(input: Inputs): SectionStatus[] {
   const list: SectionStatus[] = [
     { id: 'profile',        kind: 'single', filled: profileFilled(input.profile),                  count: profileFilled(input.profile) ? 1 : 0,         active: true },
     { id: 'education',      kind: 'multi',  filled: filledEducations.length > 0,                   count: filledEducations.length,                      active: true },
+    // 논문 — 석·박사에게만 (사이드바 ✓ 전용, 게이지 분모에는 안 들어간다)
+    { id: 'thesis',         kind: 'single', filled: thesisFilled(input.profile),                   count: thesisFilled(input.profile) ? 1 : 0,          active: isGrad },
     { id: 'military',       kind: 'single', filled: militaryFilled(input.profile),                 count: militaryFilled(input.profile) ? 1 : 0,        active: isMale },
     { id: 'coverletter',    kind: 'single', filled: coverletterFilled(input.coverletter?.coverletter), count: coverletterFilled(input.coverletter?.coverletter) ? 1 : 0, active: true },
     { id: 'career',         kind: 'multi',  filled: activities.career.length > 0,                  count: activities.career.length,                     active: true },
@@ -147,7 +165,9 @@ export function computeMyinfoSections(input: Inputs): SectionStatus[] {
 // 게이지 진척도 계산에서 제외할 섹션 — 핵심 이력 데이터가 아니라 미래/계획성·부가 영역.
 // 🔴 'extras'(우대·기타)도 여기 있다 — 보훈·장애는 **대부분 비대상**이라 분모에 넣으면
 //    채워질 일 없는 칸이 진척도를 영원히 깎는다. 분모는 이 추가로 **바뀌지 않는다**.
-const EXCLUDED_FROM_GAUGE: SectionId[] = ['extras', 'exam-schedules', 'goals', 'files']
+// 🔴 'thesis'(논문)도 같은 이유 — 석·박사에게만 있는 칸이라 분모에 넣으면 사람마다 분모가
+//    달라진다. 사이드바 ✓ 만 쓴다.
+const EXCLUDED_FROM_GAUGE: SectionId[] = ['thesis', 'extras', 'exam-schedules', 'goals', 'files']
 
 export function computeProgress(sections: SectionStatus[]): { filled: number; total: number; percent: number; firstEmptyId: SectionId | null } {
   const gaugeSections = sections.filter((s) => s.active && !EXCLUDED_FROM_GAUGE.includes(s.id))
@@ -200,10 +220,15 @@ export interface CoreItem {
   hint?: string
 }
 
+/**
+ * 🔴 옛 `'extra-fields'`(추가 정보)는 뺐다 — 취미·특기 같은 칸을 없앴으므로 셀 것이 없다.
+ * 대학원 4키는 조건부(석·박사)라 「있으면 좋아요」 목록에 넣지 않는다: 학사 지원자에게
+ * 영원히 안 채워지는 항목이 하나 늘 뿐이다.
+ */
 export type OptionalItemId =
   | 'name-en' | 'email' | 'nationality' | 'emergency'
   | 'language-certs' | 'certs' | 'awards' | 'career' | 'experiences'
-  | 'extra-fields' | 'documents' | 'disability'
+  | 'documents' | 'disability'
 
 export interface OptionalItem {
   id: OptionalItemId
@@ -323,7 +348,6 @@ export function computeCoreSet(input: CoreSetInput): CoreSet {
     { id: 'awards',         label: '수상',        done: input.awards.length > 0,         sectionId: 'awards' },
     { id: 'career',         label: '경력',        done: activities.career.length > 0,    sectionId: 'career' },
     { id: 'experiences',    label: '경험',        done: activities.experience.length > 0, sectionId: 'experiences' },
-    { id: 'extra-fields',   label: '추가 정보',   done: Object.keys(p?.extra_fields ?? {}).length > 0, sectionId: 'extras' },
     { id: 'documents',      label: '지원 서류',   done: documentsFilled(input),          sectionId: 'files' },
     {
       id: 'disability',

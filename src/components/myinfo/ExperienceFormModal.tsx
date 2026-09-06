@@ -3,8 +3,11 @@
  *
  * 계획 A′(`autofill-census-2026-09.md` 최종 갭 목록 🟡 프로젝트 행): 일지로 건너가 다른
  * 폼을 쓰는 건 불편하다는 지적에서 나왔다. 여기서는 **이력서에 옮겨 적을 만큼만** 받고
- * (활동명·유형·기관·역할·기간·성과·지원서용 요약), 로그·회고 같은 깊이는 활동 일지의 몫으로 둔다.
+ * (활동명·유형·기관·역할·기간·지원서용 요약), 로그·회고 같은 깊이는 활동 일지의 몫으로 둔다.
  * 원칙 = 「즉시 활동, 깊이는 나중에」.
+ *
+ * 🔴 「성과」 칸은 뺐다 — 지원서용 요약과 묻는 게 겹쳐 같은 문장을 두 번 쓰게 만들었다.
+ * `activities.outcome` 컬럼은 활동 일지가 계속 쓰므로 **살아 있다**. 여기서 안 보낼 뿐이다.
  *
  * 유형 칩은 활동 일지의 `TYPE_GROUPS` 를 **그대로** 재사용한다 — 같은 저장소에 다른
  * 분류 목록을 두면 두 화면이 서로 다른 말을 하게 된다. 다만 `mode` 로 **한쪽만** 보여준다:
@@ -26,8 +29,6 @@ import type { Activity, ActivityType, CreateActivityDto, UpdateActivityDto } fro
 
 /** 지원서용 요약 상한 — 백엔드 계약(≤500)과 같은 숫자 */
 export const APPLICATION_SUMMARY_MAX = 500
-/** 성과 상한 — `activities.outcome` 기존 계약 */
-const OUTCOME_MAX = 200
 
 /** 어느 입구에서 열렸나 — 유형 칩 목록·제목·기본 선택이 여기서 갈린다 */
 export type ExperienceFormMode = 'career' | 'experience'
@@ -75,7 +76,6 @@ const EMPTY = {
   role: '',
   startedAt: '',
   endedAt: '',
-  outcome: '',
   applicationSummary: '',
   country: '',
   orgDepartment: '',
@@ -97,7 +97,6 @@ export function ExperienceFormModal({ mode, editing, onClose, onDelete }: Props)
   const nameErrorId = useId()
   const summaryErrorId = useId()
   const endErrorId = useId()
-  const summaryId = useId()
   const summaryHelpId = useId()
   const typeLabelId = useId()
   const currentLabelId = useId()
@@ -115,7 +114,6 @@ export function ExperienceFormModal({ mode, editing, onClose, onDelete }: Props)
         role: editing.role ?? '',
         startedAt: editing.startedAt ?? '',
         endedAt: editing.endedAt ?? '',
-        outcome: editing.outcome ?? '',
         applicationSummary: editing.applicationSummary ?? '',
         country: editing.country ?? '',
         orgDepartment: editing.orgDepartment ?? '',
@@ -189,7 +187,6 @@ export function ExperienceFormModal({ mode, editing, onClose, onDelete }: Props)
           startedAt: form.startedAt || undefined,
           // 재직 중이면 종료일을 보내지 않는다 — 서버가 `isCurrent` 로 null 처리한다
           endedAt: isCurrent ? undefined : (form.endedAt || undefined),
-          outcome: form.outcome.trim() || undefined,
           applicationSummary: form.applicationSummary.trim() || null,
           country: country || null,
           orgDepartment: orgDepartment || null,
@@ -204,7 +201,6 @@ export function ExperienceFormModal({ mode, editing, onClose, onDelete }: Props)
           ...(form.role.trim() ? { role: form.role.trim() } : {}),
           ...(form.startedAt ? { startedAt: form.startedAt } : {}),
           ...(!isCurrent && form.endedAt ? { endedAt: form.endedAt } : {}),
-          ...(form.outcome.trim() ? { outcome: form.outcome.trim() } : {}),
           ...(form.applicationSummary.trim()
             ? { applicationSummary: form.applicationSummary.trim() }
             : {}),
@@ -369,19 +365,15 @@ export function ExperienceFormModal({ mode, editing, onClose, onDelete }: Props)
         </div>
       </ModalSection>
 
-      <ModalSection title={`성과 · ${summaryLabel}`}>
+      {/*
+        칸이 하나뿐이라 섹션 제목이 곧 이 칸의 이름이다 — 같은 글자를 제목과 라벨로 두 번
+        쓰지 않는다 (「성과」가 빠지면서 묶을 게 없어졌다).
+      */}
+      <ModalSection title={summaryLabel}>
         <div className="space-y-3">
-          <Field
-            label="성과"
-            value={form.outcome}
-            onChange={(v) => setForm((f) => ({ ...f, outcome: v }))}
-            maxLength={OUTCOME_MAX}
-            placeholder="예: 인스타그램 팔로워 30% 증가"
-          />
           <div>
-            <FieldLabel label={summaryLabel} htmlFor={summaryId} />
             <textarea
-              id={summaryId}
+              aria-label={summaryLabel}
               ref={summaryRef}
               value={form.applicationSummary}
               onChange={(e) => setForm((f) => ({ ...f, applicationSummary: e.target.value }))}

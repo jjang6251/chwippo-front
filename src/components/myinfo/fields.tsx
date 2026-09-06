@@ -115,7 +115,15 @@ export function Field({
   // 🔴 `String.length` 는 이모지를 2로 센다 — `CharCounter` 와 같은 숫자를 보여야 한다
   const count = countChars(value).total
   return (
-    <div className={span ? 'col-span-2' : ''}>
+    /*
+      🔴 `span` 은 **2열이 켜진 뒤에만** 걸어야 한다. 조건 없는 `col-span-2` 를 1열 그리드
+      (`grid-cols-1`) 안에 두면 브라우저가 **암시 칼럼**을 하나 더 만들고, 그 칼럼이 `auto`
+      라 내용 폭을 다 먹는다 — 명시 칼럼 `minmax(0,1fr)` 이 **0px** 으로 찌그러져 라벨이
+      겹치고 칩 글자가 한 자씩 세로로 찢어졌다 (390px 실측 `grid-template-columns: 0px 292px`).
+      분기점은 그리드 쪽(`lg:grid-cols-2`)과 **반드시 같아야** 한다 — 어긋나면 그 구간에서
+      같은 증상이 그대로 재발한다. `min-w-0` 은 칸이 제 몫보다 넓은 트랙을 요구하지 않게 한다.
+    */
+    <div className={`min-w-0 ${span ? 'lg:col-span-2' : ''}`}>
       <FieldLabel label={label} required={required} htmlFor={id} />
       {as === 'textarea' ? (
         <div>
@@ -192,7 +200,7 @@ export function SelectField({ label, value, onChange, options, optionLabels, req
 }) {
   const id = useId()
   return (
-    <div>
+    <div className="min-w-0">
       <FieldLabel label={label} required={required} htmlFor={id} />
       <div className="relative">
         <select id={id} name={name} value={value} onChange={(e) => onChange(e.target.value)} className={FIELD_SELECT_CLASS}>

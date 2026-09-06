@@ -206,6 +206,45 @@ describe('computeMyinfoSections — 다중 섹션', () => {
   })
 })
 
+/**
+ * 「논문」 — 사이드바 ✓ 는 있지만 **게이지 분모에는 없다**. 석·박사에게만 있는 칸이라
+ * 분모에 넣으면 사람마다 분모가 달라지고, 학사 지원자는 채울 수 없는 칸에 진척도를 깎인다.
+ */
+describe('computeMyinfoSections — 논문 (석·박사 전용)', () => {
+  const thesis = (over = {}) =>
+    computeMyinfoSections(makeInput({ profile: makeProfile(over) })).find((s) => s.id === 'thesis')!
+
+  it('🔴 최종 학력이 석사·박사여야 active', () => {
+    expect(thesis({ highest_degree: 'master' }).active).toBe(true)
+    expect(thesis({ highest_degree: 'doctor' }).active).toBe(true)
+  })
+
+  it('🔴 학사 이하·미설정이면 inactive (칩·사이드바에 안 뜬다)', () => {
+    for (const d of ['high', 'associate', 'bachelor'] as const) {
+      expect(thesis({ highest_degree: d }).active, d).toBe(false)
+    }
+    expect(thesis().active).toBe(false)
+  })
+
+  it('대학원 4키 중 하나라도 있으면 filled (공백만은 미채움)', () => {
+    expect(thesis({ highest_degree: 'master' }).filled).toBe(false)
+    expect(thesis({ highest_degree: 'master', extra_fields: { paper_title: '분산 시스템' } }).filled).toBe(true)
+    expect(thesis({ highest_degree: 'master', extra_fields: { academic_advisor: '  ' } }).filled).toBe(false)
+    // 대학원 키가 아닌 값은 세지 않는다
+    expect(thesis({ highest_degree: 'master', extra_fields: { hobby: '등산' } }).filled).toBe(false)
+  })
+
+  it('🔴 게이지 분모에는 안 들어간다 — 석사여도 total 이 그대로다', () => {
+    const male = computeMyinfoSections(makeInput({ profile: makeProfile({ gender: 'MALE' }) }))
+    const maleGrad = computeMyinfoSections(makeInput({
+      profile: makeProfile({ gender: 'MALE', highest_degree: 'master', extra_fields: { paper_title: 'x' } }),
+    }))
+    expect(computeProgress(maleGrad).total).toBe(computeProgress(male).total)
+    expect(computeProgress(maleGrad).filled).toBe(computeProgress(male).filled)
+    expect(isExcludedFromGauge('thesis')).toBe(true)
+  })
+})
+
 describe('computeMyinfoSections — goals (profile 안 필드 기반)', () => {
   it('goal_other가 채워지면 filled', () => {
     const sections = computeMyinfoSections(makeInput({
@@ -326,7 +365,7 @@ describe('computeProgress — 진척도 계산', () => {
  *  14. 목록형(어학·자격증·수상·경력·경험) — 1건 이상이면 완료
  *  14-a. 🔴 경력만 있으면 「경험」은 미완료 (그 반대도) · 유형 없는 활동은 경험 쪽
  *  14-b. 경력·경험 칩은 각자의 섹션으로 간다 (`career` / `experiences`)
- *  15. 추가 정보 — extra_fields 키 1개 이상
+ *  15. 🔴 「추가 정보」 항목이 없다 — 취미·특기 칸을 없앴으므로 셀 것이 없다 (분모 11)
  *  16. 🔴 지원 서류 — **슬롯이 있는** 문서만 센다 (기타 파일은 자동 채움 대상이 아니다)
  *  16-a. 🔴 지원 서류 — 슬롯이 0이어도 **항목 첨부**(어학·학력 2종·자격증·수상) 1개면 완료
  *  16-b. 파일 없는 항목만 있으면 미완료
@@ -467,14 +506,14 @@ describe('computeCoreSet — 기본 세트 7', () => {
   })
 })
 
-describe('computeCoreSet — 「있으면 자동으로 채워져요」 12', () => {
-  it('항목 12개 · 순서 고정', () => {
+describe('computeCoreSet — 「있으면 자동으로 채워져요」 11', () => {
+  it('항목 11개 · 순서 고정', () => {
     expect(core().optional.map((o) => o.id)).toEqual([
       'name-en', 'email', 'nationality', 'emergency',
       'language-certs', 'certs', 'awards', 'career', 'experiences',
-      'extra-fields', 'documents', 'disability',
+      'documents', 'disability',
     ])
-    expect(core().optionalTotal).toBe(12)
+    expect(core().optionalTotal).toBe(11)
   })
 
   it('영문 이름 — 성/이름 중 하나만 있어도 완료', () => {
@@ -530,9 +569,14 @@ describe('computeCoreSet — 「있으면 자동으로 채워져요」 12', () =
     expect(opt(core(), 'experiences').sectionId).toBe('experiences')
   })
 
-  it('추가 정보 — extra_fields 키 1개 이상', () => {
-    expect(opt(core({ profile: makeProfile({ extra_fields: {} }) }), 'extra-fields').done).toBe(false)
-    expect(opt(core({ profile: makeProfile({ extra_fields: { hobby: '등산' } }) }), 'extra-fields').done).toBe(true)
+  /**
+   * 🔴 옛 「추가 정보」(취미·특기 등)를 없앴다 — 그 자리는 대학원 4키가 쓰는데, 석·박사에게만
+   * 뜨는 칸이라 「있으면 좋아요」 목록에 넣으면 학사 지원자에게 영영 안 채워지는 항목이 된다.
+   */
+  it('🔴 「추가 정보」 항목이 목록에 없다 (extra_fields 를 채워도 마찬가지)', () => {
+    const withExtra = core({ profile: makeProfile({ extra_fields: { paper_title: '논문' } }) })
+    expect(withExtra.optional.map((o) => o.id)).not.toContain('extra-fields')
+    expect(withExtra.optionalTotal).toBe(11)
   })
 
   it('🔴 지원 서류 — 슬롯이 있는 문서만 센다 (기타 파일은 자동 채움 대상이 아니다)', () => {
