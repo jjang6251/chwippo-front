@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react'
-import type { ErrorEvent, Breadcrumb } from '@sentry/react'
+import type { ErrorEvent, Breadcrumb, StackFrame } from '@sentry/react'
 
 /**
  * Sentry 에러 추적 — 초기화 + PII 스크러빙.
@@ -68,6 +68,69 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent | null {
   return event
 }
 
+/**
+ * 인앱 브라우저가 페이지에 주입하는 스크립트의 함수명 (우리 소스에는 없는 이름 — grep 0건 확인).
+ * FRONT-1(iOS)은 파일이 우리 페이지 URL 로 찍혀 URL 로는 못 가르므로 함수명이 유일한 표식이다.
+ * FRONT-D 처럼 `window.` 접두가 붙어 찍히기도 한다.
+ */
+const IN_APP_BROWSER_FUNCTIONS = new Set([
+  'sendDataToNative',
+  'sendPageHideMessage',
+  'sendBeforeUnloadMessage',
+  'sendINPMessage',
+  '_handleBrowserPreparingToClose',
+])
+
+/** index.html 이 로드하는 AdSense 의 자체 텔레메트리(rum_fy2021.js) 호스트 — FRONT-C */
+const AD_SCRIPT_HOST = 'pagead2.googlesyndication.com'
+
+function hostOf(url: string): string | undefined {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return undefined // `<anonymous>` 등 URL 이 아닌 프레임
+  }
+}
+
+function isThirdPartyFrame(frame: StackFrame): boolean {
+  for (const url of [frame.filename, frame.abs_path]) {
+    if (url && (url.startsWith('iabjs://') || hostOf(url) === AD_SCRIPT_HOST)) return true
+  }
+  const fn = frame.function?.replace(/^window\./, '')
+  return fn !== undefined && IN_APP_BROWSER_FUNCTIONS.has(fn)
+}
+
+/**
+ * 남이 주입한 스크립트의 에러인가 — 운영 Sentry 노이즈 4건(FRONT-1·B·C·D, 2026-09) 차단.
+ * 전부 인앱 브라우저·AdSense 가 제 코드에서 던진 것이라 우리 코드·사용자와 무관하다.
+ *
+ * **가장 안쪽 프레임**(에러가 던져진 지점)만 본다. frames 는 바깥→안쪽 순서라 마지막이 안쪽이다.
+ *  - 메시지 매칭(ignoreErrors)을 쓰지 않는다 — 우리 코드가 같은 문구로 죽으면 그것까지 가린다.
+ *  - "프레임 중 하나라도 우리 번들이면 유지"도 안 된다 — FRONT-B·C 의 바깥 프레임은 우리 번들에
+ *    든 Sentry 래퍼(addEventListener 감싸기)라 노이즈가 전부 통과한다.
+ *
+ * 예외가 여럿(cause 연결)이면 **전부** 서드파티일 때만 노이즈 — 우리 에러가 서드파티 에러를
+ * cause 로 품은 경우까지 버리지 않기 위해서다. 스택이 없어 판정 불가한 예외는 남긴다.
+ */
+export function isThirdPartyNoise(event: ErrorEvent): boolean {
+  const values = event.exception?.values ?? []
+  if (values.length === 0) return false
+  return values.every((ex) => {
+    const frames = ex.stacktrace?.frames ?? []
+    for (let i = frames.length - 1; i >= 0; i--) {
+      const frame = frames[i]
+      if (frame.filename || frame.abs_path || frame.function) return isThirdPartyFrame(frame)
+    }
+    return false
+  })
+}
+
+/** 전송 직전 훅 — 서드파티 노이즈는 스크럽 전에 버리고, 나머지는 스크럽해서 보낸다 */
+export function beforeSend(event: ErrorEvent): ErrorEvent | null {
+  if (isThirdPartyNoise(event)) return null
+  return scrubEvent(event)
+}
+
 /** 앱(WebView) vs 웹 구분 — index.html 이 native 진입 시 data-native 를 세운다 */
 function detectPlatform(): 'app' | 'web' {
   return document.documentElement.dataset.native === '1' ? 'app' : 'web'
@@ -91,7 +154,7 @@ export function initSentry(): void {
       ...defaults.filter((i) => i.name !== 'Breadcrumbs'),
       Sentry.breadcrumbsIntegration({ console: false }),
     ],
-    beforeSend: scrubEvent,
+    beforeSend,
   })
 
   Sentry.setTag('platform', detectPlatform())
